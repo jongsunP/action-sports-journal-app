@@ -15,7 +15,20 @@ Users define their own Activity Groups.
 
 ## Expo Version Guidance
 
-Expo has changed. Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing Expo-specific code.
+Expo has changed. This project currently uses Expo SDK 54 for compatibility with the user's App Store version of Expo Go on a physical iPhone.
+
+Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before writing Expo-specific code.
+
+## Current Local Setup
+
+- Local path: `/Users/parkjongsun/Repository/action-sports-journal`
+- GitHub remote: `https://github.com/jongsunP/action-sports-journal`
+- Expo SDK: `~54.0.35`
+- React Native: `0.81.5`
+- React: `19.1.0`
+- The app has been confirmed visible on the user's physical iPhone through Expo Go.
+- First visible screen: `src/features/sessions/HomeScreen.tsx`
+- Root entry: `App.tsx`
 
 ## Product Philosophy
 
