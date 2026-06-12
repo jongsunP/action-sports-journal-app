@@ -90,6 +90,10 @@ At the time this checkpoint was updated, local `master` was pushed to
   shoulder/hip movement, rotation axis, and inverted body orientation. This
   improved the repeated Back Roll evidence results. Landing/crash is secondary
   because a failed landing does not change the trick identity.
+- Future evaluation should judge wakeboard trick identity primarily from
+  stance, edge, approach, takeoff, pop, and rotation initiation. Landing and
+  crash should be evaluated as outcomes, not as the main trick-classification
+  evidence.
 
 Current recommended architecture:
 

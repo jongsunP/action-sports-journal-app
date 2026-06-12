@@ -1252,11 +1252,18 @@ function buildGeminiEvidencePrompt({
     "보이는 근거와 추론을 분리하세요. 확실하지 않으면 confidence를 낮추고 uncertainty에 이유를 쓰세요.",
     "정확한 트릭명이 불확실하면 primaryCandidate에 가장 가능성 높은 이름을 쓰고, alternativeCandidates에 가능한 대안을 넣으세요.",
     "트릭명을 맞히는 것보다 사용자가 의도한 동작을 검증할 수 있는 후보와 근거를 주는 것이 더 중요합니다.",
-    "트릭명은 착지 결과가 아니라 동작 역학으로 판단하세요.",
-    "우선순위는 approach, edge pattern, takeoff mechanics, shoulder/hip movement, rotation axis, inversion 중 몸 방향입니다.",
+    "static classification과 dynamic classification을 분리하세요.",
+    "static classification: regular/goofy, heelside/toeside, switch/normal stance는 비교적 적은 프레임으로도 판단할 수 있습니다.",
+    "dynamic classification: trick identity, rotation family, roll axis, invert mechanics는 더 어렵고 pop부터 early airborne까지의 연속 동작을 우선 봐야 합니다.",
+    "트릭명은 착지 결과가 아니라 트릭 시작과 공중 회전 역학으로 판단하세요.",
+    "트릭 정체성은 보통 착지 전에 결정됩니다. 실패 착지나 크래시는 트릭명을 바꾸지 않습니다.",
+    "트릭명 판단 우선순위: stance > edge > approach > pop > rotation initiation > rotation axis > landing/recovery.",
+    "가장 중요한 시간 구간은 pop → rotation initiation → early airborne phase입니다.",
+    "우선 볼 근거: stance, approach mechanics, edge pattern, takeoff mechanics, pop, shoulder opening, hip movement, rotation initiation, rotation axis.",
+    "landing quality, crash outcome, recovery는 landingOutcome과 uncertainty에만 보조적으로 사용하고 primaryCandidate 결정 근거로 과대평가하지 마세요.",
     "landingOutcome은 보조 정보입니다. 실패 착지나 크래시는 트릭 정체성을 바꾸지 않습니다.",
     "예: 힐사이드 백롤을 시도하다 크래시해도 primaryCandidate는 힐사이드 백롤 계열이어야 합니다.",
-    "primaryCandidate.evidence에는 착지보다 엣지, 팝, 어깨/골반 움직임, 회전축, 공중 몸 방향 근거를 우선 쓰세요.",
+    "primaryCandidate.evidence에는 착지보다 접근, 엣지 로드, 테이크오프, 팝, 어깨 열림, 골반 움직임, 회전 시작, 회전축 근거를 우선 쓰세요.",
     "모든 텍스트는 한국어로 작성하세요.",
     "",
     `종목: ${activityGroupName}`,
@@ -1319,7 +1326,8 @@ function buildOpenAiMotionScoutInstructions() {
     "You are an action-sports motion phase scout.",
     "Your job is to scan sparse frames from the full video and identify phase windows for the key motion sequence.",
     "Do not coach yet. Do not infer fixed timing in advance.",
-    "For wakeboarding, prioritize preserving the sequence from edge load and takeoff through pop, airborne rotation, landing, and crash/recovery.",
+    "For wakeboarding trick identity, prioritize the initiation sequence: stance, edge load, takeoff, pop, rotation initiation, and early rotation axis.",
+    "Landing, crash, and recovery are outcomes. Identify them as phases, but do not let them dominate trick-classification windows.",
     "Use only visible frame evidence and timestamps provided by the caller.",
     "Return only the requested JSON.",
   ].join("\n");
@@ -1381,7 +1389,9 @@ function buildOpenAiMotionScoutPrompt({
     "다음 프레임들은 사용자가 업로드한 전체 영상에서 균등하게 샘플링한 것입니다.",
     "앱과 서버는 트릭/하이라이트가 언제 발생하는지 모릅니다.",
     "프레임 증거만 보고 웨이크보드 동작 phase window를 찾으세요.",
-    "목표는 Stage 2에서 takeoff-to-landing 구간을 촘촘히 추출할 수 있도록 시간 구간을 잡는 것입니다.",
+    "목표는 Stage 2에서 트릭 시작 구간을 촘촘히 추출할 수 있도록 시간 구간을 잡는 것입니다.",
+    "트릭명 판단에 가장 중요한 구간은 pop → rotation initiation → early airborne phase입니다.",
+    "landing/crash/recovery는 결과 구간이며, 트릭명 판단보다 착지 결과 판단에 사용하세요.",
     "",
     `종목: ${activityGroupName}`,
     `세션 제목: ${title}`,
@@ -1405,7 +1415,7 @@ function buildOpenAiMotionScoutPrompt({
     "규칙:",
     "- 모든 startSeconds/endSeconds는 전체 영상 시작 기준 초 단위입니다.",
     "- phase가 보이지 않으면 만들지 마세요.",
-    "- takeoff/pop/airborne/rotation/landing/crash_recovery 구간을 가능한 한 분리하세요.",
+    "- takeoff/pop/rotation/early airborne 구간을 가능한 한 분리하고, landing/crash_recovery는 결과 구간으로 분리하세요.",
     "- primaryHighlightTimestampSeconds는 가장 중요한 순간 하나입니다.",
     "- thumbnailFrameTimestampSeconds는 기록 카드 썸네일로 가장 설명력이 높은 순간입니다.",
     "- highlightFrameTimestampsSeconds는 future carousel/highlight image용 대표 시점입니다.",
@@ -2187,37 +2197,46 @@ function selectDenseMotionWindows(
   scout: OpenAiMotionScoutPayload,
   durationSeconds: number | undefined,
 ) {
-  const preferredPhases = new Set<MotionPhaseName>([
+  const initiationPhases = new Set<MotionPhaseName>([
     "edge_load",
     "takeoff",
     "pop",
-    "airborne",
     "rotation",
-    "landing",
-    "crash_recovery",
+    "airborne",
   ]);
-  const confidentWindows = scout.phaseWindows.filter(
+  const outcomePhases = new Set<MotionPhaseName>(["landing", "crash_recovery"]);
+  const confidentInitiationWindows = scout.phaseWindows.filter(
     (window) =>
       (window.confidence === "high" || window.confidence === "medium") &&
-      preferredPhases.has(window.phase),
+      initiationPhases.has(window.phase),
+  );
+  const confidentOutcomeWindows = scout.phaseWindows.filter(
+    (window) =>
+      (window.confidence === "high" || window.confidence === "medium") &&
+      outcomePhases.has(window.phase),
   );
   const fallbackWindows = scout.phaseWindows.filter(
     (window) => window.confidence === "high" || window.confidence === "medium",
   );
   const selectedWindows =
-    confidentWindows.length > 0 ? confidentWindows : fallbackWindows;
+    confidentInitiationWindows.length > 0
+      ? confidentInitiationWindows
+      : confidentOutcomeWindows.length > 0
+        ? confidentOutcomeWindows
+        : fallbackWindows;
 
   if (selectedWindows.length === 0) {
     return [];
   }
 
+  const hasInitiationEvidence = confidentInitiationWindows.length > 0;
   const startSeconds = Math.max(
     Math.min(...selectedWindows.map((window) => window.startSeconds)) - 1.5,
     0,
   );
   const endSeconds = Math.max(
     ...selectedWindows.map((window) => window.endSeconds),
-  ) + 1.5;
+  ) + (hasInitiationEvidence ? 0.8 : 1.5);
 
   return [
     {

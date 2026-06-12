@@ -100,6 +100,11 @@ The user reported this made the Back Roll evidence result much better.
 Landing/crash is now explicitly secondary because a crashed HS Back Roll is
 still an HS Back Roll attempt.
 
+Future evaluation should use this domain rule: wakeboard trick identity is
+primarily determined by stance, edge, approach, takeoff, pop, and rotation
+initiation. Landing and crash are outcomes, not primary trick-classification
+evidence.
+
 The recommended split is:
 
 ```text

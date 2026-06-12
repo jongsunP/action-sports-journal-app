@@ -138,6 +138,9 @@ Local path:
   rotation axis, and body orientation during inversion. This made the repeated
   Back Roll tests noticeably better. Landing/crash is now treated as secondary
   evidence because a failed landing does not change the intended trick identity.
+- Future wakeboard trick-recognition evaluation should treat stance, edge,
+  approach, takeoff, pop, and rotation initiation as primary evidence. Landing
+  and crash are outcomes, not primary trick-classification evidence.
 
 Recommended next direction:
 
