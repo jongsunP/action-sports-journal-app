@@ -14,12 +14,12 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 ## Current Status
 
-Stage 2 is complete.
+Stage 2 is complete, and App Store / TestFlight preparation has started.
 
-Latest project commit:
+Latest known local project commit before this checkpoint:
 
 ```text
-72699fb Prepare App Store build configuration
+d81def4 Refresh handoff for App Store prep
 ```
 
 Repository:
@@ -46,6 +46,8 @@ Local path:
 - Expo dependency validation passed.
 - Stage 1 review was added in `REVIEW.md`.
 - Stage 2 planning was documented in `docs/STAGE_2_PLAN.md`.
+- App Store build identifiers were added to `app.json`.
+- EAS build/submit configuration was added in `eas.json`.
 
 ## Current Tech Versions
 
@@ -62,6 +64,7 @@ Use Node 20 or newer when running Expo locally.
 - `docs/PROJECT_CHARTER.md`: product charter
 - `docs/MASTER_PLAN.md`: long-term plan
 - `docs/CURRENT_STAGE.md`: current stage description
+- `docs/CONTINUITY_CHECKPOINT.md`: latest cross-session status checkpoint
 - `docs/STAGE_2_PLAN.md`: Stage 2 plan and scope
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
@@ -107,7 +110,7 @@ codex
 Suggested first prompt:
 
 ```text
-AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, and REVIEW.md를 먼저 읽고 Stage 1 완료 상태에서 이어서 진행해줘.
+AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, and REVIEW.md를 먼저 읽고 Stage 2 완료 및 App Store 준비 상태에서 이어서 진행해줘.
 ```
 
 ## How To Run Locally
@@ -124,6 +127,9 @@ Scan the QR code with the iPhone Camera app or Expo Go. Use tunnel mode if LAN d
 
 Prepare App Store / TestFlight delivery next:
 
+- ensure the local commits are pushed to GitHub
+- verify Expo account login with EAS CLI
+- verify Apple Developer Program / App Store Connect access
 - keep the codebase minimal
 - use EAS Build for binaries
 - use EAS Submit for store uploads
