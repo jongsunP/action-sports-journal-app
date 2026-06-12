@@ -26,9 +26,12 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Expo SDK: `~54.0.35`
 - React Native: `0.81.5`
 - React: `19.1.0`
+- Stage 1 status: complete
+- Latest Stage 1 commit: `8d44d7b Add Stage 1 repository review`
 - The app has been confirmed visible on the user's physical iPhone through Expo Go.
 - First visible screen: `src/features/sessions/HomeScreen.tsx`
 - Root entry: `App.tsx`
+- Cross-session handoff: `docs/HANDOFF.md`
 
 ## Product Philosophy
 
