@@ -122,7 +122,12 @@ Scan the QR code with the iPhone Camera app or Expo Go. Use tunnel mode if LAN d
 
 ## Recommended Next Step
 
-Keep the prototype simple and make small Session-focused UX refinements only when needed.
+Prepare App Store / TestFlight delivery next:
+
+- keep the codebase minimal
+- use EAS Build for binaries
+- use EAS Submit for store uploads
+- avoid new UX work until the release path is ready
 
 Do not jump into backend, AI, auth, or database work.
 

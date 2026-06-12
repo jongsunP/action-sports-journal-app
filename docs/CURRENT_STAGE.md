@@ -34,7 +34,7 @@ Stage 2 implementation is complete. The local-only ActivityGroup and Session pro
 
 ## Next Recommended Step
 
-Move into the next local product step only if needed: small Session-focused polish or a minimal plan for the next stage.
+Prepare the App Store / TestFlight build pipeline with EAS Build and App Store identifiers before adding more product features.
 
 ## Resume Notes
 

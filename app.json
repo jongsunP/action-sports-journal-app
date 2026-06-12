@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "action-sports-journal",
+    "name": "Action Sports Journal",
     "slug": "action-sports-journal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.jongsunp.actionsportsjournal",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.jongsunp.actionsportsjournal",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
