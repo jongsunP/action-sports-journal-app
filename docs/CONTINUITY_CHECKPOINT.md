@@ -57,6 +57,7 @@ Added sessions are not persisted after app reload. This is expected because Stag
 - `expo-image-picker` dependency for video selection.
 - `src/services/ai/analyzeSessionVideo.ts` for the analysis request adapter.
 - Optional analysis endpoint hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
+- `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md` documents the mobile-to-server contract.
 
 ## Not Done Yet
 

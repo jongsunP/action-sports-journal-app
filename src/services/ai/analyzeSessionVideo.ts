@@ -14,6 +14,16 @@ export type AnalyzeSessionVideoInput = {
   video: SessionVideoAsset;
 };
 
+type RemoteAnalysisResponse = {
+  id?: unknown;
+  sessionId?: unknown;
+  status?: unknown;
+  summary?: unknown;
+  highlights?: unknown;
+  suggestions?: unknown;
+  createdAt?: unknown;
+};
+
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
 
 export async function analyzeSessionVideo({
@@ -55,7 +65,9 @@ async function requestRemoteAnalysis({
     throw new Error(`Analysis request failed with ${response.status}`);
   }
 
-  return response.json();
+  const data = (await response.json()) as RemoteAnalysisResponse;
+
+  return normalizeRemoteAnalysis(data, session.id);
 }
 
 function createMockAnalysis({
@@ -87,4 +99,37 @@ function createMockAnalysis({
     ],
     createdAt: now,
   };
+}
+
+function normalizeRemoteAnalysis(
+  data: RemoteAnalysisResponse,
+  sessionId: string,
+): AnalysisResult {
+  const now = new Date().toISOString();
+
+  return {
+    id: asString(data.id) ?? `analysis-${Date.now()}`,
+    sessionId: asString(data.sessionId) ?? sessionId,
+    status: data.status === 'failed' ? 'failed' : 'completed',
+    summary: asString(data.summary) ?? 'Analysis completed.',
+    highlights: asStringArray(data.highlights),
+    suggestions: asStringArray(data.suggestions),
+    createdAt: asString(data.createdAt) ?? now,
+  };
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (item): item is string => typeof item === 'string' && item.length > 0,
+  );
 }

@@ -25,6 +25,7 @@ Stage 3 has started with a minimal video selection and analysis request flow. Th
 - Expo SDK 54 setup for physical iPhone Expo Go compatibility
 - Stage 1 review in `REVIEW.md`
 - Cross-session handoff in `docs/HANDOFF.md`
+- Stage 3 video analysis plan in `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md`
 - Video selection through `expo-image-picker`
 - Local mock AI analysis result flow
 - Optional server endpoint hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
