@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -27,6 +27,8 @@ const requestTimeoutMs = readNumberEnv('OPENAI_REQUEST_TIMEOUT_MS', 240_000);
 const frameCount = readNumberEnv('OPENAI_VIDEO_FRAME_COUNT', 18);
 const frameWidth = readNumberEnv('OPENAI_VIDEO_FRAME_WIDTH', 1536);
 const reasoningEffort = process.env.OPENAI_REASONING_EFFORT ?? 'xhigh';
+const benchmarkArtifactDir =
+  process.env.OPENAI_BENCHMARK_ARTIFACT_DIR ?? 'dev-artifacts/openai-benchmarks';
 const allowedVideoMimeTypes = new Set([
   'video/mp4',
   'video/quicktime',
@@ -187,7 +189,7 @@ app.post('/api/analyze-session-video', upload.single('video'), async (request, r
     const analysis = parseAnalysis(result.output_text ?? '');
     dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
 
-    response.json({
+    const responseBody = {
       id: `analysis-${Date.now()}`,
       sessionId,
       status: 'completed',
@@ -207,7 +209,22 @@ app.post('/api/analyze-session-video', upload.single('video'), async (request, r
         sampledFrames: frames.length,
         frameTimestamps: frames.map((frame) => frame.timestampLabel),
       },
+    };
+
+    await writeBenchmarkArtifact({
+      sessionId,
+      activityGroupName,
+      title,
+      notes,
+      occurredAt,
+      fileName: request.file.originalname,
+      videoMimeType: request.file.mimetype,
+      videoBytes: request.file.size,
+      responseBody,
+      rawOutputText: result.output_text ?? '',
     });
+
+    response.json(responseBody);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Analysis failed.';
     console.error('Analysis request failed:', message);
@@ -263,6 +280,74 @@ function rateLimit(
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+async function writeBenchmarkArtifact({
+  sessionId,
+  activityGroupName,
+  title,
+  notes,
+  occurredAt,
+  fileName,
+  videoMimeType,
+  videoBytes,
+  responseBody,
+  rawOutputText,
+}: {
+  sessionId: string;
+  activityGroupName: string;
+  title: string;
+  notes: string;
+  occurredAt: string;
+  fileName: string;
+  videoMimeType: string;
+  videoBytes: number;
+  responseBody: Record<string, unknown>;
+  rawOutputText: string;
+}) {
+  await mkdir(benchmarkArtifactDir, { recursive: true });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safeSessionId = sessionId.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const artifactPath = join(
+    benchmarkArtifactDir,
+    `${timestamp}-${safeSessionId || 'session'}-openai-benchmark.json`,
+  );
+
+  await writeFile(
+    artifactPath,
+    JSON.stringify(
+      {
+        benchmark: {
+          provider,
+          model,
+          createdAt: new Date().toISOString(),
+          frameCount,
+          frameWidth,
+          maxOutputTokens,
+          reasoningEffort,
+        },
+        session: {
+          sessionId,
+          activityGroupName,
+          title,
+          notes,
+          occurredAt,
+        },
+        video: {
+          fileName,
+          mimeType: videoMimeType,
+          bytes: videoBytes,
+        },
+        response: responseBody,
+        rawOutputText,
+      },
+      null,
+      2,
+    ),
+  );
+
+  console.log(`Saved OpenAI benchmark artifact: ${artifactPath}`);
 }
 
 async function extractVideoFrames({

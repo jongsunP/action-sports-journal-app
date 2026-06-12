@@ -29,7 +29,8 @@ The mobile app can now:
 7. Tap `AI 체크하기`.
 8. Send the selected video file to the local dev-server through
    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
-9. The dev-server sends the uploaded video file to Gemini Video Understanding.
+9. The dev-server currently samples frames from the uploaded video and sends
+   those image inputs to OpenAI for the GPT-5.5 wakeboard benchmark.
 10. Render the returned `AnalysisResult`.
 
 ## Current Implementation
@@ -40,10 +41,10 @@ The mobile app can now:
 - Local persistence: `@react-native-async-storage/async-storage`
 - Required endpoint env var for analysis: `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
 - Local analysis server: `dev-server/index.ts`
-- Server-side video model provider: Gemini API through `@google/genai`
+- Server-side benchmark provider: OpenAI Responses API through `openai`
 
-The mobile app must not contain a Gemini API key. The key belongs only in the
-server-side `.env.local`.
+The mobile app must not contain OpenAI or Gemini API keys. Keys belong only in
+the server-side `.env.local`.
 
 ## Server Endpoint Contract
 
@@ -92,39 +93,44 @@ Users can start or stop recording at different moments, so a fixed timestamp suc
 
 `highlightScenes` should represent scenes selected by analysis, not scenes assumed by the app.
 
-## Gemini Analysis Shape
+## Current OpenAI Benchmark Shape
 
 The intended server-side flow is:
 
 1. Receive the uploaded video from the mobile app.
-2. Upload the original video file to Gemini Files API.
-3. Send the uploaded video reference plus session metadata to Gemini Video
-   Understanding.
-4. Ask for structured JSON output matching the `AnalysisResult` shape.
-5. Return summary, highlights, suggestions, and AI-selected `highlightScenes`.
+2. Extract evenly spaced frames across the video with `ffmpeg-static`.
+3. Send the sampled frames plus session metadata to GPT-5.5 through the OpenAI
+   Responses API.
+4. Ask for strict structured JSON with observations, pattern recognition,
+   inferences, confidence, and self-critique.
+5. Return the mobile-compatible `AnalysisResult` fields and preserve benchmark
+   diagnostics for comparison.
 
-The Gemini API key must stay on the server. The mobile app only sends
+The OpenAI API key must stay on the server. The mobile app only sends
 video/session data to the BFF endpoint.
 
 ## Development Cost Guardrails
 
-During solo development, keep the target Gemini API spend under KRW 10,000/month.
+During solo development, keep the target API spend under KRW 10,000/month.
 
 The development server defaults are intentionally conservative:
 
-- `MAX_VIDEO_MB=20`
+- `MAX_VIDEO_MB=50`
 - `DAILY_ANALYSIS_LIMIT=3`
 - `RATE_LIMIT_MAX_REQUESTS=3`
-- `GEMINI_MAX_OUTPUT_TOKENS=600`
-- `GEMINI_REQUEST_TIMEOUT_MS=120000`
+- `OPENAI_MAX_OUTPUT_TOKENS=3200`
+- `OPENAI_REQUEST_TIMEOUT_MS=240000`
+- `OPENAI_VIDEO_FRAME_COUNT=18`
+- `OPENAI_VIDEO_FRAME_WIDTH=1536`
 
-Also set account-level billing safeguards in Google AI Studio / Google Cloud
-where available. The app/server guardrails reduce accidental spend, but
-account-level billing controls are the final protection.
+Also set account-level billing safeguards where available. The app/server
+guardrails reduce accidental spend, but account-level billing controls are the
+final protection.
 
-The product requirement for this stage is to avoid arbitrary local frame
-extraction. The server should pass the uploaded video file to a provider that
-officially supports video understanding.
+This OpenAI path is an explicit benchmark exception: it uses server-side frame
+sampling because the current implementation is testing whether API-based
+OpenAI image reasoning can reproduce useful wakeboard coaching quality before
+making provider conclusions.
 
 ## Not In Scope Yet
 
@@ -140,12 +146,12 @@ officially supports video understanding.
 
 ## Next Work
 
-1. Add `GEMINI_API_KEY` to local `.env.local`.
+1. Add `OPENAI_API_KEY` to local `.env.local`.
 2. Restart `npm run server:dev`.
-3. Confirm `/health` returns `geminiConfigured: true`.
-4. Test from the standalone iPhone app with a short under-20MB video.
+3. Confirm `/health` returns `provider: "openai"`, `model: "gpt-5.5"`, and
+   `openaiConfigured: true`.
+4. Test from the standalone iPhone app with the same wakeboard comparison video.
 5. Confirm real Korean feedback renders in the app.
-6. If `video/quicktime` fails with Gemini, test `video/mp4` next. This is a
-   container compatibility issue, not a frame-selection change.
+6. Review the saved benchmark artifact under `dev-artifacts/openai-benchmarks/`.
 7. Only after that, decide how to persist Sessions, videos, and AnalysisResults
    beyond local device storage.

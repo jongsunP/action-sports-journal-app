@@ -39,13 +39,13 @@ http://10.10.7.17:8787/health
 The dev server reported:
 
 ```text
-geminiConfigured: true
-model: gemini-3.5-flash
+provider: openai
+model: gpt-5.5
+openaiConfigured: false
 ```
 
-A newer EAS preview build was started after adding the EAS preview endpoint
-environment variable and AsyncStorage persistence. The next session should
-verify that build on the iPhone.
+The OpenAI benchmark server starts successfully, but actual GPT-5.5 analysis
+still needs a local `OPENAI_API_KEY` and the same wakeboard comparison video.
 
 ## What Exists
 
@@ -62,7 +62,7 @@ verify that build on the iPhone.
 - Video selection through `expo-image-picker`
 - Local on-device Session persistence through AsyncStorage
 - Remote-only AI analysis hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
-- Local Gemini-backed dev server in `dev-server/index.ts`
+- Local OpenAI GPT-5.5 benchmark dev server in `dev-server/index.ts`
 - EAS preview environment variable for the dev analysis endpoint
 
 ## What Does Not Exist Yet
@@ -73,15 +73,16 @@ verify that build on the iPhone.
 - Calendar
 - RAG
 - Production video upload and storage logic
-- Production server-side Gemini analysis infrastructure
+- Production server-side AI analysis infrastructure
 - End-to-end verification that the latest standalone iPhone build can upload a
-  selected video to the local dev server and render real Gemini feedback
+  selected video to the local dev server and render real OpenAI benchmark feedback
 
 ## Next Recommended Step
 
-Install the newest EAS preview build, keep `npm run server:dev` running, confirm
-iPhone Safari can open `/health`, then test `AI 체크하기` with a short video
-under 20 MB. If it fails, inspect the dev-server terminal error first.
+Add a local `OPENAI_API_KEY`, keep `npm run server:dev` running, confirm
+`/health` returns `openaiConfigured: true`, then test `AI 체크하기` with the
+same wakeboard comparison video. Review the saved JSON artifact under
+`dev-artifacts/openai-benchmarks/` before comparing with Gemini.
 
 ## Resume Notes
 
