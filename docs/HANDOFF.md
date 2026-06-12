@@ -14,7 +14,7 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 ## Current Status
 
-Stage 2 is complete, and App Store / TestFlight preparation has started.
+Stage 2 is complete. Stage 3 video-to-analysis prototyping has started.
 
 Latest known local project commit before this checkpoint:
 
@@ -48,6 +48,10 @@ Local path:
 - Stage 2 planning was documented in `docs/STAGE_2_PLAN.md`.
 - App Store build identifiers were added to `app.json`.
 - EAS build/submit configuration was added in `eas.json`.
+- `expo-image-picker` was added so the app can select a session video.
+- The app can attach a selected video URI to a new Session.
+- A first AI analysis request flow exists.
+- If `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` is not configured, the app returns a local mock analysis result.
 
 ## Current Tech Versions
 
@@ -69,6 +73,7 @@ Use Node 20 or newer when running Expo locally.
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
 - `src/features/sessions/HomeScreen.tsx`: current first screen
+- `src/services/ai/analyzeSessionVideo.ts`: analysis request adapter with mock fallback
 - `src/types/index.ts`: initial domain types
 
 ## Domain Rule
@@ -100,6 +105,8 @@ Do not design features that bypass Session.
 - Video processing
 - Backend implementation
 
+Do not put OpenAI API keys in the mobile app. Real AI analysis should go through a server/BFF endpoint.
+
 ## How To Resume In A New Terminal Codex Session
 
 ```bash
@@ -125,17 +132,16 @@ Scan the QR code with the iPhone Camera app or Expo Go. Use tunnel mode if LAN d
 
 ## Recommended Next Step
 
-Prepare App Store / TestFlight delivery next:
+Continue the video-to-analysis prototype next:
 
-- ensure the local commits are pushed to GitHub
-- verify Expo account login with EAS CLI
-- verify Apple Developer Program / App Store Connect access
-- keep the codebase minimal
-- use EAS Build for binaries
-- use EAS Submit for store uploads
-- avoid new UX work until the release path is ready
+- run the app on the physical iPhone
+- select a video while adding a Session
+- confirm the saved Session shows `Video attached`
+- tap `Request AI Check`
+- confirm the mock result appears
+- then add a minimal server/BFF endpoint for real OpenAI analysis
 
-Do not jump into backend, AI, auth, or database work.
+Do not jump into database, authentication, phone login, storage, or production backend architecture work.
 
 ## Related Personal Context Repo
 

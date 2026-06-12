@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Keyboard,
   Pressable,
@@ -9,11 +10,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 
+import { analyzeSessionVideo, type SessionVideoAsset } from '../../services/ai';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import { mockSessions } from './mockSessions';
 
-import type { Session } from '../../types';
+import type { AnalysisResult, Session } from '../../types';
 
 export function HomeScreen() {
   const [selectedGroupId, setSelectedGroupId] = useState(
@@ -23,6 +26,18 @@ export function HomeScreen() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedVideo, setSelectedVideo] = useState<SessionVideoAsset | null>(
+    null,
+  );
+  const [videosBySessionId, setVideosBySessionId] = useState<
+    Record<string, SessionVideoAsset>
+  >({});
+  const [analysisBySessionId, setAnalysisBySessionId] = useState<
+    Record<string, AnalysisResult>
+  >({});
+  const [analyzingSessionId, setAnalyzingSessionId] = useState<string | null>(
+    null,
+  );
 
   const selectedGroup =
     mockActivityGroups.find((group) => group.id === selectedGroupId) ??
@@ -50,16 +65,106 @@ export function HomeScreen() {
       title: title.trim(),
       notes: notes.trim() || undefined,
       occurredAt: now,
+      videoUri: selectedVideo?.uri,
       shareResultIds: [],
       createdAt: now,
       updatedAt: now,
     };
 
     setSessions((current) => [nextSession, ...current]);
+    if (selectedVideo) {
+      setVideosBySessionId((current) => ({
+        ...current,
+        [nextSession.id]: selectedVideo,
+      }));
+    }
     setTitle('');
     setNotes('');
+    setSelectedVideo(null);
     setIsComposerOpen(false);
     Keyboard.dismiss();
+  };
+
+  const handlePickVideo = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission required',
+        'Please allow photo library access to select a session video.',
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['videos'],
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset || asset.type !== 'video') {
+      Alert.alert('Video required', 'Please choose a video for analysis.');
+      return;
+    }
+
+    setSelectedVideo({
+      uri: asset.uri,
+      fileName: asset.fileName,
+      fileSize: asset.fileSize,
+      mimeType: asset.mimeType,
+      duration: asset.duration,
+    });
+  };
+
+  const handleAnalyzeSession = async (session: Session) => {
+    const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
+
+    if (!video) {
+      Alert.alert('Video required', 'Attach a video before requesting analysis.');
+      return;
+    }
+
+    const group =
+      mockActivityGroups.find((item) => item.id === session.activityGroupId) ??
+      selectedGroup;
+
+    try {
+      setAnalyzingSessionId(session.id);
+      const analysis = await analyzeSessionVideo({
+        session,
+        activityGroupName: group?.name ?? 'Activity',
+        video,
+      });
+
+      setAnalysisBySessionId((current) => ({
+        ...current,
+        [session.id]: analysis,
+      }));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'The analysis request failed.';
+
+      setAnalysisBySessionId((current) => ({
+        ...current,
+        [session.id]: {
+          id: `analysis-error-${Date.now()}`,
+          sessionId: session.id,
+          status: 'failed',
+          summary: message,
+          highlights: [],
+          suggestions: ['Check the analysis endpoint and try again.'],
+          createdAt: new Date().toISOString(),
+        },
+      }));
+    } finally {
+      setAnalyzingSessionId(null);
+    }
   };
 
   return (
@@ -156,6 +261,28 @@ export function HomeScreen() {
             />
             <Pressable
               accessibilityRole="button"
+              onPress={handlePickVideo}
+              style={({ pressed }) => [
+                styles.videoButton,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text style={styles.videoButtonText}>
+                {selectedVideo ? 'Change Video' : 'Select Video'}
+              </Text>
+            </Pressable>
+            {selectedVideo ? (
+              <Text style={styles.videoMeta}>
+                {selectedVideo.fileName ?? 'Selected video'} ·{' '}
+                {formatVideoMeta(selectedVideo)}
+              </Text>
+            ) : (
+              <Text style={styles.helperText}>
+                Add a video now to test the AI analysis flow.
+              </Text>
+            )}
+            <Pressable
+              accessibilityRole="button"
               onPress={() => Keyboard.dismiss()}
               style={({ pressed }) => [
                 styles.tertiaryButton,
@@ -215,6 +342,32 @@ export function HomeScreen() {
               {item.notes ? (
                 <Text style={styles.sessionNotes}>{item.notes}</Text>
               ) : null}
+              <View style={styles.analysisPanel}>
+                <Text style={styles.analysisLabel}>
+                  {item.videoUri ? 'Video attached' : 'No video attached'}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!item.videoUri || analyzingSessionId === item.id}
+                  onPress={() => handleAnalyzeSession(item)}
+                  style={({ pressed }) => [
+                    styles.analysisButton,
+                    !item.videoUri || analyzingSessionId === item.id
+                      ? styles.analysisButtonDisabled
+                      : undefined,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  <Text style={styles.analysisButtonText}>
+                    {analyzingSessionId === item.id
+                      ? 'Analyzing...'
+                      : 'Request AI Check'}
+                  </Text>
+                </Pressable>
+                {analysisBySessionId[item.id] ? (
+                  <AnalysisResultView result={analysisBySessionId[item.id]} />
+                ) : null}
+              </View>
             </View>
           )}
         />
@@ -336,6 +489,26 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: 'top',
   },
+  videoButton: {
+    alignItems: 'center',
+    backgroundColor: '#ecfeff',
+    borderColor: '#67e8f9',
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+    paddingVertical: 12,
+  },
+  videoButtonText: {
+    color: '#155e75',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  videoMeta: {
+    color: '#155e75',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
   primaryButton: {
     alignItems: 'center',
     backgroundColor: '#0f172a',
@@ -429,4 +602,97 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  analysisPanel: {
+    borderTopColor: '#e2e8f0',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  analysisLabel: {
+    color: '#64748b',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  analysisButton: {
+    alignItems: 'center',
+    backgroundColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 11,
+  },
+  analysisButtonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  analysisButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  analysisResult: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#dbe4ee',
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 10,
+    padding: 12,
+  },
+  analysisResultTitle: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  analysisResultText: {
+    color: '#334155',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 8,
+  },
+  analysisResultListItem: {
+    color: '#475569',
+    fontSize: 12,
+    lineHeight: 18,
+  },
 });
+
+function getVideoAssetFromSession(session: Session): SessionVideoAsset | null {
+  if (!session.videoUri) {
+    return null;
+  }
+
+  return {
+    uri: session.videoUri,
+    fileName: `${session.id}.mov`,
+    mimeType: 'video/quicktime',
+  };
+}
+
+function formatVideoMeta(video: SessionVideoAsset) {
+  const parts = [
+    video.duration ? `${Math.round(video.duration / 1000)}s` : null,
+    video.fileSize ? `${Math.round(video.fileSize / 1024 / 1024)} MB` : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(' · ') : 'ready';
+}
+
+function AnalysisResultView({ result }: { result: AnalysisResult }) {
+  return (
+    <View style={styles.analysisResult}>
+      <Text style={styles.analysisResultTitle}>
+        {result.status === 'failed' ? 'Analysis failed' : 'AI check result'}
+      </Text>
+      <Text style={styles.analysisResultText}>{result.summary}</Text>
+      {result.highlights.map((highlight) => (
+        <Text key={highlight} style={styles.analysisResultListItem}>
+          - {highlight}
+        </Text>
+      ))}
+      {result.suggestions.map((suggestion) => (
+        <Text key={suggestion} style={styles.analysisResultListItem}>
+          - {suggestion}
+        </Text>
+      ))}
+    </View>
+  );
+}

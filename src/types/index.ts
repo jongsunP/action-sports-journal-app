@@ -22,9 +22,12 @@ export type Session = {
   updatedAt: ISODateString;
 };
 
+export type AnalysisStatus = 'idle' | 'running' | 'completed' | 'failed';
+
 export type AnalysisResult = {
   id: ID;
   sessionId: ID;
+  status: AnalysisStatus;
   summary: string;
   highlights: string[];
   suggestions: string[];
