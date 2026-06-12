@@ -25,6 +25,10 @@ type RemoteAnalysisResponse = {
   createdAt?: unknown;
 };
 
+type RemoteErrorResponse = {
+  error?: unknown;
+};
+
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
 
 export function hasConfiguredAnalysisEndpoint() {
@@ -36,11 +40,11 @@ export async function analyzeSessionVideo({
   activityGroupName,
   video,
 }: AnalyzeSessionVideoInput): Promise<AnalysisResult> {
-  if (analysisEndpoint) {
-    return requestRemoteAnalysis({ session, activityGroupName, video });
+  if (!analysisEndpoint) {
+    throw new Error('AI 분석 서버 엔드포인트가 설정되지 않았습니다.');
   }
 
-  return createMockAnalysis({ session, activityGroupName, video });
+  return requestRemoteAnalysis({ session, activityGroupName, video });
 }
 
 async function requestRemoteAnalysis({
@@ -67,43 +71,14 @@ async function requestRemoteAnalysis({
   });
 
   if (!response.ok) {
-    throw new Error(`Analysis request failed with ${response.status}`);
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(message ?? `Analysis request failed with ${response.status}`);
   }
 
   const data = (await response.json()) as RemoteAnalysisResponse;
 
   return normalizeRemoteAnalysis(data, session.id);
-}
-
-function createMockAnalysis({
-  session,
-  activityGroupName,
-  video,
-}: AnalyzeSessionVideoInput): AnalysisResult {
-  const now = new Date().toISOString();
-  const durationSeconds =
-    typeof video.duration === 'number' ? Math.round(video.duration / 1000) : null;
-
-  return {
-    id: `analysis-${Date.now()}`,
-    sessionId: session.id,
-    status: 'completed',
-    summary: `${activityGroupName} 세션 "${session.title}" 영상이 분석 대기 상태입니다. 아직 서버 분석이 연결되지 않아 앱 안에서 보여주는 임시 결과입니다.`,
-    highlights: [
-      durationSeconds
-        ? `선택한 영상 길이는 약 ${durationSeconds}초입니다.`
-        : '선택한 영상이 세션에 연결되었습니다.',
-      video.fileSize
-        ? `영상 파일 크기는 약 ${Math.round(video.fileSize / 1024 / 1024)}MB입니다.`
-        : '영상 메타데이터를 업로드 요청에 사용할 수 있습니다.',
-    ],
-    suggestions: [
-      '실제 분석은 서버 엔드포인트에서 OpenAI API로 처리합니다.',
-      'OpenAI API 키는 모바일 앱이 아니라 서버에만 둡니다.',
-      '분석 결과는 나중에 AnalysisResult로 저장할 수 있게 구조화합니다.',
-    ],
-    createdAt: now,
-  };
 }
 
 function normalizeRemoteAnalysis(
@@ -148,6 +123,15 @@ function asHighlightScenes(value: unknown): AnalysisResult['highlightScenes'] {
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
 
+async function readRemoteErrorMessage(response: Response): Promise<string | undefined> {
+  try {
+    const data = (await response.json()) as RemoteErrorResponse;
+
+    return asString(data.error);
+  } catch {
+    return undefined;
+  }
+}
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0

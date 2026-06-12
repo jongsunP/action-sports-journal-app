@@ -48,6 +48,8 @@ app.use(rateLimit);
 app.get('/health', (_request, response) => {
   response.json({
     ok: true,
+    openAiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    model,
     spendPolicy: 'development budget target: under KRW 10,000/month',
     limits: {
       maxVideoMb: Math.round(maxVideoBytes / 1024 / 1024),
@@ -198,6 +200,7 @@ app.post('/api/analyze-session-video', upload.single('video'), async (request, r
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Analysis failed.';
+    console.error('Analysis request failed:', message);
 
     response.status(500).json({
       error: message,
