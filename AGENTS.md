@@ -21,8 +21,8 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 ## Current Local Setup
 
-- Local path: `/Users/parkjongsun/Repository/action-sports-journal`
-- GitHub remote: `https://github.com/jongsunP/action-sports-journal`
+- Local path: `/Users/parkjongsun/Repository/action-sports-journal-app`
+- GitHub remote: `https://github.com/jongsunP/action-sports-journal-app`
 - Expo SDK: `~54.0.35`
 - React Native: `0.81.5`
 - React: `19.1.0`
