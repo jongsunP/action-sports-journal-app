@@ -16,10 +16,10 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Stage 2 is complete.
 
-Latest Stage 2 commit:
+Latest project commit:
 
 ```text
-bdbbb07 Tighten Stage 2 session composer
+72699fb Prepare App Store build configuration
 ```
 
 Repository:
