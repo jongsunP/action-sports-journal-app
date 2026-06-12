@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
@@ -25,6 +26,15 @@ import { mockActivityGroups } from '../groups/mockActivityGroups';
 import { mockSessions } from './mockSessions';
 
 import type { AnalysisResult, Session } from '../../types';
+
+const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
+
+type PersistedSessionState = {
+  selectedGroupId?: string;
+  sessions?: Session[];
+  videosBySessionId?: Record<string, SessionVideoAsset>;
+  analysisBySessionId?: Record<string, AnalysisResult>;
+};
 
 export function HomeScreen() {
   const [selectedGroupId, setSelectedGroupId] = useState(
@@ -46,6 +56,80 @@ export function HomeScreen() {
   const [analyzingSessionId, setAnalyzingSessionId] = useState<string | null>(
     null,
   );
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPersistedSessions() {
+      try {
+        const rawValue = await AsyncStorage.getItem(SESSION_STORAGE_KEY);
+
+        if (!rawValue || !isMounted) {
+          return;
+        }
+
+        const parsed = JSON.parse(rawValue) as PersistedSessionState;
+
+        if (Array.isArray(parsed.sessions)) {
+          setSessions(parsed.sessions);
+        }
+
+        if (parsed.selectedGroupId) {
+          setSelectedGroupId(parsed.selectedGroupId);
+        }
+
+        if (parsed.videosBySessionId && typeof parsed.videosBySessionId === 'object') {
+          setVideosBySessionId(parsed.videosBySessionId);
+        }
+
+        if (
+          parsed.analysisBySessionId &&
+          typeof parsed.analysisBySessionId === 'object'
+        ) {
+          setAnalysisBySessionId(parsed.analysisBySessionId);
+        }
+      } catch {
+        Alert.alert(
+          '저장된 세션을 불러오지 못했습니다',
+          '앱은 기본 세션 데이터로 계속 실행됩니다.',
+        );
+      } finally {
+        if (isMounted) {
+          setIsStorageLoaded(true);
+        }
+      }
+    }
+
+    loadPersistedSessions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isStorageLoaded) {
+      return;
+    }
+
+    const persistedState: PersistedSessionState = {
+      selectedGroupId,
+      sessions,
+      videosBySessionId,
+      analysisBySessionId,
+    };
+
+    AsyncStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify(persistedState),
+    ).catch(() => {
+      Alert.alert(
+        '세션 저장에 실패했습니다',
+        '앱을 종료하면 방금 추가한 내용이 남지 않을 수 있습니다.',
+      );
+    });
+  }, [analysisBySessionId, isStorageLoaded, selectedGroupId, sessions, videosBySessionId]);
 
   const selectedGroup =
     mockActivityGroups.find((group) => group.id === selectedGroupId) ??
