@@ -19,8 +19,16 @@ type RemoteAnalysisResponse = {
   sessionId?: unknown;
   status?: unknown;
   summary?: unknown;
+  detectedTrick?: unknown;
+  confidence?: unknown;
   highlights?: unknown;
   highlightScenes?: unknown;
+  strengths?: unknown;
+  improvements?: unknown;
+  coachingObservations?: unknown;
+  observations?: unknown;
+  patternRecognition?: unknown;
+  inferences?: unknown;
   suggestions?: unknown;
   createdAt?: unknown;
 };
@@ -92,8 +100,16 @@ function normalizeRemoteAnalysis(
     sessionId: asString(data.sessionId) ?? sessionId,
     status: data.status === 'failed' ? 'failed' : 'completed',
     summary: asString(data.summary) ?? '분석이 완료되었습니다.',
+    detectedTrick: asString(data.detectedTrick),
+    confidence: asConfidence(data.confidence),
     highlights: asStringArray(data.highlights),
     highlightScenes: asHighlightScenes(data.highlightScenes),
+    strengths: asStringArray(data.strengths),
+    improvements: asStringArray(data.improvements),
+    coachingObservations: asCoachingObservations(data.coachingObservations),
+    observations: asCoachingObservations(data.observations),
+    patternRecognition: asCoachingObservations(data.patternRecognition),
+    inferences: asCoachingObservations(data.inferences),
     suggestions: asStringArray(data.suggestions),
     createdAt: asString(data.createdAt) ?? now,
   };
@@ -121,6 +137,77 @@ function asHighlightScenes(value: unknown): AnalysisResult['highlightScenes'] {
       };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
+
+function asConfidence(value: unknown): AnalysisResult['confidence'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const level = candidate.level;
+
+  if (level !== 'high' && level !== 'medium' && level !== 'low') {
+    return undefined;
+  }
+
+  return {
+    level,
+    reason: asString(candidate.reason),
+  };
+}
+
+function asCoachingObservations(
+  value: unknown,
+): AnalysisResult['coachingObservations'] {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const observations = value
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        return {
+          label: `관찰 ${index + 1}`,
+          detail: item,
+        };
+      }
+
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const confidence = asConfidenceLevel(candidate.confidence);
+
+      return {
+        label:
+          asString(candidate.label) ??
+          asString(candidate.pattern) ??
+          asString(candidate.inference) ??
+          asString(candidate.timestampLabel) ??
+          `관찰 ${index + 1}`,
+        detail:
+          asString(candidate.detail) ??
+          asString(candidate.evidence) ??
+          asString(candidate.impact) ??
+          asString(candidate.coachingImplication) ??
+          asString(candidate.coachingRelevance) ??
+          '',
+        confidence,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> =>
+      Boolean(item && item.detail),
+    );
+
+  return observations.length > 0 ? observations : undefined;
+}
+
+function asConfidenceLevel(value: unknown): 'high' | 'medium' | 'low' | undefined {
+  return value === 'high' || value === 'medium' || value === 'low'
+    ? value
+    : undefined;
 }
 
 async function readRemoteErrorMessage(response: Response): Promise<string | undefined> {

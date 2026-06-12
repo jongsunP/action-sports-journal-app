@@ -147,6 +147,16 @@ export function HomeScreen() {
     (analysis) => analysis.status === 'completed',
   ).length;
   const canRequestRemoteAnalysis = hasConfiguredAnalysisEndpoint();
+  const visibleAnalysisResults = visibleSessions
+    .map((session) => analysisBySessionId[session.id])
+    .filter(
+      (analysis): analysis is AnalysisResult =>
+        Boolean(analysis && analysis.status === 'completed'),
+    );
+  const latestVisibleSession = visibleSessions[0];
+  const latestDetectedTrick = visibleAnalysisResults.find(
+    (analysis) => analysis.detectedTrick,
+  )?.detectedTrick;
 
   const canSaveSession = title.trim().length > 0;
 
@@ -277,10 +287,7 @@ export function HomeScreen() {
         >
           <View style={styles.header}>
             <Text style={styles.kicker}>Action Sports Journal</Text>
-            <Text style={styles.title}>오늘의 세션을 남기고, 영상을 체크하세요.</Text>
-            <Text style={styles.subtitle}>
-              웨이크보드, 스노보드, 스케이트보드 기록을 세션 중심으로 모아봅니다.
-            </Text>
+            <Text style={styles.title}>성장 흐름을 남기는 액션스포츠 저널</Text>
             <View style={styles.metricRow}>
               <MetricItem label="세션" value={sessions.length} />
               <MetricItem label="영상" value={attachedVideoCount} />
@@ -288,10 +295,25 @@ export function HomeScreen() {
             </View>
           </View>
 
+          <View style={styles.progressStrip}>
+            <ProgressItem
+              label="최근 세션"
+              value={
+                latestVisibleSession
+                  ? formatSessionDateTime(latestVisibleSession.occurredAt)
+                  : '기록 없음'
+              }
+            />
+            <ProgressItem
+              label="AI 기록"
+              value={`${visibleAnalysisResults.length}/${visibleSessions.length}`}
+            />
+            <ProgressItem label="최근 트릭" value={latestDetectedTrick ?? '확인 전'} />
+          </View>
+
           <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionLabel}>종목</Text>
-              <Text style={styles.sectionHint}>오늘의 포커스</Text>
             </View>
             <FlatList
               data={mockActivityGroups}
@@ -339,8 +361,7 @@ export function HomeScreen() {
               <View>
                 <Text style={styles.sectionLabel}>세션 피드</Text>
                 <Text style={styles.contextText}>
-                  {selectedGroup?.name ?? '선택된 종목 없음'} ·{' '}
-                  {visibleSessions.length}개 세션
+                  {selectedGroup?.name ?? '선택된 종목 없음'} · 최근 기록순
                 </Text>
               </View>
               <Pressable
@@ -441,40 +462,35 @@ export function HomeScreen() {
             ) : (
               visibleSessions.map((item) => (
                 <View key={item.id} style={styles.sessionRow}>
-                  <View style={styles.sessionMeta}>
-                    <Text style={styles.sessionTitle}>{item.title}</Text>
-                    <Text style={styles.sessionDate}>
-                      {new Date(item.occurredAt).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
-                    </Text>
-                  </View>
-                  {item.notes ? (
-                    <Text style={styles.sessionNotes}>{item.notes}</Text>
-                  ) : null}
-                  <View style={styles.statusRow}>
-                    <StatusPill
-                      active={Boolean(item.videoUri)}
-                      label={item.videoUri ? '영상 있음' : '영상 없음'}
-                    />
+                  <View style={styles.sessionHeaderRow}>
+                    <View style={styles.sessionTitleBlock}>
+                      <Text style={styles.sessionTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.sessionDate}>
+                        {formatSessionDateTime(item.occurredAt)}
+                      </Text>
+                    </View>
                     <StatusPill
                       active={analysisBySessionId[item.id]?.status === 'completed'}
                       label={
                         analysisBySessionId[item.id]?.status === 'completed'
                           ? '체크 완료'
-                          : 'AI 대기'
+                          : item.videoUri
+                            ? '체크 가능'
+                            : '영상 없음'
                       }
                     />
                   </View>
-                  <View style={styles.analysisPanel}>
-                    {!canRequestRemoteAnalysis ? (
-                      <Text style={styles.analysisLabel}>
-                        서버 분석 엔드포인트가 연결되면 AI 체크를 사용할 수 있습니다.
-                      </Text>
-                    ) : null}
+                  {item.notes ? (
+                    <Text style={styles.sessionNotes} numberOfLines={2}>
+                      {item.notes}
+                    </Text>
+                  ) : null}
+                  <View style={styles.sessionActionRow}>
+                    <Text style={styles.sessionMetaText}>
+                      {item.videoUri ? '영상 연결됨' : '영상 미연결'}
+                    </Text>
                     <Pressable
                       accessibilityRole="button"
                       disabled={
@@ -499,6 +515,13 @@ export function HomeScreen() {
                           : 'AI 체크하기'}
                       </Text>
                     </Pressable>
+                  </View>
+                  <View style={styles.analysisPanel}>
+                    {!canRequestRemoteAnalysis ? (
+                      <Text style={styles.analysisLabel}>
+                        분석 서버 endpoint 필요
+                      </Text>
+                    ) : null}
                     {analysisBySessionId[item.id] ? (
                       <AnalysisResultView result={analysisBySessionId[item.id]} />
                     ) : null}
@@ -522,54 +545,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
-    paddingHorizontal: 18,
+    paddingBottom: 28,
+    paddingHorizontal: 16,
   },
   header: {
     backgroundColor: '#101828',
-    borderRadius: 24,
-    marginTop: 10,
-    marginBottom: 18,
+    borderRadius: 18,
+    marginTop: 8,
+    marginBottom: 10,
     overflow: 'hidden',
-    padding: 22,
+    padding: 16,
   },
   kicker: {
     color: '#5eead4',
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 6,
     textTransform: 'uppercase',
   },
   title: {
     color: '#f8fafc',
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: '900',
-    lineHeight: 37,
-  },
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 12,
+    lineHeight: 27,
   },
   metricRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 20,
+    gap: 8,
+    marginTop: 14,
   },
   metricItem: {
     backgroundColor: '#1e293b',
     borderColor: '#334155',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 9,
   },
   metricValue: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
   },
   metricLabel: {
@@ -579,14 +595,38 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textTransform: 'uppercase',
   },
+  progressStrip: {
+    backgroundColor: '#fff',
+    borderColor: '#dbe4ee',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    padding: 10,
+  },
+  progressItem: {
+    flex: 1,
+  },
+  progressLabel: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  progressValue: {
+    color: '#0f172a',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   section: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   sectionTitleRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionHeader: {
     alignItems: 'flex-start',
@@ -596,7 +636,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: '#0f172a',
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '900',
   },
   sectionHint: {
@@ -606,18 +646,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   groupRow: {
-    gap: 12,
+    gap: 8,
     paddingBottom: 4,
   },
   groupChip: {
     backgroundColor: '#fff',
     borderColor: '#dbe4ee',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
-    minHeight: 100,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    width: 178,
+    minHeight: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: 148,
   },
   groupChipSelected: {
     backgroundColor: '#0f766e',
@@ -628,17 +668,17 @@ const styles = StyleSheet.create({
   },
   groupChipTitle: {
     color: '#0f172a',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '900',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   groupChipTitleSelected: {
     color: '#f8fafc',
   },
   groupChipMeta: {
     color: '#64748b',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   groupChipMetaSelected: {
     color: '#cbd5e1',
@@ -652,10 +692,10 @@ const styles = StyleSheet.create({
   composer: {
     backgroundColor: '#fff',
     borderColor: '#dbe4ee',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     marginBottom: 16,
-    padding: 16,
+    padding: 12,
   },
   input: {
     backgroundColor: '#f1f5f9',
@@ -669,7 +709,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   textArea: {
-    minHeight: 90,
+    minHeight: 72,
     textAlignVertical: 'top',
   },
   videoButton: {
@@ -762,19 +802,26 @@ const styles = StyleSheet.create({
   sessionRow: {
     backgroundColor: '#fff',
     borderColor: '#dbe4ee',
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 12,
-    padding: 16,
+    marginBottom: 8,
+    padding: 12,
   },
-  sessionMeta: {
-    marginBottom: 6,
+  sessionHeaderRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  sessionTitleBlock: {
+    flex: 1,
   },
   sessionTitle: {
     color: '#0f172a',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sessionDate: {
     color: '#64748b',
@@ -782,19 +829,24 @@ const styles = StyleSheet.create({
   },
   sessionNotes: {
     color: '#334155',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  statusRow: {
+  sessionActionRow: {
+    alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
+    justifyContent: 'space-between',
+    marginTop: 9,
+  },
+  sessionMetaText: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '700',
   },
   statusPill: {
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   statusPillActive: {
     backgroundColor: '#ccfbf1',
@@ -816,8 +868,8 @@ const styles = StyleSheet.create({
   analysisPanel: {
     borderTopColor: '#e2e8f0',
     borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 10,
+    paddingTop: 10,
   },
   analysisLabel: {
     color: '#64748b',
@@ -827,8 +879,9 @@ const styles = StyleSheet.create({
   analysisButton: {
     alignItems: 'center',
     backgroundColor: '#0f766e',
-    borderRadius: 14,
-    paddingVertical: 11,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   analysisButtonDisabled: {
     backgroundColor: '#94a3b8',
@@ -841,44 +894,49 @@ const styles = StyleSheet.create({
   analysisResult: {
     backgroundColor: '#f0fdfa',
     borderColor: '#99f6e4',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    marginTop: 10,
-    padding: 12,
+    padding: 10,
   },
   analysisResultTitle: {
     color: '#0f172a',
     fontSize: 13,
     fontWeight: '800',
-    marginBottom: 6,
+    marginBottom: 5,
     textTransform: 'uppercase',
   },
   analysisResultText: {
     color: '#334155',
     fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 8,
+    lineHeight: 18,
+    marginBottom: 6,
   },
   analysisResultListItem: {
     color: '#475569',
     fontSize: 12,
     lineHeight: 18,
   },
+  analysisCompactMeta: {
+    color: '#0f766e',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 5,
+  },
   highlightScene: {
     backgroundColor: '#fff',
     borderColor: '#99f6e4',
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 8,
     overflow: 'hidden',
   },
   highlightImage: {
     backgroundColor: '#ccfbf1',
-    height: 140,
+    height: 96,
     width: '100%',
   },
   highlightBody: {
-    padding: 12,
+    padding: 10,
   },
   highlightMeta: {
     color: '#0f766e',
@@ -930,6 +988,17 @@ function MetricItem({ label, value }: { label: string; value: number }) {
   );
 }
 
+function ProgressItem({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.progressItem}>
+      <Text style={styles.progressLabel}>{label}</Text>
+      <Text style={styles.progressValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 function StatusPill({ active, label }: { active: boolean; label: string }) {
   return (
     <View
@@ -957,6 +1026,13 @@ function AnalysisResultView({ result }: { result: AnalysisResult }) {
         {result.status === 'failed' ? '분석 실패' : 'AI 체크 결과'}
       </Text>
       <Text style={styles.analysisResultText}>{result.summary}</Text>
+      {result.detectedTrick || result.confidence ? (
+        <Text style={styles.analysisCompactMeta}>
+          {[result.detectedTrick, formatConfidence(result.confidence)]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
+      ) : null}
       {result.highlightScenes?.map((scene) => (
         <View key={scene.id} style={styles.highlightScene}>
           {scene.imageUri ? (
@@ -969,16 +1045,48 @@ function AnalysisResultView({ result }: { result: AnalysisResult }) {
           </View>
         </View>
       ))}
-      {result.highlights.map((highlight) => (
+      {result.strengths?.slice(0, 2).map((strength) => (
+        <Text key={`strength-${strength}`} style={styles.analysisResultListItem}>
+          강점: {strength}
+        </Text>
+      ))}
+      {result.improvements?.slice(0, 2).map((improvement) => (
+        <Text key={`improvement-${improvement}`} style={styles.analysisResultListItem}>
+          개선: {improvement}
+        </Text>
+      ))}
+      {result.coachingObservations?.slice(0, 2).map((observation) => (
+        <Text key={`${observation.label}-${observation.detail}`} style={styles.analysisResultListItem}>
+          관찰: {observation.label} - {observation.detail}
+        </Text>
+      ))}
+      {result.highlights.slice(0, 3).map((highlight) => (
         <Text key={highlight} style={styles.analysisResultListItem}>
           - {highlight}
         </Text>
       ))}
-      {result.suggestions.map((suggestion) => (
+      {result.suggestions.slice(0, 3).map((suggestion) => (
         <Text key={suggestion} style={styles.analysisResultListItem}>
           - {suggestion}
         </Text>
       ))}
     </View>
   );
+}
+
+function formatSessionDateTime(value: string) {
+  return new Date(value).toLocaleString('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatConfidence(confidence: AnalysisResult['confidence']) {
+  if (!confidence) {
+    return undefined;
+  }
+
+  return `확신도 ${confidence.level}`;
 }

@@ -32,13 +32,32 @@ export type HighlightScene = {
   imageUri?: string;
 };
 
+export type AnalysisConfidence = {
+  level: 'high' | 'medium' | 'low';
+  reason?: string;
+};
+
+export type CoachingObservation = {
+  label: string;
+  detail: string;
+  confidence?: AnalysisConfidence['level'];
+};
+
 export type AnalysisResult = {
   id: ID;
   sessionId: ID;
   status: AnalysisStatus;
   summary: string;
+  detectedTrick?: string;
+  confidence?: AnalysisConfidence;
   highlights: string[];
   highlightScenes?: HighlightScene[];
+  strengths?: string[];
+  improvements?: string[];
+  coachingObservations?: CoachingObservation[];
+  observations?: CoachingObservation[];
+  patternRecognition?: CoachingObservation[];
+  inferences?: CoachingObservation[];
   suggestions: string[];
   createdAt: ISODateString;
 };

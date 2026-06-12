@@ -45,18 +45,19 @@ At the time this checkpoint was updated, local `master` was pushed to
 - Added Session state is now persisted on-device using AsyncStorage.
 - A selected video can be attached to a Session.
 - The local dev analysis server runs on port `8787`.
-- The local dev analysis server currently runs the OpenAI GPT-5.5 wakeboard
-  benchmark path.
-- `/health` confirms `provider: "openai"` and model `gpt-5.5`; actual analysis
-  still requires a local `OPENAI_API_KEY`.
+- The local dev analysis server keeps Gemini as the app-facing analysis path
+  and exposes a parallel OpenAI GPT-5.5 wakeboard benchmark endpoint.
+- `/health` confirms `primaryProvider: "gemini"` and reports OpenAI benchmark
+  configuration. Actual provider comparison still requires local
+  `GEMINI_API_KEY`, `OPENAI_API_KEY`, and the same wakeboard comparison video.
 - The user's iPhone can open `http://10.10.7.17:8787/health` from Safari on
   the same Wi-Fi.
 - EAS preview has the public endpoint variable:
   `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://10.10.7.17:8787/api/analyze-session-video`.
 
 The next validation step is to run the same wakeboard comparison video through
-the OpenAI benchmark server with a real local `OPENAI_API_KEY`, then compare the
-saved JSON artifact against the prior Gemini output.
+Gemini and the OpenAI benchmark endpoint with real local API keys, then compare
+the saved OpenAI JSON artifact against the Gemini output.
 
 ## Implemented Locally
 
@@ -75,9 +76,9 @@ saved JSON artifact against the prior Gemini output.
 - `src/services/ai/analyzeSessionVideo.ts` for the analysis request adapter.
 - Remote-only analysis endpoint hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
 - Mobile mock analysis fallback removed.
-- `dev-server/index.ts` samples uploaded video frames and calls OpenAI GPT-5.5
-  through the Responses API using server-side `OPENAI_API_KEY`; the key must
-  never go into the mobile app.
+- `dev-server/index.ts` keeps `/api/analyze-session-video` as the Gemini-backed
+  endpoint and adds `/api/benchmarks/openai-wakeboard-video` for the OpenAI
+  GPT-5.5 same-video benchmark.
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md` documents the mobile-to-server contract.
 - Highlight scenes must be selected by server-side AI analysis, not guessed by the mobile app.
 - Development API spend target is under KRW 10,000/month with conservative local server limits.
@@ -92,8 +93,10 @@ saved JSON artifact against the prior Gemini output.
 - No App Store Connect upload yet.
 - No completed EAS production build yet.
 - No completed EAS submit yet.
-- End-to-end real OpenAI benchmark feedback from an iPhone-uploaded video still
-  needs a final installed-app test with a real local `OPENAI_API_KEY`.
+- End-to-end real Gemini feedback from an iPhone-uploaded video still needs a
+  final installed-app test with a real local `GEMINI_API_KEY`.
+- The OpenAI GPT-5.5 benchmark still needs the same video and a real local
+  `OPENAI_API_KEY`.
 
 ## Next Recommended Work
 
@@ -106,21 +109,24 @@ selected Session video
 ↓
 local dev-server on Mac
 ↓
-OpenAI GPT-5.5 benchmark
+Gemini analysis plus OpenAI GPT-5.5 benchmark
 ↓
 Korean feedback rendered in app
 ```
 
 Next work:
 
-1. Add local `.env.local` with `OPENAI_API_KEY`.
+1. Add local `.env.local` with `GEMINI_API_KEY` and `OPENAI_API_KEY`.
 2. Run `npm run server:dev`.
-3. Confirm `/health` returns `openaiConfigured: true`.
+3. Confirm `/health` returns `geminiConfigured: true` and OpenAI benchmark
+   `configured: true`.
 4. Add the same wakeboard comparison video Session in the standalone app.
 5. Tap `AI 체크하기`.
-6. Review `dev-artifacts/openai-benchmarks/` for the saved GPT-5.5 JSON output.
-7. Compare the GPT-5.5 output with the prior Gemini result.
-8. If it fails, inspect the dev-server terminal error first.
+6. Confirm Gemini feedback renders in the app.
+7. Run the same video through `/api/benchmarks/openai-wakeboard-video`.
+8. Review `dev-artifacts/openai-benchmarks/` for the saved GPT-5.5 JSON output.
+9. Compare the GPT-5.5 output with the Gemini result.
+10. If it fails, inspect the dev-server terminal error first.
 
 ## Current Priority
 

@@ -23,7 +23,7 @@ preview/internal distribution build.
 Latest known project checkpoint:
 
 ```text
-802bd94 Benchmark OpenAI wakeboard analysis
+699457b Add setup audit guide
 ```
 
 Repository:
@@ -67,12 +67,14 @@ Local path:
 - The mobile app must not guess highlight timestamps; highlight selection belongs to server-side AI analysis.
 - Development API spend target is under KRW 10,000/month.
 - The dev analysis server uses conservative request, file-size, and output-token limits.
-- The dev analysis server currently runs the OpenAI GPT-5.5 wakeboard benchmark
-  path. It samples the whole uploaded video into evenly spaced frames and sends
-  those image inputs through the OpenAI Responses API.
-- On 2026-06-12, `/health` was confirmed locally with `provider: "openai"`,
-  model `gpt-5.5`, and `openaiConfigured: false` because no local
-  `OPENAI_API_KEY` was present in this checkout.
+- The dev analysis server keeps Gemini as the app-facing endpoint at
+  `/api/analyze-session-video`.
+- A parallel OpenAI GPT-5.5 wakeboard benchmark endpoint exists at
+  `/api/benchmarks/openai-wakeboard-video`. It samples the whole uploaded video
+  into evenly spaced frames and sends those image inputs through the OpenAI
+  Responses API.
+- `/health` reports `primaryProvider: "gemini"` plus OpenAI benchmark
+  configuration.
 - The user's iPhone could open `http://10.10.7.17:8787/health` from Safari on
   the same Wi-Fi, confirming LAN access from iPhone to the Mac dev server.
 - EAS preview environment variable was created:
@@ -97,12 +99,13 @@ Use Node 20 or newer when running Expo locally.
 - `docs/CONTINUITY_CHECKPOINT.md`: latest cross-session status checkpoint
 - `docs/STAGE_2_PLAN.md`: Stage 2 plan and scope
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md`: video-to-analysis scope and API contract
-- `docs/DEV_AI_ANALYSIS_SETUP.md`: local OpenAI benchmark setup and spend guardrails
+- `docs/DEV_AI_ANALYSIS_SETUP.md`: local Gemini/OpenAI setup and spend guardrails
+- `docs/OPENAI_BENCHMARK_REPORT.md`: OpenAI vs Gemini benchmark procedure and pending report
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
 - `src/features/sessions/HomeScreen.tsx`: current first screen
 - `src/services/ai/analyzeSessionVideo.ts`: remote analysis request adapter
-- `dev-server/index.ts`: local OpenAI GPT-5.5 benchmark analysis server
+- `dev-server/index.ts`: local Gemini analysis server plus parallel OpenAI GPT-5.5 benchmark endpoint
 - `src/types/index.ts`: initial domain types
 - `eas.json`: EAS preview/internal and production profiles
 - `app.json`: native identifiers, EAS project ID, iOS encryption metadata
@@ -147,7 +150,7 @@ codex
 Suggested first prompt:
 
 ```text
-AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md, docs/DEV_AI_ANALYSIS_SETUP.md를 먼저 읽고, OpenAI GPT-5.5 wakeboard benchmark 구현 상태에서 이어서 진행해줘.
+AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md, docs/DEV_AI_ANALYSIS_SETUP.md, docs/OPENAI_BENCHMARK_REPORT.md를 먼저 읽고, Gemini는 유지한 상태에서 OpenAI GPT-5.5 wakeboard benchmark를 이어서 진행해줘.
 ```
 
 ## How To Run Locally For AI Analysis
@@ -213,19 +216,20 @@ If the Mac LAN IP changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
-Finish validating the actual OpenAI GPT-5.5 wakeboard benchmark:
+Finish validating the Gemini result against the OpenAI GPT-5.5 wakeboard benchmark:
 
-1. Add a local `.env.local` with `OPENAI_API_KEY`.
+1. Add a local `.env.local` with `GEMINI_API_KEY` and `OPENAI_API_KEY`.
 2. Keep `npm run server:dev` running on the Mac.
-3. Confirm `/health` returns `provider: "openai"`, `model: "gpt-5.5"`, and
-   `openaiConfigured: true`.
+3. Confirm `/health` returns `primaryProvider: "gemini"`,
+   `geminiConfigured: true`, and OpenAI benchmark `configured: true`.
 4. Open the standalone Action Sports Journal app.
 5. Add a Session, select the same wakeboard comparison video, and save it.
 6. Tap `AI 체크하기`.
-7. Confirm the app shows real Korean feedback from the OpenAI benchmark server.
-8. Review the saved JSON under `dev-artifacts/openai-benchmarks/`.
-9. Compare it with the previous Gemini result before deciding whether OpenAI
-   should be abandoned for this workflow.
+7. Confirm the app shows real Korean feedback from Gemini.
+8. Run the same video through `/api/benchmarks/openai-wakeboard-video`.
+9. Review the saved JSON under `dev-artifacts/openai-benchmarks/`.
+10. Compare it with the Gemini result before deciding whether OpenAI should be
+    abandoned for this workflow.
 
 Do not jump into authentication, phone login, production storage, or production
 backend architecture until this real analysis loop is confirmed end to end.

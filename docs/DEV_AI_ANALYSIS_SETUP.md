@@ -2,15 +2,17 @@
 
 ## Goal
 
-Enable the local OpenAI GPT-5.5 wakeboard benchmark during solo development
-while keeping API spend intentional and limited.
+Enable local Gemini-backed video analysis and a parallel OpenAI GPT-5.5
+wakeboard benchmark during solo development while keeping API spend intentional
+and limited.
 
 ## User-Owned Setup
 
-These steps must be done in the user's OpenAI API account:
+These steps must be done in the user's Gemini and OpenAI API accounts:
 
-1. Create or select an OpenAI API key.
-2. Check OpenAI API pricing and billing before repeated video tests.
+1. Create or select a Gemini API key for the app-facing development endpoint.
+2. Create or select an OpenAI API key for the parallel benchmark endpoint.
+3. Check Gemini/OpenAI pricing and billing before repeated video tests.
 3. Keep the solo-development monthly spend target around KRW 10,000 while testing.
 4. Store the key only in local `.env.local`.
 
@@ -27,13 +29,20 @@ cp .env.example .env.local
 Then fill:
 
 ```text
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_ANALYSIS_MODEL=gemini-3.5-flash
 OPENAI_API_KEY=your_api_key_here
 OPENAI_ANALYSIS_MODEL=gpt-5.5
 PORT=8787
-MAX_VIDEO_MB=50
+MAX_VIDEO_MB=20
+OPENAI_MAX_VIDEO_MB=50
 DAILY_ANALYSIS_LIMIT=3
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=3
+GEMINI_MAX_OUTPUT_TOKENS=600
+GEMINI_REQUEST_TIMEOUT_MS=120000
+GEMINI_FILE_PROCESSING_TIMEOUT_MS=120000
+GEMINI_FILE_PROCESSING_POLL_MS=2000
 OPENAI_MAX_OUTPUT_TOKENS=3200
 OPENAI_REQUEST_TIMEOUT_MS=240000
 OPENAI_VIDEO_FRAME_COUNT=18
@@ -42,7 +51,8 @@ OPENAI_REASONING_EFFORT=xhigh
 EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://YOUR_COMPUTER_LAN_IP:8787/api/analyze-session-video
 ```
 
-`EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` is not secret. `OPENAI_API_KEY` is secret.
+`EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` is not secret. `GEMINI_API_KEY` and
+`OPENAI_API_KEY` are secret.
 
 For the 2026-06-12 iPhone standalone preview test, the working local endpoint
 was:
@@ -80,9 +90,13 @@ The response should include:
 ```json
 {
   "ok": true,
-  "provider": "openai",
-  "openaiConfigured": true,
-  "model": "gpt-5.5"
+  "primaryProvider": "gemini",
+  "geminiConfigured": true,
+  "geminiModel": "gemini-3.5-flash",
+  "openAiBenchmark": {
+    "configured": true,
+    "model": "gpt-5.5"
+  }
 }
 ```
 
@@ -127,13 +141,16 @@ EAS project ID: f6e1a90a-62fb-4485-9434-ca92a756b8f4
 
 The development server applies these limits by default:
 
-- Max video size: 50 MB
+- Gemini max video size: 20 MB
+- OpenAI benchmark max video size: 50 MB
 - Daily analysis limit: 3 requests
 - Rate limit: 3 requests per minute
-- Max model output: 3200 tokens
-- Request timeout: 240 seconds
-- Sampled video frames: 18
-- Sampled frame width: 1536 px
+- Gemini max model output: 600 tokens
+- Gemini request timeout: 120 seconds
+- OpenAI max model output: 3200 tokens
+- OpenAI request timeout: 240 seconds
+- OpenAI sampled video frames: 18
+- OpenAI sampled frame width: 1536 px
 - Allowed MIME types: `video/mp4`, `video/quicktime`, `video/x-m4v`, `video/mov`
 
 These limits are local development safeguards. Account-level billing controls
@@ -141,15 +158,18 @@ are still the final spend protection.
 
 ## Current Mobile Behavior
 
-- The mobile app does not contain the OpenAI API key.
+- The mobile app does not contain Gemini or OpenAI API keys.
 - The mobile app only calls `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
 - The mobile mock AI analysis fallback has been removed.
 - If the endpoint is missing from the app build, `AI 체크하기` is disabled or
   returns a configuration error.
 - Added Sessions are persisted on-device with AsyncStorage until a real database
   is introduced.
-- The dev server samples frames from the uploaded video and sends those image
-  inputs to OpenAI through the Responses API.
+- `/api/analyze-session-video` remains the Gemini-backed app-facing endpoint.
+- `/api/benchmarks/openai-wakeboard-video` is the parallel OpenAI GPT-5.5
+  wakeboard benchmark endpoint.
+- The OpenAI benchmark samples frames from the uploaded video and sends those
+  image inputs to OpenAI through the Responses API.
 - Successful OpenAI benchmark responses are saved locally under
   `dev-artifacts/openai-benchmarks/`, which is ignored by Git.
 
@@ -162,9 +182,10 @@ are still the final spend protection.
 5. Add a Session with a short video under 20 MB.
 6. Save the Session.
 7. Tap `AI 체크하기`.
-8. Confirm the app renders Korean feedback.
-9. Compare the saved JSON artifact with the previous Gemini result.
-10. If it fails, inspect the dev-server terminal first. The server logs
+8. Confirm the app renders Gemini-backed Korean feedback.
+9. Run the same video through `/api/benchmarks/openai-wakeboard-video`.
+10. Compare the saved OpenAI JSON artifact with the Gemini result.
+11. If it fails, inspect the dev-server terminal first. The server logs
    `Analysis request failed:` with the error message.
 
 ## Product Rule

@@ -174,12 +174,13 @@ ifconfig en0 | awk '/inet / {print $2}'
 
 ## 7. Gemini/OpenAI 키 관리
 
-현재 dev-server는 OpenAI GPT-5.5 wakeboard benchmark 경로입니다.
+현재 dev-server는 Gemini를 앱-facing 분석 경로로 유지하고, OpenAI GPT-5.5
+wakeboard benchmark를 별도 endpoint로 제공합니다.
 
 규칙:
 
+- `GEMINI_API_KEY`는 `.env.local`에만 둡니다.
 - `OPENAI_API_KEY`는 `.env.local`에만 둡니다.
-- Gemini 키가 다시 필요해져도 `GEMINI_API_KEY`는 `.env.local`에만 둡니다.
 - Expo public env var에는 비밀 키를 절대 넣지 않습니다.
 - 모바일 앱에는 OpenAI/Gemini 키를 절대 넣지 않습니다.
 - `.env.local`, `.env`, API 키, 토큰은 Git에 커밋하지 않습니다.
@@ -280,9 +281,10 @@ npx expo install --check
 cp .env.example .env.local
 ```
 
-6. `.env.local`에 `OPENAI_API_KEY`와 현재 Mac LAN IP 기반 endpoint를 채웁니다.
+6. `.env.local`에 `GEMINI_API_KEY`, `OPENAI_API_KEY`, 현재 Mac LAN IP 기반 endpoint를 채웁니다.
 
 ```text
+GEMINI_API_KEY=...
 OPENAI_API_KEY=...
 EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://CURRENT_MAC_LAN_IP:8787/api/analyze-session-video
 ```
@@ -304,9 +306,12 @@ curl http://127.0.0.1:8787/health
 ```json
 {
   "ok": true,
-  "provider": "openai",
-  "openaiConfigured": true,
-  "model": "gpt-5.5"
+  "primaryProvider": "gemini",
+  "geminiConfigured": true,
+  "openAiBenchmark": {
+    "configured": true,
+    "model": "gpt-5.5"
+  }
 }
 ```
 
@@ -373,5 +378,5 @@ ls dev-artifacts/openai-benchmarks
 - TypeScript 검증은 통과했습니다.
 - Expo dependency check는 네트워크 비활성 상태에서 로컬 맵 기준으로 통과했습니다.
 - EAS 계정, preview env, iOS preview build 이력, 내부 배포 iPhone 등록은 확인됐습니다.
-- 현재 `.env.local`은 없으므로 실제 OpenAI benchmark 실행 전 `OPENAI_API_KEY`를 채워야 합니다.
+- 현재 `.env.local`은 로컬 전용 파일입니다. 실제 Gemini 분석과 OpenAI benchmark 실행 전 `GEMINI_API_KEY`와 `OPENAI_API_KEY`를 채워야 합니다.
 - 현재 EAS preview endpoint는 과거 IP `10.10.7.17`을 가리키고 있어 새 Mac/새 네트워크에서는 업데이트 후 재빌드가 필요합니다.

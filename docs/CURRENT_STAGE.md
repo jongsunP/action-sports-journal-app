@@ -39,13 +39,15 @@ http://10.10.7.17:8787/health
 The dev server reported:
 
 ```text
-provider: openai
-model: gpt-5.5
-openaiConfigured: false
+primaryProvider: gemini
+geminiConfigured: false
+openAiBenchmark.configured: false
+openAiBenchmark.model: gpt-5.5
 ```
 
-The OpenAI benchmark server starts successfully, but actual GPT-5.5 analysis
-still needs a local `OPENAI_API_KEY` and the same wakeboard comparison video.
+The server starts successfully with Gemini as the app-facing endpoint and OpenAI
+as a parallel benchmark endpoint. Actual provider comparison still needs local
+`GEMINI_API_KEY`, `OPENAI_API_KEY`, and the same wakeboard comparison video.
 
 ## What Exists
 
@@ -62,7 +64,8 @@ still needs a local `OPENAI_API_KEY` and the same wakeboard comparison video.
 - Video selection through `expo-image-picker`
 - Local on-device Session persistence through AsyncStorage
 - Remote-only AI analysis hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
-- Local OpenAI GPT-5.5 benchmark dev server in `dev-server/index.ts`
+- Local Gemini-backed dev server with a parallel OpenAI GPT-5.5 benchmark
+  endpoint in `dev-server/index.ts`
 - EAS preview environment variable for the dev analysis endpoint
 
 ## What Does Not Exist Yet
@@ -75,14 +78,16 @@ still needs a local `OPENAI_API_KEY` and the same wakeboard comparison video.
 - Production video upload and storage logic
 - Production server-side AI analysis infrastructure
 - End-to-end verification that the latest standalone iPhone build can upload a
-  selected video to the local dev server and render real OpenAI benchmark feedback
+  selected video to the local dev server and render real Gemini feedback
+- Completed same-video comparison between Gemini and OpenAI GPT-5.5 benchmark output
 
 ## Next Recommended Step
 
-Add a local `OPENAI_API_KEY`, keep `npm run server:dev` running, confirm
-`/health` returns `openaiConfigured: true`, then test `AI 체크하기` with the
-same wakeboard comparison video. Review the saved JSON artifact under
-`dev-artifacts/openai-benchmarks/` before comparing with Gemini.
+Add local `GEMINI_API_KEY` and `OPENAI_API_KEY`, keep `npm run server:dev`
+running, confirm `/health` reports both configured, then test `AI 체크하기`
+with Gemini and the same wakeboard video through the OpenAI benchmark endpoint.
+Review the saved JSON artifact under `dev-artifacts/openai-benchmarks/` before
+making provider conclusions.
 
 ## Resume Notes
 
