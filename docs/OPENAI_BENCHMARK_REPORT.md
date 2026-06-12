@@ -53,10 +53,12 @@ session/video-derived analysis.
 The benchmark:
 
 1. Receives the same uploaded wakeboard video as multipart form data.
-2. Samples evenly spaced frames with `ffmpeg-static`.
-3. Sends those frames to GPT-5.5 through the OpenAI Responses API.
-4. Uses a world-class wakeboard coaching prompt.
-5. Requires structured JSON and human-readable coaching output.
+2. Samples broad evenly spaced frames with `ffmpeg-static`.
+3. Uses GPT-5.5 to scout candidate trick/highlight windows.
+4. Samples focused frames inside the selected candidate windows.
+5. Sends those focused frames to GPT-5.5 through the OpenAI Responses API.
+6. Uses a world-class wakeboard coaching prompt.
+7. Requires structured JSON and human-readable coaching output.
 
 The prompt explicitly requires:
 
@@ -69,9 +71,10 @@ The prompt explicitly requires:
 
 ## Current Status
 
-Implementation is ready for a real benchmark run, but the run has not been
-completed in this workspace because the exact comparison video and real local
-API keys are not present in Git.
+Implementation is ready for a real benchmark run. Local `/health` can report
+both Gemini and OpenAI configured when `.env.local` is present, but the same
+comparison video still needs to be run through both providers before making a
+provider decision.
 
 Required local-only inputs:
 
@@ -114,7 +117,8 @@ Run Gemini through the app or by posting the same multipart fields to:
 /api/analyze-session-video
 ```
 
-Run OpenAI benchmark by posting the same multipart fields and same video to:
+Run OpenAI benchmark from the app by opening the same Session detail and tapping
+`GPT 코칭 받기`, or by posting the same multipart fields and same video to:
 
 ```text
 /api/benchmarks/openai-wakeboard-video

@@ -20,6 +20,21 @@ On 2026-06-12, the priority changed from Expo Go validation to installing and
 running Action Sports Journal as a standalone iPhone app through an EAS
 preview/internal distribution build.
 
+On 2026-06-13, the project validated the core AI analysis architecture with a
+real wakeboard video. The recommended direction is:
+
+```text
+Video
+↓
+Gemini Evidence Extraction
+↓
+User Confirmation
+↓
+Coaching Engine
+↓
+Stored Session Intelligence
+```
+
 Latest known project checkpoint:
 
 ```text
@@ -70,15 +85,68 @@ Local path:
 - The dev analysis server keeps Gemini as the app-facing endpoint at
   `/api/analyze-session-video`.
 - A parallel OpenAI GPT-5.5 wakeboard benchmark endpoint exists at
-  `/api/benchmarks/openai-wakeboard-video`. It samples the whole uploaded video
-  into evenly spaced frames and sends those image inputs through the OpenAI
-  Responses API.
+  `/api/benchmarks/openai-wakeboard-video`. It first samples broad frames, asks
+  GPT-5.5 to scout candidate highlight windows, then samples focused frames
+  inside those windows for the final coaching response.
+- The app has a Session detail flow that can request Gemini coaching and GPT
+  benchmark coaching for the same locally persisted Session/video.
 - `/health` reports `primaryProvider: "gemini"` plus OpenAI benchmark
   configuration.
+- Real Gemini video analysis is working through the local server-mediated path.
+- The OpenAI GPT benchmark path is working for same-video comparison.
+- GPT coaching/report quality improved after the benchmark pipeline moved to
+  richer motion context.
+- Gemini evidence extraction is implemented at `/api/extract-session-evidence`.
+- The app supports a user-confirmed trick flow, stored separately from the
+  AI-estimated trick.
+- Motion-aware dense sampling is implemented for the OpenAI benchmark path:
+  broad scan first, then focused frame extraction around the action window.
+- Gemini evidence now reports model quality mode and requires user confirmation
+  when Flash-Lite fallback, partial recovery, low confidence, or internal
+  consistency warnings are present.
+- A lightweight domain consistency validation layer flags obvious contradictions
+  such as heelside approach plus Front Roll classification before coaching.
 - The user's iPhone could open `http://10.10.7.17:8787/health` from Safari on
   the same Wi-Fi, confirming LAN access from iPhone to the Mac dev server.
 - EAS preview environment variable was created:
   `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://10.10.7.17:8787/api/analyze-session-video`.
+
+## Today's Conclusions
+
+2026-06-13 was an architecture validation day.
+
+- AI coaching quality and exact trick recognition are separate problems.
+- GPT is strong at coaching/report generation when it receives enough motion
+  context and rider intent.
+- Gemini is currently stronger for real video/motion evidence extraction.
+- Exact trick recognition is not reliable enough to trust without user
+  confirmation.
+- Motion-aware analysis is significantly better than uniform frame sampling for
+  wakeboard clips because the important evidence is concentrated from edge load
+  and takeoff through airborne rotation and landing.
+- Flash-Lite fallback is availability/degraded mode only, not a quality
+  benchmark for trick recognition.
+- After increasing `GEMINI_EVIDENCE_MAX_OUTPUT_TOKENS` to `6000`, Gemini
+  evidence JSON completed normally again (`finishReason=STOP`) and the UI
+  showed all structured fields.
+- Repeated tests with the same intended Back Roll video now tend to classify
+  within the plausible Back Roll / Tantrum neighborhood rather than producing
+  obviously unrelated tricks. Exact Back Roll vs Tantrum distinction is still
+  not reliable enough to bypass user confirmation.
+- Evidence prompt was adjusted to prioritize trick mechanics over landing
+  outcome: approach, edge pattern, takeoff mechanics, shoulder/hip movement,
+  rotation axis, and body orientation during inversion. This made the repeated
+  Back Roll tests noticeably better. Landing/crash is now treated as secondary
+  evidence because a failed landing does not change the intended trick identity.
+
+Recommended next direction:
+
+```text
+Gemini = primary video/motion/trick evidence extractor
+GPT = coaching/reporting engine after evidence and rider intent are confirmed
+```
+
+Do not invest further in GPT-only trick recognition for now.
 
 ## Current Tech Versions
 
@@ -216,6 +284,23 @@ If the Mac LAN IP changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
+Before adding product features, continue validating the evidence-first loop:
+
+1. Run the same wakeboard video through Gemini evidence extraction when the
+   primary Gemini model is available.
+2. Confirm or correct the intended trick in the app.
+3. Compare Gemini vs GPT coaching quality after both receive the confirmed
+   trick intent.
+4. Preserve evidence, confidence, uncertainty, model, and user-confirmed trick
+   as future Session intelligence.
+
+Open questions:
+
+- Long-term Gemini availability and 503 reliability.
+- GPT vs Gemini coaching quality after confirmed trick input.
+- How the evidence schema should evolve without becoming a hard-coded trick DB.
+- How to turn stored Session intelligence into user progression analysis.
+
 Finish validating the Gemini result against the OpenAI GPT-5.5 wakeboard benchmark:
 
 1. Add a local `.env.local` with `GEMINI_API_KEY` and `OPENAI_API_KEY`.
@@ -224,9 +309,9 @@ Finish validating the Gemini result against the OpenAI GPT-5.5 wakeboard benchma
    `geminiConfigured: true`, and OpenAI benchmark `configured: true`.
 4. Open the standalone Action Sports Journal app.
 5. Add a Session, select the same wakeboard comparison video, and save it.
-6. Tap `AI 체크하기`.
+6. Open the Session detail and tap `Gemini 코칭 받기`.
 7. Confirm the app shows real Korean feedback from Gemini.
-8. Run the same video through `/api/benchmarks/openai-wakeboard-video`.
+8. Tap `GPT 코칭 받기` for the same Session/video.
 9. Review the saved JSON under `dev-artifacts/openai-benchmarks/`.
 10. Compare it with the Gemini result before deciding whether OpenAI should be
     abandoned for this workflow.

@@ -20,11 +20,11 @@ prototype works without backend, database, or authentication.
 
 Stage 3 has moved from mock analysis to real server-mediated analysis. The
 mobile app can select a video for a new Session, attach that video URI to the
-Session, and request an analysis check through
-`EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`. The mobile mock analysis fallback has been
-removed.
+Session, and request analysis through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`. The
+mobile mock analysis fallback has been removed.
 
-The app can render AI-provided highlight scene cards, but it does not infer highlight timestamps locally.
+The app can render AI-provided highlight scene cards, but it does not infer
+highlight timestamps locally.
 
 Development API usage should stay under KRW 10,000/month. The local dev server has conservative limits for file size, daily requests, rate limiting, and output tokens.
 
@@ -36,7 +36,7 @@ dev-server was confirmed reachable from the iPhone at:
 http://10.10.7.17:8787/health
 ```
 
-The dev server reported:
+Earlier validation without local keys reported:
 
 ```text
 primaryProvider: gemini
@@ -46,8 +46,66 @@ openAiBenchmark.model: gpt-5.5
 ```
 
 The server starts successfully with Gemini as the app-facing endpoint and OpenAI
-as a parallel benchmark endpoint. Actual provider comparison still needs local
-`GEMINI_API_KEY`, `OPENAI_API_KEY`, and the same wakeboard comparison video.
+as a parallel benchmark endpoint. The current local workspace can report both
+`geminiConfigured: true` and OpenAI benchmark `configured: true` when
+`.env.local` is present. Do not commit or paste those local keys.
+
+On 2026-06-13, the real wakeboard-video architecture was validated:
+
+- Gemini real video analysis works.
+- OpenAI benchmark analysis works.
+- GPT coaching/report quality improved after richer motion-aware sampling.
+- Gemini evidence extraction is implemented.
+- User-confirmed trick flow is implemented.
+- Motion-aware dense sampling is implemented for the OpenAI benchmark path.
+- Gemini Flash-Lite fallback is treated as degraded mode only.
+- Domain consistency warnings now prevent internally inconsistent AI estimates
+  from proceeding as reliable coaching facts.
+
+Current recommended architecture:
+
+```text
+Video
+↓
+Gemini Evidence Extraction
+↓
+User Confirmation
+↓
+Coaching Engine
+↓
+Stored Session Intelligence
+```
+
+## Today's Conclusions
+
+AI coaching quality and exact trick recognition are separate problems. GPT is
+strong at coaching/report generation, but Gemini is currently stronger for
+video and motion evidence extraction. User confirmation is required because
+exact trick recognition is not yet reliable enough to trust automatically.
+Motion-aware analysis is significantly better than uniform frame sampling for
+wakeboard clips because the decisive sequence is usually edge load, takeoff,
+pop, airborne rotation, and landing.
+
+The latest repeated Back Roll video tests show a better failure mode: Gemini
+now generally stays in the plausible Back Roll/Tantrum-family range instead of
+returning obviously unrelated tricks. However, exact trick naming is still not
+reliable enough to skip user confirmation. After setting
+`GEMINI_EVIDENCE_MAX_OUTPUT_TOKENS=6000`, the latest evidence response completed
+normally and the app displayed all structured evidence fields.
+
+The evidence prompt was then tightened to classify trick identity from motion
+mechanics before landing outcome: approach, edge pattern, takeoff mechanics,
+shoulder/hip movement, rotation axis, and body orientation during inversion.
+The user reported this made the Back Roll evidence result much better.
+Landing/crash is now explicitly secondary because a crashed HS Back Roll is
+still an HS Back Roll attempt.
+
+The recommended split is:
+
+```text
+Gemini = primary video/motion/trick evidence extractor
+GPT = coaching/reporting engine after confirmed rider intent
+```
 
 ## What Exists
 
@@ -66,7 +124,15 @@ as a parallel benchmark endpoint. Actual provider comparison still needs local
 - Remote-only AI analysis hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
 - Local Gemini-backed dev server with a parallel OpenAI GPT-5.5 benchmark
   endpoint in `dev-server/index.ts`
+- Gemini evidence endpoint at `/api/extract-session-evidence`
+- User confirmation UI for AI-estimated trick candidates
+- Normalized evidence fields for trick candidate, approach, rotation, landing,
+  evidence windows, observations, confidence, uncertainty, model, quality mode,
+  and consistency warnings
+- Motion-aware dense sampling in the OpenAI benchmark path
 - EAS preview environment variable for the dev analysis endpoint
+- In-app Session detail flow for requesting Gemini coaching and GPT benchmark
+  coaching against the same locally persisted Session/video
 
 ## What Does Not Exist Yet
 
@@ -77,17 +143,30 @@ as a parallel benchmark endpoint. Actual provider comparison still needs local
 - RAG
 - Production video upload and storage logic
 - Production server-side AI analysis infrastructure
-- End-to-end verification that the latest standalone iPhone build can upload a
-  selected video to the local dev server and render real Gemini feedback
-- Completed same-video comparison between Gemini and OpenAI GPT-5.5 benchmark output
+- Production-quality AI pipeline from confirmed Gemini evidence into GPT
+  coaching
+- Long-term model availability strategy for Gemini 503/high-demand periods
+- Evidence schema evolution beyond the current lightweight prototype
+- Stored user progression analysis across Sessions
 
 ## Next Recommended Step
 
-Add local `GEMINI_API_KEY` and `OPENAI_API_KEY`, keep `npm run server:dev`
-running, confirm `/health` reports both configured, then test `AI 체크하기`
-with Gemini and the same wakeboard video through the OpenAI benchmark endpoint.
-Review the saved JSON artifact under `dev-artifacts/openai-benchmarks/` before
-making provider conclusions.
+Do not add unrelated product features yet. The next technical step is to test
+the evidence-first coaching loop:
+
+1. Run Gemini evidence extraction on the same wakeboard video with the primary
+   Gemini model, not Flash-Lite degraded mode.
+2. Confirm or correct the intended trick in the app.
+3. Compare GPT vs Gemini coaching quality after the confirmed trick is supplied.
+4. Decide the first stored Session intelligence shape from evidence,
+   confirmation, coaching, confidence, and uncertainty.
+
+Open questions:
+
+- Long-term Gemini availability and 503 reliability.
+- GPT vs Gemini quality after confirmed trick input.
+- Evidence schema evolution without a hard-coded full trick database.
+- User progression analysis across repeated Sessions.
 
 ## Resume Notes
 

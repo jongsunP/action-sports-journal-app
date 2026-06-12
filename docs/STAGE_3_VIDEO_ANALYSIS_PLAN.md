@@ -26,13 +26,16 @@ The mobile app can now:
 4. Select one video from the photo library.
 5. Save a local Session with `videoUri`.
 6. Persist added Session state on-device with AsyncStorage.
-7. Tap `AI 체크하기`.
+7. Open the Session detail.
+8. Tap `Gemini 코칭 받기`.
 8. Send the selected video file to the local dev-server through
    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
 9. The app-facing dev-server endpoint sends the uploaded video to Gemini.
 10. A separate benchmark endpoint can send sampled frames to OpenAI GPT-5.5 for
     same-video comparison.
-11. Render the returned `AnalysisResult`.
+11. Tap `GPT 코칭 받기` to run the same Session/video through the benchmark path.
+12. Render and persist the returned `AnalysisResult` objects locally for
+    side-by-side review.
 
 ## Current Implementation
 
@@ -107,12 +110,14 @@ The app-facing server-side flow is:
 The parallel OpenAI benchmark flow is:
 
 1. Receive the same uploaded video through `/api/benchmarks/openai-wakeboard-video`.
-2. Extract evenly spaced frames across the video with `ffmpeg-static`.
-3. Send the sampled frames plus session metadata to GPT-5.5 through the OpenAI
+2. Extract broad evenly spaced frames across the video with `ffmpeg-static`.
+3. Ask GPT-5.5 to scout candidate trick/highlight windows.
+4. Extract focused frames inside the selected candidate windows.
+5. Send the focused frames plus session metadata to GPT-5.5 through the OpenAI
    Responses API.
-4. Ask for strict structured JSON and human-readable coaching output with
+6. Ask for strict structured JSON and human-readable coaching output with
    observations, pattern recognition, inferences, confidence, and self-critique.
-5. Save the benchmark artifact locally for Gemini comparison.
+7. Save the benchmark artifact locally for Gemini comparison.
 
 Gemini and OpenAI API keys must stay on the server. The mobile app only sends
 video/session data to the BFF endpoint.
@@ -127,10 +132,12 @@ The development server defaults are intentionally conservative:
 - `OPENAI_MAX_VIDEO_MB=50`
 - `DAILY_ANALYSIS_LIMIT=3`
 - `RATE_LIMIT_MAX_REQUESTS=3`
-- `OPENAI_MAX_OUTPUT_TOKENS=3200`
+- `OPENAI_MAX_OUTPUT_TOKENS=8000`
 - `OPENAI_REQUEST_TIMEOUT_MS=240000`
 - `OPENAI_VIDEO_FRAME_COUNT=18`
+- `OPENAI_FOCUSED_VIDEO_FRAME_COUNT=24`
 - `OPENAI_VIDEO_FRAME_WIDTH=1536`
+- `OPENAI_REASONING_EFFORT=medium`
 
 Also set account-level billing safeguards where available. The app/server
 guardrails reduce accidental spend, but account-level billing controls are the
@@ -161,7 +168,8 @@ provider conclusions. This does not replace the Gemini app-facing endpoint.
    `geminiConfigured: true`, and OpenAI benchmark `configured: true`.
 4. Test from the standalone iPhone app with the same wakeboard comparison video.
 5. Confirm real Gemini-backed Korean feedback renders in the app.
-6. Run the same video through the OpenAI benchmark endpoint.
-7. Review the saved benchmark artifact under `dev-artifacts/openai-benchmarks/`.
+6. Run the same saved Session/video through the GPT benchmark button.
+7. Review the app-rendered GPT result and the saved benchmark artifact under
+   `dev-artifacts/openai-benchmarks/`.
 8. Only after that, decide how to persist Sessions, videos, and AnalysisResults
    beyond local device storage.
