@@ -39,8 +39,8 @@ http://10.10.7.17:8787/health
 The dev server reported:
 
 ```text
-openAiConfigured: true
-model: gpt-5-mini
+geminiConfigured: true
+model: gemini-3.5-flash
 ```
 
 A newer EAS preview build was started after adding the EAS preview endpoint
@@ -62,7 +62,7 @@ verify that build on the iPhone.
 - Video selection through `expo-image-picker`
 - Local on-device Session persistence through AsyncStorage
 - Remote-only AI analysis hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
-- Local OpenAI-backed dev server in `dev-server/index.ts`
+- Local Gemini-backed dev server in `dev-server/index.ts`
 - EAS preview environment variable for the dev analysis endpoint
 
 ## What Does Not Exist Yet
@@ -73,9 +73,9 @@ verify that build on the iPhone.
 - Calendar
 - RAG
 - Production video upload and storage logic
-- Production server-side OpenAI analysis infrastructure
+- Production server-side Gemini analysis infrastructure
 - End-to-end verification that the latest standalone iPhone build can upload a
-  selected video to the local dev server and render real OpenAI feedback
+  selected video to the local dev server and render real Gemini feedback
 
 ## Next Recommended Step
 

@@ -1,20 +1,25 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
+import { createPartFromUri, GoogleGenAI, Type } from '@google/genai';
 import multer from 'multer';
-import OpenAI from 'openai';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const port = Number(process.env.PORT ?? 8787);
-const model = process.env.OPENAI_ANALYSIS_MODEL ?? 'gpt-5.4-mini';
+const model = process.env.GEMINI_ANALYSIS_MODEL ?? 'gemini-3.5-flash';
 const maxVideoBytes = readNumberEnv('MAX_VIDEO_MB', 20) * 1024 * 1024;
 const dailyAnalysisLimit = readNumberEnv('DAILY_ANALYSIS_LIMIT', 3);
 const rateLimitWindowMs = readNumberEnv('RATE_LIMIT_WINDOW_MS', 60_000);
 const rateLimitMaxRequests = readNumberEnv('RATE_LIMIT_MAX_REQUESTS', 3);
-const maxOutputTokens = readNumberEnv('OPENAI_MAX_OUTPUT_TOKENS', 600);
-const requestTimeoutMs = readNumberEnv('OPENAI_REQUEST_TIMEOUT_MS', 120_000);
+const maxOutputTokens = readNumberEnv('GEMINI_MAX_OUTPUT_TOKENS', 600);
+const requestTimeoutMs = readNumberEnv('GEMINI_REQUEST_TIMEOUT_MS', 120_000);
+const fileProcessingTimeoutMs = readNumberEnv('GEMINI_FILE_PROCESSING_TIMEOUT_MS', 120_000);
+const fileProcessingPollMs = readNumberEnv('GEMINI_FILE_PROCESSING_POLL_MS', 2_000);
 const allowedVideoMimeTypes = new Set([
   'video/mp4',
   'video/quicktime',
@@ -48,7 +53,7 @@ app.use(rateLimit);
 app.get('/health', (_request, response) => {
   response.json({
     ok: true,
-    openAiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     model,
     spendPolicy: 'development budget target: under KRW 10,000/month',
     limits: {
@@ -58,6 +63,8 @@ app.get('/health', (_request, response) => {
       rateLimitMaxRequests,
       maxOutputTokens,
       requestTimeoutMs,
+      fileProcessingTimeoutMs,
+      fileProcessingPollMs,
     },
   });
 });
@@ -74,9 +81,9 @@ app.post('/api/analyze-session-video', upload.single('video'), async (request, r
       return;
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       response.status(500).json({
-        error: 'OPENAI_API_KEY is not configured on the server.',
+        error: 'GEMINI_API_KEY is not configured on the server.',
       });
       return;
     }
@@ -99,15 +106,15 @@ app.post('/api/analyze-session-video', upload.single('video'), async (request, r
     const notes = getField(request.body.notes, '');
     const occurredAt = getField(request.body.occurredAt, new Date().toISOString());
 
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    const client = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
     });
 
-    const uploadedFile = await client.files.create({
-      file: new File([new Uint8Array(request.file.buffer)], request.file.originalname, {
-        type: request.file.mimetype || 'video/quicktime',
-      }),
-      purpose: 'vision',
+    const uploadedFile = await uploadVideoForGemini({
+      client,
+      buffer: request.file.buffer,
+      mimeType: request.file.mimetype || 'video/quicktime',
+      originalName: request.file.originalname,
     });
 
     const prompt = buildAnalysisPrompt({
@@ -119,73 +126,22 @@ app.post('/api/analyze-session-video', upload.single('video'), async (request, r
     });
 
     const result = await withTimeout(
-      client.responses.create({
+      client.models.generateContent({
         model,
-        max_output_tokens: maxOutputTokens,
-        input: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text: prompt,
-              },
-              {
-                type: 'input_file',
-                file_id: uploadedFile.id,
-              },
-            ],
-          },
+        contents: [
+          createPartFromUri(uploadedFile.uri ?? '', uploadedFile.mimeType ?? request.file.mimetype),
+          prompt,
         ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'session_video_analysis',
-            strict: true,
-            schema: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                summary: { type: 'string' },
-                highlights: {
-                  type: 'array',
-                  items: { type: 'string' },
-                },
-                highlightScenes: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    additionalProperties: false,
-                    properties: {
-                      id: { type: 'string' },
-                      timestampLabel: { type: 'string' },
-                      title: { type: 'string' },
-                      description: { type: 'string' },
-                      imageUri: { type: ['string', 'null'] },
-                    },
-                    required: [
-                      'id',
-                      'timestampLabel',
-                      'title',
-                      'description',
-                      'imageUri',
-                    ],
-                  },
-                },
-                suggestions: {
-                  type: 'array',
-                  items: { type: 'string' },
-                },
-              },
-              required: ['summary', 'highlights', 'highlightScenes', 'suggestions'],
-            },
-          },
+        config: {
+          maxOutputTokens,
+          responseMimeType: 'application/json',
+          responseSchema: analysisResponseSchema,
         },
       }),
       requestTimeoutMs,
     );
 
-    const analysis = parseAnalysis(result.output_text);
+    const analysis = parseAnalysis(result.text ?? '');
     dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
 
     response.json({
@@ -255,12 +211,93 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+async function uploadVideoForGemini({
+  client,
+  buffer,
+  mimeType,
+  originalName,
+}: {
+  client: GoogleGenAI;
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
+}) {
+  const tempDir = await mkdtemp(join(tmpdir(), 'asj-video-'));
+  const filePath = join(tempDir, originalName || `session-video${extensionForMimeType(mimeType)}`);
+
+  try {
+    await writeFile(filePath, buffer);
+
+    const uploadedFile = await client.files.upload({
+      file: filePath,
+      config: {
+        displayName: originalName,
+        mimeType,
+      },
+    });
+
+    if (!uploadedFile.name) {
+      throw new Error('Gemini did not return a file name for the uploaded video.');
+    }
+
+    const activeFile = await waitForGeminiFileActive(client, uploadedFile.name);
+
+    if (!activeFile.uri) {
+      throw new Error('Gemini did not return a file URI for the uploaded video.');
+    }
+
+    return activeFile;
+  } finally {
+    await rm(tempDir, { force: true, recursive: true });
+  }
+}
+
+async function waitForGeminiFileActive(client: GoogleGenAI, name: string) {
+  const deadline = Date.now() + fileProcessingTimeoutMs;
+
+  while (Date.now() < deadline) {
+    const file = await client.files.get({ name });
+
+    if (file.state === 'ACTIVE') {
+      return file;
+    }
+
+    if (file.state === 'FAILED') {
+      throw new Error(
+        `Gemini video processing failed: ${file.error?.message ?? 'unknown error'}`,
+      );
+    }
+
+    await sleep(fileProcessingPollMs);
+  }
+
+  throw new Error('Gemini video processing timed out before the file became ACTIVE.');
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+function extensionForMimeType(mimeType: string) {
+  if (mimeType === 'video/mp4') {
+    return '.mp4';
+  }
+
+  if (mimeType === 'video/x-m4v') {
+    return '.m4v';
+  }
+
+  return '.mov';
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
 
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
     timeout = setTimeout(() => {
-      reject(new Error('OpenAI analysis timed out.'));
+      reject(new Error('Gemini analysis timed out.'));
     }, timeoutMs);
   });
 
@@ -308,27 +345,127 @@ function buildAnalysisPrompt({
   ].join('\n');
 }
 
+type GeminiAnalysisPayload = {
+  summary: string;
+  highlights: string[];
+  highlightScenes: Array<{
+    id: string;
+    timestampLabel: string;
+    title: string;
+    description: string;
+    imageUri: string | null;
+  }>;
+  suggestions: string[];
+};
+
 function parseAnalysis(outputText: string) {
-  const parsed = JSON.parse(outputText) as {
-    summary: string;
-    highlights: string[];
-    highlightScenes: Array<{
-      id: string;
-      timestampLabel: string;
-      title: string;
-      description: string;
-      imageUri: string | null;
-    }>;
-    suggestions: string[];
-  };
+  let parsed: GeminiAnalysisPayload;
+
+  try {
+    parsed = JSON.parse(extractJsonObject(outputText)) as GeminiAnalysisPayload;
+  } catch (error) {
+    console.error('Gemini returned invalid JSON:', outputText.slice(0, 1000));
+
+    return {
+      summary: fallbackSummary(outputText),
+      highlights: ['영상 분석 응답을 받았지만 JSON 형식이 깨져 간단 요약으로 표시합니다.'],
+      highlightScenes: [],
+      suggestions: ['다시 분석을 실행하거나, 더 짧은 영상을 사용해 보세요.'],
+    };
+  }
+
+  return normalizeAnalysis(parsed);
+}
+
+function extractJsonObject(outputText: string) {
+  const trimmed = outputText.trim();
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const jsonText = fencedMatch?.[1]?.trim() ?? trimmed;
+  const start = jsonText.indexOf('{');
+  const end = jsonText.lastIndexOf('}');
+
+  if (start === -1 || end === -1 || end <= start) {
+    return jsonText;
+  }
+
+  return jsonText.slice(start, end + 1);
+}
+
+function normalizeAnalysis(parsed: Partial<GeminiAnalysisPayload>) {
+  const highlightScenes = Array.isArray(parsed.highlightScenes)
+    ? parsed.highlightScenes
+        .filter((scene) => scene && typeof scene === 'object')
+        .map((scene, index) => ({
+          id: typeof scene.id === 'string' ? scene.id : `scene-${index + 1}`,
+          timestampLabel:
+            typeof scene.timestampLabel === 'string' ? scene.timestampLabel : '확인 필요',
+          title: typeof scene.title === 'string' ? scene.title : '하이라이트',
+          description:
+            typeof scene.description === 'string'
+              ? scene.description
+              : '영상에서 확인된 장면입니다.',
+          imageUri: scene.imageUri ?? undefined,
+        }))
+    : [];
 
   return {
-    summary: parsed.summary,
-    highlights: parsed.highlights,
-    highlightScenes: parsed.highlightScenes.map((scene) => ({
-      ...scene,
-      imageUri: scene.imageUri ?? undefined,
-    })),
-    suggestions: parsed.suggestions,
+    summary: typeof parsed.summary === 'string' ? parsed.summary : '영상 분석 결과를 받았습니다.',
+    highlights: normalizeStringArray(parsed.highlights, [
+      '영상에서 주요 움직임을 확인했습니다.',
+    ]),
+    highlightScenes,
+    suggestions: normalizeStringArray(parsed.suggestions, [
+      '같은 구간을 한 번 더 촬영해 비교해 보세요.',
+    ]),
   };
 }
+
+function normalizeStringArray(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const strings = value.filter((item): item is string => typeof item === 'string');
+
+  return strings.length > 0 ? strings : fallback;
+}
+
+function fallbackSummary(outputText: string) {
+  const normalized = outputText.replace(/\s+/g, ' ').trim();
+
+  if (!normalized) {
+    return '영상 분석 응답을 받았지만 표시할 수 있는 텍스트가 비어 있습니다.';
+  }
+
+  return normalized.length > 220 ? `${normalized.slice(0, 220)}...` : normalized;
+}
+
+const analysisResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    summary: { type: Type.STRING },
+    highlights: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    highlightScenes: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          id: { type: Type.STRING },
+          timestampLabel: { type: Type.STRING },
+          title: { type: Type.STRING },
+          description: { type: Type.STRING },
+          imageUri: { type: Type.STRING, nullable: true },
+        },
+        required: ['id', 'timestampLabel', 'title', 'description', 'imageUri'],
+      },
+    },
+    suggestions: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+  },
+  required: ['summary', 'highlights', 'highlightScenes', 'suggestions'],
+};

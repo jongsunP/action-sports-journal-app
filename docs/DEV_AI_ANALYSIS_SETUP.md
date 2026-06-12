@@ -1,18 +1,18 @@
-# Development AI Analysis Setup
+# Development Video Analysis Setup
 
 ## Goal
 
-Enable real OpenAI-backed analysis during solo development while keeping API spend under KRW 10,000/month.
+Enable real Gemini-backed video analysis during solo development while keeping
+API spend under KRW 10,000/month.
 
 ## User-Owned Setup
 
-These steps must be done in the user's OpenAI Platform account:
+These steps must be done in the user's Google AI Studio / Gemini API account:
 
-1. Open `https://platform.openai.com/usage` to monitor API usage.
-2. Open `https://platform.openai.com/settings/organization/billing` to manage API billing.
-3. Set a monthly API budget around `$5-$7` while testing alone.
-4. Create an API key in OpenAI Platform.
-5. Store the key only in local `.env.local`.
+1. Open `https://aistudio.google.com/` and create or select a Gemini API key.
+2. Check Gemini API pricing and billing before repeated video tests.
+3. Keep the solo-development monthly spend target around `$5-$7` while testing.
+4. Store the key only in local `.env.local`.
 
 Do not paste API keys into chat, source files, docs, GitHub, or Expo public env vars.
 
@@ -27,19 +27,21 @@ cp .env.example .env.local
 Then fill:
 
 ```text
-OPENAI_API_KEY=your_api_key_here
-OPENAI_ANALYSIS_MODEL=gpt-5-mini
+GEMINI_API_KEY=your_api_key_here
+GEMINI_ANALYSIS_MODEL=gemini-3.5-flash
 PORT=8787
 MAX_VIDEO_MB=20
 DAILY_ANALYSIS_LIMIT=3
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=3
-OPENAI_MAX_OUTPUT_TOKENS=600
-OPENAI_REQUEST_TIMEOUT_MS=120000
+GEMINI_MAX_OUTPUT_TOKENS=600
+GEMINI_REQUEST_TIMEOUT_MS=120000
+GEMINI_FILE_PROCESSING_TIMEOUT_MS=120000
+GEMINI_FILE_PROCESSING_POLL_MS=2000
 EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://YOUR_COMPUTER_LAN_IP:8787/api/analyze-session-video
 ```
 
-`EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` is not secret. `OPENAI_API_KEY` is secret.
+`EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` is not secret. `GEMINI_API_KEY` is secret.
 
 For the 2026-06-12 iPhone standalone preview test, the working local endpoint
 was:
@@ -77,7 +79,7 @@ The response should include:
 ```json
 {
   "ok": true,
-  "openAiConfigured": true
+  "geminiConfigured": true
 }
 ```
 
@@ -127,19 +129,24 @@ The development server applies these limits by default:
 - Rate limit: 3 requests per minute
 - Max model output: 600 tokens
 - Request timeout: 120 seconds
+- Gemini file processing wait timeout: 120 seconds
+- Gemini file processing polling interval: 2 seconds
 - Allowed MIME types: `video/mp4`, `video/quicktime`, `video/x-m4v`, `video/mov`
 
-These limits are local development safeguards. The OpenAI Platform monthly budget is still the account-level protection.
+These limits are local development safeguards. Account-level billing controls
+are still the final spend protection.
 
 ## Current Mobile Behavior
 
-- The mobile app does not contain the OpenAI API key.
+- The mobile app does not contain the Gemini API key.
 - The mobile app only calls `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
 - The mobile mock AI analysis fallback has been removed.
 - If the endpoint is missing from the app build, `AI 체크하기` is disabled or
   returns a configuration error.
 - Added Sessions are persisted on-device with AsyncStorage until a real database
   is introduced.
+- The dev server sends the uploaded video file to Gemini Video Understanding
+  through the Gemini Files API. It does not extract arbitrary frames locally.
 
 ## Test Procedure
 

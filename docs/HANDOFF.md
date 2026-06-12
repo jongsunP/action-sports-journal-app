@@ -65,10 +65,10 @@ Local path:
   fails with a clear configuration error rather than returning fake feedback.
 - The app can display AI-provided highlight scenes with image, timestamp, and description.
 - The mobile app must not guess highlight timestamps; highlight selection belongs to server-side AI analysis.
-- Development OpenAI API spend target is under KRW 10,000/month.
+- Development Gemini API spend target is under KRW 10,000/month.
 - The dev analysis server uses conservative request, file-size, and output-token limits.
 - The dev analysis server was confirmed running on port `8787` with
-  `/health` returning `openAiConfigured: true` and model `gpt-5-mini`.
+  `/health` returning `geminiConfigured: true` and model `gemini-3.5-flash`.
 - The user's iPhone could open `http://10.10.7.17:8787/health` from Safari on
   the same Wi-Fi, confirming LAN access from iPhone to the Mac dev server.
 - EAS preview environment variable was created:
@@ -93,12 +93,12 @@ Use Node 20 or newer when running Expo locally.
 - `docs/CONTINUITY_CHECKPOINT.md`: latest cross-session status checkpoint
 - `docs/STAGE_2_PLAN.md`: Stage 2 plan and scope
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md`: video-to-analysis scope and API contract
-- `docs/DEV_AI_ANALYSIS_SETUP.md`: local OpenAI API setup and spend guardrails
+- `docs/DEV_AI_ANALYSIS_SETUP.md`: local Gemini API setup and spend guardrails
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
 - `src/features/sessions/HomeScreen.tsx`: current first screen
 - `src/services/ai/analyzeSessionVideo.ts`: remote analysis request adapter
-- `dev-server/index.ts`: local OpenAI-backed analysis server
+- `dev-server/index.ts`: local Gemini-backed analysis server
 - `src/types/index.ts`: initial domain types
 - `eas.json`: EAS preview/internal and production profiles
 - `app.json`: native identifiers, EAS project ID, iOS encryption metadata
@@ -131,7 +131,7 @@ Do not design features that bypass Session.
 - Production video upload or storage
 - Production backend implementation
 
-Do not put OpenAI API keys in the mobile app. Real AI analysis should go through a server/BFF endpoint.
+Do not put Gemini API keys in the mobile app. Real AI analysis should go through a server/BFF endpoint.
 
 ## How To Resume In A New Terminal Codex Session
 
@@ -143,7 +143,7 @@ codex
 Suggested first prompt:
 
 ```text
-AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md, docs/DEV_AI_ANALYSIS_SETUP.md를 먼저 읽고, iPhone standalone preview build와 local OpenAI dev-server 연결 상태에서 이어서 진행해줘.
+AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md, docs/DEV_AI_ANALYSIS_SETUP.md를 먼저 읽고, iPhone standalone preview build와 local Gemini dev-server 연결 상태에서 이어서 진행해줘.
 ```
 
 ## How To Run Locally For AI Analysis
@@ -209,7 +209,7 @@ If the Mac LAN IP changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
-Finish validating the actual OpenAI video analysis flow:
+Finish validating the actual Gemini video analysis flow:
 
 1. Install the latest EAS preview build that includes commit `001ea88`.
 2. Keep `npm run server:dev` running on the Mac.
@@ -217,7 +217,7 @@ Finish validating the actual OpenAI video analysis flow:
 4. Open the standalone Action Sports Journal app.
 5. Add a Session, select a short video under 20 MB, and save it.
 6. Tap `AI 체크하기`.
-7. Confirm the app shows real Korean feedback from the OpenAI-backed dev server.
+7. Confirm the app shows real Korean feedback from the Gemini-backed dev server.
 8. If it fails, read the dev-server terminal error first.
 
 Do not jump into authentication, phone login, production storage, or production

@@ -71,7 +71,7 @@ Current goals:
 
 - Keep standalone iPhone preview/internal distribution working.
 - Validate selected video upload from the standalone app to the local dev server.
-- Return real OpenAI-backed Korean feedback through the server-mediated path.
+- Return real Gemini-backed Korean feedback through the server-mediated path.
 - Keep local Session state persisted on-device until a real database exists.
 
 ## Do Not Implement Yet
@@ -121,7 +121,7 @@ Only keep future extensibility in mind.
 - TypeScript
 - Node.js
 - Next.js API Routes (future BFF)
-- OpenAI API through server-side code only
+- Gemini API through server-side code only
 - Vercel (future)
 
 ## Expected Coding Style

@@ -45,13 +45,13 @@ At the time this checkpoint was updated, local `master` was pushed to
 - Added Session state is now persisted on-device using AsyncStorage.
 - A selected video can be attached to a Session.
 - The local dev analysis server runs on port `8787`.
-- `/health` confirms `openAiConfigured: true` and model `gpt-5-mini`.
+- `/health` confirms `geminiConfigured: true` and model `gemini-3.5-flash`.
 - The user's iPhone can open `http://10.10.7.17:8787/health` from Safari on
   the same Wi-Fi.
 - EAS preview has the public endpoint variable:
   `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://10.10.7.17:8787/api/analyze-session-video`.
 
-The actual uploaded-video-to-OpenAI feedback loop was being prepared while a new
+The actual uploaded-video-to-Gemini feedback loop was being prepared while a new
 preview build was running. The next session should verify the installed build
 includes both the endpoint variable and AsyncStorage dependency.
 
@@ -72,12 +72,12 @@ includes both the endpoint variable and AsyncStorage dependency.
 - `src/services/ai/analyzeSessionVideo.ts` for the analysis request adapter.
 - Remote-only analysis endpoint hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
 - Mobile mock analysis fallback removed.
-- `dev-server/index.ts` calls OpenAI Responses API using server-side
-  `OPENAI_API_KEY`; the key must never go into the mobile app.
+- `dev-server/index.ts` calls Gemini Video Understanding using server-side
+  `GEMINI_API_KEY`; the key must never go into the mobile app.
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md` documents the mobile-to-server contract.
 - Highlight scenes must be selected by server-side AI analysis, not guessed by the mobile app.
-- Development OpenAI API spend target is under KRW 10,000/month with conservative local server limits.
-- Local OpenAI API setup steps are documented in `docs/DEV_AI_ANALYSIS_SETUP.md`.
+- Development Gemini API spend target is under KRW 10,000/month with conservative local server limits.
+- Local Gemini API setup steps are documented in `docs/DEV_AI_ANALYSIS_SETUP.md`.
 
 ## Not Done Yet
 
@@ -88,7 +88,7 @@ includes both the endpoint variable and AsyncStorage dependency.
 - No App Store Connect upload yet.
 - No completed EAS production build yet.
 - No completed EAS submit yet.
-- End-to-end real OpenAI feedback from an iPhone-uploaded video still needs a
+- End-to-end real Gemini feedback from an iPhone-uploaded video still needs a
   final installed-app test after the latest preview build is installed.
 
 ## Next Recommended Work
@@ -102,7 +102,7 @@ selected Session video
 ↓
 local dev-server on Mac
 ↓
-OpenAI Responses API
+Gemini Video Understanding
 ↓
 Korean feedback rendered in app
 ```
@@ -122,4 +122,4 @@ The priority is first-pass feature validation, not UI/UX polish.
 
 The user is comfortable handling UI/UX later. The hard parts are native app
 behavior, EAS preview installation, video selection, local-server reachability,
-and the server-mediated OpenAI analysis path.
+and the server-mediated Gemini analysis path.

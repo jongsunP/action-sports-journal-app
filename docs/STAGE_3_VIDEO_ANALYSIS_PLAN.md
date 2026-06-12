@@ -12,7 +12,9 @@ Video
 AnalysisResult
 ```
 
-This stage is for proving that a user can attach a video to a Session and request an AI check. It is not the final storage, backend, or AI architecture.
+This stage is for proving that a user can attach a video to a Session and
+request an AI check from a standalone iPhone preview build. It is not the final
+storage, backend, or AI architecture.
 
 ## Current App Flow
 
@@ -22,18 +24,26 @@ The mobile app can now:
 2. Open Add Session.
 3. Enter title and notes.
 4. Select one video from the photo library.
-5. Save a local in-memory Session with `videoUri`.
-6. Tap `Request AI Check`.
-7. Show a mock `AnalysisResult` when no server endpoint is configured.
+5. Save a local Session with `videoUri`.
+6. Persist added Session state on-device with AsyncStorage.
+7. Tap `AI 체크하기`.
+8. Send the selected video file to the local dev-server through
+   `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
+9. The dev-server sends the uploaded video file to Gemini Video Understanding.
+10. Render the returned `AnalysisResult`.
 
 ## Current Implementation
 
 - Video picker: `expo-image-picker`
 - Screen: `src/features/sessions/HomeScreen.tsx`
 - Analysis adapter: `src/services/ai/analyzeSessionVideo.ts`
-- Optional endpoint env var: `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
+- Local persistence: `@react-native-async-storage/async-storage`
+- Required endpoint env var for analysis: `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
+- Local analysis server: `dev-server/index.ts`
+- Server-side video model provider: Gemini API through `@google/genai`
 
-The mobile app must not contain an OpenAI API key.
+The mobile app must not contain a Gemini API key. The key belongs only in the
+server-side `.env.local`.
 
 ## Server Endpoint Contract
 
@@ -71,7 +81,8 @@ Expected JSON response:
 }
 ```
 
-The app normalizes missing or malformed optional fields so a partial server response does not immediately break the UI.
+The app normalizes missing or malformed optional fields so a partial server
+response does not immediately break the UI.
 
 ## Highlight Rule
 
@@ -81,37 +92,43 @@ Users can start or stop recording at different moments, so a fixed timestamp suc
 
 `highlightScenes` should represent scenes selected by analysis, not scenes assumed by the app.
 
-## OpenAI Analysis Shape
+## Gemini Analysis Shape
 
 The intended server-side flow is:
 
 1. Receive the uploaded video from the mobile app.
-2. Extract a small set of candidate frames or short scene intervals on the server.
-3. Send the relevant frames/images plus session metadata to OpenAI.
-4. Ask for structured output matching the `AnalysisResult` shape.
+2. Upload the original video file to Gemini Files API.
+3. Send the uploaded video reference plus session metadata to Gemini Video
+   Understanding.
+4. Ask for structured JSON output matching the `AnalysisResult` shape.
 5. Return summary, highlights, suggestions, and AI-selected `highlightScenes`.
 
-The OpenAI API key must stay on the server. The mobile app only sends video/session data to the BFF endpoint.
+The Gemini API key must stay on the server. The mobile app only sends
+video/session data to the BFF endpoint.
 
 ## Development Cost Guardrails
 
-During solo development, keep the target OpenAI API spend under KRW 10,000/month.
+During solo development, keep the target Gemini API spend under KRW 10,000/month.
 
 The development server defaults are intentionally conservative:
 
 - `MAX_VIDEO_MB=20`
 - `DAILY_ANALYSIS_LIMIT=3`
 - `RATE_LIMIT_MAX_REQUESTS=3`
-- `OPENAI_MAX_OUTPUT_TOKENS=600`
-- `OPENAI_REQUEST_TIMEOUT_MS=120000`
+- `GEMINI_MAX_OUTPUT_TOKENS=600`
+- `GEMINI_REQUEST_TIMEOUT_MS=120000`
 
-Also set a monthly budget in the OpenAI Platform billing settings. The app/server guardrails reduce accidental spend, but the platform budget is the final account-level protection.
+Also set account-level billing safeguards in Google AI Studio / Google Cloud
+where available. The app/server guardrails reduce accidental spend, but
+account-level billing controls are the final protection.
 
-For cost control, do not send every full-length video to an expensive model by default. The next production-minded version should extract a small number of candidate frames or short intervals on the server, then send only those analysis inputs to OpenAI.
+The product requirement for this stage is to avoid arbitrary local frame
+extraction. The server should pass the uploaded video file to a provider that
+officially supports video understanding.
 
 ## Not In Scope Yet
 
-- Persistent Session storage
+- Database-backed Session storage
 - Production video storage
 - User accounts
 - Authentication
@@ -123,9 +140,12 @@ For cost control, do not send every full-length video to an expensive model by d
 
 ## Next Work
 
-1. Validate the current mock analysis flow on the physical iPhone.
-2. Add a tiny server/BFF endpoint that accepts the same multipart contract.
-3. Keep the OpenAI API key only on the server.
-4. Add server-side video frame extraction for AI-selected highlight candidates.
-5. Return the `AnalysisResult` JSON shape above, including `highlightScenes` when available.
-6. Only after that, decide how to persist Sessions, videos, and AnalysisResults.
+1. Add `GEMINI_API_KEY` to local `.env.local`.
+2. Restart `npm run server:dev`.
+3. Confirm `/health` returns `geminiConfigured: true`.
+4. Test from the standalone iPhone app with a short under-20MB video.
+5. Confirm real Korean feedback renders in the app.
+6. If `video/quicktime` fails with Gemini, test `video/mp4` next. This is a
+   container compatibility issue, not a frame-selection change.
+7. Only after that, decide how to persist Sessions, videos, and AnalysisResults
+   beyond local device storage.
