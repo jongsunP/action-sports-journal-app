@@ -35,6 +35,8 @@ export function HomeScreen() {
     [sessions, selectedGroup?.id],
   );
 
+  const canSaveSession = title.trim().length > 0;
+
   const handleAddSession = () => {
     if (!selectedGroup || !title.trim()) {
       return;
@@ -152,14 +154,24 @@ export function HomeScreen() {
             />
             <Pressable
               accessibilityRole="button"
+              disabled={!canSaveSession}
               onPress={handleAddSession}
               style={({ pressed }) => [
                 styles.primaryButton,
+                !canSaveSession ? styles.primaryButtonDisabled : undefined,
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
-              <Text style={styles.primaryButtonText}>Save Session</Text>
+              <Text
+                style={[
+                  styles.primaryButtonText,
+                  !canSaveSession ? styles.primaryButtonTextDisabled : undefined,
+                ]}
+              >
+                Save Session
+              </Text>
             </Pressable>
+            <Text style={styles.helperText}>Title is required.</Text>
           </View>
         ) : null}
 
@@ -318,10 +330,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 13,
   },
+  primaryButtonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
   primaryButtonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
+  },
+  primaryButtonTextDisabled: {
+    color: '#e2e8f0',
   },
   secondaryButton: {
     alignItems: 'center',
@@ -355,6 +373,11 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 13,
     lineHeight: 18,
+  },
+  helperText: {
+    color: '#64748b',
+    fontSize: 12,
+    marginTop: 8,
   },
   sessionRow: {
     backgroundColor: '#fff',

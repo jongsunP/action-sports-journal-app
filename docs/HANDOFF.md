@@ -14,12 +14,12 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 ## Current Status
 
-Stage 1 is complete.
+Stage 2 is complete.
 
-Latest Stage 1 commit:
+Latest Stage 2 commit:
 
 ```text
-8d44d7b Add Stage 1 repository review
+c055619 Mark Stage 2 prototype complete
 ```
 
 Repository:
@@ -38,10 +38,14 @@ Local path:
 
 - The app runs with Expo Go on the user's physical iPhone.
 - Expo SDK was downgraded to SDK 54 for compatibility with the user's current App Store Expo Go.
-- The first screen shows `Action Sports Journal` and a `Select Video` button.
+- The first screen shows the local Stage 2 ActivityGroup / Session prototype.
+- ActivityGroups can be selected.
+- Sessions are filtered by the selected ActivityGroup.
+- A new local Session can be added and appears immediately.
 - TypeScript validation passed.
 - Expo dependency validation passed.
 - Stage 1 review was added in `REVIEW.md`.
+- Stage 2 planning was documented in `docs/STAGE_2_PLAN.md`.
 
 ## Current Tech Versions
 
@@ -58,6 +62,7 @@ Use Node 20 or newer when running Expo locally.
 - `docs/PROJECT_CHARTER.md`: product charter
 - `docs/MASTER_PLAN.md`: long-term plan
 - `docs/CURRENT_STAGE.md`: current stage description
+- `docs/STAGE_2_PLAN.md`: Stage 2 plan and scope
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
 - `src/features/sessions/HomeScreen.tsx`: current first screen
@@ -110,21 +115,16 @@ AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, and REVIEW.md를 먼저 읽�
 ```bash
 cd /Users/parkjongsun/Repository/action-sports-journal-app
 npm install
-npx expo start --lan
+npx expo start --tunnel --port 8082
 ```
 
-Scan the QR code with the iPhone Camera app or Expo Go.
+Scan the QR code with the iPhone Camera app or Expo Go. Use tunnel mode if LAN discovery is unreliable.
 
 ## Recommended Next Step
 
+Keep the prototype simple and make small Session-focused UX refinements only when needed.
+
 Do not jump into backend, AI, auth, or database work.
-
-When the user asks to continue product work, start Stage 2 as a local-only prototype:
-
-- review the current folder and type structure
-- add mock ActivityGroups only if needed
-- add a small local-only Session concept
-- keep everything simple and reversible
 
 ## Related Personal Context Repo
 
