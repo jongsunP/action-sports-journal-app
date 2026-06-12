@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   FlatList,
+  Keyboard,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -58,6 +59,7 @@ export function HomeScreen() {
     setTitle('');
     setNotes('');
     setIsComposerOpen(false);
+    Keyboard.dismiss();
   };
 
   return (
@@ -152,6 +154,16 @@ export function HomeScreen() {
               value={notes}
               onChangeText={setNotes}
             />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => Keyboard.dismiss()}
+              style={({ pressed }) => [
+                styles.tertiaryButton,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text style={styles.tertiaryButtonText}>Hide Keyboard</Text>
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               disabled={!canSaveSession}
@@ -350,6 +362,18 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  tertiaryButton: {
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    marginBottom: 10,
+    paddingVertical: 11,
+  },
+  tertiaryButtonText: {
+    color: '#334155',
     fontSize: 13,
     fontWeight: '700',
   },
