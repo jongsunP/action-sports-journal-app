@@ -52,6 +52,10 @@ Local path:
 - The app can attach a selected video URI to a new Session.
 - A first AI analysis request flow exists.
 - If `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` is not configured, the app returns a local mock analysis result.
+- The app can display AI-provided highlight scenes with image, timestamp, and description.
+- The mobile app must not guess highlight timestamps; highlight selection belongs to server-side AI analysis.
+- Development OpenAI API spend target is under KRW 10,000/month.
+- The dev analysis server uses conservative request, file-size, and output-token limits.
 
 ## Current Tech Versions
 
@@ -71,6 +75,7 @@ Use Node 20 or newer when running Expo locally.
 - `docs/CONTINUITY_CHECKPOINT.md`: latest cross-session status checkpoint
 - `docs/STAGE_2_PLAN.md`: Stage 2 plan and scope
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md`: video-to-analysis scope and API contract
+- `docs/DEV_AI_ANALYSIS_SETUP.md`: local OpenAI API setup and spend guardrails
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
 - `src/features/sessions/HomeScreen.tsx`: current first screen

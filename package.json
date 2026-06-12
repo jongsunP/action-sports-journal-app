@@ -3,18 +3,28 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "expo": "~54.0.35",
     "expo-image-picker": "~17.0.11",
     "expo-status-bar": "~3.0.8",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "openai": "^6.42.0",
     "react": "19.1.0",
     "react-native": "0.81.5"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/react": "~19.1.0",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2"
   },
   "scripts": {
     "start": "expo start",
+    "server:dev": "tsx dev-server/index.ts",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"

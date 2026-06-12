@@ -58,6 +58,9 @@ Added sessions are not persisted after app reload. This is expected because Stag
 - `src/services/ai/analyzeSessionVideo.ts` for the analysis request adapter.
 - Optional analysis endpoint hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`.
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md` documents the mobile-to-server contract.
+- Highlight scenes must be selected by server-side AI analysis, not guessed by the mobile app.
+- Development OpenAI API spend target is under KRW 10,000/month with conservative local server limits.
+- Local OpenAI API setup steps are documented in `docs/DEV_AI_ANALYSIS_SETUP.md`.
 
 ## Not Done Yet
 

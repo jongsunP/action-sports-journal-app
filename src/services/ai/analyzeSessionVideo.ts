@@ -20,6 +20,7 @@ type RemoteAnalysisResponse = {
   status?: unknown;
   summary?: unknown;
   highlights?: unknown;
+  highlightScenes?: unknown;
   suggestions?: unknown;
   createdAt?: unknown;
 };
@@ -113,10 +114,36 @@ function normalizeRemoteAnalysis(
     status: data.status === 'failed' ? 'failed' : 'completed',
     summary: asString(data.summary) ?? '분석이 완료되었습니다.',
     highlights: asStringArray(data.highlights),
+    highlightScenes: asHighlightScenes(data.highlightScenes),
     suggestions: asStringArray(data.suggestions),
     createdAt: asString(data.createdAt) ?? now,
   };
 }
+
+function asHighlightScenes(value: unknown): AnalysisResult['highlightScenes'] {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value
+    .map((item, index) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const scene = item as Record<string, unknown>;
+
+      return {
+        id: asString(scene.id) ?? `highlight-${index}`,
+        timestampLabel: asString(scene.timestampLabel) ?? '0:00',
+        title: asString(scene.title) ?? '하이라이트',
+        description: asString(scene.description) ?? '장면 설명이 준비되었습니다.',
+        imageUri: asString(scene.imageUri),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
+
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0

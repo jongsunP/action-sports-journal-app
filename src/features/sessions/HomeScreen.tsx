@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -763,6 +764,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  highlightScene: {
+    backgroundColor: '#fff',
+    borderColor: '#99f6e4',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  highlightImage: {
+    backgroundColor: '#ccfbf1',
+    height: 140,
+    width: '100%',
+  },
+  highlightBody: {
+    padding: 12,
+  },
+  highlightMeta: {
+    color: '#0f766e',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  highlightTitle: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  highlightDescription: {
+    color: '#475569',
+    fontSize: 13,
+    lineHeight: 19,
+  },
 });
 
 function getVideoAssetFromSession(session: Session): SessionVideoAsset | null {
@@ -822,6 +857,18 @@ function AnalysisResultView({ result }: { result: AnalysisResult }) {
         {result.status === 'failed' ? '분석 실패' : 'AI 체크 결과'}
       </Text>
       <Text style={styles.analysisResultText}>{result.summary}</Text>
+      {result.highlightScenes?.map((scene) => (
+        <View key={scene.id} style={styles.highlightScene}>
+          {scene.imageUri ? (
+            <Image source={{ uri: scene.imageUri }} style={styles.highlightImage} />
+          ) : null}
+          <View style={styles.highlightBody}>
+            <Text style={styles.highlightMeta}>{scene.timestampLabel}</Text>
+            <Text style={styles.highlightTitle}>{scene.title}</Text>
+            <Text style={styles.highlightDescription}>{scene.description}</Text>
+          </View>
+        </View>
+      ))}
       {result.highlights.map((highlight) => (
         <Text key={highlight} style={styles.analysisResultListItem}>
           - {highlight}

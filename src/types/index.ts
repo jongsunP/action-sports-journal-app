@@ -24,12 +24,21 @@ export type Session = {
 
 export type AnalysisStatus = 'idle' | 'running' | 'completed' | 'failed';
 
+export type HighlightScene = {
+  id: ID;
+  timestampLabel: string;
+  title: string;
+  description: string;
+  imageUri?: string;
+};
+
 export type AnalysisResult = {
   id: ID;
   sessionId: ID;
   status: AnalysisStatus;
   summary: string;
   highlights: string[];
+  highlightScenes?: HighlightScene[];
   suggestions: string[];
   createdAt: ISODateString;
 };

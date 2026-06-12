@@ -16,6 +16,10 @@ Stage 2 implementation is complete. The local-only ActivityGroup and Session pro
 
 Stage 3 has started with a minimal video selection and analysis request flow. The mobile app can select a video for a new Session, attach that video URI to the Session, and request an analysis check. If no backend endpoint is configured, the app returns a local mock analysis result.
 
+The app can render AI-provided highlight scene cards, but it does not infer highlight timestamps locally.
+
+Development API usage should stay under KRW 10,000/month. The local dev server has conservative limits for file size, daily requests, rate limiting, and output tokens.
+
 ## What Exists
 
 - Minimal home screen
@@ -26,6 +30,7 @@ Stage 3 has started with a minimal video selection and analysis request flow. Th
 - Stage 1 review in `REVIEW.md`
 - Cross-session handoff in `docs/HANDOFF.md`
 - Stage 3 video analysis plan in `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md`
+- Development AI setup notes in `docs/DEV_AI_ANALYSIS_SETUP.md`
 - Video selection through `expo-image-picker`
 - Local mock AI analysis result flow
 - Optional server endpoint hook through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`
