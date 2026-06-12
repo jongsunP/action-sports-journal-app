@@ -83,19 +83,19 @@ function createMockAnalysis({
     id: `analysis-${Date.now()}`,
     sessionId: session.id,
     status: 'completed',
-    summary: `${activityGroupName} session "${session.title}" is ready for AI review. This is a local mock result until the backend analysis endpoint is connected.`,
+    summary: `${activityGroupName} 세션 "${session.title}" 영상이 분석 대기 상태입니다. 아직 서버 분석이 연결되지 않아 앱 안에서 보여주는 임시 결과입니다.`,
     highlights: [
       durationSeconds
-        ? `Selected video duration is about ${durationSeconds} seconds.`
-        : 'Selected video is attached to the session.',
+        ? `선택한 영상 길이는 약 ${durationSeconds}초입니다.`
+        : '선택한 영상이 세션에 연결되었습니다.',
       video.fileSize
-        ? `Video file size is about ${Math.round(video.fileSize / 1024 / 1024)} MB.`
-        : 'Video metadata is available for upload.',
+        ? `영상 파일 크기는 약 ${Math.round(video.fileSize / 1024 / 1024)}MB입니다.`
+        : '영상 메타데이터를 업로드 요청에 사용할 수 있습니다.',
     ],
     suggestions: [
-      'Send the video to a server endpoint for real OpenAI analysis.',
-      'Keep the OpenAI API key on the server, not inside the mobile app.',
-      'Return structured analysis that can be stored as AnalysisResult later.',
+      '실제 분석은 서버 엔드포인트에서 OpenAI API로 처리합니다.',
+      'OpenAI API 키는 모바일 앱이 아니라 서버에만 둡니다.',
+      '분석 결과는 나중에 AnalysisResult로 저장할 수 있게 구조화합니다.',
     ],
     createdAt: now,
   };
@@ -111,7 +111,7 @@ function normalizeRemoteAnalysis(
     id: asString(data.id) ?? `analysis-${Date.now()}`,
     sessionId: asString(data.sessionId) ?? sessionId,
     status: data.status === 'failed' ? 'failed' : 'completed',
-    summary: asString(data.summary) ?? 'Analysis completed.',
+    summary: asString(data.summary) ?? '분석이 완료되었습니다.',
     highlights: asStringArray(data.highlights),
     suggestions: asStringArray(data.suggestions),
     createdAt: asString(data.createdAt) ?? now,

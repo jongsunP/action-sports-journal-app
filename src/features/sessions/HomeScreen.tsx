@@ -97,8 +97,8 @@ export function HomeScreen() {
 
     if (!permission.granted) {
       Alert.alert(
-        'Permission required',
-        'Please allow photo library access to select a session video.',
+        '사진 접근 권한이 필요합니다',
+        '세션 영상을 선택하려면 사진 보관함 접근을 허용해주세요.',
       );
       return;
     }
@@ -116,7 +116,7 @@ export function HomeScreen() {
     const asset = result.assets[0];
 
     if (!asset || asset.type !== 'video') {
-      Alert.alert('Video required', 'Please choose a video for analysis.');
+      Alert.alert('영상이 필요합니다', '분석할 영상을 선택해주세요.');
       return;
     }
 
@@ -133,7 +133,7 @@ export function HomeScreen() {
     const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
 
     if (!video) {
-      Alert.alert('Video required', 'Attach a video before requesting analysis.');
+      Alert.alert('영상이 필요합니다', 'AI 체크 전에 영상을 먼저 연결해주세요.');
       return;
     }
 
@@ -155,7 +155,7 @@ export function HomeScreen() {
       }));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'The analysis request failed.';
+        error instanceof Error ? error.message : '분석 요청에 실패했습니다.';
 
       setAnalysisBySessionId((current) => ({
         ...current,
@@ -165,7 +165,7 @@ export function HomeScreen() {
           status: 'failed',
           summary: message,
           highlights: [],
-          suggestions: ['Check the analysis endpoint and try again.'],
+          suggestions: ['분석 서버 설정을 확인한 뒤 다시 시도해주세요.'],
           createdAt: new Date().toISOString(),
         },
       }));
@@ -187,22 +187,21 @@ export function HomeScreen() {
         >
           <View style={styles.header}>
             <Text style={styles.kicker}>Action Sports Journal</Text>
-            <Text style={styles.title}>Track sessions. Check clips.</Text>
+            <Text style={styles.title}>오늘의 세션을 남기고, 영상을 체크하세요.</Text>
             <Text style={styles.subtitle}>
-              Keep each ride tied to a session, then review the video when it is
-              ready.
+              웨이크보드, 스노보드, 스케이트보드 기록을 세션 중심으로 모아봅니다.
             </Text>
             <View style={styles.metricRow}>
-              <MetricItem label="Sessions" value={sessions.length} />
-              <MetricItem label="Videos" value={attachedVideoCount} />
-              <MetricItem label="AI checks" value={completedAnalysisCount} />
+              <MetricItem label="세션" value={sessions.length} />
+              <MetricItem label="영상" value={attachedVideoCount} />
+              <MetricItem label="AI 체크" value={completedAnalysisCount} />
             </View>
           </View>
 
           <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionLabel}>Activity</Text>
-              <Text style={styles.sectionHint}>Choose focus</Text>
+              <Text style={styles.sectionLabel}>종목</Text>
+              <Text style={styles.sectionHint}>오늘의 포커스</Text>
             </View>
             <FlatList
               data={mockActivityGroups}
@@ -248,10 +247,10 @@ export function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionLabel}>Session feed</Text>
+                <Text style={styles.sectionLabel}>세션 피드</Text>
                 <Text style={styles.contextText}>
-                  {selectedGroup?.name ?? 'No group selected'} ·{' '}
-                  {visibleSessions.length} sessions
+                  {selectedGroup?.name ?? '선택된 종목 없음'} ·{' '}
+                  {visibleSessions.length}개 세션
                 </Text>
               </View>
               <Pressable
@@ -263,7 +262,7 @@ export function HomeScreen() {
                 ]}
               >
                 <Text style={styles.secondaryButtonText}>
-                  {isComposerOpen ? 'Close' : 'Add Session'}
+                  {isComposerOpen ? '닫기' : '세션 추가'}
                 </Text>
               </Pressable>
             </View>
@@ -271,7 +270,7 @@ export function HomeScreen() {
             {isComposerOpen ? (
               <View style={styles.composer}>
                 <TextInput
-                  placeholder="Session title"
+                  placeholder="세션 제목"
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                   value={title}
@@ -279,7 +278,7 @@ export function HomeScreen() {
                 />
                 <TextInput
                   multiline
-                  placeholder="Notes"
+                  placeholder="메모"
                   placeholderTextColor="#94a3b8"
                   style={[styles.input, styles.textArea]}
                   value={notes}
@@ -294,17 +293,17 @@ export function HomeScreen() {
                   ]}
                 >
                   <Text style={styles.videoButtonText}>
-                    {selectedVideo ? 'Change Video' : 'Select Video'}
+                    {selectedVideo ? '영상 바꾸기' : '영상 선택'}
                   </Text>
                 </Pressable>
                 {selectedVideo ? (
                   <Text style={styles.videoMeta}>
-                    {selectedVideo.fileName ?? 'Selected video'} ·{' '}
+                    {selectedVideo.fileName ?? '선택한 영상'} ·{' '}
                     {formatVideoMeta(selectedVideo)}
                   </Text>
                 ) : (
                   <Text style={styles.helperText}>
-                    Add a video now to test the AI analysis flow.
+                    영상을 선택하면 AI 체크 흐름을 바로 확인할 수 있습니다.
                   </Text>
                 )}
                 <Pressable
@@ -315,7 +314,7 @@ export function HomeScreen() {
                     pressed ? styles.buttonPressed : undefined,
                   ]}
                 >
-                  <Text style={styles.tertiaryButtonText}>Hide Keyboard</Text>
+                  <Text style={styles.tertiaryButtonText}>키보드 내리기</Text>
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
@@ -335,23 +334,23 @@ export function HomeScreen() {
                         : undefined,
                     ]}
                   >
-                    Save Session
+                    세션 저장
                   </Text>
                 </Pressable>
-                <Text style={styles.helperText}>Title is required.</Text>
+                <Text style={styles.helperText}>세션 제목은 필수입니다.</Text>
               </View>
             ) : null}
 
             {visibleSessions.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>No sessions yet</Text>
+                  <Text style={styles.emptyTitle}>아직 세션이 없습니다</Text>
                   <Text style={styles.emptyText}>
-                    Add a local session to test the group-to-session flow.
+                    새 세션을 추가해서 종목별 기록 흐름을 확인해보세요.
                   </Text>
                 </View>
             ) : (
               visibleSessions.map((item) => (
-                <View style={styles.sessionRow}>
+                <View key={item.id} style={styles.sessionRow}>
                   <View style={styles.sessionMeta}>
                     <Text style={styles.sessionTitle}>{item.title}</Text>
                     <Text style={styles.sessionDate}>
@@ -369,14 +368,14 @@ export function HomeScreen() {
                   <View style={styles.statusRow}>
                     <StatusPill
                       active={Boolean(item.videoUri)}
-                      label={item.videoUri ? 'Video ready' : 'No video'}
+                      label={item.videoUri ? '영상 있음' : '영상 없음'}
                     />
                     <StatusPill
                       active={analysisBySessionId[item.id]?.status === 'completed'}
                       label={
                         analysisBySessionId[item.id]?.status === 'completed'
-                          ? 'Checked'
-                          : 'AI pending'
+                          ? '체크 완료'
+                          : 'AI 대기'
                       }
                     />
                   </View>
@@ -395,8 +394,8 @@ export function HomeScreen() {
                     >
                       <Text style={styles.analysisButtonText}>
                         {analyzingSessionId === item.id
-                          ? 'Analyzing...'
-                          : 'Request AI Check'}
+                          ? '분석 중...'
+                          : 'AI 체크하기'}
                       </Text>
                     </Pressable>
                     {analysisBySessionId[item.id] ? (
@@ -784,7 +783,7 @@ function formatVideoMeta(video: SessionVideoAsset) {
     video.fileSize ? `${Math.round(video.fileSize / 1024 / 1024)} MB` : null,
   ].filter(Boolean);
 
-  return parts.length > 0 ? parts.join(' · ') : 'ready';
+  return parts.length > 0 ? parts.join(' · ') : '준비됨';
 }
 
 function MetricItem({ label, value }: { label: string; value: number }) {
@@ -820,7 +819,7 @@ function AnalysisResultView({ result }: { result: AnalysisResult }) {
   return (
     <View style={styles.analysisResult}>
       <Text style={styles.analysisResultTitle}>
-        {result.status === 'failed' ? 'Analysis failed' : 'AI check result'}
+        {result.status === 'failed' ? '분석 실패' : 'AI 체크 결과'}
       </Text>
       <Text style={styles.analysisResultText}>{result.summary}</Text>
       {result.highlights.map((highlight) => (

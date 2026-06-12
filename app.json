@@ -29,7 +29,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Action Sports Journal to select session videos for analysis."
+          "photosPermission": "세션 영상 선택과 분석 준비를 위해 사진 보관함 접근이 필요합니다."
         }
       ]
     ]
