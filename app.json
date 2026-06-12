@@ -9,7 +9,10 @@
     "ios": {
       "bundleIdentifier": "com.jongsunp.actionsportsjournal",
       "buildNumber": "1",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.jongsunp.actionsportsjournal",
@@ -20,7 +23,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +38,11 @@
           "photosPermission": "세션 영상 선택과 분석 준비를 위해 사진 보관함 접근이 필요합니다."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f6e1a90a-62fb-4485-9434-ca92a756b8f4"
+      }
+    }
   }
 }

@@ -27,6 +27,10 @@ type RemoteAnalysisResponse = {
 
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
 
+export function hasConfiguredAnalysisEndpoint() {
+  return Boolean(analysisEndpoint);
+}
+
 export async function analyzeSessionVideo({
   session,
   activityGroupName,

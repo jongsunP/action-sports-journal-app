@@ -16,7 +16,11 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-import { analyzeSessionVideo, type SessionVideoAsset } from '../../services/ai';
+import {
+  analyzeSessionVideo,
+  hasConfiguredAnalysisEndpoint,
+  type SessionVideoAsset,
+} from '../../services/ai';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import { mockSessions } from './mockSessions';
 
@@ -58,6 +62,7 @@ export function HomeScreen() {
   const completedAnalysisCount = Object.values(analysisBySessionId).filter(
     (analysis) => analysis.status === 'completed',
   ).length;
+  const canRequestRemoteAnalysis = hasConfiguredAnalysisEndpoint();
 
   const canSaveSession = title.trim().length > 0;
 
@@ -381,13 +386,24 @@ export function HomeScreen() {
                     />
                   </View>
                   <View style={styles.analysisPanel}>
+                    {!canRequestRemoteAnalysis ? (
+                      <Text style={styles.analysisLabel}>
+                        서버 분석 엔드포인트가 연결되면 AI 체크를 사용할 수 있습니다.
+                      </Text>
+                    ) : null}
                     <Pressable
                       accessibilityRole="button"
-                      disabled={!item.videoUri || analyzingSessionId === item.id}
+                      disabled={
+                        !item.videoUri ||
+                        !canRequestRemoteAnalysis ||
+                        analyzingSessionId === item.id
+                      }
                       onPress={() => handleAnalyzeSession(item)}
                       style={({ pressed }) => [
                         styles.analysisButton,
-                        !item.videoUri || analyzingSessionId === item.id
+                        !item.videoUri ||
+                        !canRequestRemoteAnalysis ||
+                        analyzingSessionId === item.id
                           ? styles.analysisButtonDisabled
                           : undefined,
                         pressed ? styles.buttonPressed : undefined,
