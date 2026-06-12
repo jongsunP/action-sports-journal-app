@@ -19,7 +19,7 @@ Stage 2 is complete.
 Latest Stage 2 commit:
 
 ```text
-c055619 Mark Stage 2 prototype complete
+bdbbb07 Tighten Stage 2 session composer
 ```
 
 Repository:
