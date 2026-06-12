@@ -27,8 +27,12 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - React Native: `0.81.5`
 - React: `19.1.0`
 - Stage 1 status: complete
-- Latest Stage 1 commit: `8d44d7b Add Stage 1 repository review`
+- Stage 2 status: complete
+- Stage 3 status: standalone iPhone video-to-analysis prototype in progress
+- Latest checkpoint commit: `001ea88 Persist local sessions on device`
 - The app has been confirmed visible on the user's physical iPhone through Expo Go.
+- The app has also been installed and opened on the user's physical iPhone as a
+  standalone EAS preview/internal distribution app, without Expo Go.
 - First visible screen: `src/features/sessions/HomeScreen.tsx`
 - Root entry: `App.tsx`
 - Cross-session handoff: `docs/HANDOFF.md`
@@ -61,21 +65,17 @@ Do not design features that bypass Session.
 
 ## Current Development Stage
 
-Stage 1: Initial Setup
+Stage 1: Initial Setup complete.
 
 Current goals:
 
-- Expo setup
-- React Native setup
-- TypeScript setup
-- GitHub setup
-- Basic folder structure
-- Initial domain types
-- iPhone device execution
+- Keep standalone iPhone preview/internal distribution working.
+- Validate selected video upload from the standalone app to the local dev server.
+- Return real OpenAI-backed Korean feedback through the server-mediated path.
+- Keep local Session state persisted on-device until a real database exists.
 
 ## Do Not Implement Yet
 
-- OpenAI integration
 - Database
 - Authentication
 - Phone login
@@ -83,8 +83,8 @@ Current goals:
 - Expense tracking
 - Calendar
 - RAG
-- Video processing
-- Backend implementation
+- Production video upload or storage
+- Production backend implementation
 
 If unsure, keep the implementation simple.
 
@@ -121,7 +121,7 @@ Only keep future extensibility in mind.
 - TypeScript
 - Node.js
 - Next.js API Routes (future BFF)
-- OpenAI API (future)
+- OpenAI API through server-side code only
 - Vercel (future)
 
 ## Expected Coding Style
