@@ -9,6 +9,9 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
+*.ipa
+*.apk
+*.aab
 
 # Native
 .kotlin/
