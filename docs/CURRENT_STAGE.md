@@ -4,13 +4,13 @@
 
 Stage 1: Initial project setup complete.
 
-Stage 2: Local-only ActivityGroup / Session prototype planning.
+Stage 2: Local-only ActivityGroup / Session prototype in progress.
 
 ## Current Status
 
 The project has a new Expo React Native TypeScript app, initial docs, initial domain folders, minimal domain types, an Expo Go compatible SDK 54 setup, and a Stage 1 review.
 
-Stage 2 is not implemented yet. The next step is to prototype ActivityGroup and Session locally without backend, database, authentication, AI, or persistence.
+Stage 2 implementation has started. The next step is to finish the local-only ActivityGroup and Session prototype without backend, database, authentication, AI, or persistence.
 
 ## What Exists
 
@@ -34,7 +34,7 @@ Stage 2 is not implemented yet. The next step is to prototype ActivityGroup and 
 
 ## Next Recommended Step
 
-Review the Stage 2 plan in `docs/STAGE_2_PLAN.md`, then implement the local-only prototype only when the user asks.
+Continue the local-only Stage 2 prototype and verify the app still opens cleanly in Expo Go.
 
 ## Resume Notes
 
