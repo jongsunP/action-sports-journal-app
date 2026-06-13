@@ -54,8 +54,9 @@ The benchmark:
 
 1. Receives the same uploaded wakeboard video as multipart form data.
 2. Samples broad evenly spaced frames with `ffmpeg-static`.
-3. Uses GPT-5.5 to scout candidate trick/highlight windows.
-4. Samples focused frames inside the selected candidate windows.
+3. Uses GPT-5.5 to scout phase-weighted trick evidence windows.
+4. Samples focused frames around the selected setup, initiation, airborne, and
+   outcome evidence windows.
 5. Sends those focused frames to GPT-5.5 through the OpenAI Responses API.
 6. Uses a world-class wakeboard coaching prompt.
 7. Requires structured JSON and human-readable coaching output.
@@ -68,6 +69,13 @@ The prompt explicitly requires:
 - Confidence values and reasons
 - Self-critique
 - No uncertain conclusion presented as fact
+
+The benchmark target is not trick classification from isolated frames. For
+wakeboarding, the key target is phase-weighted evidence: static setup,
+initiation, airborne mechanics, then outcome. Peak-air and descent can be
+decisive for some spins, grabs, and basic variations, so they should not be
+ignored. Landing/crash should influence landing outcome and coaching, but should
+not override setup + initiation + airborne trick evidence.
 
 ## Current Status
 

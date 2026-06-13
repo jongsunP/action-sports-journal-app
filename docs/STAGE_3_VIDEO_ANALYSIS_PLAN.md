@@ -111,8 +111,9 @@ The parallel OpenAI benchmark flow is:
 
 1. Receive the same uploaded video through `/api/benchmarks/openai-wakeboard-video`.
 2. Extract broad evenly spaced frames across the video with `ffmpeg-static`.
-3. Ask GPT-5.5 to scout candidate trick/highlight windows.
-4. Extract focused frames inside the selected candidate windows.
+3. Ask GPT-5.5 to scout phase-weighted trick evidence windows.
+4. Extract focused frames around the selected setup, initiation, airborne, and
+   outcome evidence windows.
 5. Send the focused frames plus session metadata to GPT-5.5 through the OpenAI
    Responses API.
 6. Ask for strict structured JSON and human-readable coaching output with
@@ -147,6 +148,12 @@ The OpenAI path is an explicit benchmark exception: it uses server-side frame
 sampling because the current implementation is testing whether API-based OpenAI
 image reasoning can reproduce useful wakeboard coaching quality before making
 provider conclusions. This does not replace the Gemini app-facing endpoint.
+
+The goal is not to classify tricks from isolated frames. The benchmark should
+find and weight the correct wakeboarding evidence windows: static setup,
+initiation, airborne mechanics, and outcome. Trick identity should be determined
+primarily from setup + initiation + airborne mechanics. Peak-to-landing should
+not be ignored, but landing/crash should not override trick identity.
 
 ## Not In Scope Yet
 

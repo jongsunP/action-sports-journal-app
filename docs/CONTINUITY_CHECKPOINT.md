@@ -11,6 +11,16 @@ Use this file together with:
 - `docs/CURRENT_STAGE.md`
 - `REVIEW.md`
 
+## Collaboration Model
+
+- User: Product Owner / Founder / Domain Expert.
+- Codex: Implementation Engineer.
+- ChatGPT: CTO + Project Secretary + Project Historian.
+
+Wrap-ups and handoffs must preserve product continuity, not only code
+continuity. Include decisions, discoveries, validated assumptions, rejected
+directions, next starting point, technical status, and commit candidates.
+
 ## Current Project State
 
 The project is in this state:
@@ -22,6 +32,8 @@ App Store / TestFlight preparation started
 Standalone iPhone EAS preview/internal distribution validated
 Stage 3 real video-to-analysis prototype in progress
 Evidence-first AI architecture validated with a real wakeboard video
+Product direction shifted from Session First to Moment First
+Private action sports moment feed + AI Coach direction validated
 ```
 
 The latest known project checkpoint is:
@@ -71,31 +83,43 @@ At the time this checkpoint was updated, local `master` was pushed to
 
 ## Today's Conclusions
 
-2026-06-13 validated the current AI architecture direction.
+2026-06-14 clarified the current product definition:
 
-- AI coaching quality and exact trick recognition are separate problems.
-- GPT is strong at coaching/report generation.
-- Gemini is currently stronger for video/motion evidence extraction.
-- User confirmation is necessary because exact trick recognition is not yet
-  reliable.
-- Motion-aware analysis is significantly better than uniform frame sampling.
-- Evidence extraction was unstable when Gemini JSON responses were truncated,
-  but raising `GEMINI_EVIDENCE_MAX_OUTPUT_TOKENS` to `6000` restored complete
-  structured output in the latest test.
-- Repeated tests with the same Back Roll video now produce plausible Back
-  Roll/Tantrum-family classifications instead of clearly unrelated tricks.
-  Exact trick naming still requires user confirmation.
-- The evidence prompt now tells Gemini to classify the trick from motion
-  mechanics before landing outcome: approach, edge pattern, takeoff mechanics,
-  shoulder/hip movement, rotation axis, and inverted body orientation. This
-  improved the repeated Back Roll evidence results. Landing/crash is secondary
-  because a failed landing does not change the trick identity.
-- Future evaluation should judge wakeboard trick identity primarily from
-  stance, edge, approach, takeoff, pop, and rotation initiation. Landing and
-  crash should be evaluated as outcomes, not as the main trick-classification
-  evidence.
+```text
+Action Sports Journal
+=
+Private Action Sports Moment Feed
++
+AI Coach
+```
 
-Current recommended architecture:
+The product should be Moment First, not Session First. Users want to revisit
+their riding moments, not browse session records. Feed should beat dashboard,
+content should beat data, and AI Coach should be a secondary layer over the
+user's riding content.
+
+Today's UX conclusions:
+
+- The Moment Feed direction was validated.
+- The Session Feed improved significantly.
+- Thumbnail support and story rail direction were validated.
+- Large thumbnails raised perceived product quality more than styling alone.
+- Feed immersion matters more than card styling.
+- Edge-to-edge content feels better than floating cards.
+- Top dashboard/summary areas reduce immersion.
+- Instagram-style personal action sports feed is a stronger product direction
+  than a GoPro clone. GoPro / Red Bull remain visual inspiration only.
+- Korean mobile product feel should be preferred over a pure US extreme-sports
+  aesthetic.
+- Current primary UX weakness is the Detail Screen.
+
+AI remains a long-term continuous effort. Event Window Detection remains a core
+future investment area. For wakeboarding, trick identity is primarily
+determined around pop and rotation initiation, with setup and early airborne
+mechanics as important context. Landing/crash is outcome evidence, not primary
+trick identity evidence.
+
+Current recommended AI architecture:
 
 ```text
 Video
@@ -115,6 +139,58 @@ Current recommended model split:
 Gemini = primary video/motion/trick evidence extractor
 GPT = coaching/reporting engine after confirmed rider intent
 ```
+
+Current priorities:
+
+- P1: Detail Screen UX, thumbnail experience, content-first experience.
+- P2: Progression visibility, story / moment presentation.
+- P3: Event Window Detection, trick recognition consistency.
+
+## 2026-06-14 Wrap-Up
+
+What changed:
+
+- Home moved toward a private action sports Moment Feed.
+- The feed became visual-first and content-first.
+- Large thumbnails became the primary feed element.
+- Story-style recent moments were introduced.
+- Dashboard/stat summary UI was reduced because it weakened immersion.
+- Edge-to-edge content replaced the earlier floating-card feeling.
+- Local/dev thumbnail generation and local detail video playback were added.
+- Detail Screen received a first pass, but it remains the main UX risk.
+
+Why it changed:
+
+- iPhone QA showed the feed direction was significantly better once the app
+  emphasized riding moments instead of session records.
+- Real thumbnails improved perceived product quality more than styling.
+- The product should make users want to open a riding moment, not read a
+  report or browse a logbook.
+
+Rejected for now:
+
+- Dashboard-first home.
+- Session database / report-first presentation.
+- Pure GoPro clone or US extreme-sports media aesthetic.
+- More AI system work during this UX pass.
+- Database, cloud storage, backend streaming, or production video storage.
+
+Validated:
+
+- Moment Feed direction.
+- Thumbnail support.
+- Story rail direction.
+- Feed immersion over card styling.
+- Korean mobile product feel as the preferred polish direction.
+
+Open questions:
+
+- Does the latest Detail Screen feel like reviewing a riding moment on iPhone?
+- How should progression be visible without becoming a dashboard?
+- Should detail analysis appear inline, behind a drawer, or as a separate coach
+  review mode?
+- What thumbnail frame best represents a wakeboard attempt?
+- When should Event Window Detection become the active focus again?
 
 ## Implemented Locally
 
@@ -149,6 +225,12 @@ GPT = coaching/reporting engine after confirmed rider intent
 - Highlight scenes must be selected by server-side AI analysis, not guessed by the mobile app.
 - Development API spend target is under KRW 10,000/month with conservative local server limits.
 - Local OpenAI benchmark setup steps are documented in `docs/DEV_AI_ANALYSIS_SETUP.md`.
+- Instagram-style personal Moment Feed first version.
+- Story-style recent moments rail.
+- Lightweight local video thumbnail support for feed/detail imagery.
+- Lightweight local video playback from the Session detail screen.
+- Detail screen first pass toward hero video/thumbnail first, moment first,
+  AI second, long text last.
 
 ## Not Done Yet
 
@@ -167,39 +249,21 @@ GPT = coaching/reporting engine after confirmed rider intent
 
 ## Next Recommended Work
 
-The user has shifted priority to proving this loop:
+Do not add unrelated product features yet.
 
-```text
-iPhone standalone app
-↓
-selected Session video
-↓
-local dev-server on Mac
-↓
-Gemini evidence extraction
-↓
-user trick confirmation
-↓
-coaching engine
-↓
-stored Session intelligence
-```
+If returning tomorrow, continue here:
 
-Next work:
-
-1. Run `npm run server:dev`.
-2. Confirm `/health` returns Gemini configured, Gemini evidence configured, and
-   OpenAI benchmark configured.
-3. Add or reuse the same wakeboard comparison video Session in the app.
-4. Run `Gemini 근거 추출`.
-5. Confirm or correct the intended trick.
-6. Compare GPT vs Gemini coaching quality after confirmed trick input.
-7. If it fails, inspect the dev-server terminal error first.
+1. QA the Detail Screen on iPhone.
+2. Improve the Detail Screen until it feels like reviewing a riding moment, not
+   reading a report.
+3. Continue improving thumbnail experience and content-first presentation.
+4. Then revisit progression visibility and story/moment presentation.
+5. Resume Event Window Detection and trick-recognition consistency after the
+   core moment experience is stable.
 
 ## Current Priority
 
-The priority is first-pass feature validation, not UI/UX polish.
+Current priority is mobile product feel, not new AI capability.
 
-The user is comfortable handling UI/UX later. The hard parts are native app
-behavior, EAS preview installation, video selection, local-server reachability,
-and the server-mediated AI analysis path.
+P1 is Detail Screen UX, thumbnail experience, and content-first experience.
+AI systems should not be touched unless explicitly requested.
