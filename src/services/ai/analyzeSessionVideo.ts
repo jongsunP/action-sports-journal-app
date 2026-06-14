@@ -48,6 +48,10 @@ type RemoteEvidenceResponse = {
   requiresUserConfirmation?: unknown;
   consistencyStatus?: unknown;
   consistencyWarnings?: unknown;
+  rawFamilyCandidate?: unknown;
+  safeFamilyCandidate?: unknown;
+  taxonomyWarnings?: unknown;
+  gateFailures?: unknown;
   rawResponseText?: unknown;
   primaryCandidate?: unknown;
   alternativeCandidates?: unknown;
@@ -249,6 +253,10 @@ function normalizeRemoteEvidence(
     requiresUserConfirmation: data.requiresUserConfirmation === true,
     consistencyStatus: asConsistencyStatus(data.consistencyStatus),
     consistencyWarnings: asStringArray(data.consistencyWarnings),
+    rawFamilyCandidate: asString(data.rawFamilyCandidate),
+    safeFamilyCandidate: asString(data.safeFamilyCandidate),
+    taxonomyWarnings: asStringArray(data.taxonomyWarnings),
+    gateFailures: asStringArray(data.gateFailures),
     rawResponseText: asString(data.rawResponseText),
     primaryCandidate: asTrickCandidate(data.primaryCandidate),
     alternativeCandidates: asTrickCandidates(data.alternativeCandidates),

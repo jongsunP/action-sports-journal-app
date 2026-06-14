@@ -386,8 +386,11 @@ app.post(
         qualityMode === "degraded"
           ? markEvidenceAsDegraded(evidence)
           : evidence;
-      const normalizedEvidence = applyGeminiEvidenceConsistency(
+      const taxonomyAdjustedEvidence = applyWakeboardTaxonomyGates(
         qualityAdjustedEvidence,
+      );
+      const normalizedEvidence = applyGeminiEvidenceConsistency(
+        taxonomyAdjustedEvidence,
       );
       const recoveredFromPartial = isPartialRecoveredEvidence(normalizedEvidence);
       const requiresUserConfirmation =
@@ -412,6 +415,10 @@ app.post(
         requiresUserConfirmation,
         consistencyStatus: normalizedEvidence.consistencyStatus,
         consistencyWarnings: normalizedEvidence.consistencyWarnings,
+        rawFamilyCandidate: normalizedEvidence.rawFamilyCandidate,
+        safeFamilyCandidate: normalizedEvidence.safeFamilyCandidate,
+        taxonomyWarnings: normalizedEvidence.taxonomyWarnings,
+        gateFailures: normalizedEvidence.gateFailures,
         rawResponseText: rawOutputText,
         primaryCandidate: normalizedEvidence.primaryCandidate,
         alternativeCandidates: normalizedEvidence.alternativeCandidates,
@@ -435,6 +442,7 @@ app.post(
           size: request.file.size,
         },
         rawResponseText: rawOutputText,
+        rawParsedEvidence: qualityAdjustedEvidence,
         parsedEvidence: normalizedEvidence,
         response: evidenceResponse,
       });
@@ -789,7 +797,8 @@ type EvidenceDebugCapture = {
     size: number;
   };
   rawResponseText: string;
-  parsedEvidence: ReturnType<typeof normalizeGeminiEvidence>;
+  rawParsedEvidence: NormalizedGeminiEvidence;
+  parsedEvidence: TaxonomyGatedEvidence;
   response: unknown;
 };
 
@@ -822,6 +831,7 @@ function captureEvidenceDebug({
   metadata,
   file,
   rawResponseText,
+  rawParsedEvidence,
   parsedEvidence,
   response,
 }: Omit<EvidenceDebugCapture, "capturedAt">) {
@@ -834,6 +844,7 @@ function captureEvidenceDebug({
     metadata,
     file,
     rawResponseText,
+    rawParsedEvidence,
     parsedEvidence,
     response,
   });
@@ -1778,6 +1789,48 @@ type GeminiEvidencePayload = {
 
 type EvidenceConsistencyStatus = "valid" | "inconsistent" | "needs_review";
 
+type TrickFamily =
+  | "basic_air"
+  | "surface_trick"
+  | "grab"
+  | "spin"
+  | "invert"
+  | "raley"
+  | "unknown";
+
+type FamilyGateDecision = {
+  rawFamily: TrickFamily;
+  safeFamily: TrickFamily;
+  confidence: "high" | "medium" | "low";
+  entryGateSatisfied: boolean;
+  entryGateEvidence: string[];
+  missingGateEvidence: string[];
+};
+
+type SpecificTrickCandidate = {
+  rawName: string;
+  safeName: string;
+  rawConfidence: "high" | "medium" | "low";
+  safeConfidence: "high" | "medium" | "low";
+  requiredFamily: TrickFamily;
+};
+
+type TaxonomyValidationResult = {
+  familyGate: FamilyGateDecision;
+  specificCandidate: SpecificTrickCandidate;
+  warnings: string[];
+  gateFailures: string[];
+};
+
+type NormalizedGeminiEvidence = ReturnType<typeof normalizeGeminiEvidence>;
+
+type TaxonomyGatedEvidence = NormalizedGeminiEvidence & {
+  rawFamilyCandidate: FamilyGateDecision["rawFamily"];
+  safeFamilyCandidate: FamilyGateDecision["safeFamily"];
+  taxonomyWarnings: string[];
+  gateFailures: string[];
+};
+
 type OpenAiBenchmarkPayload = GeminiAnalysisPayload & {
   humanReadableAnalysis: string;
   observations: Array<{
@@ -2545,8 +2598,258 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
   };
 }
 
+function applyWakeboardTaxonomyGates(
+  evidence: NormalizedGeminiEvidence,
+): TaxonomyGatedEvidence {
+  const taxonomy = validateWakeboardTaxonomy(evidence);
+
+  if (taxonomy.gateFailures.length === 0) {
+    return {
+      ...evidence,
+      rawFamilyCandidate: taxonomy.familyGate.rawFamily,
+      safeFamilyCandidate: taxonomy.familyGate.safeFamily,
+      taxonomyWarnings: taxonomy.warnings,
+      gateFailures: taxonomy.gateFailures,
+    };
+  }
+
+  const safeFamilyFact = familyFactForTaxonomy(taxonomy, evidence);
+  const safePrimaryCandidate = trickCandidateForTaxonomy(taxonomy, evidence);
+  const safeRotationType = rotationFactForTaxonomy(taxonomy, evidence);
+  const taxonomyWarningText = taxonomy.warnings.join(" ");
+
+  return {
+    ...evidence,
+    rawFamilyCandidate: taxonomy.familyGate.rawFamily,
+    safeFamilyCandidate: taxonomy.familyGate.safeFamily,
+    taxonomyWarnings: taxonomy.warnings,
+    gateFailures: taxonomy.gateFailures,
+    consistencyStatus: "inconsistent",
+    consistencyWarnings: [
+      ...evidence.consistencyWarnings,
+      ...taxonomy.warnings,
+    ],
+    primaryCandidate: safePrimaryCandidate,
+    family: safeFamilyFact,
+    rotationType: safeRotationType,
+    confidence: "low",
+    evidence: `${evidence.evidence} ${taxonomyWarningText}`.trim(),
+    uncertainty: {
+      level: "high",
+      reasons: [
+        ...evidence.uncertainty.reasons,
+        ...taxonomy.gateFailures,
+      ],
+    },
+  };
+}
+
+function validateWakeboardTaxonomy(
+  evidence: NormalizedGeminiEvidence,
+): TaxonomyValidationResult {
+  const primaryText = normalizeDomainText(evidence.primaryCandidate.name);
+  const familyText = normalizeDomainText(evidence.family.value);
+  const rotationText = normalizeDomainText(evidence.rotationType.value);
+  const approachText = normalizeDomainText(evidence.approachType.value);
+  const allEvidenceText = evidenceSearchText(evidence);
+  const rawFamily = inferRawTrickFamily({
+    primaryText,
+    familyText,
+    rotationText,
+    allEvidenceText,
+  });
+  const isBackRollCandidate = includesAnyDomainTerm(
+    `${primaryText} ${rotationText}`,
+    ["back roll", "backroll", "백롤"],
+  );
+  const isTantrumCandidate = includesAnyDomainTerm(
+    `${primaryText} ${rotationText}`,
+    ["tantrum", "탠트럼"],
+  );
+  const isInvertSpecificCandidate =
+    rawFamily === "invert" || isBackRollCandidate || isTantrumCandidate;
+  const isBasicAirPlausible = hasBasicAirEvidence(
+    `${primaryText} ${familyText} ${rotationText} ${allEvidenceText}`,
+  );
+  const visibleInversion = hasVisibleInversionEvidence(allEvidenceText);
+  const visibleRollAxis = hasVisibleRollAxisEvidence(allEvidenceText);
+  const visibleRotationInitiation =
+    hasVisibleRotationInitiationEvidence(allEvidenceText);
+  const heelsideSetup = hasHeelsideSetupEvidence(approachText, allEvidenceText);
+  const toesideApproach = includesAnyDomainTerm(
+    `${approachText} ${allEvidenceText}`,
+    ["toeside", "toe side", "토사이드"],
+  );
+  const warnings: string[] = [];
+  const gateFailures: string[] = [];
+
+  if (rawFamily === "invert" && evidence.family.confidence === "high") {
+    if (!visibleInversion) {
+      gateFailures.push("visible inversion evidence is missing");
+      warnings.push("명시적 인버트 근거가 없어 Invert high를 낮춥니다.");
+    }
+  }
+
+  if (isBackRollCandidate && evidence.primaryCandidate.confidence === "high") {
+    if (!heelsideSetup) {
+      gateFailures.push("Back Roll requires heelside setup evidence");
+      warnings.push("Back Roll high에 필요한 힐사이드 setup 근거가 부족합니다.");
+    }
+
+    if (!visibleRollAxis) {
+      gateFailures.push("Back Roll requires visible roll-axis evidence");
+      warnings.push("Back Roll high에 필요한 roll-axis 근거가 부족합니다.");
+    }
+
+    if (!visibleInversion) {
+      gateFailures.push("Back Roll requires visible inversion evidence");
+      warnings.push("Back Roll high에 필요한 인버트 근거가 부족합니다.");
+    }
+
+    if (!visibleRotationInitiation) {
+      gateFailures.push("Back Roll requires rotation-initiation evidence");
+      warnings.push("Back Roll high에 필요한 회전 시작 근거가 부족합니다.");
+    }
+  }
+
+  if (isTantrumCandidate && evidence.primaryCandidate.confidence === "high") {
+    if (toesideApproach) {
+      gateFailures.push("Tantrum cannot be high confidence from toeside approach");
+      warnings.push("토사이드 접근에서는 Tantrum high를 허용하지 않습니다.");
+    }
+
+    if (!visibleInversion) {
+      gateFailures.push("Tantrum requires visible inversion evidence");
+      warnings.push("Tantrum high에 필요한 인버트 근거가 부족합니다.");
+    }
+
+    if (!heelsideSetup) {
+      gateFailures.push("Tantrum requires heelside setup evidence");
+      warnings.push("Tantrum high에 필요한 힐사이드 setup 근거가 부족합니다.");
+    }
+  }
+
+  if (
+    isInvertSpecificCandidate &&
+    isBasicAirPlausible &&
+    !visibleInversion
+  ) {
+    gateFailures.push("Basic Air is plausible and invert evidence is missing");
+    warnings.push("Basic Air / Straight Air 가능성이 있어 인버트 계열 high를 낮춥니다.");
+  }
+
+  if (rawFamily === "invert" && !visibleInversion && !visibleRollAxis) {
+    gateFailures.push("No invert and no roll-axis evidence visible");
+    warnings.push("인버트와 roll-axis가 보이지 않아 Basic Air / Straight Air를 우선합니다.");
+  }
+
+  const safeFamily: TrickFamily =
+    gateFailures.length === 0
+      ? rawFamily
+      : isBasicAirPlausible || (!visibleInversion && !visibleRollAxis)
+        ? "basic_air"
+        : "unknown";
+  const rawPrimaryConfidence = taxonomyConfidence(
+    evidence.primaryCandidate.confidence,
+  );
+  const rawFamilyConfidence = taxonomyConfidence(evidence.family.confidence);
+  const safeConfidence: "high" | "medium" | "low" =
+    gateFailures.length === 0
+      ? rawPrimaryConfidence
+      : "low";
+
+  return {
+    familyGate: {
+      rawFamily,
+      safeFamily,
+      confidence:
+        gateFailures.length === 0
+          ? rawFamilyConfidence
+          : "low" as const,
+      entryGateSatisfied: gateFailures.length === 0,
+      entryGateEvidence: taxonomyEntryEvidence({
+        visibleInversion,
+        visibleRollAxis,
+        visibleRotationInitiation,
+        heelsideSetup,
+        toesideApproach,
+        isBasicAirPlausible,
+      }),
+      missingGateEvidence: gateFailures,
+    },
+    specificCandidate: {
+      rawName: evidence.primaryCandidate.name,
+      safeName:
+        gateFailures.length === 0
+          ? evidence.primaryCandidate.name
+          : safeFamily === "basic_air"
+            ? "Basic Air / Straight Air"
+            : "확인 필요",
+      rawConfidence: rawPrimaryConfidence,
+      safeConfidence,
+      requiredFamily: isInvertSpecificCandidate ? "invert" : rawFamily,
+    },
+    warnings,
+    gateFailures,
+  };
+}
+
+function familyFactForTaxonomy(
+  taxonomy: TaxonomyValidationResult,
+  evidence: NormalizedGeminiEvidence,
+) {
+  if (taxonomy.gateFailures.length === 0) {
+    return evidence.family;
+  }
+
+  return {
+    value:
+      taxonomy.familyGate.safeFamily === "basic_air"
+        ? "Basic Air / Straight Air"
+        : "확인 필요",
+    confidence: "low" as const,
+    evidence:
+      taxonomy.familyGate.safeFamily === "basic_air"
+        ? "인버트 family gate를 통과하지 못해 기본 점프 계열로 낮춰 표시합니다."
+        : "트릭 family gate를 통과하지 못해 확인 필요로 낮춰 표시합니다.",
+  };
+}
+
+function trickCandidateForTaxonomy(
+  taxonomy: TaxonomyValidationResult,
+  evidence: NormalizedGeminiEvidence,
+) {
+  if (taxonomy.gateFailures.length === 0) {
+    return evidence.primaryCandidate;
+  }
+
+  return {
+    name: taxonomy.specificCandidate.safeName,
+    confidence: taxonomy.specificCandidate.safeConfidence,
+    evidence: `${evidence.primaryCandidate.evidence} Taxonomy gate: ${taxonomy.gateFailures.join("; ")}`,
+  };
+}
+
+function rotationFactForTaxonomy(
+  taxonomy: TaxonomyValidationResult,
+  evidence: NormalizedGeminiEvidence,
+) {
+  if (taxonomy.gateFailures.length === 0) {
+    return evidence.rotationType;
+  }
+
+  return {
+    value:
+      taxonomy.familyGate.safeFamily === "basic_air"
+        ? "No roll axis / 확인 필요"
+        : "확인 필요",
+    confidence: "low" as const,
+    evidence: "family gate 실패로 회전 유형을 high confidence로 유지하지 않습니다.",
+  };
+}
+
 function applyGeminiEvidenceConsistency(
-  evidence: ReturnType<typeof normalizeGeminiEvidence>,
+  evidence: TaxonomyGatedEvidence,
 ) {
   const warnings: string[] = [];
   const primaryName = evidence.primaryCandidate.name;
@@ -2738,6 +3041,203 @@ function applyGeminiEvidenceConsistency(
       reasons: [...evidence.uncertainty.reasons, ...warnings],
     },
   };
+}
+
+function inferRawTrickFamily({
+  primaryText,
+  familyText,
+  rotationText,
+  allEvidenceText,
+}: {
+  primaryText: string;
+  familyText: string;
+  rotationText: string;
+  allEvidenceText: string;
+}): TrickFamily {
+  const combined = `${primaryText} ${familyText} ${rotationText} ${allEvidenceText}`;
+
+  if (hasBasicAirEvidence(combined)) {
+    return "basic_air";
+  }
+
+  if (
+    includesAnyDomainTerm(combined, ["raley", "랠리", "레일리"])
+  ) {
+    return "raley";
+  }
+
+  if (
+    includesAnyDomainTerm(combined, ["invert", "인버트", "tantrum", "탠트럼"]) ||
+    includesAnyDomainTerm(combined, ["back roll", "backroll", "백롤"]) ||
+    includesAnyDomainTerm(combined, ["front roll", "frontroll", "프론트롤"])
+  ) {
+    return "invert";
+  }
+
+  if (includesAnyDomainTerm(combined, ["spin", "스핀", "180", "360"])) {
+    return "spin";
+  }
+
+  if (includesAnyDomainTerm(combined, ["grab", "그랩"])) {
+    return "grab";
+  }
+
+  if (
+    includesAnyDomainTerm(combined, ["surface", "butter", "press", "서피스"])
+  ) {
+    return "surface_trick";
+  }
+
+  return "unknown";
+}
+
+function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
+  return normalizeDomainText(
+    [
+      evidence.primaryCandidate.name,
+      evidence.primaryCandidate.evidence,
+      evidence.family.value,
+      evidence.family.evidence,
+      evidence.approachType.value,
+      evidence.approachType.evidence,
+      evidence.rotationType.value,
+      evidence.rotationType.evidence,
+      evidence.evidence,
+      ...evidence.evidenceWindows.map(
+        (window) => `${window.label} ${window.evidence}`,
+      ),
+      ...evidence.observations.map(
+        (observation) => `${observation.label} ${observation.detail}`,
+      ),
+      ...evidence.uncertainty.reasons,
+    ].join(" "),
+  );
+}
+
+function hasBasicAirEvidence(value: string) {
+  const text = normalizeDomainText(value);
+
+  return (
+    includesAnyDomainTerm(text, [
+      "basic air",
+      "basic jump",
+      "straight air",
+      "wake jump",
+      "베이직 점프",
+      "기본 점프",
+      "스트레이트 에어",
+    ]) ||
+    includesAnyDomainTerm(text, ["no invert", "no roll axis"]) ||
+    includesAnyDomainTerm(text, ["인버트 없음", "회전축 없음", "롤 축 없음"])
+  );
+}
+
+function hasVisibleInversionEvidence(value: string) {
+  const text = normalizeDomainText(value);
+
+  if (
+    includesAnyDomainTerm(text, [
+      "no invert",
+      "인버트 없음",
+      "not invert",
+      "no visible inversion",
+    ])
+  ) {
+    return false;
+  }
+
+  return (
+    includesAnyDomainTerm(text, [
+      "inverted body",
+      "body/board",
+      "body-board",
+      "몸/보드",
+      "몸과 보드",
+      "상하 반전",
+      "완전히 뒤집",
+      "인버트된",
+    ]) &&
+    includesAnyDomainTerm(text, ["머리 위", "overhead", "inverted", "인버트"])
+  );
+}
+
+function hasVisibleRollAxisEvidence(value: string) {
+  const text = normalizeDomainText(value);
+
+  if (
+    includesAnyDomainTerm(text, [
+      "no roll axis",
+      "회전축 없음",
+      "롤 축 없음",
+      "no visible roll",
+    ])
+  ) {
+    return false;
+  }
+
+  return includesAnyDomainTerm(text, [
+    "roll axis",
+    "rotation axis",
+    "회전축",
+    "롤 축",
+    "roll축",
+  ]);
+}
+
+function hasVisibleRotationInitiationEvidence(value: string) {
+  return includesAnyDomainTerm(value, [
+    "rotation initiation",
+    "회전 시작",
+    "initiation",
+    "어깨",
+    "골반",
+    "shoulder",
+    "hip",
+  ]);
+}
+
+function hasHeelsideSetupEvidence(approachText: string, allEvidenceText: string) {
+  return (
+    includesAnyDomainTerm(approachText, [
+      "heelside",
+      "heel side",
+      "힐사이드",
+      "hs",
+    ]) &&
+    includesAnyDomainTerm(allEvidenceText, ["heelside", "heel side", "힐사이드"]) &&
+    includesAnyDomainTerm(allEvidenceText, ["edge", "엣지", "load", "로드"])
+  );
+}
+
+function taxonomyEntryEvidence({
+  visibleInversion,
+  visibleRollAxis,
+  visibleRotationInitiation,
+  heelsideSetup,
+  toesideApproach,
+  isBasicAirPlausible,
+}: {
+  visibleInversion: boolean;
+  visibleRollAxis: boolean;
+  visibleRotationInitiation: boolean;
+  heelsideSetup: boolean;
+  toesideApproach: boolean;
+  isBasicAirPlausible: boolean;
+}) {
+  return [
+    visibleInversion ? "visible inversion" : undefined,
+    visibleRollAxis ? "visible roll axis" : undefined,
+    visibleRotationInitiation ? "visible rotation initiation" : undefined,
+    heelsideSetup ? "heelside setup" : undefined,
+    toesideApproach ? "toeside approach" : undefined,
+    isBasicAirPlausible ? "basic air plausible" : undefined,
+  ].filter((item): item is string => Boolean(item));
+}
+
+function taxonomyConfidence(value: string): "high" | "medium" | "low" {
+  return value === "high" || value === "medium" || value === "low"
+    ? value
+    : "low";
 }
 
 function normalizeDomainText(value: string) {

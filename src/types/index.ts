@@ -94,6 +94,10 @@ export type GeminiEvidenceResult = {
   requiresUserConfirmation?: boolean;
   consistencyStatus?: 'valid' | 'inconsistent' | 'needs_review';
   consistencyWarnings?: string[];
+  rawFamilyCandidate?: string;
+  safeFamilyCandidate?: string;
+  taxonomyWarnings?: string[];
+  gateFailures?: string[];
   rawResponseText?: string;
   primaryCandidate: TrickCandidateEvidence;
   alternativeCandidates: TrickCandidateEvidence[];
