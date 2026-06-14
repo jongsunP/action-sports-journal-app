@@ -72,6 +72,8 @@ const openAiReasoningEffort = process.env.OPENAI_REASONING_EFFORT ?? "medium";
 const benchmarkArtifactDir =
   process.env.OPENAI_BENCHMARK_ARTIFACT_DIR ??
   "dev-artifacts/openai-benchmarks";
+const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
+const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
 
 const allowedVideoMimeTypes = new Set([
   "video/mp4",
@@ -144,6 +146,22 @@ app.get("/health", (_request, response) => {
       openAiFrameWidth,
       openAiReasoningEffort,
     },
+  });
+});
+
+app.get("/debug/evidence-captures", (request, response) => {
+  if (!debugCaptureToken) {
+    response.status(404).json({ error: "Debug evidence capture is disabled." });
+    return;
+  }
+
+  if (getDebugToken(request) !== debugCaptureToken) {
+    response.status(401).json({ error: "Unauthorized." });
+    return;
+  }
+
+  response.json({
+    captures: evidenceDebugCaptures,
   });
 });
 
@@ -383,7 +401,7 @@ app.post(
         `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
       );
 
-      response.json({
+      const evidenceResponse = {
         id: `evidence-${Date.now()}`,
         sessionId: metadata.sessionId,
         status: normalizedEvidence.parseFailed ? "failed" : "completed",
@@ -407,7 +425,21 @@ app.post(
         observations: normalizedEvidence.observations,
         uncertainty: normalizedEvidence.uncertainty,
         createdAt: new Date().toISOString(),
+      };
+
+      captureEvidenceDebug({
+        metadata,
+        file: {
+          originalName: request.file.originalname,
+          mimeType: request.file.mimetype,
+          size: request.file.size,
+        },
+        rawResponseText: rawOutputText,
+        parsedEvidence: normalizedEvidence,
+        response: evidenceResponse,
       });
+
+      response.json(evidenceResponse);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Evidence extraction failed.";
@@ -748,6 +780,19 @@ type SessionMetadata = {
   userConfirmedTrick: string;
 };
 
+type EvidenceDebugCapture = {
+  capturedAt: string;
+  metadata: SessionMetadata;
+  file: {
+    originalName: string;
+    mimeType: string;
+    size: number;
+  };
+  rawResponseText: string;
+  parsedEvidence: ReturnType<typeof normalizeGeminiEvidence>;
+  response: unknown;
+};
+
 function getSessionMetadata(request: express.Request): SessionMetadata {
   return {
     sessionId: getField(request.body.sessionId, "session-local"),
@@ -761,6 +806,39 @@ function getSessionMetadata(request: express.Request): SessionMetadata {
 
 function getField(value: unknown, fallback: string) {
   return typeof value === "string" && value.length > 0 ? value : fallback;
+}
+
+function getDebugToken(request: express.Request) {
+  const headerValue = request.header("x-debug-token");
+
+  if (headerValue) {
+    return headerValue;
+  }
+
+  return getField(request.query.token, "");
+}
+
+function captureEvidenceDebug({
+  metadata,
+  file,
+  rawResponseText,
+  parsedEvidence,
+  response,
+}: Omit<EvidenceDebugCapture, "capturedAt">) {
+  if (!debugCaptureToken) {
+    return;
+  }
+
+  evidenceDebugCaptures.unshift({
+    capturedAt: new Date().toISOString(),
+    metadata,
+    file,
+    rawResponseText,
+    parsedEvidence,
+    response,
+  });
+
+  evidenceDebugCaptures.splice(5);
 }
 
 function readNumberEnv(name: string, fallback: number) {
