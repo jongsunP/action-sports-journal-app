@@ -2688,6 +2688,11 @@ function validateWakeboardTaxonomy(
       gateFailures.push("visible inversion evidence is missing");
       warnings.push("명시적 인버트 근거가 없어 Invert high를 낮춥니다.");
     }
+
+    if (!visibleRotationInitiation) {
+      gateFailures.push("Invert high requires rotation-initiation evidence");
+      warnings.push("인버트 high에 필요한 회전 시작 근거가 부족합니다.");
+    }
   }
 
   if (isBackRollCandidate && evidence.primaryCandidate.confidence === "high") {
@@ -2726,6 +2731,11 @@ function validateWakeboardTaxonomy(
     if (!heelsideSetup) {
       gateFailures.push("Tantrum requires heelside setup evidence");
       warnings.push("Tantrum high에 필요한 힐사이드 setup 근거가 부족합니다.");
+    }
+
+    if (!visibleRotationInitiation) {
+      gateFailures.push("Tantrum requires rotation-initiation evidence");
+      warnings.push("Tantrum high에 필요한 회전 시작 근거가 부족합니다.");
     }
   }
 
