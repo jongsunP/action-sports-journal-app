@@ -23,6 +23,7 @@ dotenv.config();
 
 const execFileAsync = promisify(execFile);
 
+const host = process.env.HOST ?? "0.0.0.0";
 const port = Number(process.env.PORT ?? 8787);
 const geminiModel = process.env.GEMINI_ANALYSIS_MODEL ?? "gemini-3.5-flash";
 const geminiFallbackModel =
@@ -105,6 +106,11 @@ app.use(rateLimit);
 app.get("/health", (_request, response) => {
   response.json({
     ok: true,
+    server: {
+      host,
+      port,
+      environment: process.env.NODE_ENV ?? "development",
+    },
     primaryProvider: "gemini",
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     geminiModel,
@@ -727,8 +733,10 @@ app.post(
   },
 );
 
-app.listen(port, () => {
-  console.log(`Action Sports Journal analysis server listening on ${port}`);
+app.listen(port, host, () => {
+  console.log(
+    `Action Sports Journal analysis server listening on ${host}:${port}`,
+  );
 });
 
 type SessionMetadata = {
