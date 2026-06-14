@@ -1,8 +1,8 @@
 # Current Stage
 
-Read `docs/PROJECT_MEMORY.md` first for the top-level project memory,
-collaboration rules, product philosophy, AI architecture direction, and current
-resume point.
+`docs/PROJECT_MEMORY.md` is the primary source of truth and project operating
+system. Read it first for top-level project memory, collaboration rules,
+product philosophy, AI architecture direction, and current resume point.
 
 ## Stage
 

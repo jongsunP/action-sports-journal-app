@@ -4,7 +4,8 @@
 
 This file records the current handoff state after the prior Codex account/session became unavailable.
 
-Use this file together with:
+`docs/PROJECT_MEMORY.md` is the primary source of truth and project operating
+system. Use this file together with:
 
 - `docs/PROJECT_MEMORY.md`
 - `AGENTS.md`
@@ -41,7 +42,7 @@ Render backend deployed and standalone iPhone app working without Expo Go
 The latest known project checkpoint is:
 
 ```text
-3f932a8 Anchor approach detection to final approach window
+4807a10 Create permanent project memory system
 ```
 
 At the time this checkpoint was updated, local `master` was pushed to

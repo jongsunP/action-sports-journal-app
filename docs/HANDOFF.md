@@ -4,7 +4,8 @@
 
 This file exists so a new Codex session can continue work without relying on chat history.
 
-Read `docs/PROJECT_MEMORY.md` first. Then read this file after `AGENTS.md`,
+`docs/PROJECT_MEMORY.md` is the primary source of truth and project operating
+system. Read it first. Then read this file after `AGENTS.md`,
 `docs/CURRENT_STAGE.md`, and `REVIEW.md`.
 
 ## Project
@@ -64,7 +65,7 @@ Stored Session Intelligence
 Latest known project checkpoint:
 
 ```text
-3f932a8 Anchor approach detection to final approach window
+4807a10 Create permanent project memory system
 ```
 
 Repository:

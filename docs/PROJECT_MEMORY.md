@@ -2,12 +2,13 @@
 
 ## Purpose
 
-This is the top-level permanent memory document for Action Sports Journal.
+This is the top-level permanent memory document and operating system for
+Action Sports Journal.
 
 Future GPT sessions, Codex sessions, new computers, and handoffs should read
 this first, then follow references to the more detailed documents.
 
-Use this document as the single source of truth for project identity,
+Use this document as the primary source of truth for project identity,
 collaboration rules, product philosophy, AI architecture direction, wakeboard
 domain constraints, current priorities, and recovery instructions.
 
@@ -376,6 +377,17 @@ For a new GPT session:
 6. Use explicit uncertainty labels.
 7. Do not propose implementation as completed work.
 
+Recommended opening prompt for a new GPT session:
+
+```text
+Read docs/PROJECT_MEMORY.md as the primary source of truth for Action Sports
+Journal. Then read docs/CURRENT_STAGE.md, docs/HANDOFF.md, and
+docs/CONTINUITY_CHECKPOINT.md. Continue from the current resume point. Use
+Confirmed Fact / Observation / Hypothesis / Recommendation / Unknown labels
+when diagnosing. Do not imply anything is implemented unless the docs or code
+confirm it.
+```
+
 For a new Codex session:
 
 1. Sync the personal context repository if required by local instructions.
@@ -392,6 +404,16 @@ For a new Codex session:
 8. Prefer small focused commits and push important checkpoints to
    `origin/master`.
 
+Recommended opening prompt for a new Codex session:
+
+```text
+Open ~/repository/action-sports-journal-app. Read docs/PROJECT_MEMORY.md first
+as the primary source of truth, then read AGENTS.md if present,
+docs/CURRENT_STAGE.md, docs/HANDOFF.md, and docs/CONTINUITY_CHECKPOINT.md.
+Check git status before edits. Do not print secrets. Continue from the current
+resume point and keep changes scoped.
+```
+
 Current resume instruction:
 
 ```text
@@ -399,4 +421,89 @@ Start with Inversion Detection.
 Design InversionObservedFacts.
 Do not change trick classification again until raw inversion evidence is
 understood.
+```
+
+## Save Point Procedure
+
+When the Founder says any of these:
+
+- "정리하자"
+- "작업 정리"
+- "오늘 마무리"
+- "Save Point"
+- "마무리하자"
+
+Expected process:
+
+1. Summarize findings.
+   - Confirmed facts
+   - Observations
+   - Hypotheses
+   - Recommendations
+   - Unknowns
+
+2. Record decisions.
+   - Product decisions
+   - Technical decisions
+   - Rejected directions
+   - Reasons decisions were made
+
+3. Record current status.
+   - What works
+   - What changed
+   - What was verified
+   - What was not verified
+
+4. Record open issues.
+   - Bugs
+   - AI uncertainty
+   - Product questions
+   - Deployment or environment risks
+
+5. Record next starting point.
+   - The exact next priority
+   - The first task for the next session
+   - What not to do yet
+
+6. Update documentation.
+   - Always update this file if the operating context changed.
+   - Update `docs/HANDOFF.md`, `docs/CONTINUITY_CHECKPOINT.md`, and
+     `docs/CURRENT_STAGE.md` when milestone status, current priority, or next
+     starting point changes.
+   - Update specialized docs when relevant, such as taxonomy, validation,
+     deployment, or AI design docs.
+
+7. Verify.
+   - Run `npm run typecheck` when code or TypeScript-facing docs/config changed,
+     or when the Founder requests it.
+   - Check `git status`.
+   - Verify no secrets are committed.
+   - Verify `.env.local` and local secret files remain ignored when env files
+     are involved.
+
+8. Commit and push when requested.
+   - Use one clean checkpoint commit.
+   - Push to `origin/master`.
+   - Report commit hash and final git status.
+
+Save Point report format:
+
+```text
+Confirmed:
+- ...
+
+Unknown:
+- ...
+
+Changed:
+- ...
+
+Verified:
+- ...
+
+Commit:
+- ...
+
+Next starting point:
+- ...
 ```
