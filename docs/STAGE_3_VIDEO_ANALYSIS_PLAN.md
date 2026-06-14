@@ -155,6 +155,11 @@ initiation, airborne mechanics, and outcome. Trick identity should be determined
 primarily from setup + initiation + airborne mechanics. Peak-to-landing should
 not be ignored, but landing/crash should not override trick identity.
 
+The next AI architecture direction is documented in
+`docs/AI_ANALYSIS_PIPELINE_DESIGN.md`. The key shift is from one Gemini pass to
+a staged pipeline: observed facts, family classification, specific trick
+classification, judge AI, then coaching.
+
 ## Not In Scope Yet
 
 - Database-backed Session storage

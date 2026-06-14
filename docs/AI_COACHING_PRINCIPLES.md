@@ -38,6 +38,11 @@ Wakeboard trick evidence should also follow the taxonomy reference in
 `docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md`: classify the parent trick family
 before naming a specific trick.
 
+The long-term analysis architecture is described in
+`docs/AI_ANALYSIS_PIPELINE_DESIGN.md`. Coaching should come after observed
+facts, family classification, specific trick classification, and a judgment
+step have produced stable evidence.
+
 ## Wakeboard Domain Insights
 
 Trick identity is not determined by landing.
