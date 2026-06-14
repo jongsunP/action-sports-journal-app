@@ -56,6 +56,10 @@ type RemoteEvidenceResponse = {
   primaryCandidate?: unknown;
   alternativeCandidates?: unknown;
   family?: unknown;
+  rawApproachType?: unknown;
+  approachObservedFacts?: unknown;
+  approachDecision?: unknown;
+  approachWarnings?: unknown;
   approachType?: unknown;
   rotationType?: unknown;
   landingOutcome?: unknown;
@@ -261,6 +265,10 @@ function normalizeRemoteEvidence(
     primaryCandidate: asTrickCandidate(data.primaryCandidate),
     alternativeCandidates: asTrickCandidates(data.alternativeCandidates),
     family: asEvidenceFact(data.family),
+    rawApproachType: asOptionalEvidenceFact(data.rawApproachType),
+    approachObservedFacts: asApproachObservedFacts(data.approachObservedFacts),
+    approachDecision: asApproachDecision(data.approachDecision),
+    approachWarnings: asStringArray(data.approachWarnings),
     approachType: asEvidenceFact(data.approachType),
     rotationType: asEvidenceFact(data.rotationType),
     landingOutcome: asEvidenceFact(data.landingOutcome),
@@ -319,6 +327,110 @@ function asEvidenceFact(value: unknown): GeminiEvidenceResult['approachType'] {
     confidence: asConfidenceLevel(candidate.confidence) ?? 'low',
     evidence: asString(candidate.evidence) ?? '근거가 부족합니다.',
   };
+}
+
+function asOptionalEvidenceFact(
+  value: unknown,
+): GeminiEvidenceResult['rawApproachType'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  return asEvidenceFact(value);
+}
+
+function asApproachObservedFacts(
+  value: unknown,
+): GeminiEvidenceResult['approachObservedFacts'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+  const wakeCrossingPath =
+    facts.wakeCrossingPath && typeof facts.wakeCrossingPath === 'object'
+      ? (facts.wakeCrossingPath as Record<string, unknown>)
+      : {};
+
+  return {
+    stance: asEvidenceFact(facts.stance),
+    leadFoot: asEvidenceFact(facts.leadFoot),
+    boardDirection: asEvidenceFact(facts.boardDirection),
+    wakeCrossingPath: {
+      startPosition: asString(wakeCrossingPath.startPosition) ?? 'unknown',
+      takeoffPosition: asString(wakeCrossingPath.takeoffPosition) ?? 'unknown',
+      landingPosition: asString(wakeCrossingPath.landingPosition) ?? 'unknown',
+      direction: asString(wakeCrossingPath.direction) ?? 'unknown',
+      confidence: asConfidenceLevel(wakeCrossingPath.confidence) ?? 'low',
+      evidence:
+        asString(wakeCrossingPath.evidence) ??
+        '웨이크 경로 근거를 충분히 읽지 못했습니다.',
+    },
+    edgeDirectionEvidence: asEvidenceFact(facts.edgeDirectionEvidence),
+    handlePosition: asEvidenceFact(facts.handlePosition),
+    bodyOrientation: asEvidenceFact(facts.bodyOrientation),
+  };
+}
+
+function asApproachDecision(
+  value: unknown,
+): GeminiEvidenceResult['approachDecision'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const decision = value as Record<string, unknown>;
+  const rawValue = asString(decision.value);
+  const approachValue =
+    rawValue === 'heelside' ||
+    rawValue === 'toeside' ||
+    rawValue === 'switch' ||
+    rawValue === 'unknown'
+      ? rawValue
+      : 'unknown';
+
+  return {
+    value: approachValue,
+    confidence: asConfidenceLevel(decision.confidence) ?? 'low',
+    derivedFrom: asStringArray(decision.derivedFrom),
+    reasoning: asStringArray(decision.reasoning),
+    rejectedAlternatives: asRejectedApproachAlternatives(
+      decision.rejectedAlternatives,
+    ),
+    uncertainty: asStringArray(decision.uncertainty),
+  };
+}
+
+function asRejectedApproachAlternatives(
+  value: unknown,
+): NonNullable<GeminiEvidenceResult['approachDecision']>['rejectedAlternatives'] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const rawValue = asString(candidate.value);
+
+      if (
+        rawValue !== 'heelside' &&
+        rawValue !== 'toeside' &&
+        rawValue !== 'switch'
+      ) {
+        return null;
+      }
+
+      return {
+        value: rawValue as 'heelside' | 'toeside' | 'switch',
+        reason: asString(candidate.reason) ?? '근거가 부족합니다.',
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
 
 function asEvidenceWindows(value: unknown): GeminiEvidenceResult['evidenceWindows'] {

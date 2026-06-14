@@ -56,6 +56,35 @@ export type EvidenceFact = {
   evidence: string;
 };
 
+export type ApproachObservedFacts = {
+  stance: EvidenceFact;
+  leadFoot: EvidenceFact;
+  boardDirection: EvidenceFact;
+  wakeCrossingPath: {
+    startPosition: string;
+    takeoffPosition: string;
+    landingPosition: string;
+    direction: string;
+    confidence: EvidenceConfidence;
+    evidence: string;
+  };
+  edgeDirectionEvidence: EvidenceFact;
+  handlePosition: EvidenceFact;
+  bodyOrientation: EvidenceFact;
+};
+
+export type ApproachDecision = {
+  value: 'heelside' | 'toeside' | 'switch' | 'unknown';
+  confidence: EvidenceConfidence;
+  derivedFrom: string[];
+  reasoning: string[];
+  rejectedAlternatives: Array<{
+    value: 'heelside' | 'toeside' | 'switch';
+    reason: string;
+  }>;
+  uncertainty: string[];
+};
+
 export type AttemptedTrickEvidence = {
   name: string;
   confidence: EvidenceConfidence;
@@ -102,6 +131,10 @@ export type GeminiEvidenceResult = {
   primaryCandidate: TrickCandidateEvidence;
   alternativeCandidates: TrickCandidateEvidence[];
   family: EvidenceFact;
+  rawApproachType?: EvidenceFact;
+  approachObservedFacts?: ApproachObservedFacts;
+  approachDecision?: ApproachDecision;
+  approachWarnings?: string[];
   approachType: EvidenceFact;
   rotationType: EvidenceFact;
   landingOutcome: EvidenceFact;

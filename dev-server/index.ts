@@ -423,6 +423,10 @@ app.post(
         primaryCandidate: normalizedEvidence.primaryCandidate,
         alternativeCandidates: normalizedEvidence.alternativeCandidates,
         family: normalizedEvidence.family,
+        rawApproachType: normalizedEvidence.rawApproachType,
+        approachObservedFacts: normalizedEvidence.approachObservedFacts,
+        approachDecision: normalizedEvidence.approachDecision,
+        approachWarnings: normalizedEvidence.approachWarnings,
         approachType: normalizedEvidence.approachType,
         rotationType: normalizedEvidence.rotationType,
         landingOutcome: normalizedEvidence.landingOutcome,
@@ -1441,6 +1445,12 @@ function buildGeminiEvidencePrompt({
     "기본 점프/스트레이트 에어/토사이드 베이직 점프도 정상 후보입니다. 인버트가 아니면 반드시 No invert 또는 기본 점프로 분류하세요.",
     "명시적 반례 후보: Toeside Basic Jump, Basic Jump, Straight Air, No invert, No roll axis, No back roll mechanics.",
     "보드가 높게 뜨거나 카메라 각도 때문에 보드가 라이더 위쪽에 보이는 것만으로 인버트/백롤이라고 판단하지 마세요.",
+    "접근 방향은 바로 힐사이드/토사이드로 단정하지 말고 먼저 approachObservedFacts를 채우세요.",
+    "approachObservedFacts에는 stance, leadFoot, boardDirection, wakeCrossingPath, edgeDirectionEvidence, handlePosition, bodyOrientation을 관찰 사실로 분리해서 작성하세요.",
+    "질문 순서: 스탠스는 무엇인가? 어느 발이 앞인가? 보드 방향은? 라이더는 어디서 시작했고 어디서 이륙했고 어디에 착지했는가? 어떤 엣지가 로드됐는가? 핸들은 어디에 있는가? 어떤 시각 사실이 이를 뒷받침하는가?",
+    "bodyOrientation은 보조 근거입니다. 가슴/등이 보인다는 사실만으로 힐사이드/토사이드를 확정하지 마세요.",
+    "트릭 후보명에서 접근 방향을 역추론하지 마세요. Back Roll/Tantrum 후보라고 해서 힐사이드로 채우면 안 됩니다.",
+    "wake crossing direction만으로 approach high를 주지 마세요. stance/leadFoot/wake path/edge evidence가 부족하면 confidence를 낮추세요.",
     "static classification과 dynamic classification을 분리하세요.",
     "static classification: regular/goofy, heelside/toeside, switch/normal stance는 비교적 적은 프레임으로도 판단할 수 있습니다.",
     "dynamic classification: trick identity, rotation family, roll axis, invert mechanics는 더 어렵고 setup + initiation + airborne mechanics를 함께 봐야 합니다.",
@@ -1480,6 +1490,7 @@ function buildGeminiEvidencePrompt({
     "반드시 추출할 항목:",
     "- primaryCandidate: AI가 가장 가능성이 높다고 보는 기술명",
     "- family: 인버트/스핀/그랩/슬라이드/기본 점프/확인 필요 등 넓은 계열",
+    "- approachObservedFacts: 접근 방향 판단 전 관찰 사실",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
     "- landingOutcome: 착지 성공/불안정 착지/크래시/확인 필요",
@@ -1496,8 +1507,9 @@ function buildGeminiEvidencePrompt({
     "- 몸/보드가 완전히 뒤집히는 관계가 보이지 않으면 family=인버트 high를 금지하세요.",
     "- roll axis가 보이지 않으면 rotationType=No roll axis 또는 확인 필요로 쓰세요.",
     "- 백롤 mechanics가 보이지 않으면 primaryCandidate에 백롤을 쓰지 마세요.",
+    "- approachObservedFacts가 부족하면 approachType high를 금지하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, approachObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -1756,6 +1768,7 @@ type GeminiEvidencePayload = {
     confidence: "high" | "medium" | "low";
     evidence: string;
   };
+  approachObservedFacts?: ApproachObservedFactsPayload;
   rotationType: {
     value: string;
     confidence: "high" | "medium" | "low";
@@ -1788,6 +1801,41 @@ type GeminiEvidencePayload = {
 };
 
 type EvidenceConsistencyStatus = "valid" | "inconsistent" | "needs_review";
+
+type ApproachFactPayload = {
+  value: string;
+  confidence: "high" | "medium" | "low";
+  evidence: string;
+};
+
+type ApproachObservedFactsPayload = {
+  stance: ApproachFactPayload;
+  leadFoot: ApproachFactPayload;
+  boardDirection: ApproachFactPayload;
+  wakeCrossingPath: {
+    startPosition: string;
+    takeoffPosition: string;
+    landingPosition: string;
+    direction: string;
+    confidence: "high" | "medium" | "low";
+    evidence: string;
+  };
+  edgeDirectionEvidence: ApproachFactPayload;
+  handlePosition: ApproachFactPayload;
+  bodyOrientation: ApproachFactPayload;
+};
+
+type ApproachDecision = {
+  value: "heelside" | "toeside" | "switch" | "unknown";
+  confidence: "high" | "medium" | "low";
+  derivedFrom: string[];
+  reasoning: string[];
+  rejectedAlternatives: Array<{
+    value: "heelside" | "toeside" | "switch";
+    reason: string;
+  }>;
+  uncertainty: string[];
+};
 
 type TrickFamily =
   | "basic_air"
@@ -1962,6 +2010,13 @@ function parseGeminiEvidence(outputText: string) {
       };
     }
 
+    const rawApproachType = normalizeEvidenceFact(undefined, "확인 필요");
+    const approachObservedFacts = normalizeApproachObservedFacts(undefined);
+    const approachDecision = deriveApproachDecision(
+      approachObservedFacts,
+      rawApproachType,
+    );
+
     return {
       parseFailed: true,
       consistencyStatus: "needs_review" as EvidenceConsistencyStatus,
@@ -1969,7 +2024,14 @@ function parseGeminiEvidence(outputText: string) {
       primaryCandidate: normalizeTrickCandidate(undefined, "확인 필요"),
       alternativeCandidates: [],
       family: normalizeEvidenceFact(undefined, "확인 필요"),
-      approachType: normalizeEvidenceFact(undefined, "확인 필요"),
+      rawApproachType,
+      approachObservedFacts,
+      approachDecision,
+      approachWarnings: approachDecision.uncertainty,
+      approachType: approachFactFromDecision(
+        approachDecision,
+        rawApproachType,
+      ),
       rotationType: normalizeEvidenceFact(undefined, "확인 필요"),
       landingOutcome: normalizeEvidenceFact(undefined, "확인 필요"),
       confidence: "low" as const,
@@ -2007,6 +2069,10 @@ function parsePartialGeminiEvidence(outputText: string) {
   const alternativeCandidates =
     parseArrayProperty(outputText, "alternativeCandidates") ?? [];
   const family = parseObjectProperty(outputText, "family");
+  const approachObservedFacts = parseObjectProperty(
+    outputText,
+    "approachObservedFacts",
+  );
   const approachType = parseObjectProperty(outputText, "approachType");
   const rotationType = parseObjectProperty(outputText, "rotationType");
   const landingOutcome = parseObjectProperty(outputText, "landingOutcome");
@@ -2018,6 +2084,8 @@ function parsePartialGeminiEvidence(outputText: string) {
     alternativeCandidates:
       alternativeCandidates as GeminiEvidencePayload["alternativeCandidates"],
     family: family as GeminiEvidencePayload["family"] | undefined,
+    approachObservedFacts:
+      approachObservedFacts as GeminiEvidencePayload["approachObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
     rotationType: rotationType as GeminiEvidencePayload["rotationType"] | undefined,
     landingOutcome:
@@ -2572,6 +2640,19 @@ function normalizeGeminiAnalysis(parsed: Partial<GeminiAnalysisPayload>) {
 }
 
 function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
+  const rawApproachType = normalizeEvidenceFact(
+    parsed.approachType,
+    "확인 필요",
+  );
+  const approachObservedFacts = normalizeApproachObservedFacts(
+    parsed.approachObservedFacts,
+  );
+  const approachDecision = deriveApproachDecision(
+    approachObservedFacts,
+    rawApproachType,
+  );
+  const approachWarnings = approachDecision.uncertainty;
+
   return {
     parseFailed: false,
     consistencyStatus: "valid" as EvidenceConsistencyStatus,
@@ -2584,7 +2665,11 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
       parsed.alternativeCandidates,
     ),
     family: normalizeEvidenceFact(parsed.family, "확인 필요"),
-    approachType: normalizeEvidenceFact(parsed.approachType, "확인 필요"),
+    rawApproachType,
+    approachObservedFacts,
+    approachDecision,
+    approachWarnings,
+    approachType: approachFactFromDecision(approachDecision, rawApproachType),
     rotationType: normalizeEvidenceFact(parsed.rotationType, "확인 필요"),
     landingOutcome: normalizeEvidenceFact(parsed.landingOutcome, "확인 필요"),
     confidence: asOpenAiConfidenceLevel(parsed.confidence) ?? "low",
@@ -2596,6 +2681,349 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     observations: normalizeEvidenceObservations(parsed.observations),
     uncertainty: normalizeEvidenceUncertainty(parsed.uncertainty),
   };
+}
+
+function normalizeApproachObservedFacts(
+  value: unknown,
+): ApproachObservedFactsPayload {
+  const facts =
+    value && typeof value === "object"
+      ? (value as Partial<ApproachObservedFactsPayload>)
+      : {};
+
+  return {
+    stance: normalizeApproachFact(facts.stance, "unknown"),
+    leadFoot: normalizeApproachFact(facts.leadFoot, "unknown"),
+    boardDirection: normalizeApproachFact(facts.boardDirection, "unknown"),
+    wakeCrossingPath: normalizeWakeCrossingPath(facts.wakeCrossingPath),
+    edgeDirectionEvidence: normalizeApproachFact(
+      facts.edgeDirectionEvidence,
+      "unknown",
+    ),
+    handlePosition: normalizeApproachFact(facts.handlePosition, "unknown"),
+    bodyOrientation: normalizeApproachFact(facts.bodyOrientation, "unknown"),
+  };
+}
+
+function normalizeApproachFact(
+  value: unknown,
+  fallbackValue: string,
+): ApproachFactPayload {
+  if (!value || typeof value !== "object") {
+    return {
+      value: fallbackValue,
+      confidence: "low",
+      evidence: "영상 근거를 충분히 구조화하지 못했습니다.",
+    };
+  }
+
+  const fact = value as Record<string, unknown>;
+
+  return {
+    value: typeof fact.value === "string" ? fact.value : fallbackValue,
+    confidence: asOpenAiConfidenceLevel(fact.confidence) ?? "low",
+    evidence:
+      typeof fact.evidence === "string"
+        ? fact.evidence
+        : "영상 근거를 충분히 구조화하지 못했습니다.",
+  };
+}
+
+function normalizeWakeCrossingPath(
+  value: unknown,
+): ApproachObservedFactsPayload["wakeCrossingPath"] {
+  if (!value || typeof value !== "object") {
+    return {
+      startPosition: "unknown",
+      takeoffPosition: "unknown",
+      landingPosition: "unknown",
+      direction: "unknown",
+      confidence: "low",
+      evidence: "웨이크 경로 근거를 충분히 구조화하지 못했습니다.",
+    };
+  }
+
+  const path = value as Record<string, unknown>;
+
+  return {
+    startPosition:
+      typeof path.startPosition === "string" ? path.startPosition : "unknown",
+    takeoffPosition:
+      typeof path.takeoffPosition === "string"
+        ? path.takeoffPosition
+        : "unknown",
+    landingPosition:
+      typeof path.landingPosition === "string"
+        ? path.landingPosition
+        : "unknown",
+    direction: typeof path.direction === "string" ? path.direction : "unknown",
+    confidence: asOpenAiConfidenceLevel(path.confidence) ?? "low",
+    evidence:
+      typeof path.evidence === "string"
+        ? path.evidence
+        : "웨이크 경로 근거를 충분히 구조화하지 못했습니다.",
+  };
+}
+
+function deriveApproachDecision(
+  facts: ApproachObservedFactsPayload,
+  rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
+): ApproachDecision {
+  const uncertainty: string[] = [];
+  const reasoning: string[] = [];
+  const rejectedAlternatives: ApproachDecision["rejectedAlternatives"] = [];
+  const edgeText = approachFactText(facts.edgeDirectionEvidence);
+  const rawText = approachFactText(rawApproachType);
+  const bodyText = approachFactText(facts.bodyOrientation);
+  const edgeCandidate = approachValueFromText(edgeText);
+  const rawCandidate = approachValueFromText(rawText);
+  const derivedFrom: string[] = [];
+  const supportingFacts = [
+    ["stance", facts.stance] as const,
+    ["leadFoot", facts.leadFoot] as const,
+    ["boardDirection", facts.boardDirection] as const,
+    ["wakeCrossingPath", facts.wakeCrossingPath] as const,
+    ["handlePosition", facts.handlePosition] as const,
+  ].filter(([, fact]) => isSpecificApproachFact(fact));
+  const bodyOnly =
+    supportingFacts.length === 0 &&
+    !isSpecificApproachFact(facts.edgeDirectionEvidence) &&
+    isSpecificApproachFact(facts.bodyOrientation);
+
+  if (isSpecificApproachFact(facts.edgeDirectionEvidence)) {
+    derivedFrom.push("edgeDirectionEvidence");
+    reasoning.push(`edgeDirectionEvidence: ${facts.edgeDirectionEvidence.evidence}`);
+  }
+
+  for (const [field, fact] of supportingFacts) {
+    derivedFrom.push(field);
+    reasoning.push(`${field}: ${approachFactEvidence(fact)}`);
+  }
+
+  if (isSpecificApproachFact(facts.bodyOrientation)) {
+    reasoning.push(
+      `bodyOrientation은 보조 근거로만 사용됨: ${facts.bodyOrientation.evidence}`,
+    );
+  }
+
+  if (bodyOnly) {
+    uncertainty.push(
+      "가슴/등 방향만 구조화되어 있어 접근 방향 판정 근거로 충분하지 않습니다.",
+    );
+  }
+
+  if (!edgeCandidate && rawCandidate && rawApproachType.confidence === "high") {
+    uncertainty.push(
+      "raw approachType은 high였지만 관찰 사실의 edgeDirectionEvidence에서 같은 결론을 독립적으로 확인하지 못했습니다.",
+    );
+  }
+
+  if (
+    approachEvidenceOnlyRepeatsLabel(facts.edgeDirectionEvidence) ||
+    approachEvidenceOnlyRepeatsLabel(rawApproachType)
+  ) {
+    uncertainty.push(
+      "접근 근거가 힐사이드/토사이드 라벨을 반복하지만 스탠스, 리드풋, 경로, 핸들 등 시각 사실이 부족합니다.",
+    );
+  }
+
+  if (supportingFacts.length < 2) {
+    uncertainty.push(
+      "stance/leadFoot/wake path/board direction/handle position 중 독립 근거가 2개 미만이라 high confidence를 허용하지 않습니다.",
+    );
+  }
+
+  const value = edgeCandidate ?? "unknown";
+  let confidence: ApproachDecision["confidence"] = "low";
+
+  if (value !== "unknown") {
+    confidence =
+      facts.edgeDirectionEvidence.confidence === "high" &&
+      supportingFacts.length >= 2 &&
+      uncertainty.length === 0
+        ? "high"
+        : supportingFacts.length >= 1 && !bodyOnly
+          ? "medium"
+          : "low";
+  }
+
+  if (value === "unknown") {
+    reasoning.push(
+      "approachType은 raw label이 아니라 관찰 사실에서 파생해야 하므로, edgeDirectionEvidence가 부족한 경우 unknown으로 유지합니다.",
+    );
+  }
+
+  for (const alternative of ["heelside", "toeside", "switch"] as const) {
+    if (alternative !== value) {
+      rejectedAlternatives.push({
+        value: alternative,
+        reason:
+          value === "unknown"
+            ? "독립적인 edgeDirectionEvidence와 경로 근거가 부족합니다."
+            : `${value} 근거가 우선이며 ${alternative}를 지지하는 독립 근거가 부족합니다.`,
+      });
+    }
+  }
+
+  return {
+    value,
+    confidence,
+    derivedFrom,
+    reasoning:
+      reasoning.length > 0
+        ? reasoning
+        : ["접근 방향을 파생할 충분한 관찰 사실이 없습니다."],
+    rejectedAlternatives,
+    uncertainty,
+  };
+}
+
+function approachFactFromDecision(
+  decision: ApproachDecision,
+  rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
+) {
+  const labelMap: Record<ApproachDecision["value"], string> = {
+    heelside: "힐사이드",
+    toeside: "토사이드",
+    switch: "스위치",
+    unknown: "확인 필요",
+  };
+  const rawLabel =
+    rawApproachType.value !== "확인 필요"
+      ? ` Raw Gemini approachType: ${rawApproachType.value} (${rawApproachType.confidence}).`
+      : "";
+
+  return {
+    value: labelMap[decision.value],
+    confidence: decision.confidence,
+    evidence: `${decision.reasoning.join(" ")}${rawLabel}`.trim(),
+  };
+}
+
+function approachFactText(
+  fact:
+    | ApproachFactPayload
+    | ApproachObservedFactsPayload["wakeCrossingPath"]
+    | ReturnType<typeof normalizeEvidenceFact>,
+) {
+  if ("value" in fact) {
+    return normalizeDomainText(`${fact.value} ${fact.evidence}`);
+  }
+
+  return normalizeDomainText(
+    `${fact.startPosition} ${fact.takeoffPosition} ${fact.landingPosition} ${fact.direction} ${fact.evidence}`,
+  );
+}
+
+function approachFactEvidence(
+  fact: ApproachFactPayload | ApproachObservedFactsPayload["wakeCrossingPath"],
+) {
+  if ("value" in fact) {
+    return fact.evidence;
+  }
+
+  return `${fact.startPosition} -> ${fact.takeoffPosition} -> ${fact.landingPosition}; ${fact.evidence}`;
+}
+
+function approachValueFromText(
+  text: string,
+): ApproachDecision["value"] | null {
+  if (
+    includesAnyDomainTerm(text, [
+      "switch",
+      "스위치",
+      "opposite stance",
+      "반대 스탠스",
+    ])
+  ) {
+    return "switch";
+  }
+
+  if (
+    includesAnyDomainTerm(text, [
+      "toeside",
+      "toe side",
+      "toe edge",
+      "토사이드",
+      "토 엣지",
+      "앞꿈치",
+      "발가락",
+    ])
+  ) {
+    return "toeside";
+  }
+
+  if (
+    includesAnyDomainTerm(text, [
+      "heelside",
+      "heel side",
+      "heel edge",
+      "힐사이드",
+      "힐 엣지",
+      "뒤꿈치",
+      "힐엣지",
+    ])
+  ) {
+    return "heelside";
+  }
+
+  return null;
+}
+
+function isSpecificApproachFact(
+  fact: ApproachFactPayload | ApproachObservedFactsPayload["wakeCrossingPath"],
+) {
+  const text = approachFactText(fact);
+  const confidence = fact.confidence;
+
+  if (confidence === "low") {
+    return false;
+  }
+
+  if (
+    includesAnyDomainTerm(text, [
+      "unknown",
+      "unclear",
+      "확인 필요",
+      "불명확",
+      "보이지 않",
+      "식별 불가",
+    ])
+  ) {
+    return false;
+  }
+
+  return text.length > 12;
+}
+
+function approachEvidenceOnlyRepeatsLabel(
+  fact: ApproachFactPayload | ReturnType<typeof normalizeEvidenceFact>,
+) {
+  const evidenceText = normalizeDomainText(fact.evidence);
+  const valueText = normalizeDomainText(fact.value);
+  const containsApproachLabel =
+    approachValueFromText(`${valueText} ${evidenceText}`) !== null;
+  const containsVisualFact = includesAnyDomainTerm(evidenceText, [
+    "stance",
+    "스탠스",
+    "lead foot",
+    "리드풋",
+    "앞발",
+    "board direction",
+    "보드 방향",
+    "wake crossing",
+    "웨이크 경로",
+    "start",
+    "takeoff",
+    "landing",
+    "시작",
+    "이륙",
+    "착지",
+    "handle",
+    "핸들",
+  ]);
+
+  return containsApproachLabel && !containsVisualFact;
 }
 
 function applyWakeboardTaxonomyGates(
@@ -3698,11 +4126,55 @@ const geminiTrickCandidateSchema = {
   required: ["name", "confidence", "evidence"],
 };
 
+const geminiApproachObservedFactsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    stance: geminiEvidenceFactSchema,
+    leadFoot: geminiEvidenceFactSchema,
+    boardDirection: geminiEvidenceFactSchema,
+    wakeCrossingPath: {
+      type: Type.OBJECT,
+      properties: {
+        startPosition: { type: Type.STRING },
+        takeoffPosition: { type: Type.STRING },
+        landingPosition: { type: Type.STRING },
+        direction: { type: Type.STRING },
+        confidence: {
+          type: Type.STRING,
+          enum: ["high", "medium", "low"],
+        },
+        evidence: { type: Type.STRING },
+      },
+      required: [
+        "startPosition",
+        "takeoffPosition",
+        "landingPosition",
+        "direction",
+        "confidence",
+        "evidence",
+      ],
+    },
+    edgeDirectionEvidence: geminiEvidenceFactSchema,
+    handlePosition: geminiEvidenceFactSchema,
+    bodyOrientation: geminiEvidenceFactSchema,
+  },
+  required: [
+    "stance",
+    "leadFoot",
+    "boardDirection",
+    "wakeCrossingPath",
+    "edgeDirectionEvidence",
+    "handlePosition",
+    "bodyOrientation",
+  ],
+};
+
 const geminiEvidenceResponseSchema = {
   type: Type.OBJECT,
   properties: {
     primaryCandidate: geminiTrickCandidateSchema,
     family: geminiEvidenceFactSchema,
+    approachObservedFacts: geminiApproachObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
     landingOutcome: geminiEvidenceFactSchema,
@@ -3772,6 +4244,7 @@ const geminiEvidenceResponseSchema = {
   required: [
     "primaryCandidate",
     "family",
+    "approachObservedFacts",
     "approachType",
     "rotationType",
     "landingOutcome",
