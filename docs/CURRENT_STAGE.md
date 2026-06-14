@@ -80,11 +80,19 @@ Video
 ↓
 Gemini Evidence Extraction
 ↓
+Wakeboard Trick Taxonomy Gate
+↓
 User Confirmation
 ↓
 Coaching Engine
 ↓
 Stored Session Intelligence
+```
+
+Wakeboard taxonomy reference:
+
+```text
+docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md
 ```
 
 On 2026-06-14, the product direction was refined through iPhone QA:

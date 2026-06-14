@@ -8,6 +8,9 @@ single Toeside Basic Jump false-positive case.
 This matrix is for coverage testing only. Do not use it as a hard-coded trick
 database in product logic yet.
 
+Use `docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md` as the parent-family reference
+for these validation cases.
+
 ## Validation Goal
 
 The system should classify the trick family first, then classify the specific

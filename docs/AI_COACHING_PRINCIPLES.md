@@ -34,6 +34,10 @@ AI coaching should not jump directly from video to advice. The system first
 needs to find the important event window, extract visible evidence, and let the
 user confirm intent before coaching or tracking progression.
 
+Wakeboard trick evidence should also follow the taxonomy reference in
+`docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md`: classify the parent trick family
+before naming a specific trick.
+
 ## Wakeboard Domain Insights
 
 Trick identity is not determined by landing.
@@ -78,3 +82,7 @@ observations and patterns.
 
 When evidence conflicts, the system should return candidate tricks with reasons
 and confidence instead of forcing one answer.
+
+When parent-family evidence is missing, prefer `Unknown`, `needs_review`, or
+the safer Basic Air / Straight Air family over a high-confidence advanced
+invert trick.
