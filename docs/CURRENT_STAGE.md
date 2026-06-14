@@ -78,15 +78,15 @@ Current recommended architecture:
 ```text
 Video
 ↓
-Gemini Evidence Extraction
+Observed Facts
 ↓
-Wakeboard Trick Taxonomy Gate
+Trick Family
 ↓
-User Confirmation
+Specific Trick
 ↓
-Coaching Engine
+Judge
 ↓
-Stored Session Intelligence
+Coach
 ```
 
 Wakeboard taxonomy reference:
@@ -124,6 +124,32 @@ Deployment milestone:
   good.
 - Coaching requests reach the backend/AI path, but the current next issue is a
   structured parsing failure in the coaching response flow.
+
+AI evidence checkpoint:
+
+- Gemini evidence extraction works from the standalone app.
+- A clear Toeside Basic Jump was initially misclassified as Back Roll /
+  Tantrum / Invert.
+- The initial false positive was not caused by parsing or app-side
+  post-processing.
+- The root cause involved raw model hallucination plus missing wakeboard trick
+  taxonomy structure.
+- Wakeboard trick taxonomy and validation matrix documents exist.
+- A Taxonomy Gate is implemented to block invalid parent-family jumps.
+- `ApproachObservedFacts` is implemented so approach is derived from observed
+  facts instead of a raw heelside/toeside label when possible.
+- `FinalApproachWindow` is implemented so approach evidence is anchored near
+  wake crossing and takeoff, not inferred from the whole clip.
+- Toeside detection improved significantly.
+- Invalid Tantrum classifications are now downgraded instead of confidently
+  returned.
+
+Current AI unknowns:
+
+- Unknown: why Gemini still believes inversion exists in the test clip.
+- Unknown: whether inversion detection is using incorrect visual cues.
+- Unknown: whether inversion evidence is inferred from airtime/body position
+  rather than true inversion mechanics.
 
 ## Today's Conclusions
 
@@ -233,6 +259,8 @@ Open questions:
 - Normalized evidence fields for trick candidate, approach, rotation, landing,
   evidence windows, observations, confidence, uncertainty, model, quality mode,
   and consistency warnings
+- Wakeboard Trick Taxonomy Gate for family-level classification safety
+- `ApproachObservedFacts` and `FinalApproachWindow` fields in the evidence path
 - Motion-aware dense sampling in the OpenAI benchmark path
 - EAS preview environment variable for the dev analysis endpoint
 - EAS preview environment variable for the Render analysis endpoint
@@ -258,7 +286,7 @@ Open questions:
 - Production-quality AI pipeline from confirmed Gemini evidence into GPT
   coaching
 - Long-term model availability strategy for Gemini 503/high-demand periods
-- Evidence schema evolution beyond the current lightweight prototype
+- `InversionObservedFacts` schema and validation
 - Stored user progression analysis across Sessions
 
 ## Next Recommended Step
@@ -267,19 +295,25 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. Investigate the coaching structured parsing failure.
-2. Review Detail Screen on iPhone.
-3. Decide whether the Detail Screen now feels like reviewing a riding moment
+1. Design and validate `InversionObservedFacts` before modifying trick
+   classification again.
+2. Understand why nonexistent inversion evidence is being generated.
+3. Investigate whether inversion detection is using airtime/body position as a
+   proxy for true inversion mechanics.
+4. Investigate the coaching structured parsing failure.
+5. Review Detail Screen on iPhone.
+6. Decide whether the Detail Screen now feels like reviewing a riding moment
    rather than reading a report.
-4. Review Progression UX.
-5. Keep Feed mostly frozen unless new iPhone QA identifies a specific issue.
-6. Resume Event Window Detection and trick-recognition consistency after the
+7. Review Progression UX.
+8. Keep Feed mostly frozen unless new iPhone QA identifies a specific issue.
+9. Resume Event Window Detection and trick-recognition consistency after the
    primary moment experience is stable.
 
 Open questions:
 
 - Long-term Gemini availability and 503 reliability.
 - GPT vs Gemini quality after confirmed trick input.
+- InversionObservedFacts design without overfitting one clip.
 - Evidence schema evolution without a hard-coded full trick database.
 - User progression analysis across repeated Sessions.
 - Detail Screen product feel.

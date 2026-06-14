@@ -40,7 +40,7 @@ Render backend deployed and standalone iPhone app working without Expo Go
 The latest known project checkpoint is:
 
 ```text
-c294f84 Prepare Render and EAS preview deployment
+3f932a8 Anchor approach detection to final approach window
 ```
 
 At the time this checkpoint was updated, local `master` was pushed to
@@ -140,13 +140,15 @@ Current recommended AI architecture:
 ```text
 Video
 ↓
-Gemini Evidence Extraction
+Observed Facts
 ↓
-User Confirmation
+Trick Family
 ↓
-Coaching Engine
+Specific Trick
 ↓
-Stored Session Intelligence
+Judge
+↓
+Coach
 ```
 
 Current recommended model split:
@@ -206,6 +208,53 @@ Validated:
 - Render-hosted thumbnail generation.
 - Render-hosted Gemini evidence extraction.
 - Local-first iPhone storage as the right short-term storage model.
+
+## 2026-06-15 AI Evidence Checkpoint
+
+Implementation stopped at a clean checkpoint after adding family-level and
+approach temporal safeguards. Do not treat the remaining inversion issue as a
+coaching problem.
+
+Confirmed findings:
+
+- Standalone iPhone app works.
+- Render backend works.
+- Gemini evidence extraction works.
+- A clear Toeside Basic Jump was initially misclassified as Back Roll /
+  Tantrum / Invert.
+- Parsing and post-processing did not create the initial false positive.
+- The root cause involved raw model hallucination plus missing wakeboard trick
+  taxonomy structure.
+- Wakeboard trick taxonomy was introduced.
+- Wakeboard validation matrix was introduced.
+- Taxonomy Gate was implemented.
+- `ApproachObservedFacts` was implemented.
+- `FinalApproachWindow` design and implementation were added.
+- Toeside detection improved significantly.
+- Invalid Tantrum classifications are now downgraded instead of confidently
+  returned.
+
+Open questions:
+
+- Unknown: why Gemini still believes inversion exists in the test clip.
+- Unknown: whether inversion detection is using incorrect visual cues.
+- Unknown: whether inversion evidence is being inferred from airtime/body
+  position rather than true inversion mechanics.
+
+Next starting point:
+
+```text
+Inversion Detection
+```
+
+Next goal:
+
+- Design and validate `InversionObservedFacts` before modifying trick
+  classification again.
+- Candidate fields: `bodyInverted`, `boardAboveHead`, `rollAxis`, `flipAxis`,
+  `rotationInitiation`, and `inversionConfidence`.
+- First collect and inspect raw inversion evidence paths so nonexistent
+  inversion evidence can be explained before prompt or taxonomy changes.
 
 Architecture status:
 
@@ -289,19 +338,21 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. Investigate coaching structured parsing failure.
-2. QA the Detail Screen on iPhone.
-3. Improve the Detail Screen until it feels like reviewing a riding moment, not
+1. Design and validate `InversionObservedFacts`.
+2. Investigate why nonexistent inversion evidence is being generated.
+3. Investigate coaching structured parsing failure.
+4. QA the Detail Screen on iPhone.
+5. Improve the Detail Screen until it feels like reviewing a riding moment, not
    reading a report.
-4. Review Progression UX.
-5. Keep the Feed mostly frozen unless new iPhone QA identifies a specific issue.
-6. Resume Event Window Detection and trick-recognition consistency after the
+6. Review Progression UX.
+7. Keep the Feed mostly frozen unless new iPhone QA identifies a specific issue.
+8. Resume Event Window Detection and trick-recognition consistency after the
    core moment experience is stable.
 
 ## Current Priority
 
-Current priority is standalone app reliability plus mobile product feel.
+Current priority is AI evidence truthfulness plus standalone app reliability.
 
-P1 is Detail Screen UX, thumbnail experience, and content-first experience.
-AI systems should not be changed broadly unless explicitly requested, but the
-coaching structured parsing failure is the next targeted reliability issue.
+P1 is Inversion Detection evidence design. P2 is Detail Screen UX, thumbnail
+experience, and content-first experience. AI systems should not be changed
+broadly unless explicitly requested.

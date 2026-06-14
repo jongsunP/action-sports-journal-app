@@ -63,7 +63,7 @@ Stored Session Intelligence
 Latest known project checkpoint:
 
 ```text
-c294f84 Prepare Render and EAS preview deployment
+3f932a8 Anchor approach detection to final approach window
 ```
 
 Repository:
@@ -153,6 +153,72 @@ Local path:
   structured parsing failure in the coaching response flow.
 
 ## Today's Conclusions
+
+## 2026-06-15 AI Evidence Checkpoint
+
+Today's implementation is stopped at a clean checkpoint. The next work should
+not modify coaching or UI first. Continue from the AI evidence layer.
+
+Confirmed findings:
+
+- The standalone iPhone app works.
+- The Render backend works.
+- Gemini evidence extraction works from the installed standalone app.
+- A clear Toeside Basic Jump was initially misclassified as Back Roll /
+  Tantrum / Invert with high confidence.
+- The root cause was not JSON parsing or app-side post-processing.
+- The false positives originated in raw model evidence, with missing wakeboard
+  taxonomy structure and insufficient family gates.
+- A wakeboard trick taxonomy reference was introduced.
+- A wakeboard validation matrix was introduced.
+- A Taxonomy Gate was implemented to prevent direct jumps from basic air into
+  advanced invert tricks when parent-family evidence is missing.
+- `ApproachObservedFacts` was implemented so the model must first report
+  stance, lead foot, board direction, wake path, edge evidence, handle
+  position, and body orientation.
+- `FinalApproachWindow` design and implementation were added so approach
+  detection is anchored near wake crossing and takeoff rather than inferred
+  from the whole clip.
+- Toeside detection improved significantly in QA.
+- Invalid Tantrum classifications are now downgraded instead of confidently
+  returned as app-facing results.
+
+Open questions:
+
+- Unknown: why Gemini still believes inversion exists in the test clip.
+- Unknown: whether inversion detection is using incorrect visual cues.
+- Unknown: whether inversion evidence is being inferred from airtime/body
+  position rather than true inversion mechanics.
+
+Current AI architecture direction:
+
+```text
+Video
+↓
+Observed Facts
+↓
+Trick Family
+↓
+Specific Trick
+↓
+Judge
+↓
+Coach
+```
+
+Next starting point:
+
+```text
+Inversion Detection
+```
+
+Next goal:
+
+- Design and validate `InversionObservedFacts` before modifying trick
+  classification again.
+- Candidate facts: `bodyInverted`, `boardAboveHead`, `rollAxis`, `flipAxis`,
+  `rotationInitiation`, and `inversionConfidence`.
+- First understand why nonexistent inversion evidence is being generated.
 
 2026-06-14 clarified the product identity.
 
