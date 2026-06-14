@@ -34,12 +34,13 @@ Stage 3 real video-to-analysis prototype in progress
 Evidence-first AI architecture validated with a real wakeboard video
 Product direction shifted from Session First to Moment First
 Private action sports moment feed + AI Coach direction validated
+Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
 The latest known project checkpoint is:
 
 ```text
-802bd94 Benchmark OpenAI wakeboard analysis
+c294f84 Prepare Render and EAS preview deployment
 ```
 
 At the time this checkpoint was updated, local `master` was pushed to
@@ -80,6 +81,21 @@ At the time this checkpoint was updated, local `master` was pushed to
   the same Wi-Fi.
 - EAS preview has the public endpoint variable:
   `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://10.10.7.17:8787/api/analyze-session-video`.
+- Render backend is deployed at `https://action-sports-journal-api.onrender.com`.
+- Public HTTPS `/health` returns `ok: true`, `geminiConfigured: true`, and
+  `geminiEvidence.configured: true`.
+- EAS preview/internal distribution now uses:
+  `https://action-sports-journal-api.onrender.com/api/analyze-session-video`.
+- The app is installed on the user's iPhone as a standalone EAS internal
+  distribution app, not Expo Go, TestFlight, or App Store.
+- The installed app works without the local Mac server.
+- Thumbnail generation uses the Render backend.
+- Gemini evidence extraction works from the standalone app and evidence quality
+  is currently good.
+- Gemini API key rotation was completed in Render and local `.env.local`
+  without exposing key values. The previous `API_KEY_INVALID` issue is fixed.
+- Coaching requests reach the backend/AI path, but the current blocker is a
+  structured parsing failure in the coaching response flow.
 
 ## Today's Conclusions
 
@@ -158,6 +174,9 @@ What changed:
 - Edge-to-edge content replaced the earlier floating-card feeling.
 - Local/dev thumbnail generation and local detail video playback were added.
 - Detail Screen received a first pass, but it remains the main UX risk.
+- Render backend deployment was completed.
+- EAS internal distribution produced an installed standalone iPhone app.
+- The app now uses a public HTTPS backend instead of the local Mac/LAN server.
 
 Why it changed:
 
@@ -182,6 +201,22 @@ Validated:
 - Story rail direction.
 - Feed immersion over card styling.
 - Korean mobile product feel as the preferred polish direction.
+- Standalone iPhone installation without Expo Go.
+- Render-hosted backend health and Gemini configuration.
+- Render-hosted thumbnail generation.
+- Render-hosted Gemini evidence extraction.
+- Local-first iPhone storage as the right short-term storage model.
+
+Architecture status:
+
+- Data remains local-first on the iPhone with AsyncStorage.
+- Backend is a thin AI gateway plus thumbnail generation server.
+- No database yet.
+- No login yet.
+- No cloud video storage yet.
+- No CDN yet.
+- AI keys live only in Render environment variables and local ignored env files.
+- Future optimization: move thumbnail generation on-device if practical.
 
 Open questions:
 
@@ -236,7 +271,7 @@ Open questions:
 
 - No database.
 - No authentication.
-- No production backend.
+- No production database/cloud storage.
 - No production video upload or storage.
 - No App Store Connect upload yet.
 - No completed EAS production build yet.
@@ -246,6 +281,7 @@ Open questions:
 - GPT vs Gemini quality decision after confirmed trick input.
 - Evidence schema evolution.
 - User progression analysis across Sessions.
+- Coaching structured parsing failure investigation.
 
 ## Next Recommended Work
 
@@ -253,17 +289,19 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. QA the Detail Screen on iPhone.
-2. Improve the Detail Screen until it feels like reviewing a riding moment, not
+1. Investigate coaching structured parsing failure.
+2. QA the Detail Screen on iPhone.
+3. Improve the Detail Screen until it feels like reviewing a riding moment, not
    reading a report.
-3. Continue improving thumbnail experience and content-first presentation.
-4. Then revisit progression visibility and story/moment presentation.
-5. Resume Event Window Detection and trick-recognition consistency after the
+4. Review Progression UX.
+5. Keep the Feed mostly frozen unless new iPhone QA identifies a specific issue.
+6. Resume Event Window Detection and trick-recognition consistency after the
    core moment experience is stable.
 
 ## Current Priority
 
-Current priority is mobile product feel, not new AI capability.
+Current priority is standalone app reliability plus mobile product feel.
 
 P1 is Detail Screen UX, thumbnail experience, and content-first experience.
-AI systems should not be touched unless explicitly requested.
+AI systems should not be changed broadly unless explicitly requested, but the
+coaching structured parsing failure is the next targeted reliability issue.

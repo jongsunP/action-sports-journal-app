@@ -23,6 +23,17 @@ mobile app can select a video for a new Session, attach that video URI to the
 Session, and request analysis through `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`. The
 mobile mock analysis fallback has been removed.
 
+On 2026-06-14, the backend was deployed to Render and the standalone iPhone app
+was installed through EAS preview/internal distribution using the public HTTPS
+Render endpoint:
+
+```text
+https://action-sports-journal-api.onrender.com/api/analyze-session-video
+```
+
+The installed app is not Expo Go, TestFlight, or App Store. It runs as a
+standalone iPhone app and no longer depends on the local Mac/LAN server.
+
 The app can render AI-provided highlight scene cards, but it does not infer
 highlight timestamps locally.
 
@@ -91,6 +102,20 @@ direction is Moment First: users should open the app to revisit riding moments,
 not browse session records. Riding moments are the primary product. AI Coach is
 a secondary layer that explains, confirms, and coaches after the user is
 already engaged by the clip.
+
+Deployment milestone:
+
+- Render backend is live at `https://action-sports-journal-api.onrender.com`.
+- `/health` returns `ok: true`, `geminiConfigured: true`, and
+  `geminiEvidence.configured: true`.
+- Gemini API key rotation was completed in Render and local `.env.local`
+  without exposing key values.
+- The previous `API_KEY_INVALID` issue is fixed.
+- Thumbnail generation works through the Render backend.
+- Evidence extraction works from the standalone app and evidence quality is
+  good.
+- Coaching requests reach the backend/AI path, but the current next issue is a
+  structured parsing failure in the coaching response flow.
 
 ## Today's Conclusions
 
@@ -202,8 +227,10 @@ Open questions:
   and consistency warnings
 - Motion-aware dense sampling in the OpenAI benchmark path
 - EAS preview environment variable for the dev analysis endpoint
+- EAS preview environment variable for the Render analysis endpoint
 - In-app Session detail flow for requesting Gemini coaching and GPT benchmark
   coaching against the same locally persisted Session/video
+- Render-hosted thin AI gateway plus thumbnail generation server
 - Instagram-style personal Moment Feed first version
 - Story-style recent moments rail
 - Lightweight video-derived thumbnail support
@@ -219,7 +246,7 @@ Open questions:
 - Calendar
 - RAG
 - Production video upload and storage logic
-- Production server-side AI analysis infrastructure
+- Database-backed production persistence
 - Production-quality AI pipeline from confirmed Gemini evidence into GPT
   coaching
 - Long-term model availability strategy for Gemini 503/high-demand periods
@@ -232,12 +259,13 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. Review Detail Screen on iPhone.
-2. Decide whether the Detail Screen now feels like reviewing a riding moment
+1. Investigate the coaching structured parsing failure.
+2. Review Detail Screen on iPhone.
+3. Decide whether the Detail Screen now feels like reviewing a riding moment
    rather than reading a report.
-3. Continue improving thumbnail experience and content-first presentation.
-4. Then improve progression visibility and story/moment presentation.
-5. Resume Event Window Detection and trick-recognition consistency after the
+4. Review Progression UX.
+5. Keep Feed mostly frozen unless new iPhone QA identifies a specific issue.
+6. Resume Event Window Detection and trick-recognition consistency after the
    primary moment experience is stable.
 
 Open questions:

@@ -63,7 +63,7 @@ Stored Session Intelligence
 Latest known project checkpoint:
 
 ```text
-699457b Add setup audit guide
+c294f84 Prepare Render and EAS preview deployment
 ```
 
 Repository:
@@ -135,6 +135,22 @@ Local path:
   the same Wi-Fi, confirming LAN access from iPhone to the Mac dev server.
 - EAS preview environment variable was created:
   `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://10.10.7.17:8787/api/analyze-session-video`.
+- Render backend is deployed and alive at:
+  `https://action-sports-journal-api.onrender.com`.
+- Public HTTPS health check passes with `ok: true`, `geminiConfigured: true`,
+  and `geminiEvidence.configured: true`.
+- EAS preview/internal distribution now points the installed app at:
+  `https://action-sports-journal-api.onrender.com/api/analyze-session-video`.
+- The app has been installed on the user's iPhone as a standalone EAS internal
+  distribution app, not Expo Go, TestFlight, or App Store.
+- The standalone app works without the local Mac server and uses the Render
+  backend for thumbnail generation and Gemini evidence/coaching requests.
+- Gemini API key rotation was completed in Render and local `.env.local`
+  without exposing key values. The previous `API_KEY_INVALID` issue is fixed.
+- Evidence extraction works from the standalone app, and evidence quality was
+  judged good in iPhone QA.
+- Coaching requests reach the backend/AI path, but the current next issue is a
+  structured parsing failure in the coaching response flow.
 
 ## Today's Conclusions
 
@@ -204,6 +220,9 @@ What changed today:
   moment first, AI second, long text last.
 - End-of-day product knowledge was captured in
   `docs/AI_COACHING_PRINCIPLES.md`.
+- Deployment readiness moved from planning to a working standalone milestone:
+  Render now hosts the backend, EAS internal distribution installs the iPhone
+  app, and the app no longer depends on the local Mac/LAN server.
 
 Why it changed:
 
@@ -235,19 +254,37 @@ What was validated:
   extreme-sports media aesthetics.
 - Thumbnail generation and local detail playback are good enough for local/dev
   evaluation.
+- Public HTTPS backend access from the installed standalone app.
+- Render-hosted thumbnail generation.
+- Render-hosted Gemini evidence extraction after API key rotation.
+- Local-first iPhone storage remains sufficient for personal early usage.
+
+Architecture status:
+
+- Data remains local-first on the iPhone through AsyncStorage.
+- Backend is a thin AI gateway plus thumbnail generation server.
+- No database yet.
+- No login yet.
+- No cloud video storage yet.
+- No CDN yet.
+- AI keys live only in Render environment variables and local ignored env files.
+- Future optimization: move thumbnail generation on-device if practical.
 
 ## If I Return Tomorrow
 
 Start here:
 
-1. Do not redesign the feed unless new iPhone QA explicitly asks for it.
-2. QA the Detail Screen on iPhone first.
-3. Decide whether the detail screen feels like reviewing a riding moment or
+1. Investigate the coaching structured parsing failure now that requests reach
+   the Render backend and AI successfully.
+2. Do not redesign the feed unless new iPhone QA explicitly asks for it.
+3. QA the Detail Screen on iPhone first.
+4. Decide whether the detail screen feels like reviewing a riding moment or
    still feels like reading an analysis report.
-4. If it still feels report-like, improve only Detail Screen UX:
+5. If it still feels report-like, improve only Detail Screen UX:
    hero media first, moment context second, AI coach third, long text last.
-5. Keep AI logic untouched unless the user explicitly switches back to AI work.
-6. After Detail Screen is acceptable, work on progression visibility without
+6. Review Progression UX without turning the app back into a dashboard.
+7. Keep AI logic untouched unless the user explicitly switches back to AI work.
+8. After Detail Screen is acceptable, work on progression visibility without
    turning the app back into a dashboard.
 
 Open questions for tomorrow:
@@ -280,6 +317,7 @@ Use Node 20 or newer when running Expo locally.
 - `docs/STAGE_2_PLAN.md`: Stage 2 plan and scope
 - `docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md`: video-to-analysis scope and API contract
 - `docs/DEV_AI_ANALYSIS_SETUP.md`: local Gemini/OpenAI setup and spend guardrails
+- `docs/DEPLOYMENT_READINESS_ROADMAP.md`: Render/EAS internal distribution deployment path
 - `docs/OPENAI_BENCHMARK_REPORT.md`: OpenAI vs Gemini benchmark procedure and pending report
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
@@ -316,7 +354,7 @@ Do not design features that bypass Session.
 - Calendar
 - RAG
 - Production video upload or storage
-- Production backend implementation
+- Production database/cloud storage implementation
 
 Do not put Gemini or OpenAI API keys in the mobile app. Real AI analysis should go through a server/BFF endpoint.
 
@@ -386,24 +424,24 @@ npx eas-cli@latest whoami
 npx eas-cli@latest env:list --environment preview
 ```
 
-The preview environment must include:
+The preview environment currently points at Render:
 
 ```text
-EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://10.10.7.17:8787/api/analyze-session-video
+EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=https://action-sports-journal-api.onrender.com/api/analyze-session-video
 ```
 
-If the Mac LAN IP changes, update this EAS preview variable and rebuild.
+If the backend URL changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
 Do not add unrelated product features yet. Continue from the current Moment
 First UX work:
 
-1. Run the app on iPhone.
-2. Review the Detail Screen.
-3. Fix only Detail Screen UX if it still feels like a report.
-4. Preserve the current feed direction unless QA finds a specific issue.
-5. Keep database/auth/production storage/backend architecture out of scope.
+1. Investigate the coaching structured parsing failure.
+2. Continue Detail Screen QA on iPhone.
+3. Review Progression UX.
+4. Keep Feed mostly frozen unless QA finds a specific issue.
+5. Keep database/auth/cloud video storage/CDN out of scope.
 
 ## Related Personal Context Repo
 

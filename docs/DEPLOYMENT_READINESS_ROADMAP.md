@@ -7,6 +7,9 @@ the local Mac/LAN development environment.
 
 The product does not need to be complete. It must be usable.
 
+Status as of 2026-06-14: this milestone has been reached for the preview
+internal-distribution path.
+
 ## Recommended Path
 
 ```text
@@ -52,6 +55,8 @@ installed and usable on my iPhone anywhere
 
 - Current server entry: `dev-server/index.ts`.
 - Runtime: Express + TypeScript through `tsx`.
+- Deployed Render URL:
+  `https://action-sports-journal-api.onrender.com`.
 - Required app-facing endpoints:
   - `GET /health`
   - `POST /api/analyze-session-video`
@@ -72,6 +77,9 @@ installed and usable on my iPhone anywhere
 - Gemini and OpenAI keys must exist only on the backend host.
 - Do not put AI keys in Expo public env vars, `app.json`, source files, docs,
   GitHub, or the mobile app bundle.
+- Gemini API key was rotated and updated in Render and local `.env.local`
+  without exposing key values.
+- The previous `API_KEY_INVALID` issue is fixed.
 
 ### Storage
 
@@ -98,8 +106,8 @@ Add later only when the product needs:
 
 ## What Prevents Independent Usage Today
 
-The current standalone build can run on the iPhone, but AI and thumbnail
-features depend on a local Mac/LAN endpoint such as:
+Historical blocker: the standalone build could run on the iPhone, but AI and
+thumbnail features depended on a local Mac/LAN endpoint such as:
 
 ```text
 http://YOUR_COMPUTER_LAN_IP:8787/api/analyze-session-video
@@ -112,7 +120,8 @@ That works only when:
 - the iPhone is on the same network
 - the LAN IP has not changed
 
-To work anywhere, the app must point to a stable public HTTPS backend.
+Resolved: the EAS preview build now points to a stable public HTTPS Render
+backend.
 
 ## Render Web Service Plan
 
@@ -151,6 +160,20 @@ npm run server:start
 
 ```text
 /health
+```
+
+Current health URL:
+
+```text
+https://action-sports-journal-api.onrender.com/health
+```
+
+Confirmed:
+
+```text
+ok: true
+geminiConfigured: true
+geminiEvidence.configured: true
 ```
 
 ### Port
@@ -204,10 +227,10 @@ For the first standalone usable app, OpenAI benchmark can remain unset.
 
 ## EAS Preview Endpoint Configuration
 
-After Render gives the backend a public HTTPS URL, configure EAS preview with:
+EAS preview is configured with:
 
 ```text
-EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=https://YOUR-RENDER-SERVICE.onrender.com/api/analyze-session-video
+EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=https://action-sports-journal-api.onrender.com/api/analyze-session-video
 ```
 
 This value is public. It is safe to be embedded in the mobile app.
@@ -220,12 +243,12 @@ Check current EAS preview environment variables:
 npx eas-cli@latest env:list --environment preview
 ```
 
-Create or update the endpoint:
+Create or update the endpoint if it ever changes:
 
 ```bash
 npx eas-cli@latest env:create \
   --name EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT \
-  --value https://YOUR-RENDER-SERVICE.onrender.com/api/analyze-session-video \
+  --value https://action-sports-journal-api.onrender.com/api/analyze-session-video \
   --environment preview \
   --visibility plaintext
 ```
@@ -244,6 +267,15 @@ npx eas-cli@latest build --platform ios --profile preview
 Install the internal distribution build on the registered iPhone.
 
 The installed app should be tested outside the local Mac/LAN environment.
+
+Confirmed installed app state:
+
+- Installed through EAS preview/internal distribution.
+- Not Expo Go.
+- Not TestFlight.
+- Not App Store.
+- Runs without the local Mac server.
+- Uses Render for thumbnail generation and Gemini evidence/coaching requests.
 
 ## Validation Checklist
 
@@ -274,6 +306,12 @@ ok: true
 geminiConfigured: true
 ```
 
+Also verify:
+
+```text
+geminiEvidence.configured: true
+```
+
 ### iPhone
 
 1. Install the EAS preview internal distribution app.
@@ -289,6 +327,14 @@ geminiConfigured: true
 11. Request Gemini evidence/coaching.
 12. Confirm Korean AI feedback renders in the app.
 
+Current validation notes:
+
+- Thumbnail generation works through Render.
+- Evidence extraction works from the standalone app and evidence quality is
+  good.
+- Coaching request reaches backend/AI, but structured parsing currently needs
+  investigation.
+
 ## What Remains Manual
 
 - Creating the Render account/service.
@@ -298,6 +344,7 @@ geminiConfigured: true
 - Running the EAS iOS preview build.
 - Installing the internal distribution build on the iPhone.
 - Checking provider billing limits in Gemini/OpenAI accounts.
+- Updating rotated AI keys in Render and local ignored env files when needed.
 
 ## Not In This Deployment Step
 
@@ -312,6 +359,24 @@ geminiConfigured: true
 - RAG.
 - UI redesign.
 - AI behavior changes.
+
+## Current Architecture Status
+
+- Data remains local-first on the iPhone with AsyncStorage.
+- Backend is a thin AI gateway plus thumbnail generation server.
+- No database yet.
+- No login yet.
+- No cloud video storage yet.
+- No CDN yet.
+- AI keys live only in Render environment variables and local ignored env files.
+- Future optimization: move thumbnail generation on-device if practical.
+
+## Next Starting Point
+
+1. Investigate the coaching structured parsing failure.
+2. Continue Detail Screen QA.
+3. Review Progression UX.
+4. Keep Feed mostly frozen unless new iPhone QA finds a specific issue.
 
 ## Future Database Direction
 
