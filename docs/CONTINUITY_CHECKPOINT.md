@@ -6,6 +6,7 @@ This file records the current handoff state after the prior Codex account/sessio
 
 Use this file together with:
 
+- `docs/PROJECT_MEMORY.md`
 - `AGENTS.md`
 - `docs/HANDOFF.md`
 - `docs/CURRENT_STAGE.md`

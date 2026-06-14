@@ -4,7 +4,8 @@
 
 This file exists so a new Codex session can continue work without relying on chat history.
 
-Read this file after `AGENTS.md`, `docs/CURRENT_STAGE.md`, and `REVIEW.md`.
+Read `docs/PROJECT_MEMORY.md` first. Then read this file after `AGENTS.md`,
+`docs/CURRENT_STAGE.md`, and `REVIEW.md`.
 
 ## Project
 

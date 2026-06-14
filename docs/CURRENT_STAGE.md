@@ -1,5 +1,9 @@
 # Current Stage
 
+Read `docs/PROJECT_MEMORY.md` first for the top-level project memory,
+collaboration rules, product philosophy, AI architecture direction, and current
+resume point.
+
 ## Stage
 
 Stage 1: Initial project setup complete.
