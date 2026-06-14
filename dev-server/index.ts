@@ -1427,6 +1427,9 @@ function buildGeminiEvidencePrompt({
     "보이는 근거와 추론을 분리하세요. 확실하지 않으면 confidence를 낮추고 uncertainty에 이유를 쓰세요.",
     "정확한 트릭명이 불확실하면 primaryCandidate에 가장 가능성 높은 이름을 쓰고, alternativeCandidates에 가능한 대안을 넣으세요.",
     "트릭명을 억지로 하나로 맞히는 것보다 경험자/코치가 보는 결정적 순간과 근거를 찾는 것이 더 중요합니다.",
+    "기본 점프/스트레이트 에어/토사이드 베이직 점프도 정상 후보입니다. 인버트가 아니면 반드시 No invert 또는 기본 점프로 분류하세요.",
+    "명시적 반례 후보: Toeside Basic Jump, Basic Jump, Straight Air, No invert, No roll axis, No back roll mechanics.",
+    "보드가 높게 뜨거나 카메라 각도 때문에 보드가 라이더 위쪽에 보이는 것만으로 인버트/백롤이라고 판단하지 마세요.",
     "static classification과 dynamic classification을 분리하세요.",
     "static classification: regular/goofy, heelside/toeside, switch/normal stance는 비교적 적은 프레임으로도 판단할 수 있습니다.",
     "dynamic classification: trick identity, rotation family, roll axis, invert mechanics는 더 어렵고 setup + initiation + airborne mechanics를 함께 봐야 합니다.",
@@ -1437,6 +1440,12 @@ function buildGeminiEvidencePrompt({
     "4. outcome evidence: descent, landing, crash, recovery.",
     "일반 우선순위: stance/regular-goofy > edge/heelside-toeside > approach/edge load > takeoff/pop > rotation initiation > early airborne rotation axis > peak-air body orientation > descent/landing setup > landing outcome/crash.",
     "Back Roll vs Tantrum 같은 invert trick은 보통 pop → rotation initiation → early airborne → peak 구간이 가장 중요합니다.",
+    "Back Roll high confidence는 반드시 서로 독립된 가시 근거 4가지를 모두 만족해야 합니다: heelside setup, roll axis, inverted body/board relationship, rotation initiation.",
+    "위 4가지 중 하나라도 명확하지 않으면 primaryCandidate=Back Roll 또는 rotationType=Back Roll의 confidence는 high가 될 수 없습니다.",
+    "roll axis가 보이지 않으면 rotationType은 Back Roll high가 될 수 없습니다.",
+    "명확한 inverted body/board relationship이 보이지 않으면 family는 Invert high가 될 수 없습니다.",
+    "Basic Jump 또는 Straight Air가 그럴듯하면 Back Roll은 high가 될 수 없습니다.",
+    "approachType high와 rotationType high는 같은 문장을 반복하지 말고, 각각 독립적인 보이는 근거에 의존해야 합니다.",
     "spin, grab, basic variation은 peak-air나 descent에서만 명확해질 수 있으므로 peak-to-landing을 완전히 무시하지 마세요.",
     "트릭명은 착지 결과가 아니라 setup + initiation + airborne mechanics를 중심으로 판단하세요.",
     "트릭 정체성은 보통 착지 전에 결정됩니다. 실패 착지나 크래시는 트릭명을 바꾸지 않습니다.",
@@ -1461,7 +1470,7 @@ function buildGeminiEvidencePrompt({
     "- primaryCandidate: AI가 가장 가능성이 높다고 보는 기술명",
     "- family: 인버트/스핀/그랩/슬라이드/기본 점프/확인 필요 등 넓은 계열",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
-    "- rotationType: 백롤/탠트럼/프론트롤/스핀/인버트/확인 필요 등 회전 특성",
+    "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
     "- landingOutcome: 착지 성공/불안정 착지/크래시/확인 필요",
     "- confidence: primaryCandidate에 대한 전체 확신도",
     "- evidence: primaryCandidate를 제안한 짧은 핵심 근거",
@@ -1469,6 +1478,13 @@ function buildGeminiEvidencePrompt({
     "- evidenceWindows: 트릭 정체성을 판단하는 phase-weighted event window",
     "- observations: 영상에서 직접 보이는 사실",
     "- uncertainty: 불확실한 이유와 전체 확신도",
+    "",
+    "negative evidence 규칙:",
+    "- 토사이드 접근이 보이면 approachType은 토사이드로 쓰고 힐사이드 high를 금지하세요.",
+    "- 웨이크를 넘어가는 기본 점프/스트레이트 에어로 보이면 family는 기본 점프 또는 No invert로 쓰세요.",
+    "- 몸/보드가 완전히 뒤집히는 관계가 보이지 않으면 family=인버트 high를 금지하세요.",
+    "- roll axis가 보이지 않으면 rotationType=No roll axis 또는 확인 필요로 쓰세요.",
+    "- 백롤 mechanics가 보이지 않으면 primaryCandidate에 백롤을 쓰지 마세요.",
     "",
     "중요: JSON key 순서는 반드시 primaryCandidate, family, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
@@ -2538,12 +2554,45 @@ function applyGeminiEvidenceConsistency(
   const approachText = normalizeDomainText(evidence.approachType.value);
   const rotationText = normalizeDomainText(evidence.rotationType.value);
   const familyText = normalizeDomainText(evidence.family.value);
+  const allEvidenceText = normalizeDomainText(
+    [
+      evidence.primaryCandidate.evidence,
+      evidence.family.evidence,
+      evidence.approachType.evidence,
+      evidence.rotationType.evidence,
+      evidence.evidence,
+      ...evidence.evidenceWindows.map((window) => window.evidence),
+      ...evidence.observations.map((observation) => observation.detail),
+      ...evidence.uncertainty.reasons,
+    ].join(" "),
+  );
   const isHeelsideApproach = includesAnyDomainTerm(approachText, [
     "heelside",
     "heel side",
     "힐사이드",
     "hs",
   ]);
+  const isToesideMentioned = includesAnyDomainTerm(
+    `${approachText} ${allEvidenceText}`,
+    ["toeside", "toe side", "토사이드", "ts"],
+  );
+  const isBasicJumpPlausible = includesAnyDomainTerm(
+    `${primaryText} ${familyText} ${rotationText} ${allEvidenceText}`,
+    [
+      "basic jump",
+      "straight air",
+      "베이직 점프",
+      "기본 점프",
+      "스트레이트 에어",
+      "no invert",
+      "no roll axis",
+      "백롤 mechanics 없음",
+      "백롤 메커닉 없음",
+    ],
+  );
+  const isBackRollCandidate =
+    includesAnyDomainTerm(primaryText, ["back roll", "backroll", "백롤"]) ||
+    includesAnyDomainTerm(rotationText, ["back roll", "backroll", "백롤"]);
   const isFrontRollCandidate =
     includesAnyDomainTerm(primaryText, ["front roll", "frontroll", "프론트롤"]) ||
     includesAnyDomainTerm(rotationText, ["front roll", "frontroll", "프론트롤"]);
@@ -2551,6 +2600,48 @@ function applyGeminiEvidenceConsistency(
     includesAnyDomainTerm(familyText, ["invert", "인버트"]) ||
     includesAnyDomainTerm(primaryText, ["roll", "롤"]) ||
     includesAnyDomainTerm(rotationText, ["roll", "롤"]);
+  const isPrimaryHigh = evidence.primaryCandidate.confidence === "high";
+  const isApproachHigh = evidence.approachType.confidence === "high";
+  const isRotationHigh = evidence.rotationType.confidence === "high";
+  const isFamilyHigh = evidence.family.confidence === "high";
+  const hasHeelsideSetupEvidence =
+    isHeelsideApproach &&
+    includesAnyDomainTerm(allEvidenceText, ["heelside", "heel side", "힐사이드"]) &&
+    includesAnyDomainTerm(allEvidenceText, ["edge", "엣지", "load", "로드"]);
+  const hasRollAxisEvidence = includesAnyDomainTerm(allEvidenceText, [
+    "roll axis",
+    "rotation axis",
+    "회전축",
+    "롤 축",
+    "roll축",
+  ]);
+  const hasExplicitInvertEvidence =
+    includesAnyDomainTerm(allEvidenceText, [
+      "inverted body",
+      "body/board",
+      "body-board",
+      "몸/보드",
+      "몸과 보드",
+      "상하 반전",
+      "완전히 뒤집",
+      "인버트된",
+    ]) &&
+    includesAnyDomainTerm(allEvidenceText, ["머리 위", "overhead", "inverted", "인버트"]);
+  const hasRotationInitiationEvidence = includesAnyDomainTerm(allEvidenceText, [
+    "rotation initiation",
+    "회전 시작",
+    "initiation",
+    "어깨",
+    "골반",
+    "shoulder",
+    "hip",
+  ]);
+  const approachEvidenceText = normalizeDomainText(evidence.approachType.evidence);
+  const rotationEvidenceText = normalizeDomainText(evidence.rotationType.evidence);
+  const hasSeparateApproachAndRotationEvidence =
+    approachEvidenceText.length > 0 &&
+    rotationEvidenceText.length > 0 &&
+    approachEvidenceText !== rotationEvidenceText;
 
   let consistencyStatus: EvidenceConsistencyStatus = "valid";
 
@@ -2559,10 +2650,61 @@ function applyGeminiEvidenceConsistency(
     warnings.push(
       "힐사이드 접근과 프론트 롤 추정이 함께 나와 내부 일관성이 낮습니다.",
     );
-  } else if (
+  }
+
+  if (isBackRollCandidate && (isPrimaryHigh || isRotationHigh)) {
+    if (!hasExplicitInvertEvidence) {
+      consistencyStatus = "inconsistent";
+      warnings.push("백롤 high 추정에 필요한 명시적 인버트 근거가 부족합니다.");
+    }
+
+    if (!hasRollAxisEvidence) {
+      consistencyStatus = "inconsistent";
+      warnings.push("백롤 high 추정에 필요한 roll-axis 근거가 부족합니다.");
+    }
+
+    if (!hasHeelsideSetupEvidence) {
+      consistencyStatus = "inconsistent";
+      warnings.push("백롤 high 추정에 필요한 독립적인 힐사이드 setup 근거가 부족합니다.");
+    }
+
+    if (!hasRotationInitiationEvidence) {
+      consistencyStatus = "inconsistent";
+      warnings.push("백롤 high 추정에 필요한 회전 시작 근거가 부족합니다.");
+    }
+
+    if (isBasicJumpPlausible) {
+      consistencyStatus = "inconsistent";
+      warnings.push("기본 점프/스트레이트 에어 가능성이 있어 백롤 high 추정을 낮춰야 합니다.");
+    }
+  }
+
+  if (isInvertFamily && isFamilyHigh && !hasExplicitInvertEvidence) {
+    consistencyStatus = "inconsistent";
+    warnings.push("인버트 high 추정에 필요한 명시적 몸/보드 반전 근거가 부족합니다.");
+  }
+
+  if (isHeelsideApproach && isApproachHigh && isToesideMentioned) {
+    consistencyStatus = "inconsistent";
+    warnings.push("토사이드 가능성이 함께 나타나 힐사이드 high 추정을 낮춰야 합니다.");
+  }
+
+  if (
+    isApproachHigh &&
+    isRotationHigh &&
+    !hasSeparateApproachAndRotationEvidence
+  ) {
+    consistencyStatus = "inconsistent";
+    warnings.push("접근 방식과 회전 유형 high 추정이 독립 근거에 의존하지 않습니다.");
+  }
+
+  if (
+    consistencyStatus === "valid" &&
+    (
     evidence.primaryCandidate.confidence === "low" ||
     evidence.approachType.confidence === "low" ||
     evidence.rotationType.confidence === "low"
+    )
   ) {
     consistencyStatus = "needs_review";
     warnings.push("핵심 동작 필드의 확신도가 낮아 사용자 확인이 필요합니다.");
