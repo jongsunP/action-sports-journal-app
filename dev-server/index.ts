@@ -423,6 +423,7 @@ app.post(
         primaryCandidate: normalizedEvidence.primaryCandidate,
         alternativeCandidates: normalizedEvidence.alternativeCandidates,
         family: normalizedEvidence.family,
+        temporalWindows: normalizedEvidence.temporalWindows,
         rawApproachType: normalizedEvidence.rawApproachType,
         approachObservedFacts: normalizedEvidence.approachObservedFacts,
         approachDecision: normalizedEvidence.approachDecision,
@@ -1445,6 +1446,11 @@ function buildGeminiEvidencePrompt({
     "기본 점프/스트레이트 에어/토사이드 베이직 점프도 정상 후보입니다. 인버트가 아니면 반드시 No invert 또는 기본 점프로 분류하세요.",
     "명시적 반례 후보: Toeside Basic Jump, Basic Jump, Straight Air, No invert, No roll axis, No back roll mechanics.",
     "보드가 높게 뜨거나 카메라 각도 때문에 보드가 라이더 위쪽에 보이는 것만으로 인버트/백롤이라고 판단하지 마세요.",
+    "접근 방향을 판단하기 전에 반드시 takeoff/pop timestamp를 먼저 찾으세요.",
+    "finalApproachWindow는 takeoffTimestamp 약 2~3초 전부터 takeoff 순간까지입니다.",
+    "긴 slalom/setup 구간이 있으면 접근 방향 직접 근거로 쓰지 말고 ignoredSetupWindows에 분리하세요.",
+    "approachObservedFacts는 finalApproachWindow 내부에서만 추출하세요.",
+    "earlier slalom/setup, 카메라 프레이밍, 착지/회복 구간은 approachType high의 직접 근거가 될 수 없습니다.",
     "접근 방향은 바로 힐사이드/토사이드로 단정하지 말고 먼저 approachObservedFacts를 채우세요.",
     "approachObservedFacts에는 stance, leadFoot, boardDirection, wakeCrossingPath, edgeDirectionEvidence, handlePosition, bodyOrientation을 관찰 사실로 분리해서 작성하세요.",
     "질문 순서: 스탠스는 무엇인가? 어느 발이 앞인가? 보드 방향은? 라이더는 어디서 시작했고 어디서 이륙했고 어디에 착지했는가? 어떤 엣지가 로드됐는가? 핸들은 어디에 있는가? 어떤 시각 사실이 이를 뒷받침하는가?",
@@ -1490,6 +1496,7 @@ function buildGeminiEvidencePrompt({
     "반드시 추출할 항목:",
     "- primaryCandidate: AI가 가장 가능성이 높다고 보는 기술명",
     "- family: 인버트/스핀/그랩/슬라이드/기본 점프/확인 필요 등 넓은 계열",
+    "- temporalWindows: takeoffTimestamp, finalApproachWindow, ignoredSetupWindows, approachWindowConfidence",
     "- approachObservedFacts: 접근 방향 판단 전 관찰 사실",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
@@ -1503,13 +1510,16 @@ function buildGeminiEvidencePrompt({
     "",
     "negative evidence 규칙:",
     "- 토사이드 접근이 보이면 approachType은 토사이드로 쓰고 힐사이드 high를 금지하세요.",
+    "- approachObservedFacts의 timestamp 근거가 finalApproachWindow 밖이면 approachType high를 금지하세요.",
+    "- takeoffTimestamp가 없거나 finalApproachWindow confidence가 low이면 approachType high를 금지하세요.",
+    "- wakeCrossingPath와 edgeDirectionEvidence는 finalApproachWindow를 참조해야 합니다.",
     "- 웨이크를 넘어가는 기본 점프/스트레이트 에어로 보이면 family는 기본 점프 또는 No invert로 쓰세요.",
     "- 몸/보드가 완전히 뒤집히는 관계가 보이지 않으면 family=인버트 high를 금지하세요.",
     "- roll axis가 보이지 않으면 rotationType=No roll axis 또는 확인 필요로 쓰세요.",
     "- 백롤 mechanics가 보이지 않으면 primaryCandidate에 백롤을 쓰지 마세요.",
     "- approachObservedFacts가 부족하면 approachType high를 금지하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, approachObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -1763,6 +1773,7 @@ type GeminiEvidencePayload = {
     confidence: "high" | "medium" | "low";
     evidence: string;
   };
+  temporalWindows?: EvidenceTemporalWindowsPayload;
   approachType: {
     value: string;
     confidence: "high" | "medium" | "low";
@@ -1801,6 +1812,30 @@ type GeminiEvidencePayload = {
 };
 
 type EvidenceConsistencyStatus = "valid" | "inconsistent" | "needs_review";
+
+type TakeoffDetectionPayload = {
+  timestampSeconds: number | null;
+  confidence: "high" | "medium" | "low";
+  evidence: string;
+};
+
+type FinalApproachWindowPayload = {
+  startSeconds: number;
+  endSeconds: number;
+  confidence: "high" | "medium" | "low";
+  reasonWindowWasChosen: string;
+};
+
+type EvidenceTemporalWindowsPayload = {
+  takeoffTimestamp: TakeoffDetectionPayload;
+  finalApproachWindow: FinalApproachWindowPayload;
+  ignoredSetupWindows: Array<{
+    startSeconds: number;
+    endSeconds: number;
+    reason: string;
+  }>;
+  approachWindowConfidence: "high" | "medium" | "low";
+};
 
 type ApproachFactPayload = {
   value: string;
@@ -2010,11 +2045,13 @@ function parseGeminiEvidence(outputText: string) {
       };
     }
 
+    const temporalWindows = normalizeTemporalWindows(undefined);
     const rawApproachType = normalizeEvidenceFact(undefined, "확인 필요");
     const approachObservedFacts = normalizeApproachObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
       rawApproachType,
+      temporalWindows,
     );
 
     return {
@@ -2024,6 +2061,7 @@ function parseGeminiEvidence(outputText: string) {
       primaryCandidate: normalizeTrickCandidate(undefined, "확인 필요"),
       alternativeCandidates: [],
       family: normalizeEvidenceFact(undefined, "확인 필요"),
+      temporalWindows,
       rawApproachType,
       approachObservedFacts,
       approachDecision,
@@ -2069,6 +2107,7 @@ function parsePartialGeminiEvidence(outputText: string) {
   const alternativeCandidates =
     parseArrayProperty(outputText, "alternativeCandidates") ?? [];
   const family = parseObjectProperty(outputText, "family");
+  const temporalWindows = parseObjectProperty(outputText, "temporalWindows");
   const approachObservedFacts = parseObjectProperty(
     outputText,
     "approachObservedFacts",
@@ -2084,6 +2123,8 @@ function parsePartialGeminiEvidence(outputText: string) {
     alternativeCandidates:
       alternativeCandidates as GeminiEvidencePayload["alternativeCandidates"],
     family: family as GeminiEvidencePayload["family"] | undefined,
+    temporalWindows:
+      temporalWindows as GeminiEvidencePayload["temporalWindows"] | undefined,
     approachObservedFacts:
       approachObservedFacts as GeminiEvidencePayload["approachObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
@@ -2644,12 +2685,14 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     parsed.approachType,
     "확인 필요",
   );
+  const temporalWindows = normalizeTemporalWindows(parsed.temporalWindows);
   const approachObservedFacts = normalizeApproachObservedFacts(
     parsed.approachObservedFacts,
   );
   const approachDecision = deriveApproachDecision(
     approachObservedFacts,
     rawApproachType,
+    temporalWindows,
   );
   const approachWarnings = approachDecision.uncertainty;
 
@@ -2665,6 +2708,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
       parsed.alternativeCandidates,
     ),
     family: normalizeEvidenceFact(parsed.family, "확인 필요"),
+    temporalWindows,
     rawApproachType,
     approachObservedFacts,
     approachDecision,
@@ -2681,6 +2725,121 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     observations: normalizeEvidenceObservations(parsed.observations),
     uncertainty: normalizeEvidenceUncertainty(parsed.uncertainty),
   };
+}
+
+function normalizeTemporalWindows(
+  value: unknown,
+): EvidenceTemporalWindowsPayload {
+  const temporal =
+    value && typeof value === "object"
+      ? (value as Partial<EvidenceTemporalWindowsPayload>)
+      : {};
+  const takeoff = normalizeTakeoffDetection(temporal.takeoffTimestamp);
+  const finalApproachWindow = normalizeFinalApproachWindow(
+    temporal.finalApproachWindow,
+    takeoff.timestampSeconds,
+  );
+
+  return {
+    takeoffTimestamp: takeoff,
+    finalApproachWindow,
+    ignoredSetupWindows: normalizeIgnoredSetupWindows(
+      temporal.ignoredSetupWindows,
+    ),
+    approachWindowConfidence:
+      asOpenAiConfidenceLevel(temporal.approachWindowConfidence) ??
+      finalApproachWindow.confidence,
+  };
+}
+
+function normalizeTakeoffDetection(value: unknown): TakeoffDetectionPayload {
+  if (!value || typeof value !== "object") {
+    return {
+      timestampSeconds: null,
+      confidence: "low",
+      evidence: "takeoff/pop timestamp를 충분히 구조화하지 못했습니다.",
+    };
+  }
+
+  const takeoff = value as Record<string, unknown>;
+  const timestampSeconds = Number(takeoff.timestampSeconds);
+
+  return {
+    timestampSeconds: Number.isFinite(timestampSeconds)
+      ? timestampSeconds
+      : null,
+    confidence: asOpenAiConfidenceLevel(takeoff.confidence) ?? "low",
+    evidence:
+      typeof takeoff.evidence === "string"
+        ? takeoff.evidence
+        : "takeoff/pop timestamp 근거가 부족합니다.",
+  };
+}
+
+function normalizeFinalApproachWindow(
+  value: unknown,
+  takeoffTimestamp: number | null,
+): FinalApproachWindowPayload {
+  const fallbackEnd = takeoffTimestamp ?? 0;
+  const fallbackStart = Math.max(0, fallbackEnd - 3);
+
+  if (!value || typeof value !== "object") {
+    return {
+      startSeconds: fallbackStart,
+      endSeconds: fallbackEnd,
+      confidence: "low",
+      reasonWindowWasChosen:
+        "final approach window를 충분히 구조화하지 못했습니다.",
+    };
+  }
+
+  const window = value as Record<string, unknown>;
+  const startSeconds = Number(window.startSeconds);
+  const endSeconds = Number(window.endSeconds);
+
+  return {
+    startSeconds: Number.isFinite(startSeconds) ? startSeconds : fallbackStart,
+    endSeconds: Number.isFinite(endSeconds) ? endSeconds : fallbackEnd,
+    confidence: asOpenAiConfidenceLevel(window.confidence) ?? "low",
+    reasonWindowWasChosen:
+      typeof window.reasonWindowWasChosen === "string"
+        ? window.reasonWindowWasChosen
+        : "takeoff 직전 final approach window로 선택했습니다.",
+  };
+}
+
+function normalizeIgnoredSetupWindows(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as EvidenceTemporalWindowsPayload["ignoredSetupWindows"];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const window = item as Record<string, unknown>;
+      const startSeconds = Number(window.startSeconds);
+      const endSeconds = Number(window.endSeconds);
+
+      if (!Number.isFinite(startSeconds) || !Number.isFinite(endSeconds)) {
+        return null;
+      }
+
+      return {
+        startSeconds,
+        endSeconds,
+        reason:
+          typeof window.reason === "string"
+            ? window.reason
+            : "final approach window 이전 setup/slalom 구간입니다.",
+      };
+    })
+    .filter(
+      (item): item is EvidenceTemporalWindowsPayload["ignoredSetupWindows"][number] =>
+        Boolean(item),
+    );
 }
 
 function normalizeApproachObservedFacts(
@@ -2768,13 +2927,18 @@ function normalizeWakeCrossingPath(
 function deriveApproachDecision(
   facts: ApproachObservedFactsPayload,
   rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
+  temporalWindows: EvidenceTemporalWindowsPayload,
 ): ApproachDecision {
   const uncertainty: string[] = [];
   const reasoning: string[] = [];
   const rejectedAlternatives: ApproachDecision["rejectedAlternatives"] = [];
+  const temporalWarnings = validateApproachTemporalFocus(
+    facts,
+    rawApproachType,
+    temporalWindows,
+  );
   const edgeText = approachFactText(facts.edgeDirectionEvidence);
   const rawText = approachFactText(rawApproachType);
-  const bodyText = approachFactText(facts.bodyOrientation);
   const edgeCandidate = approachValueFromText(edgeText);
   const rawCandidate = approachValueFromText(rawText);
   const derivedFrom: string[] = [];
@@ -2832,6 +2996,19 @@ function deriveApproachDecision(
       "stance/leadFoot/wake path/board direction/handle position 중 독립 근거가 2개 미만이라 high confidence를 허용하지 않습니다.",
     );
   }
+
+  if (
+    !isSpecificApproachFact(facts.stance) ||
+    !isSpecificApproachFact(facts.leadFoot) ||
+    !isSpecificApproachFact(facts.boardDirection) ||
+    !isSpecificApproachFact(facts.edgeDirectionEvidence)
+  ) {
+    uncertainty.push(
+      "stance, leadFoot, boardDirection, edgeDirectionEvidence 중 하나 이상이 부족해 접근 high confidence를 허용하지 않습니다.",
+    );
+  }
+
+  uncertainty.push(...temporalWarnings);
 
   const value = edgeCandidate ?? "unknown";
   let confidence: ApproachDecision["confidence"] = "low";
@@ -3024,6 +3201,131 @@ function approachEvidenceOnlyRepeatsLabel(
   ]);
 
   return containsApproachLabel && !containsVisualFact;
+}
+
+function validateApproachTemporalFocus(
+  facts: ApproachObservedFactsPayload,
+  rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
+  temporalWindows: EvidenceTemporalWindowsPayload,
+) {
+  const warnings: string[] = [];
+  const finalWindow = temporalWindows.finalApproachWindow;
+  const keyEvidence = [
+    facts.stance.evidence,
+    facts.leadFoot.evidence,
+    facts.boardDirection.evidence,
+    approachFactEvidence(facts.wakeCrossingPath),
+    facts.edgeDirectionEvidence.evidence,
+    facts.handlePosition.evidence,
+    rawApproachType.evidence,
+  ];
+  const timestampedEvidence = keyEvidence.filter((text) =>
+    hasTimestampReference(text),
+  );
+  const insideCount = timestampedEvidence.filter((text) =>
+    isEvidenceInsideFinalApproachWindow(text, finalWindow),
+  ).length;
+  const outsideCount = timestampedEvidence.length - insideCount;
+
+  if (temporalWindows.takeoffTimestamp.timestampSeconds === null) {
+    warnings.push(
+      "takeoffTimestamp가 없어 final approach window 기준 접근 high confidence를 허용하지 않습니다.",
+    );
+  }
+
+  if (
+    finalWindow.confidence === "low" ||
+    temporalWindows.approachWindowConfidence === "low"
+  ) {
+    warnings.push(
+      "finalApproachWindow confidence가 낮아 접근 high confidence를 허용하지 않습니다.",
+    );
+  }
+
+  if (!hasTimestampReference(facts.edgeDirectionEvidence.evidence)) {
+    warnings.push(
+      "edgeDirectionEvidence가 finalApproachWindow timestamp를 명시하지 않습니다.",
+    );
+  } else if (
+    !isEvidenceInsideFinalApproachWindow(
+      facts.edgeDirectionEvidence.evidence,
+      finalWindow,
+    )
+  ) {
+    warnings.push(
+      "edgeDirectionEvidence timestamp가 finalApproachWindow 밖에 있어 접근 high confidence를 허용하지 않습니다.",
+    );
+  }
+
+  const wakeCrossingEvidence = approachFactEvidence(facts.wakeCrossingPath);
+
+  if (!hasTimestampReference(wakeCrossingEvidence)) {
+    warnings.push(
+      "wakeCrossingPath가 finalApproachWindow timestamp를 명시하지 않습니다.",
+    );
+  } else if (
+    !isEvidenceInsideFinalApproachWindow(wakeCrossingEvidence, finalWindow)
+  ) {
+    warnings.push(
+      "wakeCrossingPath timestamp가 finalApproachWindow 밖에 있어 접근 high confidence를 허용하지 않습니다.",
+    );
+  }
+
+  if (timestampedEvidence.length > 0 && outsideCount >= insideCount) {
+    warnings.push(
+      "접근 근거 timestamp가 finalApproachWindow보다 외부 setup/slalom 구간에 더 많이 의존합니다.",
+    );
+  }
+
+  return warnings;
+}
+
+function isEvidenceInsideFinalApproachWindow(
+  evidence: string,
+  finalApproachWindow: FinalApproachWindowPayload,
+) {
+  const timestamps = extractEvidenceTimestamps(evidence);
+
+  if (timestamps.length === 0) {
+    return false;
+  }
+
+  return timestamps.some(
+    (timestamp) =>
+      timestamp >= finalApproachWindow.startSeconds - 0.25 &&
+      timestamp <= finalApproachWindow.endSeconds + 0.25,
+  );
+}
+
+function hasTimestampReference(evidence: string) {
+  return extractEvidenceTimestamps(evidence).length > 0;
+}
+
+function extractEvidenceTimestamps(evidence: string) {
+  const timestamps: number[] = [];
+  const mmSsPattern = /(\d{1,2}):(\d{2})(?:\.(\d+))?/g;
+  const secondPattern = /(?:^|[^\d])(\d+(?:\.\d+)?)\s*(?:초|s|sec|second|seconds)\b/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = mmSsPattern.exec(evidence)) !== null) {
+    const minutes = Number(match[1]);
+    const seconds = Number(match[2]);
+    const fraction = match[3] ? Number(`0.${match[3]}`) : 0;
+
+    if (Number.isFinite(minutes) && Number.isFinite(seconds)) {
+      timestamps.push(minutes * 60 + seconds + fraction);
+    }
+  }
+
+  while ((match = secondPattern.exec(evidence)) !== null) {
+    const seconds = Number(match[1]);
+
+    if (Number.isFinite(seconds)) {
+      timestamps.push(seconds);
+    }
+  }
+
+  return timestamps;
 }
 
 function applyWakeboardTaxonomyGates(
@@ -4169,11 +4471,70 @@ const geminiApproachObservedFactsSchema = {
   ],
 };
 
+const geminiTemporalWindowsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    takeoffTimestamp: {
+      type: Type.OBJECT,
+      properties: {
+        timestampSeconds: { type: Type.NUMBER, nullable: true },
+        confidence: {
+          type: Type.STRING,
+          enum: ["high", "medium", "low"],
+        },
+        evidence: { type: Type.STRING },
+      },
+      required: ["timestampSeconds", "confidence", "evidence"],
+    },
+    finalApproachWindow: {
+      type: Type.OBJECT,
+      properties: {
+        startSeconds: { type: Type.NUMBER },
+        endSeconds: { type: Type.NUMBER },
+        confidence: {
+          type: Type.STRING,
+          enum: ["high", "medium", "low"],
+        },
+        reasonWindowWasChosen: { type: Type.STRING },
+      },
+      required: [
+        "startSeconds",
+        "endSeconds",
+        "confidence",
+        "reasonWindowWasChosen",
+      ],
+    },
+    ignoredSetupWindows: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          startSeconds: { type: Type.NUMBER },
+          endSeconds: { type: Type.NUMBER },
+          reason: { type: Type.STRING },
+        },
+        required: ["startSeconds", "endSeconds", "reason"],
+      },
+    },
+    approachWindowConfidence: {
+      type: Type.STRING,
+      enum: ["high", "medium", "low"],
+    },
+  },
+  required: [
+    "takeoffTimestamp",
+    "finalApproachWindow",
+    "ignoredSetupWindows",
+    "approachWindowConfidence",
+  ],
+};
+
 const geminiEvidenceResponseSchema = {
   type: Type.OBJECT,
   properties: {
     primaryCandidate: geminiTrickCandidateSchema,
     family: geminiEvidenceFactSchema,
+    temporalWindows: geminiTemporalWindowsSchema,
     approachObservedFacts: geminiApproachObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
@@ -4244,6 +4605,7 @@ const geminiEvidenceResponseSchema = {
   required: [
     "primaryCandidate",
     "family",
+    "temporalWindows",
     "approachObservedFacts",
     "approachType",
     "rotationType",

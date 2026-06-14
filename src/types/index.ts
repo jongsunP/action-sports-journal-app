@@ -56,6 +56,26 @@ export type EvidenceFact = {
   evidence: string;
 };
 
+export type EvidenceTemporalWindows = {
+  takeoffTimestamp: {
+    timestampSeconds: number | null;
+    confidence: EvidenceConfidence;
+    evidence: string;
+  };
+  finalApproachWindow: {
+    startSeconds: number;
+    endSeconds: number;
+    confidence: EvidenceConfidence;
+    reasonWindowWasChosen: string;
+  };
+  ignoredSetupWindows: Array<{
+    startSeconds: number;
+    endSeconds: number;
+    reason: string;
+  }>;
+  approachWindowConfidence: EvidenceConfidence;
+};
+
 export type ApproachObservedFacts = {
   stance: EvidenceFact;
   leadFoot: EvidenceFact;
@@ -131,6 +151,7 @@ export type GeminiEvidenceResult = {
   primaryCandidate: TrickCandidateEvidence;
   alternativeCandidates: TrickCandidateEvidence[];
   family: EvidenceFact;
+  temporalWindows?: EvidenceTemporalWindows;
   rawApproachType?: EvidenceFact;
   approachObservedFacts?: ApproachObservedFacts;
   approachDecision?: ApproachDecision;

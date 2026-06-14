@@ -56,6 +56,7 @@ type RemoteEvidenceResponse = {
   primaryCandidate?: unknown;
   alternativeCandidates?: unknown;
   family?: unknown;
+  temporalWindows?: unknown;
   rawApproachType?: unknown;
   approachObservedFacts?: unknown;
   approachDecision?: unknown;
@@ -265,6 +266,7 @@ function normalizeRemoteEvidence(
     primaryCandidate: asTrickCandidate(data.primaryCandidate),
     alternativeCandidates: asTrickCandidates(data.alternativeCandidates),
     family: asEvidenceFact(data.family),
+    temporalWindows: asEvidenceTemporalWindows(data.temporalWindows),
     rawApproachType: asOptionalEvidenceFact(data.rawApproachType),
     approachObservedFacts: asApproachObservedFacts(data.approachObservedFacts),
     approachDecision: asApproachDecision(data.approachDecision),
@@ -337,6 +339,81 @@ function asOptionalEvidenceFact(
   }
 
   return asEvidenceFact(value);
+}
+
+function asEvidenceTemporalWindows(
+  value: unknown,
+): GeminiEvidenceResult['temporalWindows'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const temporal = value as Record<string, unknown>;
+  const takeoff =
+    temporal.takeoffTimestamp && typeof temporal.takeoffTimestamp === 'object'
+      ? (temporal.takeoffTimestamp as Record<string, unknown>)
+      : {};
+  const finalApproach =
+    temporal.finalApproachWindow &&
+    typeof temporal.finalApproachWindow === 'object'
+      ? (temporal.finalApproachWindow as Record<string, unknown>)
+      : {};
+  const timestampSeconds = Number(takeoff.timestampSeconds);
+
+  return {
+    takeoffTimestamp: {
+      timestampSeconds: Number.isFinite(timestampSeconds)
+        ? timestampSeconds
+        : null,
+      confidence: asConfidenceLevel(takeoff.confidence) ?? 'low',
+      evidence:
+        asString(takeoff.evidence) ??
+        'takeoff/pop timestamp 근거를 충분히 읽지 못했습니다.',
+    },
+    finalApproachWindow: {
+      startSeconds: asNumber(finalApproach.startSeconds) ?? 0,
+      endSeconds: asNumber(finalApproach.endSeconds) ?? 0,
+      confidence: asConfidenceLevel(finalApproach.confidence) ?? 'low',
+      reasonWindowWasChosen:
+        asString(finalApproach.reasonWindowWasChosen) ??
+        'final approach window 근거를 충분히 읽지 못했습니다.',
+    },
+    ignoredSetupWindows: asIgnoredSetupWindows(temporal.ignoredSetupWindows),
+    approachWindowConfidence:
+      asConfidenceLevel(temporal.approachWindowConfidence) ?? 'low',
+  };
+}
+
+function asIgnoredSetupWindows(
+  value: unknown,
+): NonNullable<GeminiEvidenceResult['temporalWindows']>['ignoredSetupWindows'] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const startSeconds = asNumber(candidate.startSeconds);
+      const endSeconds = asNumber(candidate.endSeconds);
+
+      if (startSeconds === undefined || endSeconds === undefined) {
+        return null;
+      }
+
+      return {
+        startSeconds,
+        endSeconds,
+        reason:
+          asString(candidate.reason) ??
+          'final approach window 이전 setup/slalom 구간입니다.',
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
 
 function asApproachObservedFacts(
@@ -638,6 +715,12 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0
     ? value
     : undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : undefined;
 }
 
 function asStringArray(value: unknown): string[] {
