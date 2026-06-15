@@ -137,8 +137,10 @@ Infrastructure milestone on 2026-06-15:
   `evidence_results`.
 - Supabase SDK client scaffold exists, but the app is not product-wired to
   Supabase yet.
-- A smoke test script exists, but it needs owner-provided Supabase env values
-  before it can pass.
+- Supabase env values are present locally.
+- `npm run supabase:smoke` confirms Supabase connection with service role.
+- Phase 1 schema is not applied yet: `users`, `moments`, `analysis_jobs`, and
+  `evidence_results` are still missing in Supabase.
 - The next architecture direction is synchronous analysis to asynchronous
   background analysis.
 - Async transition plan exists at `docs/ASYNC_ANALYSIS_PLAN.md`.
@@ -318,9 +320,8 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. If continuing infrastructure, add Supabase env values and run
-   `npm run supabase:smoke`.
-2. Apply `supabase/phase1_schema.sql` in the Supabase SQL editor.
+1. Apply `supabase/phase1_schema.sql` in the Supabase SQL editor.
+2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
 3. Start the server-side DB write spike before changing mobile UX.
 4. Use `docs/ASYNC_ANALYSIS_PLAN.md` as the implementation guide for
    synchronous to asynchronous analysis.

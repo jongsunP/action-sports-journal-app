@@ -26,23 +26,51 @@ const client = createClient(supabaseUrl, serverKey, {
   },
 });
 
-const { data, error } = await client.from('users').select('id').limit(1);
+if (serviceRoleKey) {
+  const { error } = await client.auth.admin.listUsers({
+    page: 1,
+    perPage: 1,
+  });
 
-if (error) {
-  console.error('Supabase smoke test failed.');
-  console.error(error.message);
-  process.exit(1);
+  if (error) {
+    console.error('Supabase connection smoke test failed.');
+    console.error(error.message);
+    process.exit(1);
+  }
 }
 
-console.log('Supabase smoke test passed.');
+const tableChecks = await Promise.all(
+  ['users', 'moments', 'analysis_jobs', 'evidence_results'].map(
+    async (tableName) => {
+      const { error } = await client.from(tableName).select('id').limit(1);
+
+      return {
+        tableName,
+        reachable: !error,
+        errorMessage: error?.message,
+      };
+    },
+  ),
+);
+const schemaReady = tableChecks.every((check) => check.reachable);
+
+console.log('Supabase connection smoke test passed.');
 console.log(
   JSON.stringify(
     {
       url: supabaseUrl,
       mode: serviceRoleKey ? 'service_role' : 'publishable_key',
-      usersTableReachable: Array.isArray(data),
+      serviceRoleConfigured: Boolean(serviceRoleKey),
+      schemaReady,
+      tables: tableChecks,
     },
     null,
     2,
   ),
 );
+
+if (!schemaReady) {
+  console.log(
+    'Supabase connection is ready, but Phase 1 schema is not applied yet. Run supabase/phase1_schema.sql in the Supabase SQL editor.',
+  );
+}

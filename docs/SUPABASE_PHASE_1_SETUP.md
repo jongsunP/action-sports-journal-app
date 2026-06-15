@@ -119,11 +119,15 @@ Use Node 22 LTS for the smoke test.
 Expected output:
 
 ```text
-Supabase smoke test passed.
+Supabase connection smoke test passed.
 ```
 
-The script checks whether the `users` table is reachable using the service role
-key when available.
+The script first checks whether Supabase is reachable using the service role
+key when available. It then reports whether the Phase 1 tables are present.
+
+If `schemaReady` is `false`, connection is working but
+`supabase/phase1_schema.sql` still needs to be applied in the Supabase SQL
+editor.
 
 ## 7. Current App Impact
 

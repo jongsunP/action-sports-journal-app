@@ -193,19 +193,19 @@ Important boundaries:
 - No Auth UI yet.
 - No Storage integration yet.
 - No Job Queue yet.
-- Supabase env values are not committed and still need to be supplied by the
-  owner.
+- Supabase env values are present locally but are not committed.
+- Supabase connection smoke test passes with the service role key.
+- Phase 1 schema is not applied yet, so `schemaReady` is currently false.
 - The app still uses the current evidence extraction flow until async
   implementation begins.
 
 Next starting point:
 
 1. Switch local shell to Node 22 LTS with `nvm install && nvm use`.
-2. Add Supabase values to `.env.local` and Render env.
-3. Run `npm run supabase:smoke`.
-4. Apply `supabase/phase1_schema.sql` in Supabase SQL editor.
-5. Start server-side DB write spike.
-6. Then implement async analysis using `docs/ASYNC_ANALYSIS_PLAN.md`.
+2. Apply `supabase/phase1_schema.sql` in Supabase SQL editor.
+3. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
+4. Start server-side DB write spike.
+5. Then implement async analysis using `docs/ASYNC_ANALYSIS_PLAN.md`.
 
 ## 2026-06-15 AI Evidence Checkpoint
 
@@ -569,12 +569,11 @@ Do not add unrelated product features yet. Continue from the current Supabase
 Phase 1 and async analysis transition work unless the user explicitly switches
 back to AI evidence truthfulness or UX QA.
 
-1. Prepare Supabase env values.
-2. Run `npm run supabase:smoke`.
-3. Apply `supabase/phase1_schema.sql`.
-4. Prove server-side DB writes for Moment, AnalysisJob, and EvidenceResult.
-5. Use `docs/ASYNC_ANALYSIS_PLAN.md` to start the async analysis transition.
-6. Keep Auth UI, Storage, Push, Queue, scoring, and coaching expansion out of
+1. Apply `supabase/phase1_schema.sql`.
+2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
+3. Prove server-side DB writes for Moment, AnalysisJob, and EvidenceResult.
+4. Use `docs/ASYNC_ANALYSIS_PLAN.md` to start the async analysis transition.
+5. Keep Auth UI, Storage, Push, Queue, scoring, and coaching expansion out of
    scope until explicitly requested.
 
 ## Related Personal Context Repo

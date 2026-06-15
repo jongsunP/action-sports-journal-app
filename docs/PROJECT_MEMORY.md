@@ -231,10 +231,13 @@ Completed planning and scaffolding:
 - Supabase SDK and React Native URL polyfill were added.
 - `.env.example` now includes Supabase Phase 1 environment placeholders.
 - `src/services/supabase/client.ts` exists as a guarded mobile client scaffold.
-- `scripts/smoke-test-supabase.mjs` checks Supabase connectivity once env
-  values and schema are ready.
+- Supabase env values are present locally.
+- `scripts/smoke-test-supabase.mjs` confirms Supabase connectivity with the
+  service role key and reports Phase 1 schema readiness separately.
 - `supabase/phase1_schema.sql` drafts `users`, `moments`, `analysis_jobs`, and
   `evidence_results`.
+- Current Supabase status: connection passes, but Phase 1 schema is not applied
+  yet.
 - Node standard was raised to Node 22 LTS through `.nvmrc`, `package.json`
   engines, and setup docs.
 - Async analysis transition planning was documented in
@@ -260,11 +263,9 @@ Moment created
 
 Recommended next starting point:
 
-1. Owner prepares Supabase env values.
-2. Create `.env.local` and Render env values.
-3. Run `npm run supabase:smoke`.
-4. Apply `supabase/phase1_schema.sql` manually in the Supabase SQL editor.
-5. Start server-side DB write spike before changing mobile UX.
+1. Apply `supabase/phase1_schema.sql` manually in the Supabase SQL editor.
+2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
+3. Start server-side DB write spike before changing mobile UX.
 
 ## Wakeboard Domain Knowledge
 
