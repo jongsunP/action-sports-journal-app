@@ -99,6 +99,14 @@ export function hasConfiguredAnalysisEndpoint() {
   return Boolean(analysisEndpoint);
 }
 
+export function getConfiguredAiEndpoints() {
+  return {
+    analysisEndpoint,
+    geminiEvidenceEndpoint,
+    openAiBenchmarkEndpoint,
+  };
+}
+
 export async function analyzeSessionVideo({
   session,
   activityGroupName,

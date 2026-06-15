@@ -21,12 +21,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
 import {
-  analyzeSessionVideo,
-  benchmarkSessionVideoWithOpenAi,
   extractSessionEvidenceWithGemini,
-  hasConfiguredAnalysisEndpoint,
+  getConfiguredAiEndpoints,
   hasConfiguredGeminiEvidenceEndpoint,
-  hasConfiguredOpenAiBenchmarkEndpoint,
   type SessionVideoAsset,
 } from '../../services/ai';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
@@ -39,6 +36,7 @@ import {
 import type { AnalysisResult, GeminiEvidenceResult, Session } from '../../types';
 
 const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
+const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 
 type PersistedSessionState = {
   selectedGroupId?: string;
@@ -53,7 +51,7 @@ type PersistedSessionState = {
 
 export function HomeScreen() {
   const [selectedGroupId, setSelectedGroupId] = useState(
-    mockActivityGroups[0]?.id ?? '',
+    ACTIVE_WAKEBOARD_GROUP_ID,
   );
   const [sessions, setSessions] = useState<Session[]>(mockSessions);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -79,20 +77,9 @@ export function HomeScreen() {
   const [thumbnailsBySessionId, setThumbnailsBySessionId] = useState<
     Record<string, string>
   >({});
-  const [analyzingSessionId, setAnalyzingSessionId] = useState<string | null>(
-    null,
-  );
-  const [benchmarkingSessionId, setBenchmarkingSessionId] = useState<string | null>(
-    null,
-  );
-  const [extractingEvidenceSessionId, setExtractingEvidenceSessionId] = useState<
-    string | null
-  >(null);
+  const [extractingEvidenceBySessionId, setExtractingEvidenceBySessionId] =
+    useState<Record<string, boolean>>({});
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [selectedCoachingResult, setSelectedCoachingResult] = useState<{
-    title: string;
-    result: AnalysisResult;
-  } | null>(null);
   const [playingVideoSessionId, setPlayingVideoSessionId] = useState<string | null>(
     null,
   );
@@ -115,9 +102,7 @@ export function HomeScreen() {
           setSessions(parsed.sessions);
         }
 
-        if (parsed.selectedGroupId) {
-          setSelectedGroupId(parsed.selectedGroupId);
-        }
+        setSelectedGroupId(ACTIVE_WAKEBOARD_GROUP_ID);
 
         if (parsed.videosBySessionId && typeof parsed.videosBySessionId === 'object') {
           setVideosBySessionId(parsed.videosBySessionId);
@@ -214,7 +199,7 @@ export function HomeScreen() {
   ]);
 
   const selectedGroup =
-    mockActivityGroups.find((group) => group.id === selectedGroupId) ??
+    mockActivityGroups.find((group) => group.id === ACTIVE_WAKEBOARD_GROUP_ID) ??
     mockActivityGroups[0];
 
   const visibleSessions = useMemo(
@@ -224,9 +209,8 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
-  const canRequestRemoteAnalysis = hasConfiguredAnalysisEndpoint();
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
-  const canRequestOpenAiBenchmark = hasConfiguredOpenAiBenchmarkEndpoint();
+  const configuredAiEndpoints = getConfiguredAiEndpoints();
   const canCreateVideoThumbnail = hasConfiguredVideoThumbnailEndpoint();
   const selectedSession = selectedSessionId
     ? sessions.find((session) => session.id === selectedSessionId)
@@ -237,8 +221,7 @@ export function HomeScreen() {
   const selectedSessionCard = selectedSession
     ? getSessionCardPresentation({
         session: selectedSession,
-        geminiResult: analysisBySessionId[selectedSession.id],
-        gptResult: openAiBenchmarkBySessionId[selectedSession.id],
+        evidence: geminiEvidenceBySessionId[selectedSession.id],
         thumbnailUri: thumbnailsBySessionId[selectedSession.id],
       })
     : undefined;
@@ -246,13 +229,23 @@ export function HomeScreen() {
     session,
     card: getSessionCardPresentation({
       session,
-      geminiResult: analysisBySessionId[session.id],
-      gptResult: openAiBenchmarkBySessionId[session.id],
+      evidence: geminiEvidenceBySessionId[session.id],
       thumbnailUri: thumbnailsBySessionId[session.id],
     }),
   }));
 
   const canSaveSession = title.trim().length > 0;
+
+  const openEvidenceSheet = (session: Session) => {
+    setSelectedSessionId(session.id);
+    setPlayingVideoSessionId(null);
+
+    const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
+
+    if (video && !geminiEvidenceBySessionId[session.id]) {
+      void handleExtractEvidence(session, { openSheet: false });
+    }
+  };
 
   const handleAddSession = () => {
     if (!selectedGroup || !title.trim()) {
@@ -279,6 +272,11 @@ export function HomeScreen() {
         [nextSession.id]: selectedVideo,
       }));
       createThumbnailForSession(nextSession.id, selectedVideo);
+      setSelectedSessionId(nextSession.id);
+      void handleExtractEvidence(nextSession, {
+        openSheet: false,
+        videoOverride: selectedVideo,
+      });
     }
     setTitle('');
     setNotes('');
@@ -344,147 +342,40 @@ export function HomeScreen() {
     });
   };
 
-  const handleAnalyzeSession = async (session: Session) => {
-    const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
-
-    if (!video) {
-      Alert.alert('영상이 필요합니다', '코칭을 받으려면 영상을 먼저 연결해주세요.');
+  const handleExtractEvidence = async (
+    session: Session,
+    options?: { openSheet?: boolean; videoOverride?: SessionVideoAsset },
+  ) => {
+    if (extractingEvidenceBySessionId[session.id]) {
       return;
     }
 
-    const group =
-      mockActivityGroups.find((item) => item.id === session.activityGroupId) ??
-      selectedGroup;
-    const evidence = geminiEvidenceBySessionId[session.id];
-    const needsConfirmation =
-      evidence &&
-      (evidence.requiresUserConfirmation ||
-        evidence.qualityMode === 'degraded' ||
-        evidence.consistencyStatus === 'inconsistent' ||
-        evidence.consistencyStatus === 'needs_review') &&
-      !userConfirmedTrickBySessionId[session.id];
-
-    if (needsConfirmation) {
-      Alert.alert(
-        '기술 확인이 필요합니다',
-        '현재 AI 추정 결과의 확신도나 내부 일관성이 충분하지 않습니다. 코칭 전에 시도한 기술을 먼저 확정해 주세요.',
-      );
-      return;
-    }
-
-    try {
-      setAnalyzingSessionId(session.id);
-      const analysis = await analyzeSessionVideo({
-        session,
-        activityGroupName: group?.name ?? 'Activity',
-        video,
-        userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
-      });
-
-      setAnalysisBySessionId((current) => ({
-        ...current,
-        [session.id]: analysis,
-      }));
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '분석 요청에 실패했습니다.';
-
-      setAnalysisBySessionId((current) => ({
-        ...current,
-        [session.id]: {
-          id: `analysis-error-${Date.now()}`,
-          sessionId: session.id,
-          status: 'failed',
-          summary: message,
-          highlights: [],
-          suggestions: ['분석 서버 설정을 확인한 뒤 다시 시도해주세요.'],
-          createdAt: new Date().toISOString(),
-        },
-      }));
-    } finally {
-      setAnalyzingSessionId(null);
-    }
-  };
-
-  const handleBenchmarkSession = async (session: Session) => {
-    const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
-
-    if (!video) {
-      Alert.alert('영상이 필요합니다', '비교 코칭 전에 영상을 먼저 연결해주세요.');
-      return;
-    }
-
-    const group =
-      mockActivityGroups.find((item) => item.id === session.activityGroupId) ??
-      selectedGroup;
-    const evidence = geminiEvidenceBySessionId[session.id];
-    const needsConfirmation =
-      evidence &&
-      (evidence.requiresUserConfirmation ||
-        evidence.qualityMode === 'degraded' ||
-        evidence.consistencyStatus === 'inconsistent' ||
-        evidence.consistencyStatus === 'needs_review') &&
-      !userConfirmedTrickBySessionId[session.id];
-
-    if (needsConfirmation) {
-      Alert.alert(
-        '기술 확인이 필요합니다',
-        '현재 AI 추정 결과의 확신도나 내부 일관성이 충분하지 않습니다. 비교 코칭 전에 시도한 기술을 먼저 확정해 주세요.',
-      );
-      return;
-    }
-
-    try {
-      setBenchmarkingSessionId(session.id);
-      const analysis = await benchmarkSessionVideoWithOpenAi({
-        session,
-        activityGroupName: group?.name ?? 'Activity',
-        video,
-        userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
-      });
-
-      setOpenAiBenchmarkBySessionId((current) => ({
-        ...current,
-        [session.id]: analysis,
-      }));
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '비교 코칭 요청에 실패했습니다.';
-
-      setOpenAiBenchmarkBySessionId((current) => ({
-        ...current,
-        [session.id]: {
-          id: `openai-benchmark-error-${Date.now()}`,
-          sessionId: session.id,
-          status: 'failed',
-          summary: message,
-          highlights: [],
-          suggestions: ['서버 설정과 API 키를 확인한 뒤 다시 시도해주세요.'],
-          createdAt: new Date().toISOString(),
-        },
-      }));
-    } finally {
-      setBenchmarkingSessionId(null);
-    }
-  };
-
-  const handleExtractEvidence = async (session: Session) => {
-    const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
+    const video =
+      options?.videoOverride ??
+      videosBySessionId[session.id] ??
+      getVideoAssetFromSession(session);
 
     if (!video) {
       Alert.alert('영상이 필요합니다', '근거 추출 전에 영상을 먼저 연결해주세요.');
       return;
     }
 
+    if (options?.openSheet !== false) {
+      setSelectedSessionId(session.id);
+    }
+
     const group =
       mockActivityGroups.find((item) => item.id === session.activityGroupId) ??
       selectedGroup;
 
     try {
-      setExtractingEvidenceSessionId(session.id);
+      setExtractingEvidenceBySessionId((current) => ({
+        ...current,
+        [session.id]: true,
+      }));
       const evidence = await extractSessionEvidenceWithGemini({
         session,
-        activityGroupName: group?.name ?? 'Activity',
+        activityGroupName: 'Wakeboard',
         video,
         userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
       });
@@ -542,7 +433,10 @@ export function HomeScreen() {
         },
       }));
     } finally {
-      setExtractingEvidenceSessionId(null);
+      setExtractingEvidenceBySessionId((current) => ({
+        ...current,
+        [session.id]: false,
+      }));
     }
   };
 
@@ -572,7 +466,6 @@ export function HomeScreen() {
 
           if (selectedSessionId === session.id) {
             setSelectedSessionId(null);
-            setSelectedCoachingResult(null);
             setPlayingVideoSessionId(null);
           }
         },
@@ -595,8 +488,8 @@ export function HomeScreen() {
             <>
               <View style={styles.header}>
                 <View>
-                  <Text style={styles.kicker}>Action Sports Journal</Text>
-                  <Text style={styles.title}>내 라이딩 모먼트</Text>
+                  <Text style={styles.kicker}>Wakeboard Evidence MVP</Text>
+                  <Text style={styles.title}>웨이크보드 근거 추출</Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"
@@ -625,10 +518,7 @@ export function HomeScreen() {
                   renderItem={({ item }) => (
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => {
-                        setSelectedSessionId(item.session.id);
-                        setSelectedCoachingResult(null);
-                      }}
+                      onPress={() => openEvidenceSheet(item.session)}
                       style={({ pressed }) => [
                         styles.storyItem,
                         pressed ? styles.buttonPressed : undefined,
@@ -653,38 +543,11 @@ export function HomeScreen() {
                 />
               </View>
 
-              <View style={styles.section}>
-                <FlatList
-                  data={mockActivityGroups}
-                  horizontal
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.groupRow}
-                  renderItem={({ item }) => {
-                    const selected = item.id === selectedGroup?.id;
-
-                    return (
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => setSelectedGroupId(item.id)}
-                        style={({ pressed }) => [
-                          styles.groupChip,
-                          selected ? styles.groupChipSelected : undefined,
-                          pressed ? styles.groupChipPressed : undefined,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.groupChipTitle,
-                            selected ? styles.groupChipTitleSelected : undefined,
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  }}
-                  showsHorizontalScrollIndicator={false}
-                />
+              <View style={styles.activeSportBanner}>
+                <Text style={styles.activeSportTitle}>Wakeboard</Text>
+                <Text style={styles.activeSportText}>
+                  이번 MVP는 웨이크보드 동작 근거 추출 정확도만 확인합니다.
+                </Text>
               </View>
             </>
           ) : null}
@@ -695,7 +558,7 @@ export function HomeScreen() {
                 <View>
                   <Text style={styles.sectionLabel}>새 모먼트</Text>
                   <Text style={styles.contextText}>
-                    {selectedGroup?.name ?? '선택된 종목 없음'}에 추가
+                    Wakeboard 모먼트에 추가
                   </Text>
                 </View>
               </View>
@@ -737,7 +600,7 @@ export function HomeScreen() {
                   </Text>
                 ) : (
                   <Text style={styles.helperText}>
-                    영상을 선택하면 코칭 흐름을 바로 확인할 수 있습니다.
+                    영상을 선택하면 저장 후 Gemini 근거 추출이 자동으로 시작됩니다.
                   </Text>
                 )}
                 <Pressable
@@ -775,302 +638,7 @@ export function HomeScreen() {
               </View>
             ) : null}
 
-            {selectedSession ? (
-              <View style={styles.detailPanel}>
-                {selectedCoachingResult ? (
-                  <CoachingResultDetail
-                    result={selectedCoachingResult.result}
-                    title={selectedCoachingResult.title}
-                    onBack={() => setSelectedCoachingResult(null)}
-                  />
-                ) : (
-                  <>
-                    <View style={styles.detailHero}>
-                      {playingVideoSessionId === selectedSession.id &&
-                      selectedSessionVideo ? (
-                        <LocalSessionVideoPlayer videoUri={selectedSessionVideo.uri} />
-                      ) : (
-                        <>
-                          {selectedSessionCard?.thumbnailUri ? (
-                            <Image
-                              source={{ uri: selectedSessionCard.thumbnailUri }}
-                              style={styles.detailHeroImage}
-                            />
-                          ) : (
-                            <View style={styles.detailHeroFallback}>
-                              <Text style={styles.detailHeroPlay}>▶</Text>
-                            </View>
-                          )}
-                          <View style={styles.detailHeroShade} />
-                          {selectedSessionVideo ? (
-                            <Pressable
-                              accessibilityRole="button"
-                              onPress={() => setPlayingVideoSessionId(selectedSession.id)}
-                              style={({ pressed }) => [
-                                styles.detailPlayButton,
-                                pressed ? styles.buttonPressed : undefined,
-                              ]}
-                            >
-                              <Text style={styles.detailPlayIcon}>▶</Text>
-                            </Pressable>
-                          ) : null}
-                          <View style={styles.detailHeroContent}>
-                            <Text style={styles.detailHeroTitle} numberOfLines={2}>
-                              {selectedSessionCard?.momentTitle ?? selectedSession.title}
-                            </Text>
-                            {selectedSessionCard?.reason ? (
-                              <Text style={styles.detailHeroReason} numberOfLines={2}>
-                                {selectedSessionCard.reason}
-                              </Text>
-                            ) : null}
-                            <View style={styles.detailSignalRow}>
-                              <SignalDot
-                                active={Boolean(selectedSession.videoUri)}
-                                label="영상"
-                              />
-                              <SignalDot
-                                active={Boolean(
-                                  geminiEvidenceBySessionId[selectedSession.id],
-                                )}
-                                label="근거"
-                              />
-                              <SignalDot
-                                active={
-                                  hasCoachingResult(
-                                    analysisBySessionId[selectedSession.id],
-                                  ) ||
-                                  hasCoachingResult(
-                                    openAiBenchmarkBySessionId[selectedSession.id],
-                                  )
-                                }
-                                label="코칭"
-                              />
-                            </View>
-                          </View>
-                        </>
-                      )}
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => {
-                          setSelectedSessionId(null);
-                          setSelectedCoachingResult(null);
-                          setPlayingVideoSessionId(null);
-                        }}
-                        style={({ pressed }) => [
-                          styles.detailBackOverlay,
-                          pressed ? styles.buttonPressed : undefined,
-                        ]}
-                      >
-                        <Text style={styles.backButtonText}>← 피드</Text>
-                      </Pressable>
-                    </View>
-                    <View style={styles.detailMomentSummary}>
-                      <Text style={styles.detailMomentDate}>
-                        {formatSessionDateTime(selectedSession.occurredAt)}
-                      </Text>
-                      <Text style={styles.detailMomentTitle} numberOfLines={2}>
-                        {selectedSession.title}
-                      </Text>
-                      <Text style={styles.detailMomentReason} numberOfLines={2}>
-                        {selectedSessionCard?.openReason ?? '라이딩 모먼트'}
-                      </Text>
-                      {userConfirmedTrickBySessionId[selectedSession.id] ? (
-                        <Text style={styles.confirmedTrickText}>
-                          확정 기술: {userConfirmedTrickBySessionId[selectedSession.id]}
-                        </Text>
-                      ) : null}
-                    </View>
-
-                    <View style={styles.coachDock}>
-                      <Text style={styles.coachDockTitle}>AI Coach</Text>
-                      <Text style={styles.coachDockText}>
-                        모먼트를 먼저 보고, 필요한 리뷰만 열어보세요.
-                      </Text>
-                      <View style={styles.detailActionRow}>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={
-                            !hasCoachingResult(analysisBySessionId[selectedSession.id]) &&
-                            (!selectedSession.videoUri ||
-                              !canRequestRemoteAnalysis ||
-                              analyzingSessionId === selectedSession.id)
-                          }
-                          onPress={() => {
-                            const result = analysisBySessionId[selectedSession.id];
-
-                            if (result) {
-                              setSelectedCoachingResult({
-                                title: 'AI 코치 리뷰',
-                                result,
-                              });
-                              return;
-                            }
-
-                            handleAnalyzeSession(selectedSession);
-                          }}
-                          style={({ pressed }) => [
-                            hasCoachingResult(analysisBySessionId[selectedSession.id])
-                              ? styles.coachingButtonComplete
-                              : styles.coachingButtonPending,
-                            !hasCoachingResult(analysisBySessionId[selectedSession.id]) &&
-                            (!selectedSession.videoUri ||
-                              !canRequestRemoteAnalysis ||
-                              analyzingSessionId === selectedSession.id)
-                              ? styles.analysisButtonDisabled
-                              : undefined,
-                            pressed ? styles.buttonPressed : undefined,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.analysisButtonText,
-                              hasCoachingResult(analysisBySessionId[selectedSession.id])
-                                ? undefined
-                                : styles.pendingButtonText,
-                            ]}
-                          >
-                            {analyzingSessionId === selectedSession.id
-                              ? '코칭 중...'
-                              : hasCoachingResult(analysisBySessionId[selectedSession.id])
-                                ? '코치 리뷰 보기'
-                                : '코치 리뷰 받기'}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={
-                            !hasCoachingResult(
-                              openAiBenchmarkBySessionId[selectedSession.id],
-                            ) &&
-                            (!selectedSession.videoUri ||
-                              !canRequestOpenAiBenchmark ||
-                              benchmarkingSessionId === selectedSession.id)
-                          }
-                          onPress={() => {
-                            const result = openAiBenchmarkBySessionId[selectedSession.id];
-
-                            if (result) {
-                              setSelectedCoachingResult({
-                                title: '비교 리뷰',
-                                result,
-                              });
-                              return;
-                            }
-
-                            handleBenchmarkSession(selectedSession);
-                          }}
-                          style={({ pressed }) => [
-                            hasCoachingResult(openAiBenchmarkBySessionId[selectedSession.id])
-                              ? styles.coachingButtonComplete
-                              : styles.coachingButtonPending,
-                            !hasCoachingResult(
-                              openAiBenchmarkBySessionId[selectedSession.id],
-                            ) &&
-                            (!selectedSession.videoUri ||
-                              !canRequestOpenAiBenchmark ||
-                              benchmarkingSessionId === selectedSession.id)
-                              ? styles.analysisButtonDisabled
-                              : undefined,
-                            pressed ? styles.buttonPressed : undefined,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.analysisButtonText,
-                              hasCoachingResult(
-                                openAiBenchmarkBySessionId[selectedSession.id],
-                              )
-                                ? undefined
-                                : styles.pendingButtonText,
-                            ]}
-                          >
-                            {benchmarkingSessionId === selectedSession.id
-                              ? '분석 중...'
-                              : hasCoachingResult(
-                                  openAiBenchmarkBySessionId[selectedSession.id],
-                                )
-                                ? '비교 리뷰 보기'
-                                : '비교 리뷰 받기'}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={
-                            !selectedSession.videoUri ||
-                            !canRequestGeminiEvidence ||
-                            extractingEvidenceSessionId === selectedSession.id
-                          }
-                          onPress={() => handleExtractEvidence(selectedSession)}
-                          style={({ pressed }) => [
-                            styles.coachingButtonPending,
-                            !selectedSession.videoUri ||
-                            !canRequestGeminiEvidence ||
-                            extractingEvidenceSessionId === selectedSession.id
-                              ? styles.analysisButtonDisabled
-                              : undefined,
-                            pressed ? styles.buttonPressed : undefined,
-                          ]}
-                        >
-                          <Text style={[styles.analysisButtonText, styles.pendingButtonText]}>
-                            {extractingEvidenceSessionId === selectedSession.id
-                              ? '동작 확인 중...'
-                              : geminiEvidenceBySessionId[selectedSession.id]
-                                ? '동작 근거 다시 보기'
-                                : '동작 근거 보기'}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    {geminiEvidenceBySessionId[selectedSession.id] ? (
-                      <GeminiEvidenceView
-                        evidence={geminiEvidenceBySessionId[selectedSession.id]}
-                        userConfirmedTrick={
-                          userConfirmedTrickBySessionId[selectedSession.id]
-                        }
-                        onConfirmTrick={(trickName) => {
-                          const trimmed = trickName.trim();
-
-                          if (!trimmed) {
-                            return;
-                          }
-
-                          setUserConfirmedTrickBySessionId((current) => ({
-                            ...current,
-                            [selectedSession.id]: trimmed,
-                          }));
-                        }}
-                      />
-                    ) : null}
-                    {analysisBySessionId[selectedSession.id] ? (
-                      <AnalysisResultView
-                        result={analysisBySessionId[selectedSession.id]}
-                        title="AI 코치 리뷰"
-                      />
-                    ) : null}
-                    {openAiBenchmarkBySessionId[selectedSession.id] ? (
-                      <AnalysisResultView
-                        result={openAiBenchmarkBySessionId[selectedSession.id]}
-                        title="비교 리뷰"
-                      />
-                    ) : null}
-                    {selectedSession.notes ? (
-                      <Text style={styles.detailNotes}>{selectedSession.notes}</Text>
-                    ) : null}
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => handleDeleteSession(selectedSession)}
-                      style={({ pressed }) => [
-                        styles.deleteButton,
-                        pressed ? styles.buttonPressed : undefined,
-                      ]}
-                    >
-                      <Text style={styles.deleteButtonText}>모먼트 삭제</Text>
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            ) : visibleSessions.length === 0 ? (
+            {visibleSessions.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyTitle}>아직 모먼트가 없습니다</Text>
                   <Text style={styles.emptyText}>
@@ -1081,26 +649,17 @@ export function HomeScreen() {
               visibleSessions.map((item) => {
                 const card = getSessionCardPresentation({
                   session: item,
-                  geminiResult: analysisBySessionId[item.id],
-                  gptResult: openAiBenchmarkBySessionId[item.id],
+                  evidence: geminiEvidenceBySessionId[item.id],
                   thumbnailUri: thumbnailsBySessionId[item.id],
                 });
-                const hasGemini = hasCoachingResult(analysisBySessionId[item.id]);
-                const hasGpt = hasCoachingResult(openAiBenchmarkBySessionId[item.id]);
                 const hasEvidence = Boolean(geminiEvidenceBySessionId[item.id]);
-                const isWorking =
-                  analyzingSessionId === item.id ||
-                  benchmarkingSessionId === item.id ||
-                  extractingEvidenceSessionId === item.id;
+                const isWorking = extractingEvidenceBySessionId[item.id];
 
                 return (
                 <Pressable
                   accessibilityRole="button"
                   key={item.id}
-                  onPress={() => {
-                    setSelectedSessionId(item.id);
-                    setSelectedCoachingResult(null);
-                  }}
+                  onPress={() => openEvidenceSheet(item)}
                   style={({ pressed }) => [
                     styles.sessionRow,
                     pressed ? styles.sessionRowPressed : undefined,
@@ -1121,7 +680,7 @@ export function HomeScreen() {
                     <View style={styles.momentTopBar}>
                       <Text style={styles.momentBadge}>
                         {isWorking
-                          ? '리뷰 중'
+                          ? '근거 추출 중'
                           : item.videoUri
                             ? '라이딩 클립'
                             : '모먼트'}
@@ -1151,10 +710,9 @@ export function HomeScreen() {
                     <View style={styles.momentSignals}>
                       <SignalDot active={Boolean(item.videoUri)} label="영상" />
                       <SignalDot active={hasEvidence} label="근거" />
-                      <SignalDot active={hasGemini || hasGpt} label="코칭" />
                     </View>
                     <Text style={styles.momentOpenText}>
-                      보기
+                      근거
                     </Text>
                   </View>
                 </Pressable>
@@ -1164,6 +722,30 @@ export function HomeScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <EvidenceBottomSheet
+        canRequestGeminiEvidence={canRequestGeminiEvidence}
+        debugEndpoint={
+          __DEV__ ? configuredAiEndpoints.geminiEvidenceEndpoint : undefined
+        }
+        evidence={selectedSession ? geminiEvidenceBySessionId[selectedSession.id] : undefined}
+        isLoading={
+          selectedSession ? Boolean(extractingEvidenceBySessionId[selectedSession.id]) : false
+        }
+        onClose={() => {
+          setSelectedSessionId(null);
+          setPlayingVideoSessionId(null);
+        }}
+        onDelete={
+          selectedSession ? () => handleDeleteSession(selectedSession) : undefined
+        }
+        onRetry={
+          selectedSession
+            ? () => handleExtractEvidence(selectedSession, { openSheet: true })
+            : undefined
+        }
+        session={selectedSession}
+        video={selectedSessionVideo}
+      />
     </SafeAreaView>
   );
 }
@@ -1259,6 +841,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 13,
     textAlign: 'center',
+  },
+  activeSportBanner: {
+    backgroundColor: 'rgba(3, 199, 90, 0.12)',
+    borderColor: 'rgba(3, 199, 90, 0.35)',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+    marginHorizontal: 16,
+    padding: 12,
+  },
+  activeSportTitle: {
+    color: '#b7f5ce',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+  },
+  activeSportText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
   },
   section: {
     marginBottom: 14,
@@ -2134,6 +1738,34 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 4,
   },
+  evidenceSummaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  evidenceSummaryCard: {
+    backgroundColor: '#fff',
+    borderColor: '#dbe4ee',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexGrow: 1,
+    flexBasis: '47%',
+    padding: 9,
+  },
+  evidenceSummaryLabel: {
+    color: '#64748b',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+  },
+  evidenceSummaryValue: {
+    color: '#0f172a',
+    fontSize: 12,
+    fontWeight: '900',
+    lineHeight: 16,
+  },
   candidateRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2355,6 +1987,143 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
+  sheetBackdrop: {
+    backgroundColor: 'rgba(3, 7, 18, 0.62)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheetPanel: {
+    backgroundColor: '#0b0d12',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    maxHeight: '88%',
+    overflow: 'hidden',
+    paddingTop: 8,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    backgroundColor: '#475569',
+    borderRadius: 999,
+    height: 4,
+    marginBottom: 10,
+    width: 46,
+  },
+  sheetHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  sheetKicker: {
+    color: '#03c75a',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  sheetTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 23,
+  },
+  sheetMeta: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  sheetCloseButton: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  sheetCloseText: {
+    color: '#0f172a',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  sheetBody: {
+    paddingBottom: 22,
+  },
+  sheetStateCard: {
+    backgroundColor: '#111318',
+    borderColor: 'rgba(248, 250, 252, 0.1)',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 14,
+  },
+  sheetStateTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+  sheetStateText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  sheetActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 4,
+  },
+  sheetRetryButton: {
+    alignItems: 'center',
+    backgroundColor: '#03c75a',
+    borderRadius: 999,
+    flexGrow: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  sheetRetryButtonDisabled: {
+    backgroundColor: '#475569',
+  },
+  sheetRetryText: {
+    color: '#07110a',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  sheetDeleteButton: {
+    alignItems: 'center',
+    backgroundColor: '#fff1f2',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  sheetDeleteText: {
+    color: '#be123c',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  debugBox: {
+    backgroundColor: '#020617',
+    borderColor: '#334155',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 10,
+  },
+  debugText: {
+    color: '#94a3b8',
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: undefined,
+    }),
+    fontSize: 10,
+    lineHeight: 15,
+  },
 });
 
 function getVideoAssetFromSession(session: Session): SessionVideoAsset | null {
@@ -2386,44 +2155,39 @@ function removeRecordKey<T>(record: Record<string, T>, key: string) {
 
 function getSessionCardPresentation({
   session,
-  geminiResult,
-  gptResult,
+  evidence,
   thumbnailUri,
 }: {
   session: Session;
-  geminiResult?: AnalysisResult;
-  gptResult?: AnalysisResult;
+  evidence?: GeminiEvidenceResult;
   thumbnailUri?: string;
 }) {
-  const result = chooseCardResult(geminiResult, gptResult);
-  const primaryScene = result?.highlightScenes?.find((scene) => scene.imageUri);
   const detectedAction =
-    result?.detectedTrick ??
-    result?.patternRecognition?.[0]?.label ??
-    result?.highlightScenes?.[0]?.title;
+    evidence?.primaryCandidate.name === '확인 필요'
+      ? undefined
+      : evidence?.primaryCandidate.name;
   const hook =
-    result?.highlights?.[0] ??
-    result?.coachingObservations?.[0]?.detail ??
-    result?.improvements?.[0] ??
-    result?.summary;
-  const hasReview = result?.status === 'completed';
+    evidence?.evidence ??
+    evidence?.approachObservedFacts?.wakeCrossingPath.evidence ??
+    evidence?.family.evidence;
+  const hasEvidence = evidence?.status === 'completed';
   const momentTitle =
     detectedAction ??
     inferMomentTitle(session.title) ??
     (session.videoUri ? '라이딩 모먼트' : '클립 대기 중');
-  const reason = hasReview
-    ? hook ?? '코치 리뷰가 준비됐습니다.'
+  const reason = hasEvidence
+    ? hook ?? '동작 근거가 준비됐습니다.'
     : session.videoUri
-      ? '이 클립에서 다음 포커스를 확인해보세요.'
+      ? 'Gemini 근거 추출을 시작합니다.'
       : '클립을 추가하면 모먼트가 살아납니다.';
-  const openReason = hasReview
-    ? '코치 리뷰 준비'
+  const openReason = hasEvidence
+    ? '동작 근거 준비'
     : session.videoUri
-      ? '리뷰할 클립'
+      ? '근거 추출 대기'
       : '클립 추가 필요';
 
   return {
-    thumbnailUri: primaryScene?.imageUri ?? thumbnailUri,
+    thumbnailUri,
     detectedAction: detectedAction ? compactCardText(detectedAction, 42) : undefined,
     hook: hook ? compactCardText(hook, 92) : undefined,
     momentTitle: compactCardText(momentTitle, 34),
@@ -2454,21 +2218,6 @@ function inferMomentTitle(title: string) {
   }
 
   return normalized;
-}
-
-function chooseCardResult(
-  geminiResult: AnalysisResult | undefined,
-  gptResult: AnalysisResult | undefined,
-) {
-  if (gptResult?.status === 'completed') {
-    return gptResult;
-  }
-
-  if (geminiResult?.status === 'completed') {
-    return geminiResult;
-  }
-
-  return gptResult ?? geminiResult;
 }
 
 function compactCardText(text: string, maxLength: number) {
@@ -2550,6 +2299,141 @@ function LocalSessionVideoPlayer({ videoUri }: { videoUri: string }) {
   );
 }
 
+function EvidenceBottomSheet({
+  canRequestGeminiEvidence,
+  debugEndpoint,
+  evidence,
+  isLoading,
+  onClose,
+  onDelete,
+  onRetry,
+  session,
+  video,
+}: {
+  canRequestGeminiEvidence: boolean;
+  debugEndpoint?: string;
+  evidence?: GeminiEvidenceResult;
+  isLoading: boolean;
+  onClose: () => void;
+  onDelete?: () => void;
+  onRetry?: () => void;
+  session?: Session;
+  video?: SessionVideoAsset | null;
+}) {
+  if (!session) {
+    return null;
+  }
+
+  const canRetry = Boolean(video && canRequestGeminiEvidence && !isLoading);
+
+  return (
+    <Modal
+      animationType="slide"
+      onRequestClose={onClose}
+      transparent
+      visible={Boolean(session)}
+    >
+      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
+        <Pressable style={styles.sheetPanel} onPress={(event) => event.stopPropagation()}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetKicker}>Wakeboard Evidence</Text>
+              <Text style={styles.sheetTitle} numberOfLines={2}>
+                {session.title}
+              </Text>
+              <Text style={styles.sheetMeta}>
+                {formatSessionDateTime(session.occurredAt)}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.sheetCloseButton,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text style={styles.sheetCloseText}>닫기</Text>
+            </Pressable>
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.sheetBody}
+            showsVerticalScrollIndicator={false}
+          >
+            {!video ? (
+              <View style={styles.sheetStateCard}>
+                <Text style={styles.sheetStateTitle}>영상이 필요합니다</Text>
+                <Text style={styles.sheetStateText}>
+                  Evidence Extraction MVP는 웨이크보드 영상을 기준으로 동작 근거를
+                  추출합니다.
+                </Text>
+              </View>
+            ) : null}
+            {isLoading ? (
+              <View style={styles.sheetStateCard}>
+                <Text style={styles.sheetStateTitle}>Gemini 근거 추출 중</Text>
+                <Text style={styles.sheetStateText}>
+                  영상에서 어프로치, 인버전, 기술 계열 근거를 확인하고 있습니다.
+                </Text>
+              </View>
+            ) : null}
+            {evidence ? (
+              <GeminiEvidenceView
+                evidence={evidence}
+                userConfirmedTrick={undefined}
+                onConfirmTrick={() => undefined}
+              />
+            ) : !isLoading && video ? (
+              <View style={styles.sheetStateCard}>
+                <Text style={styles.sheetStateTitle}>아직 추출 결과가 없습니다</Text>
+                <Text style={styles.sheetStateText}>
+                  다시 시도를 누르면 Gemini evidence endpoint만 호출합니다.
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.sheetActionRow}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canRetry}
+                onPress={onRetry}
+                style={({ pressed }) => [
+                  styles.sheetRetryButton,
+                  !canRetry ? styles.sheetRetryButtonDisabled : undefined,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text style={styles.sheetRetryText}>
+                  {isLoading ? '추출 중...' : '근거 추출 다시 시도'}
+                </Text>
+              </Pressable>
+              {onDelete ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onDelete}
+                  style={({ pressed }) => [
+                    styles.sheetDeleteButton,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  <Text style={styles.sheetDeleteText}>삭제</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {debugEndpoint ? (
+              <View style={styles.debugBox}>
+                <Text style={styles.debugText}>
+                  DEV endpoint: {debugEndpoint}
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 function AnalysisResultView({
   result,
   title,
@@ -2607,7 +2491,7 @@ function GeminiEvidenceView({
 }: {
   evidence: GeminiEvidenceResult;
   userConfirmedTrick?: string;
-  onConfirmTrick: (trickName: string) => void;
+  onConfirmTrick?: (trickName: string) => void;
 }) {
   const [draftTrickName, setDraftTrickName] = useState(
     userConfirmedTrick ?? evidence.primaryCandidate.name,
@@ -2646,6 +2530,21 @@ function GeminiEvidenceView({
           ? 'degraded / low-confidence'
           : 'standard'}
       </Text>
+      <View style={styles.evidenceSummaryGrid}>
+        <EvidenceSummaryCard label="Predicted" value={evidence.primaryCandidate.name} />
+        <EvidenceSummaryCard label="Family" value={evidence.family.value} />
+        <EvidenceSummaryCard label="Confidence" value={evidence.confidence} />
+        <EvidenceSummaryCard
+          label="Review"
+          value={
+            evidence.requiresUserConfirmation ||
+            evidence.consistencyStatus === 'needs_review' ||
+            evidence.consistencyStatus === 'inconsistent'
+              ? 'needs_review'
+              : 'ok'
+          }
+        />
+      </View>
       <View style={styles.evidenceFactRow}>
         <Text style={styles.evidenceFactLabel}>AI 추정 기술</Text>
         <Text style={styles.evidenceFactValue}>
@@ -2695,7 +2594,14 @@ function GeminiEvidenceView({
         confidence={evidence.landingOutcome.confidence}
         evidence={evidence.landingOutcome.evidence}
       />
-      <View style={styles.evidenceSection}>
+      {evidence.approachObservedFacts ? (
+        <ApproachObservedFactsSummary facts={evidence.approachObservedFacts} />
+      ) : null}
+      {evidence.inversionObservedFacts ? (
+        <InversionObservedFactsSummary facts={evidence.inversionObservedFacts} />
+      ) : null}
+      {onConfirmTrick ? (
+        <View style={styles.evidenceSection}>
         <Text style={styles.evidenceSectionTitle}>기술명 확인</Text>
         <View style={styles.candidateRow}>
           {candidateNames.map((name) => (
@@ -2704,7 +2610,7 @@ function GeminiEvidenceView({
               key={name}
               onPress={() => {
                 setDraftTrickName(name);
-                onConfirmTrick(name);
+                onConfirmTrick?.(name);
               }}
               style={({ pressed }) => [
                 styles.candidateChip,
@@ -2749,7 +2655,8 @@ function GeminiEvidenceView({
             사용자 확정 기술: {userConfirmedTrick}
           </Text>
         ) : null}
-      </View>
+        </View>
+      ) : null}
       {evidence.evidenceWindows.length > 0 ? (
         <View style={styles.evidenceSection}>
           <Text style={styles.evidenceSectionTitle}>근거 구간</Text>
@@ -2790,6 +2697,104 @@ function GeminiEvidenceView({
       </View>
     </View>
   );
+}
+
+function EvidenceSummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.evidenceSummaryCard}>
+      <Text style={styles.evidenceSummaryLabel}>{label}</Text>
+      <Text style={styles.evidenceSummaryValue} numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ApproachObservedFactsSummary({
+  facts,
+}: {
+  facts: NonNullable<GeminiEvidenceResult['approachObservedFacts']>;
+}) {
+  return (
+    <View style={styles.evidenceSection}>
+      <Text style={styles.evidenceSectionTitle}>approachObservedFacts</Text>
+      <Text style={styles.evidenceText}>
+        stance: {facts.stance.value} ({facts.stance.confidence})
+      </Text>
+      <Text style={styles.evidenceText}>
+        leadFoot: {facts.leadFoot.value} ({facts.leadFoot.confidence})
+      </Text>
+      <Text style={styles.evidenceText}>
+        boardDirection: {facts.boardDirection.value} (
+        {facts.boardDirection.confidence})
+      </Text>
+      <Text style={styles.evidenceText}>
+        wakePath: {facts.wakeCrossingPath.startPosition} →{' '}
+        {facts.wakeCrossingPath.takeoffPosition} →{' '}
+        {facts.wakeCrossingPath.landingPosition} (
+        {facts.wakeCrossingPath.confidence})
+      </Text>
+      <Text style={styles.evidenceText}>
+        edge: {facts.edgeDirectionEvidence.value} (
+        {facts.edgeDirectionEvidence.confidence})
+      </Text>
+      <Text style={styles.evidenceText}>
+        handle/body: {facts.handlePosition.value} · {facts.bodyOrientation.value}
+      </Text>
+    </View>
+  );
+}
+
+function InversionObservedFactsSummary({
+  facts,
+}: {
+  facts: NonNullable<GeminiEvidenceResult['inversionObservedFacts']>;
+}) {
+  const duration =
+    facts.inversionDuration.seconds === null
+      ? 'unknown'
+      : `${facts.inversionDuration.seconds}s`;
+
+  return (
+    <View style={styles.evidenceSection}>
+      <Text style={styles.evidenceSectionTitle}>inversionObservedFacts</Text>
+      <Text style={styles.evidenceText}>
+        bodyInverted: {formatObservedBoolean(facts.bodyInverted)}
+      </Text>
+      <Text style={styles.evidenceText}>
+        boardAboveHead: {formatObservedBoolean(facts.boardAboveHead)}
+      </Text>
+      <Text style={styles.evidenceText}>
+        rollAxisObserved: {formatObservedBoolean(facts.rollAxisObserved)}
+      </Text>
+      <Text style={styles.evidenceText}>
+        flipAxisObserved: {formatObservedBoolean(facts.flipAxisObserved)}
+      </Text>
+      <Text style={styles.evidenceText}>
+        duration: {duration} ({facts.inversionDuration.confidence})
+      </Text>
+      <Text style={styles.evidenceText}>
+        evidenceCount: {facts.inversionEvidenceCount}
+      </Text>
+      {facts.antiInversionEvidence.slice(0, 3).map((item) => (
+        <Text key={item} style={styles.evidenceText}>
+          anti: {item}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function formatObservedBoolean(value: true | false | 'unknown') {
+  if (value === true) {
+    return 'true';
+  }
+
+  if (value === false) {
+    return 'false';
+  }
+
+  return 'unknown';
 }
 
 function EvidenceFactRow({
