@@ -53,9 +53,11 @@ Confirmed deployment state:
 - App is not Expo Go, TestFlight, or App Store.
 - Render backend works at `https://action-sports-journal-api.onrender.com`.
 - Public HTTPS backend is used instead of the local Mac/LAN server.
-- Data remains local-first on the iPhone with AsyncStorage.
-- Supabase Phase 1 connection scaffolding exists, but no user-facing database
-  integration, login, cloud video storage, or CDN exists yet.
+- Supabase-backed Moment persistence and latest Evidence restore are now wired
+  into the standalone app.
+- Async Analysis MVP is validated for personal iPhone usage.
+- No login, cloud video storage, external queue, push, CDN, TestFlight, or App
+  Store path exists yet.
 
 Detailed status documents:
 
@@ -274,6 +276,66 @@ Recommended next starting point:
 2. Run a real Evidence Extraction request with a linked `momentId`.
 3. Confirm the created `evidence_results` row and linked Moment latest IDs.
 
+## 2026-06-16 Async Analysis MVP Checkpoint
+
+Confirmed facts:
+
+- Async Analysis MVP was implemented and pushed:
+
+```text
+0e9594e Implement async evidence analysis MVP
+```
+
+- Rate-limit and queued-state mismatch was fixed and pushed:
+
+```text
+7d83e7e Keep async evidence jobs queued on enqueue delay
+```
+
+- Render is deployed with the latest rate-limit behavior.
+- `/health` returns `ok: true`, `geminiConfigured: true`, and
+  `geminiEvidence.configured: true`.
+- Route-scoped rate limiting is active. Health, Moment reads, and polling are
+  not counted.
+- Standalone iOS internal build `1.0.0 (5)` was created:
+
+```text
+https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/66b48f3c-5564-4ddd-aa20-698f201e6204
+```
+
+- Founder validated this standalone app flow:
+
+```text
+video selected
+-> queued
+-> app immediately closed
+-> wait 2-3 minutes
+-> app relaunched
+-> completed restored
+```
+
+Implementation status:
+
+- `POST /api/moments` creates a Moment and queued AnalysisJob, then returns
+  quickly.
+- `/api/extract-session-evidence` starts background evidence extraction for the
+  queued job.
+- Supabase stores `moments`, `analysis_jobs`, and `evidence_results`.
+- Home restores Supabase Moments and latest Evidence after app relaunch.
+- UI shows `queued`, `processing`, `completed`, and `failed`.
+- A `429` or network-like enqueue failure does not falsely mark the Moment
+  `failed`; the app keeps it `queued` unless the backend records a real job
+  failure.
+
+Important boundary:
+
+- This is the short-path Async MVP, not a fully durable job system.
+- The current worker still relies on the Render process retaining the uploaded
+  video buffer after enqueue.
+- If Render restarts during analysis, the current design may still lose the
+  in-process work.
+- Supabase Storage or another durable video store is not implemented yet.
+
 ## Wakeboard Domain Knowledge
 
 Heelside and Toeside are approach / edge directions, not trick families.
@@ -368,23 +430,27 @@ Why key decisions were made:
 Current active problem:
 
 ```text
-Inversion Detection
+Async MVP hardening decision
 ```
 
 Next starting point:
 
-- Validate `InversionObservedFacts` v1 on the real test clip before modifying
-  trick classification again.
+- Decide whether to harden the validated Async MVP with durable video storage
+  before broader usage.
+- Recommended technical next step: Supabase Storage video object ->
+  AnalysisJob references storage path -> worker can retry after process restart.
+- If infrastructure hardening is paused, continue Detail Screen QA and Moment
+  result UX.
 
 Goal:
 
-- Understand why nonexistent inversion evidence is being generated.
-- Determine whether Gemini is using incorrect visual cues.
-- Determine whether it is inferring inversion from airtime/body position rather
-  than true inversion mechanics.
+- Preserve the working standalone iPhone flow while removing the remaining
+  in-process background task fragility.
 
 Secondary priorities:
 
+- If AI work resumes, validate `InversionObservedFacts` v1 on the real test
+  clip before modifying trick classification again.
 - Continue Detail Screen QA.
 - Review Progression UX.
 - Keep Feed mostly frozen for now.
@@ -411,9 +477,11 @@ Product:
 
 Architecture:
 
-- No user-facing database integration yet; Supabase Phase 1 scaffolding exists.
+- Supabase Moment persistence and latest Evidence restore are wired for the
+  Async MVP.
 - No login yet.
 - No cloud video storage yet.
+- No durable queue or retry-safe worker yet.
 - No CDN yet.
 - No production App Store/TestFlight path yet.
 - AI keys must remain only in Render environment variables and local ignored env
@@ -474,10 +542,11 @@ resume point and keep changes scoped.
 Current resume instruction:
 
 ```text
-Start with Inversion Detection.
-Design InversionObservedFacts.
-Do not change trick classification again until raw inversion evidence is
-understood.
+Start from the validated Async Analysis MVP.
+Decide whether the next step is durable video storage / retry-safe jobs, or
+Detail Screen and Moment result UX QA.
+If returning to AI classification, resume InversionObservedFacts validation
+before changing trick classification again.
 ```
 
 ## Save Point Procedure

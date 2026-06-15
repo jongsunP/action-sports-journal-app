@@ -151,6 +151,48 @@ Infrastructure milestone on 2026-06-15:
   background analysis.
 - Async transition plan exists at `docs/ASYNC_ANALYSIS_PLAN.md`.
 
+Async Analysis MVP milestone on 2026-06-16:
+
+- Async Analysis MVP is implemented and pushed.
+- `POST /api/moments` creates a Moment and queued AnalysisJob, then returns
+  quickly.
+- Evidence extraction runs through an AnalysisJob-backed background path.
+- Moment status can move through `queued`, `processing`, `completed`, and
+  `failed`.
+- Supabase Moment restore and latest Evidence restore are wired into the Home
+  screen.
+- The app polls `/api/moments` while active queued/processing Moments exist.
+- A bug was fixed where `/api/extract-session-evidence` 429/network failures
+  made the app show `failed` while the DB job remained `queued`.
+- Rate limiting is now route-scoped to expensive upload/AI routes only.
+  `/health`, `/api/moments`, and status polling are not counted.
+- Render has the latest backend deploy with the rate-limit fix.
+- Standalone iOS internal build `1.0.0 (5)` was created:
+
+```text
+https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/66b48f3c-5564-4ddd-aa20-698f201e6204
+```
+
+- Founder validated the target flow on the standalone app:
+
+```text
+video selected
+-> queued
+-> app immediately closed
+-> wait 2-3 minutes
+-> app relaunched
+-> completed restored
+```
+
+Current infrastructure boundary:
+
+- The Async MVP is validated for personal iPhone use.
+- The worker still depends on the Render process retaining the uploaded video
+  buffer after enqueue. It is not yet durable across Render restart/sleep during
+  analysis.
+- No Supabase Storage, cloud video storage, external queue, Auth, Push, or CDN
+  exists yet.
+
 AI evidence checkpoint:
 
 - Gemini evidence extraction works from the standalone app.

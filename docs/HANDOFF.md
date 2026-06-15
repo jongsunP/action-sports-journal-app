@@ -159,6 +159,72 @@ Local path:
 
 ## Today's Conclusions
 
+## 2026-06-16 Async Analysis MVP Validation Wrap-Up
+
+Latest confirmed checkpoint:
+
+```text
+7d83e7e Keep async evidence jobs queued on enqueue delay
+```
+
+Confirmed facts:
+
+- `origin/master` includes `0e9594e` for the Async Analysis MVP.
+- `origin/master` includes `7d83e7e` for route-scoped rate limiting and queued
+  state preservation on evidence enqueue delay.
+- Render backend is redeployed with the rate-limit fix.
+- Render `/health` returns `ok: true`, `geminiConfigured: true`, and
+  `geminiEvidence.configured: true`.
+- Render `/health` also reports that only upload/AI routes are rate limited.
+  Health, Moment reads, and status polling are not counted.
+- A new standalone iOS EAS preview/internal distribution build was created for
+  validation:
+
+```text
+Version: 1.0.0
+Build Number: 5
+Build URL: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/66b48f3c-5564-4ddd-aa20-698f201e6204
+```
+
+- The build was installed and tested by the Founder.
+- The validation flow works:
+
+```text
+video selected
+-> queued
+-> app immediately closed
+-> wait 2-3 minutes
+-> app relaunched
+-> completed restored
+```
+
+Technical decisions:
+
+- Do not mark a Moment failed when `/api/extract-session-evidence` enqueue
+  fails because of `429`, `408`, `503`, or network-like errors.
+- Keep the app-facing state aligned with the durable Supabase job state.
+- A job should become `failed` only when the backend records an actual job
+  failure.
+- Route-scoped rate limiting is appropriate for the Async MVP. Global rate
+  limiting is not appropriate because it can block polling and status reads.
+
+Current boundary:
+
+- Async Analysis MVP is validated for personal standalone iPhone usage.
+- The current worker is still an in-process Render background task that uses the
+  uploaded request buffer. It is good enough for MVP validation, but not a
+  durable queue/storage architecture.
+- No Auth, Push, Supabase Storage, CDN, or external queue has been added.
+
+Next starting point:
+
+1. Decide whether to harden Async Analysis next with durable video storage
+   before broader usage.
+2. Recommended hardening path: Supabase Storage video object + AnalysisJob
+   references storage path + worker can retry after process restart.
+3. If not hardening infrastructure next, resume iPhone QA on Detail Screen and
+   Moment result UX.
+
 ## 2026-06-15 Infrastructure Wrap-Up
 
 Today closed with two pushed commits:

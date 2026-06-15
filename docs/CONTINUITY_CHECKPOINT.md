@@ -104,6 +104,73 @@ At the time this checkpoint was updated, local `master` was pushed to
 
 ## Today's Conclusions
 
+## 2026-06-16 Async Analysis MVP Save Point
+
+Confirmed facts:
+
+- `origin/master` includes the Async Analysis MVP:
+
+```text
+0e9594e Implement async evidence analysis MVP
+```
+
+- `origin/master` includes the rate-limit / queued-state correction:
+
+```text
+7d83e7e Keep async evidence jobs queued on enqueue delay
+```
+
+- Render is deployed with the latest rate-limit behavior.
+- `/health` returns 200 with `ok: true`, `geminiConfigured: true`, and
+  `geminiEvidence.configured: true`.
+- `/health` reports route-scoped rate limiting:
+  - AI/video upload routes are rate limited.
+  - Health, Moment list, and status polling are not counted.
+- EAS standalone iOS internal build succeeded:
+
+```text
+Version: 1.0.0
+Build Number: 5
+URL: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/66b48f3c-5564-4ddd-aa20-698f201e6204
+```
+
+- Founder verified the core Async MVP flow on the standalone iPhone app:
+
+```text
+video selected
+-> queued
+-> app closed immediately
+-> wait 2-3 minutes
+-> app relaunched
+-> completed restored
+```
+
+What changed:
+
+- Moment creation now returns quickly while evidence extraction is tracked by
+  `analysis_jobs`.
+- Supabase Moments and latest EvidenceResults are restored after app relaunch.
+- UI state now stays aligned with Supabase job state when enqueue is delayed.
+- A `429` or network-like enqueue failure no longer falsely marks the Moment
+  `failed`.
+
+Current boundary:
+
+- This is still the short-path Async MVP.
+- The video file is not stored durably in Supabase Storage or cloud storage.
+- If Render restarts during in-process analysis, the current job may still need
+  manual recovery or a future durable worker path.
+- No Auth, Push, external queue, CDN, or production video storage exists.
+
+Next starting point:
+
+1. Recommended infrastructure next step: design/implement durable video storage
+   for AnalysisJobs using Supabase Storage.
+2. Product next step if infrastructure is paused: continue Detail Screen QA and
+   Moment result UX.
+3. AI next step if AI work resumes: continue Inversion Detection evidence
+   validation before modifying trick classification again.
+
 ## 2026-06-15 End-of-Day Save Point
 
 Current git state at wrap-up:
