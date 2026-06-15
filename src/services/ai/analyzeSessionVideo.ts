@@ -89,6 +89,16 @@ type RemoteErrorResponse = {
   error?: unknown;
 };
 
+export class RemoteRequestError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'RemoteRequestError';
+    this.status = status;
+  }
+}
+
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
 const geminiEvidenceEndpoint = analysisEndpoint?.replace(
   /\/api\/analyze-session-video$/,
@@ -264,7 +274,10 @@ async function requestRemoteJson({
   if (!response.ok) {
     const message = await readRemoteErrorMessage(response);
 
-    throw new Error(message ?? `Analysis request failed with ${response.status}`);
+    throw new RemoteRequestError(
+      message ?? `Analysis request failed with ${response.status}`,
+      response.status,
+    );
   }
 
   return response.json();

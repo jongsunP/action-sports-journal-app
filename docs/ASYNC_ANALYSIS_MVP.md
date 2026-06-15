@@ -605,6 +605,37 @@ Recommendation:
 
 ## 10. Validation Checklist
 
+## 10.1 Rate Limit Note
+
+Confirmed fact:
+
+- The first Async MVP briefly used a global Express rate limit through `app.use(rateLimit)`.
+- That meant `/health`, `/api/moments`, `/api/moments/:id/status`, `/api/extract-session-evidence`, thumbnail upload, and polling all shared the same request bucket.
+- With `RATE_LIMIT_WINDOW_MS=60000` and `RATE_LIMIT_MAX_REQUESTS=3`, a normal standalone app flow could exhaust the bucket before the evidence enqueue request.
+
+Observed failure mode:
+
+- `POST /api/moments` succeeded.
+- `analysis_jobs` row was created and stayed `queued`.
+- `POST /api/extract-session-evidence` could receive `429`.
+- The app incorrectly displayed `failed` even though the DB job had not failed.
+
+Decision:
+
+- Health, Moment list, and status polling must not share the same rate limit bucket as AI/video upload routes.
+- Only expensive upload/AI routes should be rate limited for the early MVP:
+  - `POST /api/analyze-session-video`
+  - `POST /api/extract-session-evidence`
+  - `POST /api/benchmarks/openai-wakeboard-video`
+  - `POST /api/create-session-thumbnail`
+- If evidence enqueue fails with rate limit or network errors, the app keeps the Moment `queued`. It must not mark the job `failed` unless the backend records a real job failure.
+
+Recommendation:
+
+- Keep `RATE_LIMIT_WINDOW_MS=60000`.
+- For personal low-traffic testing, use `RATE_LIMIT_MAX_REQUESTS=10` to avoid blocking the normal create -> enqueue -> poll flow.
+- If cost control becomes the concern, enforce daily analysis limits and per-route AI upload limits rather than limiting status reads.
+
 구현 후 검증해야 할 항목:
 
 ### Moment Creation
@@ -662,4 +693,3 @@ Recommendation:
 - 첫 Async MVP 구현 전에 "worker가 나중에 접근 가능한 영상 참조"를 명확히 결정해야 합니다.
 - 가장 제품적으로 안전한 경로는 Supabase Storage에 원본 영상을 저장하고, AnalysisJob이 storage path를 참조하는 방식입니다.
 - 가장 짧은 실험 경로는 Render가 요청에서 받은 video buffer를 즉시 background task로 넘기는 방식이지만, 이것은 durable async라기보다 non-blocking synchronous extension에 가깝습니다.
-

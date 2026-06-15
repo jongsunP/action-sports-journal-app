@@ -24,6 +24,7 @@ import {
   getConfiguredAiEndpoints,
   hasConfiguredGeminiEvidenceEndpoint,
   queueSessionEvidenceExtractionWithGemini,
+  RemoteRequestError,
   type SessionVideoAsset,
 } from '../../services/ai';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
@@ -708,12 +709,23 @@ export function HomeScreen() {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '근거 추출 요청에 실패했습니다.';
+      const shouldKeepQueued = isEvidenceQueueRequestRetryable(error);
 
-      await syncMomentStatus(
-        session.id,
-        'failed',
-        options?.momentIdOverride,
-      );
+      if (shouldKeepQueued) {
+        updateLocalMomentStatus(session.id, 'queued');
+
+        if (error instanceof RemoteRequestError && error.status === 429) {
+          Alert.alert(
+            '분석 요청이 잠시 제한됐습니다',
+            'Moment는 분석 대기 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
+          );
+        }
+
+        console.warn('Evidence queue request delayed:', message);
+        return;
+      }
+
+      await syncMomentStatus(session.id, 'failed', options?.momentIdOverride);
     } finally {
       setExtractingEvidenceBySessionId((current) => ({
         ...current,
@@ -2484,6 +2496,24 @@ function removeRecordKey<T>(record: Record<string, T>, key: string) {
   return remaining;
 }
 
+function isEvidenceQueueRequestRetryable(error: unknown) {
+  if (error instanceof RemoteRequestError) {
+    return error.status === 429 || error.status === 408 || error.status === 503;
+  }
+
+  if (error instanceof TypeError) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+
+  return (
+    message.includes('network') ||
+    message.includes('timed out') ||
+    message.includes('too many requests')
+  );
+}
+
 function getMomentStatus({
   evidence,
   isProcessing,
@@ -2552,7 +2582,8 @@ function getMomentStatusMessage(status: MomentStatus) {
   if (status === 'queued') {
     return {
       title: '분석 대기 중',
-      body: 'Moment가 저장됐고 evidence extraction을 시작할 준비를 하고 있습니다.',
+      body:
+        'Moment가 저장됐고 evidence extraction을 시작할 준비를 하고 있습니다. 서버가 바쁘거나 요청이 제한되면 이 상태를 유지합니다.',
     };
   }
 

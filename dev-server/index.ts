@@ -91,6 +91,14 @@ const allowedVideoMimeTypes = new Set([
 ]);
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 const dailyUsage = new Map<string, number>();
+const analysisRateLimit = createRateLimit("analysis", {
+  windowMs: rateLimitWindowMs,
+  maxRequests: rateLimitMaxRequests,
+});
+const thumbnailRateLimit = createRateLimit("thumbnail", {
+  windowMs: rateLimitWindowMs,
+  maxRequests: Math.max(rateLimitMaxRequests, 10),
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -111,7 +119,6 @@ const upload = multer({
 const app = express();
 
 app.use(cors());
-app.use(rateLimit);
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_request, response) => {
@@ -145,6 +152,14 @@ app.get("/health", (_request, response) => {
       dailyAnalysisLimit,
       rateLimitWindowMs,
       rateLimitMaxRequests,
+      rateLimitScope:
+        "Only upload/AI routes are rate limited. Health, moments reads, and status polling are not counted.",
+      rateLimitedRoutes: [
+        "POST /api/analyze-session-video",
+        "POST /api/extract-session-evidence",
+        "POST /api/benchmarks/openai-wakeboard-video",
+        "POST /api/create-session-thumbnail",
+      ],
       geminiMaxOutputTokens,
       geminiEvidenceMaxOutputTokens,
       geminiRequestTimeoutMs,
@@ -422,6 +437,7 @@ app.get("/debug/evidence-captures", (request, response) => {
 
 app.post(
   "/api/create-session-thumbnail",
+  thumbnailRateLimit,
   upload.single("video"),
   async (request, response) => {
     try {
@@ -455,6 +471,7 @@ app.post(
 
 app.post(
   "/api/analyze-session-video",
+  analysisRateLimit,
   upload.single("video"),
   async (request, response) => {
     try {
@@ -557,6 +574,7 @@ app.post(
 
 app.post(
   "/api/extract-session-evidence",
+  analysisRateLimit,
   upload.single("video"),
   async (request, response) => {
     try {
@@ -631,6 +649,7 @@ app.post(
 
 app.post(
   "/api/benchmarks/openai-wakeboard-video",
+  analysisRateLimit,
   upload.single("video"),
   async (request, response) => {
     try {
@@ -1036,33 +1055,45 @@ function readNumberEnv(name: string, fallback: number) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function rateLimit(
-  request: express.Request,
-  response: express.Response,
-  next: express.NextFunction,
+function createRateLimit(
+  scope: string,
+  {
+    windowMs,
+    maxRequests,
+  }: {
+    windowMs: number;
+    maxRequests: number;
+  },
 ) {
-  const key = request.ip ?? "unknown";
-  const now = Date.now();
-  const bucket = rateLimitBuckets.get(key);
+  return (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const key = `${scope}:${request.ip ?? "unknown"}`;
+    const now = Date.now();
+    const bucket = rateLimitBuckets.get(key);
 
-  if (!bucket || bucket.resetAt <= now) {
-    rateLimitBuckets.set(key, {
-      count: 1,
-      resetAt: now + rateLimitWindowMs,
-    });
+    if (!bucket || bucket.resetAt <= now) {
+      rateLimitBuckets.set(key, {
+        count: 1,
+        resetAt: now + windowMs,
+      });
+      next();
+      return;
+    }
+
+    if (bucket.count >= maxRequests) {
+      response.status(429).json({
+        error:
+          "Server is rate limiting analysis requests. The Moment remains queued; try again shortly.",
+      });
+      return;
+    }
+
+    bucket.count += 1;
     next();
-    return;
-  }
-
-  if (bucket.count >= rateLimitMaxRequests) {
-    response.status(429).json({
-      error: "Too many requests. Try again shortly.",
-    });
-    return;
-  }
-
-  bucket.count += 1;
-  next();
+  };
 }
 
 function todayKey(provider: "gemini" | "gemini-evidence" | "openai") {
