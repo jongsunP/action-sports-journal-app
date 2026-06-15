@@ -396,13 +396,18 @@ export function HomeScreen() {
     ? getMomentStatus({
         evidence: geminiEvidenceBySessionId[selectedSession.id],
         isProcessing: Boolean(extractingEvidenceBySessionId[selectedSession.id]),
+        sessionStatus: selectedSession.momentStatus,
       })
     : undefined;
   const storyMoments = visibleSessions.slice(0, 8).map((session) => ({
     session,
     card: getSessionCardPresentation({
       session,
-      evidence: geminiEvidenceBySessionId[session.id],
+      evidence: getCompletedMomentEvidence({
+        evidence: geminiEvidenceBySessionId[session.id],
+        isProcessing: Boolean(extractingEvidenceBySessionId[session.id]),
+        sessionStatus: session.momentStatus,
+      }),
       thumbnailUri: thumbnailsBySessionId[session.id],
     }),
   }));
@@ -929,17 +934,23 @@ export function HomeScreen() {
                 </View>
             ) : (
               visibleSessions.map((item) => {
-                const card = getSessionCardPresentation({
-                  session: item,
-                  evidence: geminiEvidenceBySessionId[item.id],
-                  thumbnailUri: thumbnailsBySessionId[item.id],
-                });
-                const hasEvidence = Boolean(geminiEvidenceBySessionId[item.id]);
                 const isWorking = extractingEvidenceBySessionId[item.id];
                 const momentStatus = getMomentStatus({
                   evidence: geminiEvidenceBySessionId[item.id],
                   isProcessing: Boolean(isWorking),
+                  sessionStatus: item.momentStatus,
                 });
+                const completedEvidence = getCompletedMomentEvidence({
+                  evidence: geminiEvidenceBySessionId[item.id],
+                  isProcessing: Boolean(isWorking),
+                  sessionStatus: item.momentStatus,
+                });
+                const card = getSessionCardPresentation({
+                  session: item,
+                  evidence: completedEvidence,
+                  thumbnailUri: thumbnailsBySessionId[item.id],
+                });
+                const hasEvidence = Boolean(completedEvidence);
 
                 return (
                 <Pressable
@@ -1405,6 +1416,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 8,
     paddingVertical: 5,
+  },
+  momentStatusQueued: {
+    backgroundColor: '#93c5fd',
   },
   momentStatusProcessing: {
     backgroundColor: '#facc15',
@@ -2475,28 +2489,38 @@ function removeRecordKey<T>(record: Record<string, T>, key: string) {
 function getMomentStatus({
   evidence,
   isProcessing,
+  sessionStatus,
 }: {
   evidence?: GeminiEvidenceResult;
   isProcessing: boolean;
+  sessionStatus?: MomentStatus;
 }): MomentStatus | undefined {
-  if (isProcessing) {
+  if (isProcessing || sessionStatus === 'processing') {
     return 'processing';
   }
 
-  if (evidence?.status === 'failed') {
+  if (sessionStatus === 'failed' || evidence?.status === 'failed') {
     return 'failed';
   }
 
-  if (evidence?.status === 'completed') {
+  if (sessionStatus === 'completed' || evidence?.status === 'completed') {
     return 'completed';
   }
 
-  return undefined;
+  if (sessionStatus === 'queued') {
+    return 'queued';
+  }
+
+  return evidence ? undefined : sessionStatus;
 }
 
 function getMomentStatusLabel(status: MomentStatus) {
+  if (status === 'queued') {
+    return '분석 대기';
+  }
+
   if (status === 'processing') {
-    return '분석 중...';
+    return '분석 중';
   }
 
   if (status === 'completed') {
@@ -2507,6 +2531,10 @@ function getMomentStatusLabel(status: MomentStatus) {
 }
 
 function getMomentStatusStyle(status?: MomentStatus) {
+  if (status === 'queued') {
+    return styles.momentStatusQueued;
+  }
+
   if (status === 'processing') {
     return styles.momentStatusProcessing;
   }
@@ -2520,6 +2548,52 @@ function getMomentStatusStyle(status?: MomentStatus) {
   }
 
   return undefined;
+}
+
+function getMomentStatusMessage(status: MomentStatus) {
+  if (status === 'queued') {
+    return {
+      title: '분석 대기 중',
+      body: 'Moment가 저장됐고 evidence extraction을 시작할 준비를 하고 있습니다.',
+    };
+  }
+
+  if (status === 'processing') {
+    return {
+      title: '분석 중',
+      body: '영상에서 어프로치, 인버전, 기술 계열 근거를 확인하고 있습니다.',
+    };
+  }
+
+  if (status === 'failed') {
+    return {
+      title: '분석 실패',
+      body: 'Evidence extraction이 완료되지 않았습니다. 다시 시도할 수 있습니다.',
+    };
+  }
+
+  return {
+    title: '분석 완료',
+    body: 'Evidence result가 준비됐습니다.',
+  };
+}
+
+function getCompletedMomentEvidence({
+  evidence,
+  isProcessing,
+  sessionStatus,
+}: {
+  evidence?: GeminiEvidenceResult;
+  isProcessing: boolean;
+  sessionStatus?: MomentStatus;
+}) {
+  const momentStatus = getMomentStatus({
+    evidence,
+    isProcessing,
+    sessionStatus,
+  });
+
+  return momentStatus === 'completed' ? evidence : undefined;
 }
 
 function getSessionCardPresentation({
@@ -2696,6 +2770,16 @@ function EvidenceBottomSheet({
   }
 
   const canRetry = Boolean(video && canRequestGeminiEvidence && !isLoading);
+  const visibleEvidence =
+    evidence && (!momentStatus || momentStatus === 'completed')
+      ? evidence
+      : undefined;
+  const shouldShowStatusMessage = Boolean(
+    momentStatus && momentStatus !== 'completed',
+  );
+  const statusMessage = momentStatus
+    ? getMomentStatusMessage(momentStatus)
+    : undefined;
 
   return (
     <Modal
@@ -2753,21 +2837,21 @@ function EvidenceBottomSheet({
                 </Text>
               </View>
             ) : null}
-            {isLoading ? (
+            {shouldShowStatusMessage && statusMessage ? (
               <View style={styles.sheetStateCard}>
-                <Text style={styles.sheetStateTitle}>분석 중...</Text>
+                <Text style={styles.sheetStateTitle}>{statusMessage.title}</Text>
                 <Text style={styles.sheetStateText}>
-                  영상에서 어프로치, 인버전, 기술 계열 근거를 확인하고 있습니다.
+                  {statusMessage.body}
                 </Text>
               </View>
             ) : null}
-            {evidence ? (
+            {visibleEvidence ? (
               <GeminiEvidenceView
-                evidence={evidence}
+                evidence={visibleEvidence}
                 userConfirmedTrick={undefined}
                 onConfirmTrick={() => undefined}
               />
-            ) : !isLoading && video ? (
+            ) : !shouldShowStatusMessage && !isLoading && video ? (
               <View style={styles.sheetStateCard}>
                 <Text style={styles.sheetStateTitle}>아직 추출 결과가 없습니다</Text>
                 <Text style={styles.sheetStateText}>
