@@ -144,3 +144,9 @@ alter table public.evidence_results enable row level security;
 -- Phase 1 locked-down RLS:
 -- Service role can manage rows. Authenticated client policies are intentionally
 -- not opened yet because Auth UI is not part of this phase.
+
+grant usage on schema public to service_role;
+grant all on table public.users to service_role;
+grant all on table public.moments to service_role;
+grant all on table public.analysis_jobs to service_role;
+grant all on table public.evidence_results to service_role;

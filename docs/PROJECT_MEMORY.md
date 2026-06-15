@@ -236,8 +236,10 @@ Completed planning and scaffolding:
   service role key and reports Phase 1 schema readiness separately.
 - `supabase/phase1_schema.sql` drafts `users`, `moments`, `analysis_jobs`, and
   `evidence_results`.
-- Current Supabase status: connection passes, but Phase 1 schema is not applied
-  yet.
+- Current Supabase status: connection passes and Phase 1 tables exist, but
+  service-role table grants are missing.
+- `supabase/phase1_service_role_grants.sql` repairs existing projects where the
+  tables were created before service-role grants were added.
 - Node standard was raised to Node 22 LTS through `.nvmrc`, `package.json`
   engines, and setup docs.
 - Async analysis transition planning was documented in
@@ -263,9 +265,10 @@ Moment created
 
 Recommended next starting point:
 
-1. Apply `supabase/phase1_schema.sql` manually in the Supabase SQL editor.
+1. Apply `supabase/phase1_service_role_grants.sql` manually in the Supabase SQL
+   editor.
 2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
-3. Start server-side DB write spike before changing mobile UX.
+3. Run `npm run supabase:write-smoke` and confirm server-side DB writes.
 
 ## Wakeboard Domain Knowledge
 

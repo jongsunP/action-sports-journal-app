@@ -129,6 +129,14 @@ If `schemaReady` is `false`, connection is working but
 `supabase/phase1_schema.sql` still needs to be applied in the Supabase SQL
 editor.
 
+If `schemaApplied` is `true` and `grantsReady` is `false`, the tables exist but
+the server-side service role cannot access them yet. Run this repair SQL in the
+Supabase SQL editor:
+
+```text
+supabase/phase1_service_role_grants.sql
+```
+
 ## 7. Current App Impact
 
 No product UI behavior should change in Phase 1.
@@ -151,6 +159,16 @@ Only after the smoke test passes:
 4. Insert test AnalysisJob.
 5. Insert test EvidenceResult.
 6. Keep mobile app unchanged until server-side persistence is verified.
+
+Use this command to run the write spike:
+
+```bash
+npm run supabase:write-smoke
+```
+
+By default the script deletes the smoke-test user at the end, which cascades to
+the inserted Moment, AnalysisJob, and EvidenceResult. Pass `-- --keep` if a
+manual database inspection row is needed.
 
 ## References
 

@@ -43,16 +43,23 @@ const tableChecks = await Promise.all(
   ['users', 'moments', 'analysis_jobs', 'evidence_results'].map(
     async (tableName) => {
       const { error } = await client.from(tableName).select('id').limit(1);
+      const errorMessage = error?.message;
+      const exists = !errorMessage?.includes('Could not find the table');
+      const permissionDenied = errorMessage?.includes('permission denied');
 
       return {
         tableName,
         reachable: !error,
-        errorMessage: error?.message,
+        exists,
+        permissionDenied: Boolean(permissionDenied),
+        errorMessage,
       };
     },
   ),
 );
 const schemaReady = tableChecks.every((check) => check.reachable);
+const schemaApplied = tableChecks.every((check) => check.exists);
+const grantsReady = tableChecks.every((check) => !check.permissionDenied);
 
 console.log('Supabase connection smoke test passed.');
 console.log(
@@ -62,6 +69,8 @@ console.log(
       mode: serviceRoleKey ? 'service_role' : 'publishable_key',
       serviceRoleConfigured: Boolean(serviceRoleKey),
       schemaReady,
+      schemaApplied,
+      grantsReady,
       tables: tableChecks,
     },
     null,
@@ -70,7 +79,13 @@ console.log(
 );
 
 if (!schemaReady) {
-  console.log(
-    'Supabase connection is ready, but Phase 1 schema is not applied yet. Run supabase/phase1_schema.sql in the Supabase SQL editor.',
-  );
+  if (!schemaApplied) {
+    console.log(
+      'Supabase connection is ready, but Phase 1 schema is not applied yet. Run supabase/phase1_schema.sql in the Supabase SQL editor.',
+    );
+  } else if (!grantsReady) {
+    console.log(
+      'Supabase Phase 1 tables exist, but service_role grants are missing. Run supabase/phase1_service_role_grants.sql in the Supabase SQL editor.',
+    );
+  }
 }
