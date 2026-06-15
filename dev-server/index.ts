@@ -200,9 +200,16 @@ app.post("/api/moments", async (request, response) => {
       throw new Error(`Failed to insert moment: ${error.message}`);
     }
 
+    const analysisJob = await createQueuedEvidenceAnalysisJob({
+      userId,
+      momentId: data.id,
+    });
+
     response.json({
       momentId: data.id,
       status: data.status,
+      analysisJobId: analysisJob?.id,
+      analysisJobStatus: analysisJob?.status,
     });
   } catch (error) {
     const message =
@@ -553,16 +560,6 @@ app.post(
   upload.single("video"),
   async (request, response) => {
     try {
-      const usageKey = todayKey("gemini-evidence");
-
-      if (isDailyUsageLimitExceeded(usageKey)) {
-        response.status(429).json({
-          error:
-            "Daily evidence extraction limit reached. This limit keeps development API spend under control.",
-        });
-        return;
-      }
-
       if (!process.env.GEMINI_API_KEY) {
         response.status(500).json({
           error: "GEMINI_API_KEY is not configured on the server.",
@@ -583,181 +580,43 @@ app.post(
       }
 
       const metadata = getSessionMetadata(request);
-      const client = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY,
-      });
+      const queuedJob = await getOrCreateQueuedEvidenceAnalysisJob(metadata);
 
-      const uploadedFile = await uploadVideoForGemini({
-        client,
-        buffer: request.file.buffer,
-        mimeType: request.file.mimetype || "video/quicktime",
-        originalName: request.file.originalname,
-      });
+      if (!queuedJob) {
+        response.status(400).json({
+          error: "A valid linked Moment is required to queue evidence extraction.",
+        });
+        return;
+      }
 
-      const prompt = buildGeminiEvidencePrompt({
-        ...metadata,
-        fileName: request.file.originalname,
-      });
-
-      const result = await withTimeout(
-        generateGeminiContentWithResilience({
-          client,
-          operation: "evidence extraction",
-          params: {
-            model: geminiModel,
-            contents: [
-              createPartFromUri(
-                uploadedFile.uri ?? "",
-                uploadedFile.mimeType ?? request.file.mimetype,
-              ),
-              prompt,
-            ],
-            config: {
-              maxOutputTokens: geminiEvidenceMaxOutputTokens,
-              responseMimeType: "application/json",
-              responseSchema: geminiEvidenceResponseSchema,
-            },
-          },
-        }),
-        geminiEvidenceRequestTimeoutMs,
-        "Gemini evidence extraction timed out.",
-      );
-
-      const rawOutputText = result.response.text ?? "";
-      const candidate = result.response.candidates?.[0];
-      console.log(
-        `[Gemini evidence raw] model=${result.model} outputChars=${rawOutputText.length} finishReason=${candidate?.finishReason ?? "unknown"}`,
-      );
-      const evidence = parseGeminiEvidence(rawOutputText);
-      const qualityMode = geminiQualityMode(result.model);
-      const qualityAdjustedEvidence =
-        qualityMode === "degraded"
-          ? markEvidenceAsDegraded(evidence)
-          : evidence;
-      const taxonomyAdjustedEvidence = applyWakeboardTaxonomyGates(
-        qualityAdjustedEvidence,
-      );
-      const normalizedEvidence = applyGeminiEvidenceConsistency(
-        taxonomyAdjustedEvidence,
-      );
-      const recoveredFromPartial = isPartialRecoveredEvidence(normalizedEvidence);
-      const requiresUserConfirmation =
-        qualityMode === "degraded" ||
-        recoveredFromPartial ||
-        normalizedEvidence.consistencyStatus !== "valid" ||
-        normalizedEvidence.confidence === "low" ||
-        normalizedEvidence.primaryCandidate.confidence === "low";
-      recordDailyUsage(usageKey);
-      console.log(
-        `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
-      );
-
-      const evidenceResponse = {
-        id: `evidence-${Date.now()}`,
-        sessionId: metadata.sessionId,
-        status: normalizedEvidence.parseFailed ? "failed" : "completed",
-        provider: "gemini",
-        model: result.model,
-        qualityMode,
-        recoveredFromPartial,
-        requiresUserConfirmation,
-        consistencyStatus: normalizedEvidence.consistencyStatus,
-        consistencyWarnings: normalizedEvidence.consistencyWarnings,
-        rawFamilyCandidate: normalizedEvidence.rawFamilyCandidate,
-        safeFamilyCandidate: normalizedEvidence.safeFamilyCandidate,
-        taxonomyWarnings: normalizedEvidence.taxonomyWarnings,
-        gateFailures: normalizedEvidence.gateFailures,
-        rawResponseText: rawOutputText,
-        primaryCandidate: normalizedEvidence.primaryCandidate,
-        alternativeCandidates: normalizedEvidence.alternativeCandidates,
-        family: normalizedEvidence.family,
-        temporalWindows: normalizedEvidence.temporalWindows,
-        rawApproachType: normalizedEvidence.rawApproachType,
-        approachObservedFacts: normalizedEvidence.approachObservedFacts,
-        inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
-        approachDecision: normalizedEvidence.approachDecision,
-        approachWarnings: normalizedEvidence.approachWarnings,
-        approachType: normalizedEvidence.approachType,
-        rotationType: normalizedEvidence.rotationType,
-        landingOutcome: normalizedEvidence.landingOutcome,
-        confidence: normalizedEvidence.confidence,
-        evidence: normalizedEvidence.evidence,
-        evidenceWindows: normalizedEvidence.evidenceWindows,
-        observations: normalizedEvidence.observations,
-        uncertainty: normalizedEvidence.uncertainty,
-        createdAt: new Date().toISOString(),
+      const file = {
+        buffer: Buffer.from(request.file.buffer),
+        mimetype: request.file.mimetype,
+        originalname: request.file.originalname,
+        size: request.file.size,
       };
 
-      captureEvidenceDebug({
-        metadata,
-        file: {
-          originalName: request.file.originalname,
-          mimeType: request.file.mimetype,
-          size: request.file.size,
-        },
-        rawResponseText: rawOutputText,
-        rawParsedEvidence: qualityAdjustedEvidence,
-        parsedEvidence: normalizedEvidence,
-        response: evidenceResponse,
-      });
-
-      try {
-        const persistence = await persistEvidenceResultForLinkedMoment({
-          metadata,
-          evidence: normalizedEvidence,
-          rawResponseText: rawOutputText,
-          model: result.model,
-          qualityMode,
-          requiresUserConfirmation,
-        });
-
-        if (persistence.status !== "skipped") {
-          Object.assign(evidenceResponse, {
-            supabasePersistence: persistence,
+      if (queuedJob.status === "queued") {
+        setImmediate(() => {
+          void processQueuedEvidenceAnalysisJob({
+            analysisJobId: queuedJob.id,
+            metadata,
+            file,
           });
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "unknown Supabase error";
-        console.error("Failed to persist Gemini evidence result:", message);
-        Object.assign(evidenceResponse, {
-          supabasePersistence: {
-            status: "failed",
-            reason: message,
-          },
         });
       }
 
-      try {
-        await writeEvidenceCaptureArtifact({
-          metadata,
-          fileName: request.file.originalname,
-          videoMimeType: request.file.mimetype,
-          videoBytes: request.file.size,
-          rawGeminiResponse: rawOutputText,
-          rawParsedEvidence: evidence,
-          qualityAdjustedEvidence,
-          taxonomyGateResult: taxonomyAdjustedEvidence,
-          normalizedResult: normalizedEvidence,
-          evidenceResponse,
-          modelInfo: {
-            requestedModel: geminiModel,
-            fallbackModel: geminiFallbackModel,
-            actualModel: result.model,
-            qualityMode,
-            degraded: qualityMode === "degraded",
-            recoveredFromPartial,
-            requiresUserConfirmation,
-            finishReason: candidate?.finishReason ?? "unknown",
-          },
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "unknown artifact error";
-        console.error("Failed to save Gemini evidence capture artifact:", message);
-      }
-
-      response.json(evidenceResponse);
+      response.status(202).json({
+        id: queuedJob.id,
+        sessionId: metadata.sessionId,
+        momentId: queuedJob.momentId,
+        status: queuedJob.status,
+        provider: "gemini",
+        model: geminiModel,
+        momentStatus:
+          queuedJob.status === "processing" ? "processing" : "queued",
+        createdAt: new Date().toISOString(),
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Evidence extraction failed.";
@@ -1111,6 +970,13 @@ type EvidenceDebugCapture = {
   rawParsedEvidence: NormalizedGeminiEvidence;
   parsedEvidence: TaxonomyGatedEvidence;
   response: unknown;
+};
+
+type EvidenceJobVideoFile = {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+  size: number;
 };
 
 function getSessionMetadata(request: express.Request): SessionMetadata {
@@ -1713,6 +1579,7 @@ async function persistEvidenceResultForLinkedMoment({
   model,
   qualityMode,
   requiresUserConfirmation,
+  analysisJobId,
 }: {
   metadata: SessionMetadata;
   evidence: TaxonomyGatedEvidence;
@@ -1720,6 +1587,7 @@ async function persistEvidenceResultForLinkedMoment({
   model: string;
   qualityMode: "standard" | "degraded";
   requiresUserConfirmation: boolean;
+  analysisJobId?: string;
 }) {
   const client = getSupabaseServerClient();
 
@@ -1740,33 +1608,21 @@ async function persistEvidenceResultForLinkedMoment({
   }
 
   const now = new Date().toISOString();
-  const { data: analysisJob, error: analysisJobError } = await client
-    .from("analysis_jobs")
-    .insert({
-      user_id: linkedMoment.user_id,
-      moment_id: linkedMoment.id,
-      kind: "evidence_extraction",
-      status: "completed",
-      provider: "gemini",
+  const resolvedAnalysisJobId =
+    analysisJobId ??
+    (await createCompletedEvidenceAnalysisJob({
+      userId: linkedMoment.user_id,
+      momentId: linkedMoment.id,
       model,
-      attempts: 1,
-      max_attempts: 1,
-      started_at: now,
-      completed_at: now,
-    })
-    .select("id")
-    .single();
-
-  if (analysisJobError) {
-    throw new Error(`Failed to insert analysis_jobs: ${analysisJobError.message}`);
-  }
+      now,
+    }));
 
   const { data: evidenceResult, error: evidenceResultError } = await client
     .from("evidence_results")
     .insert({
       user_id: linkedMoment.user_id,
       moment_id: linkedMoment.id,
-      analysis_job_id: analysisJob.id,
+      analysis_job_id: resolvedAnalysisJobId,
       provider: "gemini",
       model,
       status: evidence.parseFailed ? "failed" : "completed",
@@ -1800,7 +1656,7 @@ async function persistEvidenceResultForLinkedMoment({
     .from("moments")
     .update({
       status: evidence.parseFailed ? "failed" : "completed",
-      latest_analysis_job_id: analysisJob.id,
+      latest_analysis_job_id: resolvedAnalysisJobId,
       latest_evidence_result_id: evidenceResult.id,
       updated_at: now,
     })
@@ -1810,12 +1666,489 @@ async function persistEvidenceResultForLinkedMoment({
     throw new Error(`Failed to update moments: ${momentUpdateError.message}`);
   }
 
+  if (analysisJobId) {
+    const { error: analysisJobUpdateError } = await client
+      .from("analysis_jobs")
+      .update({
+        status: evidence.parseFailed ? "failed" : "completed",
+        model,
+        completed_at: evidence.parseFailed ? null : now,
+        failed_at: evidence.parseFailed ? now : null,
+        last_error: evidence.parseFailed
+          ? evidence.uncertainty.reasons.join(" ").slice(0, 1000)
+          : null,
+        updated_at: now,
+      })
+      .eq("id", analysisJobId);
+
+    if (analysisJobUpdateError) {
+      throw new Error(
+        `Failed to update analysis_jobs: ${analysisJobUpdateError.message}`,
+      );
+    }
+  }
+
   return {
     status: "inserted" as const,
     momentId: linkedMoment.id,
-    analysisJobId: analysisJob.id as string,
+    analysisJobId: resolvedAnalysisJobId,
     evidenceResultId: evidenceResult.id as string,
   };
+}
+
+async function createCompletedEvidenceAnalysisJob({
+  userId,
+  momentId,
+  model,
+  now,
+}: {
+  userId: string;
+  momentId: string;
+  model: string;
+  now: string;
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const { data, error } = await client
+    .from("analysis_jobs")
+    .insert({
+      user_id: userId,
+      moment_id: momentId,
+      kind: "evidence_extraction",
+      status: "completed",
+      provider: "gemini",
+      model,
+      attempts: 1,
+      max_attempts: 1,
+      started_at: now,
+      completed_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to insert analysis_jobs: ${error.message}`);
+  }
+
+  return data.id as string;
+}
+
+async function createQueuedEvidenceAnalysisJob({
+  userId,
+  momentId,
+}: {
+  userId: string;
+  momentId: string;
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("analysis_jobs")
+    .insert({
+      user_id: userId,
+      moment_id: momentId,
+      kind: "evidence_extraction",
+      status: "queued",
+      provider: "gemini",
+      model: geminiModel,
+      attempts: 0,
+      max_attempts: 1,
+    })
+    .select("id,status")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to insert queued analysis_jobs: ${error.message}`);
+  }
+
+  const { error: momentUpdateError } = await client
+    .from("moments")
+    .update({
+      status: "queued",
+      latest_analysis_job_id: data.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", momentId);
+
+  if (momentUpdateError) {
+    throw new Error(
+      `Failed to link queued analysis job to moment: ${momentUpdateError.message}`,
+    );
+  }
+
+  return {
+    id: data.id as string,
+    status: data.status as "queued",
+  };
+}
+
+async function getOrCreateQueuedEvidenceAnalysisJob(metadata: SessionMetadata) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const linkedMoment = await findLinkedMomentForEvidence(metadata);
+
+  if (!linkedMoment) {
+    return null;
+  }
+
+  const { data: existingJobs, error: existingJobError } = await client
+    .from("analysis_jobs")
+    .select("id,status")
+    .eq("moment_id", linkedMoment.id)
+    .eq("kind", "evidence_extraction")
+    .in("status", ["queued", "processing"])
+    .order("queued_at", { ascending: false })
+    .limit(1);
+
+  if (existingJobError) {
+    throw new Error(`Failed to find active analysis job: ${existingJobError.message}`);
+  }
+
+  const existingJob = existingJobs?.[0];
+
+  if (existingJob?.id && existingJob?.status) {
+    return {
+      id: existingJob.id as string,
+      momentId: linkedMoment.id,
+      userId: linkedMoment.user_id,
+      status: existingJob.status as "queued" | "processing",
+    };
+  }
+
+  const queuedJob = await createQueuedEvidenceAnalysisJob({
+    userId: linkedMoment.user_id,
+    momentId: linkedMoment.id,
+  });
+
+  if (!queuedJob) {
+    return null;
+  }
+
+  return {
+    id: queuedJob.id,
+    momentId: linkedMoment.id,
+    userId: linkedMoment.user_id,
+    status: queuedJob.status,
+  };
+}
+
+async function processQueuedEvidenceAnalysisJob({
+  analysisJobId,
+  metadata,
+  file,
+}: {
+  analysisJobId: string;
+  metadata: SessionMetadata;
+  file: EvidenceJobVideoFile;
+}) {
+  const claimedJob = await markEvidenceAnalysisJobProcessing(analysisJobId);
+
+  if (!claimedJob) {
+    return;
+  }
+
+  try {
+    await runGeminiEvidenceExtraction({
+      analysisJobId,
+      metadata,
+      file,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Evidence extraction failed.";
+    console.error("Async Gemini evidence extraction failed:", message);
+    await markEvidenceAnalysisJobFailed({
+      analysisJobId,
+      momentId: claimedJob.momentId,
+      errorMessage: message,
+    });
+  }
+}
+
+async function markEvidenceAnalysisJobProcessing(analysisJobId: string) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const now = new Date().toISOString();
+  const { data, error } = await client
+    .from("analysis_jobs")
+    .update({
+      status: "processing",
+      attempts: 1,
+      started_at: now,
+      updated_at: now,
+    })
+    .eq("id", analysisJobId)
+    .eq("status", "queued")
+    .select("id,moment_id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to mark analysis job processing: ${error.message}`);
+  }
+
+  if (!data?.id || !data?.moment_id) {
+    return null;
+  }
+
+  const { error: momentUpdateError } = await client
+    .from("moments")
+    .update({
+      status: "processing",
+      latest_analysis_job_id: analysisJobId,
+      updated_at: now,
+    })
+    .eq("id", data.moment_id);
+
+  if (momentUpdateError) {
+    throw new Error(
+      `Failed to mark moment processing: ${momentUpdateError.message}`,
+    );
+  }
+
+  return {
+    id: data.id as string,
+    momentId: data.moment_id as string,
+  };
+}
+
+async function markEvidenceAnalysisJobFailed({
+  analysisJobId,
+  momentId,
+  errorMessage,
+}: {
+  analysisJobId: string;
+  momentId: string;
+  errorMessage: string;
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const safeErrorMessage = errorMessage.slice(0, 1000);
+  const { error: jobError } = await client
+    .from("analysis_jobs")
+    .update({
+      status: "failed",
+      last_error: safeErrorMessage,
+      failed_at: now,
+      updated_at: now,
+    })
+    .eq("id", analysisJobId);
+
+  if (jobError) {
+    console.error(`Failed to mark analysis job failed: ${jobError.message}`);
+  }
+
+  const { error: momentError } = await client
+    .from("moments")
+    .update({
+      status: "failed",
+      latest_analysis_job_id: analysisJobId,
+      updated_at: now,
+    })
+    .eq("id", momentId);
+
+  if (momentError) {
+    console.error(`Failed to mark moment failed: ${momentError.message}`);
+  }
+}
+
+async function runGeminiEvidenceExtraction({
+  analysisJobId,
+  metadata,
+  file,
+}: {
+  analysisJobId: string;
+  metadata: SessionMetadata;
+  file: EvidenceJobVideoFile;
+}) {
+  const usageKey = todayKey("gemini-evidence");
+
+  if (isDailyUsageLimitExceeded(usageKey)) {
+    throw new Error(
+      "Daily evidence extraction limit reached. This limit keeps development API spend under control.",
+    );
+  }
+
+  const client = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  });
+
+  const uploadedFile = await uploadVideoForGemini({
+    client,
+    buffer: file.buffer,
+    mimeType: file.mimetype || "video/quicktime",
+    originalName: file.originalname,
+  });
+
+  const prompt = buildGeminiEvidencePrompt({
+    ...metadata,
+    fileName: file.originalname,
+  });
+
+  const result = await withTimeout(
+    generateGeminiContentWithResilience({
+      client,
+      operation: "evidence extraction",
+      params: {
+        model: geminiModel,
+        contents: [
+          createPartFromUri(
+            uploadedFile.uri ?? "",
+            uploadedFile.mimeType ?? file.mimetype,
+          ),
+          prompt,
+        ],
+        config: {
+          maxOutputTokens: geminiEvidenceMaxOutputTokens,
+          responseMimeType: "application/json",
+          responseSchema: geminiEvidenceResponseSchema,
+        },
+      },
+    }),
+    geminiEvidenceRequestTimeoutMs,
+    "Gemini evidence extraction timed out.",
+  );
+
+  const rawOutputText = result.response.text ?? "";
+  const candidate = result.response.candidates?.[0];
+  console.log(
+    `[Gemini evidence raw] model=${result.model} outputChars=${rawOutputText.length} finishReason=${candidate?.finishReason ?? "unknown"}`,
+  );
+  const evidence = parseGeminiEvidence(rawOutputText);
+  const qualityMode = geminiQualityMode(result.model);
+  const qualityAdjustedEvidence =
+    qualityMode === "degraded" ? markEvidenceAsDegraded(evidence) : evidence;
+  const taxonomyAdjustedEvidence = applyWakeboardTaxonomyGates(
+    qualityAdjustedEvidence,
+  );
+  const normalizedEvidence = applyGeminiEvidenceConsistency(
+    taxonomyAdjustedEvidence,
+  );
+  const recoveredFromPartial = isPartialRecoveredEvidence(normalizedEvidence);
+  const requiresUserConfirmation =
+    qualityMode === "degraded" ||
+    recoveredFromPartial ||
+    normalizedEvidence.consistencyStatus !== "valid" ||
+    normalizedEvidence.confidence === "low" ||
+    normalizedEvidence.primaryCandidate.confidence === "low";
+  recordDailyUsage(usageKey);
+  console.log(
+    `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
+  );
+
+  const evidenceResponse = {
+    id: `evidence-${Date.now()}`,
+    sessionId: metadata.sessionId,
+    status: normalizedEvidence.parseFailed ? "failed" : "completed",
+    provider: "gemini",
+    model: result.model,
+    qualityMode,
+    recoveredFromPartial,
+    requiresUserConfirmation,
+    consistencyStatus: normalizedEvidence.consistencyStatus,
+    consistencyWarnings: normalizedEvidence.consistencyWarnings,
+    rawFamilyCandidate: normalizedEvidence.rawFamilyCandidate,
+    safeFamilyCandidate: normalizedEvidence.safeFamilyCandidate,
+    taxonomyWarnings: normalizedEvidence.taxonomyWarnings,
+    gateFailures: normalizedEvidence.gateFailures,
+    rawResponseText: rawOutputText,
+    primaryCandidate: normalizedEvidence.primaryCandidate,
+    alternativeCandidates: normalizedEvidence.alternativeCandidates,
+    family: normalizedEvidence.family,
+    temporalWindows: normalizedEvidence.temporalWindows,
+    rawApproachType: normalizedEvidence.rawApproachType,
+    approachObservedFacts: normalizedEvidence.approachObservedFacts,
+    inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
+    approachDecision: normalizedEvidence.approachDecision,
+    approachWarnings: normalizedEvidence.approachWarnings,
+    approachType: normalizedEvidence.approachType,
+    rotationType: normalizedEvidence.rotationType,
+    landingOutcome: normalizedEvidence.landingOutcome,
+    confidence: normalizedEvidence.confidence,
+    evidence: normalizedEvidence.evidence,
+    evidenceWindows: normalizedEvidence.evidenceWindows,
+    observations: normalizedEvidence.observations,
+    uncertainty: normalizedEvidence.uncertainty,
+    createdAt: new Date().toISOString(),
+  };
+
+  captureEvidenceDebug({
+    metadata,
+    file: {
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    },
+    rawResponseText: rawOutputText,
+    rawParsedEvidence: qualityAdjustedEvidence,
+    parsedEvidence: normalizedEvidence,
+    response: evidenceResponse,
+  });
+
+  const persistence = await persistEvidenceResultForLinkedMoment({
+    metadata,
+    evidence: normalizedEvidence,
+    rawResponseText: rawOutputText,
+    model: result.model,
+    qualityMode,
+    requiresUserConfirmation,
+    analysisJobId,
+  });
+
+  if (persistence.status !== "skipped") {
+    Object.assign(evidenceResponse, {
+      supabasePersistence: persistence,
+    });
+  }
+
+  try {
+    await writeEvidenceCaptureArtifact({
+      metadata,
+      fileName: file.originalname,
+      videoMimeType: file.mimetype,
+      videoBytes: file.size,
+      rawGeminiResponse: rawOutputText,
+      rawParsedEvidence: evidence,
+      qualityAdjustedEvidence,
+      taxonomyGateResult: taxonomyAdjustedEvidence,
+      normalizedResult: normalizedEvidence,
+      evidenceResponse,
+      modelInfo: {
+        requestedModel: geminiModel,
+        fallbackModel: geminiFallbackModel,
+        actualModel: result.model,
+        qualityMode,
+        degraded: qualityMode === "degraded",
+        recoveredFromPartial,
+        requiresUserConfirmation,
+        finishReason: candidate?.finishReason ?? "unknown",
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "unknown artifact error";
+    console.error("Failed to save Gemini evidence capture artifact:", message);
+  }
 }
 
 async function findLinkedMomentForEvidence(metadata: SessionMetadata) {

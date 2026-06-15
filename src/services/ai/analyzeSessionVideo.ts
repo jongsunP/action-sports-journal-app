@@ -16,6 +16,17 @@ export type AnalyzeSessionVideoInput = {
   userConfirmedTrick?: string;
 };
 
+export type QueuedEvidenceAnalysisJob = {
+  id: string;
+  sessionId: string;
+  momentId?: string;
+  status: 'queued' | 'processing';
+  momentStatus: 'queued' | 'processing';
+  provider: 'gemini';
+  model?: string;
+  createdAt: string;
+};
+
 type RemoteAnalysisResponse = {
   id?: unknown;
   sessionId?: unknown;
@@ -135,6 +146,7 @@ export async function extractSessionEvidenceWithGemini({
   session,
   activityGroupName,
   video,
+  momentId,
   userConfirmedTrick,
 }: AnalyzeSessionVideoInput): Promise<GeminiEvidenceResult> {
   if (!geminiEvidenceEndpoint) {
@@ -146,10 +158,34 @@ export async function extractSessionEvidenceWithGemini({
     session,
     activityGroupName,
     video,
+    momentId,
     userConfirmedTrick,
   });
 
   return normalizeRemoteEvidence(data as RemoteEvidenceResponse, session.id);
+}
+
+export async function queueSessionEvidenceExtractionWithGemini({
+  session,
+  activityGroupName,
+  video,
+  momentId,
+  userConfirmedTrick,
+}: AnalyzeSessionVideoInput): Promise<QueuedEvidenceAnalysisJob> {
+  if (!geminiEvidenceEndpoint) {
+    throw new Error('Gemini 근거 추출 엔드포인트가 설정되지 않았습니다.');
+  }
+
+  const data = await requestRemoteJson({
+    endpoint: geminiEvidenceEndpoint,
+    session,
+    activityGroupName,
+    video,
+    momentId,
+    userConfirmedTrick,
+  });
+
+  return normalizeQueuedEvidenceAnalysisJob(data, session.id);
 }
 
 export function hasConfiguredOpenAiBenchmarkEndpoint() {
@@ -260,6 +296,29 @@ function normalizeRemoteAnalysis(
     selfCritique: asSelfCritique(data.selfCritique),
     suggestions: asStringArray(data.suggestions),
     createdAt: asString(data.createdAt) ?? now,
+  };
+}
+
+function normalizeQueuedEvidenceAnalysisJob(
+  data: unknown,
+  sessionId: string,
+): QueuedEvidenceAnalysisJob {
+  const response =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const rawStatus = asString(response.status);
+  const status = rawStatus === 'processing' ? 'processing' : 'queued';
+  const rawMomentStatus = asString(response.momentStatus);
+  const momentStatus = rawMomentStatus === 'processing' ? 'processing' : 'queued';
+
+  return {
+    id: asString(response.id) ?? `analysis-job-${Date.now()}`,
+    sessionId: asString(response.sessionId) ?? sessionId,
+    momentId: asString(response.momentId),
+    status,
+    momentStatus,
+    provider: 'gemini',
+    model: asString(response.model),
+    createdAt: asString(response.createdAt) ?? new Date().toISOString(),
   };
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEventListener } from 'expo';
 import {
   Alert,
@@ -21,9 +21,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
 import {
-  extractSessionEvidenceWithGemini,
   getConfiguredAiEndpoints,
   hasConfiguredGeminiEvidenceEndpoint,
+  queueSessionEvidenceExtractionWithGemini,
   type SessionVideoAsset,
 } from '../../services/ai';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
@@ -102,6 +102,117 @@ export function HomeScreen() {
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] =
     useState(false);
+
+  const syncRemoteMoments = useCallback(
+    (remoteMoments: RemoteMomentRecord[]) => {
+      const sessionIdByRemoteMomentId = new Map(
+        remoteMoments.map((moment) => [
+          moment.remoteMomentId,
+          resolveLocalSessionIdForRemoteMoment(
+            moment,
+            remoteMomentIdsBySessionId,
+          ),
+        ]),
+      );
+
+      setSessions((current) => {
+        const nextSessionsById = new Map(
+          current.map((session) => [session.id, session]),
+        );
+
+        for (const remoteMoment of remoteMoments) {
+          const sessionId =
+            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+            remoteMoment.session.id;
+          const existingSession = nextSessionsById.get(sessionId);
+
+          nextSessionsById.set(sessionId, {
+            ...existingSession,
+            ...remoteMoment.session,
+            id: sessionId,
+            videoUri: existingSession?.videoUri ?? remoteMoment.session.videoUri,
+            shareResultIds: existingSession?.shareResultIds ?? [],
+          });
+        }
+
+        return Array.from(nextSessionsById.values()).sort((left, right) =>
+          right.occurredAt.localeCompare(left.occurredAt),
+        );
+      });
+
+      setRemoteMomentIdsBySessionId((current) => {
+        const next = { ...current };
+
+        for (const remoteMoment of remoteMoments) {
+          const sessionId =
+            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+            remoteMoment.session.id;
+
+          next[sessionId] = remoteMoment.remoteMomentId;
+        }
+
+        return next;
+      });
+
+      setVideosBySessionId((current) => {
+        const next = { ...current };
+
+        for (const remoteMoment of remoteMoments) {
+          if (!remoteMoment.video) {
+            continue;
+          }
+
+          const sessionId =
+            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+            remoteMoment.session.id;
+
+          next[sessionId] = current[sessionId] ?? remoteMoment.video;
+        }
+
+        return next;
+      });
+
+      setGeminiEvidenceBySessionId((current) => {
+        const next = { ...current };
+
+        for (const remoteMoment of remoteMoments) {
+          if (!remoteMoment.evidence) {
+            continue;
+          }
+
+          const sessionId =
+            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+            remoteMoment.session.id;
+
+          next[sessionId] = {
+            ...remoteMoment.evidence,
+            sessionId,
+          };
+        }
+
+        return next;
+      });
+
+      setThumbnailsBySessionId((current) => {
+        const next = { ...current };
+
+        for (const remoteMoment of remoteMoments) {
+          if (!remoteMoment.thumbnailUri) {
+            continue;
+          }
+
+          const sessionId =
+            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+            remoteMoment.session.id;
+
+          next[sessionId] = current[sessionId] ?? remoteMoment.thumbnailUri;
+        }
+
+        return next;
+      });
+    },
+    [remoteMomentIdsBySessionId],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -244,111 +355,7 @@ export function HomeScreen() {
           return;
         }
 
-        const sessionIdByRemoteMomentId = new Map(
-          remoteMoments.map((moment) => [
-            moment.remoteMomentId,
-            resolveLocalSessionIdForRemoteMoment(
-              moment,
-              remoteMomentIdsBySessionId,
-            ),
-          ]),
-        );
-
-        setSessions((current) => {
-          const nextSessionsById = new Map(
-            current.map((session) => [session.id, session]),
-          );
-
-          for (const remoteMoment of remoteMoments) {
-            const sessionId =
-              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-              remoteMoment.session.id;
-            const existingSession = nextSessionsById.get(sessionId);
-
-            nextSessionsById.set(sessionId, {
-              ...existingSession,
-              ...remoteMoment.session,
-              id: sessionId,
-              videoUri: existingSession?.videoUri ?? remoteMoment.session.videoUri,
-              shareResultIds: existingSession?.shareResultIds ?? [],
-            });
-          }
-
-          return Array.from(nextSessionsById.values()).sort((left, right) =>
-            right.occurredAt.localeCompare(left.occurredAt),
-          );
-        });
-
-        setRemoteMomentIdsBySessionId((current) => {
-          const next = { ...current };
-
-          for (const remoteMoment of remoteMoments) {
-            const sessionId =
-              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-              remoteMoment.session.id;
-
-            next[sessionId] = remoteMoment.remoteMomentId;
-          }
-
-          return next;
-        });
-
-        setVideosBySessionId((current) => {
-          const next = { ...current };
-
-          for (const remoteMoment of remoteMoments) {
-            if (!remoteMoment.video) {
-              continue;
-            }
-
-            const sessionId =
-              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-              remoteMoment.session.id;
-
-            next[sessionId] = current[sessionId] ?? remoteMoment.video;
-          }
-
-          return next;
-        });
-
-        setGeminiEvidenceBySessionId((current) => {
-          const next = { ...current };
-
-          for (const remoteMoment of remoteMoments) {
-            if (!remoteMoment.evidence) {
-              continue;
-            }
-
-            const sessionId =
-              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-              remoteMoment.session.id;
-
-            next[sessionId] = {
-              ...remoteMoment.evidence,
-              sessionId,
-            };
-          }
-
-          return next;
-        });
-
-        setThumbnailsBySessionId((current) => {
-          const next = { ...current };
-
-          for (const remoteMoment of remoteMoments) {
-            if (!remoteMoment.thumbnailUri) {
-              continue;
-            }
-
-            const sessionId =
-              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-              remoteMoment.session.id;
-
-            next[sessionId] = current[sessionId] ?? remoteMoment.thumbnailUri;
-          }
-
-          return next;
-        });
+        syncRemoteMoments(remoteMoments);
       } catch (error) {
         console.warn(
           'Supabase moment list failed:',
@@ -370,6 +377,50 @@ export function HomeScreen() {
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
     remoteMomentIdsBySessionId,
+    syncRemoteMoments,
+  ]);
+
+  useEffect(() => {
+    if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
+      return;
+    }
+
+    const hasActiveMoment = sessions.some(
+      (session) =>
+        session.momentStatus === 'queued' ||
+        session.momentStatus === 'processing',
+    );
+
+    if (!hasActiveMoment) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const intervalId = setInterval(() => {
+      listMoments()
+        .then((remoteMoments) => {
+          if (isMounted) {
+            syncRemoteMoments(remoteMoments);
+          }
+        })
+        .catch((error) => {
+          console.warn(
+            'Supabase moment polling failed:',
+            error instanceof Error ? error.message : 'Unknown error',
+          );
+        });
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [
+    isRemoteMomentSyncLoaded,
+    isStorageLoaded,
+    sessions,
+    syncRemoteMoments,
   ]);
 
   const selectedGroup =
@@ -640,12 +691,7 @@ export function HomeScreen() {
         ...current,
         [session.id]: true,
       }));
-      await syncMomentStatus(
-        session.id,
-        'processing',
-        options?.momentIdOverride,
-      );
-      const evidence = await extractSessionEvidenceWithGemini({
+      const queuedJob = await queueSessionEvidenceExtractionWithGemini({
         session,
         activityGroupName: 'Wakeboard',
         video,
@@ -654,13 +700,9 @@ export function HomeScreen() {
         userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
       });
 
-      setGeminiEvidenceBySessionId((current) => ({
-        ...current,
-        [session.id]: evidence,
-      }));
       await syncMomentStatus(
         session.id,
-        'completed',
+        queuedJob.momentStatus,
         options?.momentIdOverride,
       );
     } catch (error) {
@@ -672,50 +714,6 @@ export function HomeScreen() {
         'failed',
         options?.momentIdOverride,
       );
-      setGeminiEvidenceBySessionId((current) => ({
-        ...current,
-        [session.id]: {
-          id: `evidence-error-${Date.now()}`,
-          sessionId: session.id,
-          status: 'failed',
-          provider: 'gemini',
-          primaryCandidate: {
-            name: '확인 실패',
-            confidence: 'low',
-            evidence: message,
-          },
-          alternativeCandidates: [],
-          family: {
-            value: '확인 실패',
-            confidence: 'low',
-            evidence: message,
-          },
-          approachType: {
-            value: '확인 실패',
-            confidence: 'low',
-            evidence: message,
-          },
-          rotationType: {
-            value: '확인 실패',
-            confidence: 'low',
-            evidence: message,
-          },
-          landingOutcome: {
-            value: '확인 실패',
-            confidence: 'low',
-            evidence: message,
-          },
-          confidence: 'low',
-          evidence: message,
-          evidenceWindows: [],
-          observations: [],
-          uncertainty: {
-            level: 'high',
-            reasons: [message],
-          },
-          createdAt: new Date().toISOString(),
-        },
-      }));
     } finally {
       setExtractingEvidenceBySessionId((current) => ({
         ...current,
