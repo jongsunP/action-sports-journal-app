@@ -87,6 +87,14 @@ const openAiBenchmarkEndpoint = analysisEndpoint?.replace(
   '/api/benchmarks/openai-wakeboard-video',
 );
 
+if (__DEV__) {
+  console.log('[Action Sports Journal] AI endpoints', {
+    analysisEndpoint,
+    geminiEvidenceEndpoint,
+    openAiBenchmarkEndpoint,
+  });
+}
+
 export function hasConfiguredAnalysisEndpoint() {
   return Boolean(analysisEndpoint);
 }
