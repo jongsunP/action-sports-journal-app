@@ -195,19 +195,21 @@ Important boundaries:
 - No Job Queue yet.
 - Supabase env values are present locally but are not committed.
 - Supabase connection smoke test passes with the service role key.
-- Phase 1 tables exist, but service-role table grants are missing, so
-  `schemaReady` is currently false.
-- `npm run supabase:write-smoke` exists but currently fails until
-  `supabase/phase1_service_role_grants.sql` is applied.
+- Phase 1 tables exist and service-role table grants are applied.
+- `npm run supabase:smoke` reports `schemaReady: true`.
+- `npm run supabase:write-smoke` proves server-side insert/update/delete.
+- Gemini Evidence Extraction now attempts to persist an `evidence_results` row
+  when an existing Moment is linked by `momentId` or UUID `sessionId`.
 - The app still uses the current evidence extraction flow until async
   implementation begins.
 
 Next starting point:
 
 1. Switch local shell to Node 22 LTS with `nvm install && nvm use`.
-2. Apply `supabase/phase1_service_role_grants.sql` in Supabase SQL editor.
-3. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
-4. Run `npm run supabase:write-smoke` and confirm server-side DB writes.
+2. Correct the local Gemini API key before real linked Evidence Extraction
+   verification.
+3. Run a real Evidence Extraction request with a linked `momentId`.
+4. Confirm the created `evidence_results` row and linked Moment latest IDs.
 5. Then implement async analysis using `docs/ASYNC_ANALYSIS_PLAN.md`.
 
 ## 2026-06-15 AI Evidence Checkpoint
@@ -572,10 +574,10 @@ Do not add unrelated product features yet. Continue from the current Supabase
 Phase 1 and async analysis transition work unless the user explicitly switches
 back to AI evidence truthfulness or UX QA.
 
-1. Apply `supabase/phase1_service_role_grants.sql`.
-2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
-3. Run `npm run supabase:write-smoke` to prove server-side DB writes for
-   Moment, AnalysisJob, and EvidenceResult.
+1. Correct the local Gemini API key before real linked Evidence Extraction
+   verification.
+2. Run a real Evidence Extraction request with a linked `momentId`.
+3. Confirm the created `evidence_results` row and linked Moment latest IDs.
 4. Use `docs/ASYNC_ANALYSIS_PLAN.md` to start the async analysis transition.
 5. Keep Auth UI, Storage, Push, Queue, scoring, and coaching expansion out of
    scope until explicitly requested.

@@ -17,6 +17,7 @@ import express from "express";
 import ffmpegPath from "ffmpeg-static";
 import multer from "multer";
 import OpenAI from "openai";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -76,8 +77,11 @@ const benchmarkArtifactDir =
 const evidenceCaptureArtifactDir =
   process.env.EVIDENCE_CAPTURE_ARTIFACT_DIR ??
   "dev-artifacts/evidence-captures";
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
+let supabaseServerClient: ReturnType<typeof createSupabaseClient<any>> | null | undefined;
 
 const allowedVideoMimeTypes = new Set([
   "video/mp4",
@@ -459,6 +463,33 @@ app.post(
       });
 
       try {
+        const persistence = await persistEvidenceResultForLinkedMoment({
+          metadata,
+          evidence: normalizedEvidence,
+          rawResponseText: rawOutputText,
+          model: result.model,
+          qualityMode,
+          requiresUserConfirmation,
+        });
+
+        if (persistence.status !== "skipped") {
+          Object.assign(evidenceResponse, {
+            supabasePersistence: persistence,
+          });
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "unknown Supabase error";
+        console.error("Failed to persist Gemini evidence result:", message);
+        Object.assign(evidenceResponse, {
+          supabasePersistence: {
+            status: "failed",
+            reason: message,
+          },
+        });
+      }
+
+      try {
         await writeEvidenceCaptureArtifact({
           metadata,
           fileName: request.file.originalname,
@@ -821,6 +852,7 @@ app.listen(port, host, () => {
 
 type SessionMetadata = {
   sessionId: string;
+  momentId: string;
   activityGroupName: string;
   title: string;
   notes: string;
@@ -845,6 +877,7 @@ type EvidenceDebugCapture = {
 function getSessionMetadata(request: express.Request): SessionMetadata {
   return {
     sessionId: getField(request.body.sessionId, "session-local"),
+    momentId: getField(request.body.momentId, ""),
     activityGroupName: getField(request.body.activityGroupName, "웨이크보드"),
     title: getField(request.body.title, "웨이크보드 세션"),
     notes: getField(request.body.notes, ""),
@@ -1432,6 +1465,182 @@ async function writeOpenAiBenchmarkArtifact({
   );
 
   console.log(`Saved OpenAI benchmark artifact: ${artifactPath}`);
+}
+
+async function persistEvidenceResultForLinkedMoment({
+  metadata,
+  evidence,
+  rawResponseText,
+  model,
+  qualityMode,
+  requiresUserConfirmation,
+}: {
+  metadata: SessionMetadata;
+  evidence: TaxonomyGatedEvidence;
+  rawResponseText: string;
+  model: string;
+  qualityMode: "standard" | "degraded";
+  requiresUserConfirmation: boolean;
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return {
+      status: "skipped" as const,
+      reason: "Supabase service role env is not configured.",
+    };
+  }
+
+  const linkedMoment = await findLinkedMomentForEvidence(metadata);
+
+  if (!linkedMoment) {
+    return {
+      status: "skipped" as const,
+      reason: "No existing Moment was linked to this evidence request.",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { data: analysisJob, error: analysisJobError } = await client
+    .from("analysis_jobs")
+    .insert({
+      user_id: linkedMoment.user_id,
+      moment_id: linkedMoment.id,
+      kind: "evidence_extraction",
+      status: "completed",
+      provider: "gemini",
+      model,
+      attempts: 1,
+      max_attempts: 1,
+      started_at: now,
+      completed_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (analysisJobError) {
+    throw new Error(`Failed to insert analysis_jobs: ${analysisJobError.message}`);
+  }
+
+  const { data: evidenceResult, error: evidenceResultError } = await client
+    .from("evidence_results")
+    .insert({
+      user_id: linkedMoment.user_id,
+      moment_id: linkedMoment.id,
+      analysis_job_id: analysisJob.id,
+      provider: "gemini",
+      model,
+      status: evidence.parseFailed ? "failed" : "completed",
+      quality_mode: qualityMode,
+      predicted_trick: evidence.primaryCandidate.name,
+      family: evidence.family.value,
+      confidence: evidence.confidence,
+      needs_review: requiresUserConfirmation,
+      consistency_status: evidence.consistencyStatus,
+      consistency_warnings: evidence.consistencyWarnings,
+      approach_observed_facts: evidence.approachObservedFacts,
+      inversion_observed_facts: evidence.inversionObservedFacts,
+      temporal_windows: evidence.temporalWindows,
+      evidence_windows: evidence.evidenceWindows,
+      observations: evidence.observations,
+      raw_response_text: rawResponseText,
+      error_message: evidence.parseFailed
+        ? evidence.uncertainty.reasons.join(" ")
+        : null,
+    })
+    .select("id")
+    .single();
+
+  if (evidenceResultError) {
+    throw new Error(
+      `Failed to insert evidence_results: ${evidenceResultError.message}`,
+    );
+  }
+
+  const { error: momentUpdateError } = await client
+    .from("moments")
+    .update({
+      status: evidence.parseFailed ? "failed" : "completed",
+      latest_analysis_job_id: analysisJob.id,
+      latest_evidence_result_id: evidenceResult.id,
+      updated_at: now,
+    })
+    .eq("id", linkedMoment.id);
+
+  if (momentUpdateError) {
+    throw new Error(`Failed to update moments: ${momentUpdateError.message}`);
+  }
+
+  return {
+    status: "inserted" as const,
+    momentId: linkedMoment.id,
+    analysisJobId: analysisJob.id as string,
+    evidenceResultId: evidenceResult.id as string,
+  };
+}
+
+async function findLinkedMomentForEvidence(metadata: SessionMetadata) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return null;
+  }
+
+  if (isUuid(metadata.momentId)) {
+    return findMomentByColumn("id", metadata.momentId);
+  }
+
+  if (isUuid(metadata.sessionId)) {
+    return findMomentByColumn("session_id", metadata.sessionId);
+  }
+
+  return null;
+}
+
+async function findMomentByColumn(column: "id" | "session_id", value: string) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("moments")
+    .select("id,user_id")
+    .eq(column, value)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to find linked Moment: ${error.message}`);
+  }
+
+  return data as { id: string; user_id: string } | null;
+}
+
+function getSupabaseServerClient() {
+  if (supabaseServerClient !== undefined) {
+    return supabaseServerClient;
+  }
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    supabaseServerClient = null;
+    return supabaseServerClient;
+  }
+
+  supabaseServerClient = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return supabaseServerClient;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 async function writeEvidenceCaptureArtifact({

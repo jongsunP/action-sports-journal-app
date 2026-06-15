@@ -12,6 +12,7 @@ export type AnalyzeSessionVideoInput = {
   session: Session;
   activityGroupName: string;
   video: SessionVideoAsset;
+  momentId?: string;
   userConfirmedTrick?: string;
 };
 
@@ -197,11 +198,15 @@ async function requestRemoteJson({
   session,
   activityGroupName,
   video,
+  momentId,
   userConfirmedTrick,
 }: AnalyzeSessionVideoInput & { endpoint: string }): Promise<unknown> {
   const formData = new FormData();
 
   formData.append('sessionId', session.id);
+  if (momentId) {
+    formData.append('momentId', momentId);
+  }
   formData.append('activityGroupName', activityGroupName);
   formData.append('title', session.title);
   formData.append('notes', session.notes ?? '');

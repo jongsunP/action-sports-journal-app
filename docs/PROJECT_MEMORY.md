@@ -236,10 +236,14 @@ Completed planning and scaffolding:
   service role key and reports Phase 1 schema readiness separately.
 - `supabase/phase1_schema.sql` drafts `users`, `moments`, `analysis_jobs`, and
   `evidence_results`.
-- Current Supabase status: connection passes and Phase 1 tables exist, but
-  service-role table grants are missing.
+- Current Supabase status: connection passes, Phase 1 tables exist, and
+  service-role table grants are applied.
 - `supabase/phase1_service_role_grants.sql` repairs existing projects where the
   tables were created before service-role grants were added.
+- `npm run supabase:write-smoke` confirms server-side insert/update/delete
+  across `users`, `moments`, `analysis_jobs`, and `evidence_results`.
+- Gemini Evidence Extraction now attempts to persist an `evidence_results` row
+  when an existing Moment is linked by `momentId` or UUID `sessionId`.
 - Node standard was raised to Node 22 LTS through `.nvmrc`, `package.json`
   engines, and setup docs.
 - Async analysis transition planning was documented in
@@ -265,10 +269,10 @@ Moment created
 
 Recommended next starting point:
 
-1. Apply `supabase/phase1_service_role_grants.sql` manually in the Supabase SQL
-   editor.
-2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
-3. Run `npm run supabase:write-smoke` and confirm server-side DB writes.
+1. Correct the local Gemini API key before real linked Evidence Extraction
+   verification.
+2. Run a real Evidence Extraction request with a linked `momentId`.
+3. Confirm the created `evidence_results` row and linked Moment latest IDs.
 
 ## Wakeboard Domain Knowledge
 

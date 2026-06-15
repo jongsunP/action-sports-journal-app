@@ -140,9 +140,13 @@ Infrastructure milestone on 2026-06-15:
 - Supabase env values are present locally.
 - `npm run supabase:smoke` confirms Supabase connection with service role.
 - Phase 1 tables exist in Supabase.
-- Service-role table grants are not applied yet, so `schemaReady` is still
-  false and `npm run supabase:write-smoke` currently fails with
-  `permission denied for table users`.
+- Service-role table grants are applied.
+- `npm run supabase:smoke` reports `schemaReady: true`.
+- `npm run supabase:write-smoke` confirms server-side insert/update/delete
+  across `users`, `moments`, `analysis_jobs`, and `evidence_results`.
+- Gemini Evidence Extraction can now persist an `evidence_results` row when an
+  existing Moment is linked by `momentId` or UUID `sessionId`; no UI behavior is
+  changed.
 - The next architecture direction is synchronous analysis to asynchronous
   background analysis.
 - Async transition plan exists at `docs/ASYNC_ANALYSIS_PLAN.md`.
@@ -322,15 +326,15 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. Apply `supabase/phase1_service_role_grants.sql` in the Supabase SQL editor.
-2. Re-run `npm run supabase:smoke` and confirm `schemaReady: true`.
-3. Run `npm run supabase:write-smoke` and confirm server-side DB writes.
-4. Use `docs/ASYNC_ANALYSIS_PLAN.md` as the implementation guide for
+1. Verify a real Gemini Evidence Extraction request with a linked `momentId`
+   after the local Gemini API key is corrected.
+2. Confirm the created `evidence_results` row and linked `moments` latest IDs.
+3. Use `docs/ASYNC_ANALYSIS_PLAN.md` as the implementation guide for
    synchronous to asynchronous analysis.
-5. If returning to AI truthfulness, run the real test clip through
+4. If returning to AI truthfulness, run the real test clip through
    `InversionObservedFacts` v1 before modifying trick classification again.
-6. Investigate the coaching structured parsing failure.
-7. Review Detail Screen on iPhone.
+5. Investigate the coaching structured parsing failure.
+6. Review Detail Screen on iPhone.
 8. Keep Feed mostly frozen unless new iPhone QA identifies a specific issue.
 
 Open questions:
