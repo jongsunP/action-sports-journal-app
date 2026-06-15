@@ -1730,24 +1730,33 @@ async function getOrCreateDefaultSupabaseUser() {
   }
 
   const email = "standalone-app@action-sports-journal.invalid";
+  const { data: existingUsers, error: selectError } = await client
+    .from("users")
+    .select("id")
+    .eq("email", email)
+    .limit(1);
+
+  if (selectError) {
+    throw new Error(`Failed to find default user: ${selectError.message}`);
+  }
+
+  if (existingUsers?.[0]?.id) {
+    return existingUsers[0].id as string;
+  }
+
   const { data, error } = await client
     .from("users")
-    .upsert(
-      {
-        email,
-        display_name: "Standalone App User",
-        locale: "ko-KR",
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "email",
-      },
-    )
+    .insert({
+      email,
+      display_name: "Standalone App User",
+      locale: "ko-KR",
+      updated_at: new Date().toISOString(),
+    })
     .select("id")
     .single();
 
   if (error) {
-    throw new Error(`Failed to upsert default user: ${error.message}`);
+    throw new Error(`Failed to insert default user: ${error.message}`);
   }
 
   return data.id as string;
