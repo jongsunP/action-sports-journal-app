@@ -73,6 +73,9 @@ const openAiReasoningEffort = process.env.OPENAI_REASONING_EFFORT ?? "medium";
 const benchmarkArtifactDir =
   process.env.OPENAI_BENCHMARK_ARTIFACT_DIR ??
   "dev-artifacts/openai-benchmarks";
+const evidenceCaptureArtifactDir =
+  process.env.EVIDENCE_CAPTURE_ARTIFACT_DIR ??
+  "dev-artifacts/evidence-captures";
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
 
@@ -454,6 +457,35 @@ app.post(
         parsedEvidence: normalizedEvidence,
         response: evidenceResponse,
       });
+
+      try {
+        await writeEvidenceCaptureArtifact({
+          metadata,
+          fileName: request.file.originalname,
+          videoMimeType: request.file.mimetype,
+          videoBytes: request.file.size,
+          rawGeminiResponse: rawOutputText,
+          rawParsedEvidence: evidence,
+          qualityAdjustedEvidence,
+          taxonomyGateResult: taxonomyAdjustedEvidence,
+          normalizedResult: normalizedEvidence,
+          evidenceResponse,
+          modelInfo: {
+            requestedModel: geminiModel,
+            fallbackModel: geminiFallbackModel,
+            actualModel: result.model,
+            qualityMode,
+            degraded: qualityMode === "degraded",
+            recoveredFromPartial,
+            requiresUserConfirmation,
+            finishReason: candidate?.finishReason ?? "unknown",
+          },
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "unknown artifact error";
+        console.error("Failed to save Gemini evidence capture artifact:", message);
+      }
 
       response.json(evidenceResponse);
     } catch (error) {
@@ -1400,6 +1432,125 @@ async function writeOpenAiBenchmarkArtifact({
   );
 
   console.log(`Saved OpenAI benchmark artifact: ${artifactPath}`);
+}
+
+async function writeEvidenceCaptureArtifact({
+  metadata,
+  fileName,
+  videoMimeType,
+  videoBytes,
+  rawGeminiResponse,
+  rawParsedEvidence,
+  qualityAdjustedEvidence,
+  taxonomyGateResult,
+  normalizedResult,
+  evidenceResponse,
+  modelInfo,
+}: {
+  metadata: SessionMetadata;
+  fileName: string;
+  videoMimeType: string;
+  videoBytes: number;
+  rawGeminiResponse: string;
+  rawParsedEvidence: NormalizedGeminiEvidence;
+  qualityAdjustedEvidence: NormalizedGeminiEvidence;
+  taxonomyGateResult: TaxonomyGatedEvidence;
+  normalizedResult: TaxonomyGatedEvidence;
+  evidenceResponse: Record<string, unknown>;
+  modelInfo: {
+    requestedModel: string;
+    fallbackModel: string;
+    actualModel: string;
+    qualityMode: "standard" | "degraded";
+    degraded: boolean;
+    recoveredFromPartial: boolean;
+    requiresUserConfirmation: boolean;
+    finishReason: string;
+  };
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  await mkdir(evidenceCaptureArtifactDir, { recursive: true });
+
+  const timestamp = evidenceCaptureTimestamp();
+  const predictedTrick = safeFileSegment(
+    normalizedResult.primaryCandidate.name || "unknown-trick",
+  );
+  const model = safeFileSegment(modelInfo.actualModel || "unknown-model");
+  const artifactPath = join(
+    evidenceCaptureArtifactDir,
+    `${timestamp}-${predictedTrick}-${model}.json`,
+  );
+  const createdAt = new Date().toISOString();
+
+  await writeFile(
+    artifactPath,
+    JSON.stringify(
+      {
+        capture: {
+          kind: "gemini-evidence",
+          createdAt,
+          nodeEnv: process.env.NODE_ENV ?? "development",
+        },
+        modelInfo,
+        session: metadata,
+        video: {
+          fileName,
+          mimeType: videoMimeType,
+          bytes: videoBytes,
+        },
+        rawGeminiResponse,
+        rawParsedEvidence,
+        qualityAdjustedEvidence,
+        taxonomyGateResult: {
+          rawFamilyCandidate: taxonomyGateResult.rawFamilyCandidate,
+          safeFamilyCandidate: taxonomyGateResult.safeFamilyCandidate,
+          taxonomyWarnings: taxonomyGateResult.taxonomyWarnings,
+          gateFailures: taxonomyGateResult.gateFailures,
+          result: taxonomyGateResult,
+        },
+        normalizedResult,
+        approachObservedFacts: normalizedResult.approachObservedFacts,
+        inversionObservedFacts: normalizedResult.inversionObservedFacts,
+        consistencyCheck: {
+          status: normalizedResult.consistencyStatus,
+          warnings: normalizedResult.consistencyWarnings,
+          requiresUserConfirmation: modelInfo.requiresUserConfirmation,
+        },
+        evidenceResponse,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  console.log(`Saved Gemini evidence capture artifact: ${artifactPath}`);
+}
+
+function evidenceCaptureTimestamp() {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return [
+    now.getFullYear(),
+    pad(now.getMonth() + 1),
+    pad(now.getDate()),
+  ].join("-") +
+    `-${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+}
+
+function safeFileSegment(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9가-힣_-]+/gi, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || "unknown"
+  );
 }
 
 function buildGeminiAnalysisPrompt({
