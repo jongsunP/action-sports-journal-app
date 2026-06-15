@@ -33,7 +33,8 @@ const geminiMaxVideoBytes = readNumberEnv("MAX_VIDEO_MB", 20) * 1024 * 1024;
 const openAiMaxVideoBytes =
   readNumberEnv("OPENAI_MAX_VIDEO_MB", 50) * 1024 * 1024;
 const uploadMaxVideoBytes = Math.max(geminiMaxVideoBytes, openAiMaxVideoBytes);
-const dailyAnalysisLimit = readNumberEnv("DAILY_ANALYSIS_LIMIT", 3);
+const dailyUsageLimitEnabled = process.env.NODE_ENV === "production";
+const dailyAnalysisLimit = readNumberEnv("DAILY_ANALYSIS_LIMIT", 30);
 const rateLimitWindowMs = readNumberEnv("RATE_LIMIT_WINDOW_MS", 60_000);
 const rateLimitMaxRequests = readNumberEnv("RATE_LIMIT_MAX_REQUESTS", 3);
 const geminiMaxOutputTokens = readNumberEnv("GEMINI_MAX_OUTPUT_TOKENS", 1_200);
@@ -132,6 +133,7 @@ app.get("/health", (_request, response) => {
     limits: {
       geminiMaxVideoMb: Math.round(geminiMaxVideoBytes / 1024 / 1024),
       openAiMaxVideoMb: Math.round(openAiMaxVideoBytes / 1024 / 1024),
+      dailyUsageLimitEnabled,
       dailyAnalysisLimit,
       rateLimitWindowMs,
       rateLimitMaxRequests,
@@ -205,7 +207,7 @@ app.post(
     try {
       const usageKey = todayKey("gemini");
 
-      if ((dailyUsage.get(usageKey) ?? 0) >= dailyAnalysisLimit) {
+      if (isDailyUsageLimitExceeded(usageKey)) {
         response.status(429).json({
           error:
             "Daily analysis limit reached. This limit keeps development API spend under control.",
@@ -275,7 +277,7 @@ app.post(
 
       const rawOutputText = result.response.text ?? "";
       const analysis = parseGeminiAnalysis(rawOutputText);
-      dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
+      recordDailyUsage(usageKey);
 
       response.json({
         id: `analysis-${Date.now()}`,
@@ -307,7 +309,7 @@ app.post(
     try {
       const usageKey = todayKey("gemini-evidence");
 
-      if ((dailyUsage.get(usageKey) ?? 0) >= dailyAnalysisLimit) {
+      if (isDailyUsageLimitExceeded(usageKey)) {
         response.status(429).json({
           error:
             "Daily evidence extraction limit reached. This limit keeps development API spend under control.",
@@ -399,7 +401,7 @@ app.post(
         normalizedEvidence.consistencyStatus !== "valid" ||
         normalizedEvidence.confidence === "low" ||
         normalizedEvidence.primaryCandidate.confidence === "low";
-      dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
+      recordDailyUsage(usageKey);
       console.log(
         `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
       );
@@ -473,7 +475,7 @@ app.post(
     try {
       const usageKey = todayKey("openai");
 
-      if ((dailyUsage.get(usageKey) ?? 0) >= dailyAnalysisLimit) {
+      if (isDailyUsageLimitExceeded(usageKey)) {
         response.status(429).json({
           error:
             "Daily benchmark limit reached. This limit keeps development API spend under control.",
@@ -649,7 +651,7 @@ app.post(
           rawOutputText: rawMotionScoutOutputText,
         });
 
-        dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
+        recordDailyUsage(usageKey);
         response.json(responseBody);
         return;
       }
@@ -707,7 +709,7 @@ app.post(
         analysis.highlightScenes,
         focusedFrames.frames,
       );
-      dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
+      recordDailyUsage(usageKey);
 
       const responseBody = {
         id: `openai-benchmark-${Date.now()}`,
@@ -895,6 +897,17 @@ function rateLimit(
 
 function todayKey(provider: "gemini" | "gemini-evidence" | "openai") {
   return `${provider}-${new Date().toISOString().slice(0, 10)}`;
+}
+
+function isDailyUsageLimitExceeded(usageKey: string) {
+  return (
+    dailyUsageLimitEnabled &&
+    (dailyUsage.get(usageKey) ?? 0) >= dailyAnalysisLimit
+  );
+}
+
+function recordDailyUsage(usageKey: string) {
+  dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
 }
 
 async function uploadVideoForGemini({
