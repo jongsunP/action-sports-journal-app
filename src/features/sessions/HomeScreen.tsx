@@ -35,6 +35,8 @@ import {
 import {
   hasConfiguredSupabaseMoments,
   insertMoment,
+  listMoments,
+  type RemoteMomentRecord,
   updateMomentStatus,
 } from '../../services/moments';
 
@@ -98,6 +100,8 @@ export function HomeScreen() {
     null,
   );
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+  const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] =
+    useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -219,6 +223,153 @@ export function HomeScreen() {
     thumbnailsBySessionId,
     userConfirmedTrickBySessionId,
     videosBySessionId,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isStorageLoaded ||
+      isRemoteMomentSyncLoaded ||
+      !hasConfiguredSupabaseMoments()
+    ) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadRemoteMoments() {
+      try {
+        const remoteMoments = await listMoments();
+
+        if (!isMounted || remoteMoments.length === 0) {
+          return;
+        }
+
+        const sessionIdByRemoteMomentId = new Map(
+          remoteMoments.map((moment) => [
+            moment.remoteMomentId,
+            resolveLocalSessionIdForRemoteMoment(
+              moment,
+              remoteMomentIdsBySessionId,
+            ),
+          ]),
+        );
+
+        setSessions((current) => {
+          const nextSessionsById = new Map(
+            current.map((session) => [session.id, session]),
+          );
+
+          for (const remoteMoment of remoteMoments) {
+            const sessionId =
+              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+              remoteMoment.session.id;
+            const existingSession = nextSessionsById.get(sessionId);
+
+            nextSessionsById.set(sessionId, {
+              ...existingSession,
+              ...remoteMoment.session,
+              id: sessionId,
+              videoUri: existingSession?.videoUri ?? remoteMoment.session.videoUri,
+              shareResultIds: existingSession?.shareResultIds ?? [],
+            });
+          }
+
+          return Array.from(nextSessionsById.values()).sort((left, right) =>
+            right.occurredAt.localeCompare(left.occurredAt),
+          );
+        });
+
+        setRemoteMomentIdsBySessionId((current) => {
+          const next = { ...current };
+
+          for (const remoteMoment of remoteMoments) {
+            const sessionId =
+              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+              remoteMoment.session.id;
+
+            next[sessionId] = remoteMoment.remoteMomentId;
+          }
+
+          return next;
+        });
+
+        setVideosBySessionId((current) => {
+          const next = { ...current };
+
+          for (const remoteMoment of remoteMoments) {
+            if (!remoteMoment.video) {
+              continue;
+            }
+
+            const sessionId =
+              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+              remoteMoment.session.id;
+
+            next[sessionId] = current[sessionId] ?? remoteMoment.video;
+          }
+
+          return next;
+        });
+
+        setGeminiEvidenceBySessionId((current) => {
+          const next = { ...current };
+
+          for (const remoteMoment of remoteMoments) {
+            if (!remoteMoment.evidence) {
+              continue;
+            }
+
+            const sessionId =
+              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+              remoteMoment.session.id;
+
+            next[sessionId] = {
+              ...remoteMoment.evidence,
+              sessionId,
+            };
+          }
+
+          return next;
+        });
+
+        setThumbnailsBySessionId((current) => {
+          const next = { ...current };
+
+          for (const remoteMoment of remoteMoments) {
+            if (!remoteMoment.thumbnailUri) {
+              continue;
+            }
+
+            const sessionId =
+              sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+              remoteMoment.session.id;
+
+            next[sessionId] = current[sessionId] ?? remoteMoment.thumbnailUri;
+          }
+
+          return next;
+        });
+      } catch (error) {
+        console.warn(
+          'Supabase moment list failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      } finally {
+        if (isMounted) {
+          setIsRemoteMomentSyncLoaded(true);
+        }
+      }
+    }
+
+    void loadRemoteMoments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    isRemoteMomentSyncLoaded,
+    isStorageLoaded,
+    remoteMomentIdsBySessionId,
   ]);
 
   const selectedGroup =
@@ -884,6 +1035,17 @@ export function HomeScreen() {
       />
     </SafeAreaView>
   );
+}
+
+function resolveLocalSessionIdForRemoteMoment(
+  remoteMoment: RemoteMomentRecord,
+  remoteMomentIdsBySessionId: Record<string, string>,
+) {
+  const existingLocalSessionId = Object.entries(remoteMomentIdsBySessionId).find(
+    ([, remoteMomentId]) => remoteMomentId === remoteMoment.remoteMomentId,
+  )?.[0];
+
+  return existingLocalSessionId ?? remoteMoment.session.id;
 }
 
 const styles = StyleSheet.create({

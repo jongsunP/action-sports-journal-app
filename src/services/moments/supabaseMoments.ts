@@ -1,4 +1,9 @@
-import type { MomentStatus, Session } from '../../types';
+import type {
+  EvidenceConfidence,
+  GeminiEvidenceResult,
+  MomentStatus,
+  Session,
+} from '../../types';
 import type { SessionVideoAsset } from '../ai';
 
 type CreateMomentResponse = {
@@ -6,8 +11,20 @@ type CreateMomentResponse = {
   status?: unknown;
 };
 
+export type RemoteMomentRecord = {
+  remoteMomentId: string;
+  session: Session;
+  video?: SessionVideoAsset;
+  thumbnailUri?: string;
+  evidence?: GeminiEvidenceResult;
+};
+
 type RemoteErrorResponse = {
   error?: unknown;
+};
+
+type RemoteMomentListResponse = {
+  moments?: unknown;
 };
 
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
@@ -82,6 +99,30 @@ export async function updateMomentStatus(
   }
 }
 
+export async function listMoments() {
+  if (!momentsEndpoint) {
+    return [];
+  }
+
+  const response = await fetch(momentsEndpoint);
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(message ?? `Moment list failed with ${response.status}`);
+  }
+
+  const data = (await response.json()) as RemoteMomentListResponse;
+
+  if (!Array.isArray(data.moments)) {
+    return [];
+  }
+
+  return data.moments
+    .map(normalizeRemoteMoment)
+    .filter((moment): moment is RemoteMomentRecord => Boolean(moment));
+}
+
 async function readRemoteErrorMessage(response: Response) {
   try {
     const data = (await response.json()) as RemoteErrorResponse;
@@ -90,4 +131,204 @@ async function readRemoteErrorMessage(response: Response) {
   } catch {
     return undefined;
   }
+}
+
+function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const moment = value as Record<string, unknown>;
+  const remoteMomentId = asString(moment.id);
+
+  if (!remoteMomentId) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const occurredAt = asString(moment.occurredAt) ?? now;
+  const sourceVideoUri = asString(moment.sourceVideoUri);
+  const durationMs = asNumber(moment.durationMs);
+  const sessionId = asString(moment.sessionId) ?? remoteMomentId;
+  const session: Session = {
+    id: sessionId,
+    activityGroupId: normalizeActivityGroupId(asString(moment.activityGroupId)),
+    title: asString(moment.title) ?? 'Untitled moment',
+    notes: asString(moment.notes),
+    occurredAt,
+    videoUri: sourceVideoUri,
+    momentStatus: asMomentStatus(moment.status),
+    shareResultIds: [],
+    createdAt: asString(moment.createdAt) ?? occurredAt,
+    updatedAt: asString(moment.updatedAt) ?? occurredAt,
+  };
+  const video = sourceVideoUri
+    ? {
+        uri: sourceVideoUri,
+        fileName: asString(moment.fileName),
+        fileSize: asNumber(moment.fileSize),
+        mimeType: asString(moment.mimeType),
+        duration: typeof durationMs === 'number' ? durationMs : null,
+      }
+    : undefined;
+  const evidence = normalizeRemoteEvidenceResult(
+    moment.latestEvidenceResult,
+    session.id,
+  );
+
+  return {
+    remoteMomentId,
+    session,
+    video,
+    thumbnailUri: asString(moment.thumbnailUri),
+    evidence,
+  };
+}
+
+function normalizeRemoteEvidenceResult(
+  value: unknown,
+  sessionId: string,
+): GeminiEvidenceResult | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const evidence = value as Record<string, unknown>;
+  const createdAt = asString(evidence.created_at) ?? new Date().toISOString();
+  const confidence = asConfidence(evidence.confidence) ?? 'low';
+  const predictedTrick = asString(evidence.predicted_trick) ?? '확인 필요';
+  const family = asString(evidence.family) ?? '확인 필요';
+  const errorMessage = asString(evidence.error_message);
+
+  return {
+    id: asString(evidence.id) ?? `evidence-${Date.now()}`,
+    sessionId,
+    status: evidence.status === 'failed' ? 'failed' : 'completed',
+    provider: 'gemini',
+    model: asString(evidence.model),
+    qualityMode:
+      evidence.quality_mode === 'degraded' || evidence.quality_mode === 'standard'
+        ? evidence.quality_mode
+        : undefined,
+    requiresUserConfirmation: evidence.needs_review === true,
+    consistencyStatus: asConsistencyStatus(evidence.consistency_status),
+    consistencyWarnings: asStringArray(evidence.consistency_warnings),
+    rawResponseText: asString(evidence.raw_response_text),
+    primaryCandidate: {
+      name: predictedTrick,
+      confidence,
+      evidence: errorMessage ?? 'Supabase에 저장된 최신 evidence result입니다.',
+    },
+    alternativeCandidates: [],
+    family: {
+      value: family,
+      confidence,
+      evidence: 'Supabase에 저장된 최신 family result입니다.',
+    },
+    temporalWindows: asRecord(evidence.temporal_windows) as
+      | GeminiEvidenceResult['temporalWindows']
+      | undefined,
+    approachObservedFacts: asRecord(evidence.approach_observed_facts) as
+      | GeminiEvidenceResult['approachObservedFacts']
+      | undefined,
+    inversionObservedFacts: asRecord(evidence.inversion_observed_facts) as
+      | GeminiEvidenceResult['inversionObservedFacts']
+      | undefined,
+    approachType: {
+      value: '확인 필요',
+      confidence: 'low',
+      evidence: '저장된 approachType 요약은 아직 별도 컬럼으로 보관하지 않습니다.',
+    },
+    rotationType: {
+      value: '확인 필요',
+      confidence: 'low',
+      evidence: '저장된 rotationType 요약은 아직 별도 컬럼으로 보관하지 않습니다.',
+    },
+    landingOutcome: {
+      value: '확인 필요',
+      confidence: 'low',
+      evidence: '저장된 landingOutcome 요약은 아직 별도 컬럼으로 보관하지 않습니다.',
+    },
+    confidence,
+    evidence: errorMessage ?? 'Supabase에서 복원한 최신 evidence result입니다.',
+    evidenceWindows: asArray(evidence.evidence_windows) as
+      GeminiEvidenceResult['evidenceWindows'],
+    observations: asArray(evidence.observations) as GeminiEvidenceResult['observations'],
+    uncertainty: {
+      level: confidence,
+      reasons: errorMessage ? [errorMessage] : [],
+    },
+    createdAt,
+  };
+}
+
+function normalizeActivityGroupId(value?: string) {
+  if (!value || value === 'wakeboard') {
+    return 'group-wakeboard';
+  }
+
+  return value;
+}
+
+function asMomentStatus(value: unknown): MomentStatus | undefined {
+  if (
+    value === 'queued' ||
+    value === 'processing' ||
+    value === 'completed' ||
+    value === 'failed'
+  ) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function asConsistencyStatus(
+  value: unknown,
+): GeminiEvidenceResult['consistencyStatus'] {
+  if (
+    value === 'valid' ||
+    value === 'inconsistent' ||
+    value === 'needs_review'
+  ) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function asConfidence(value: unknown): EvidenceConfidence | undefined {
+  if (value === 'high' || value === 'medium' || value === 'low') {
+    return value;
+  }
+
+  return undefined;
+}
+
+function asString(value: unknown) {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function asNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function asStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+function asArray(value: unknown) {
+  return Array.isArray(value) ? value : [];
+}
+
+function asRecord(value: unknown) {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : undefined;
 }

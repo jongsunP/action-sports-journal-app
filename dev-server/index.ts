@@ -212,6 +212,140 @@ app.post("/api/moments", async (request, response) => {
   }
 });
 
+app.get("/api/moments", async (_request, response) => {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const userId = await getOrCreateDefaultSupabaseUser();
+    const { data: moments, error: momentsError } = await client
+      .from("moments")
+      .select(
+        [
+          "id",
+          "session_id",
+          "activity_group_id",
+          "title",
+          "notes",
+          "status",
+          "occurred_at",
+          "source_video_uri",
+          "thumbnail_uri",
+          "duration_ms",
+          "file_name",
+          "mime_type",
+          "file_size",
+          "latest_evidence_result_id",
+          "latest_analysis_job_id",
+          "created_at",
+          "updated_at",
+        ].join(","),
+      )
+      .eq("user_id", userId)
+      .order("occurred_at", { ascending: false });
+
+    if (momentsError) {
+      throw new Error(`Failed to list moments: ${momentsError.message}`);
+    }
+
+    const momentRows = (moments ?? []) as unknown as Array<
+      Record<string, unknown>
+    >;
+    const evidenceResultIds = momentRows
+      .map((moment) => moment.latest_evidence_result_id)
+      .filter((value): value is string => typeof value === "string");
+    const evidenceResultsById = new Map<string, Record<string, unknown>>();
+
+    if (evidenceResultIds.length > 0) {
+      const { data: evidenceResults, error: evidenceResultsError } = await client
+        .from("evidence_results")
+        .select(
+          [
+            "id",
+            "moment_id",
+            "analysis_job_id",
+            "provider",
+            "model",
+            "status",
+            "quality_mode",
+            "predicted_trick",
+            "family",
+            "confidence",
+            "needs_review",
+            "consistency_status",
+            "consistency_warnings",
+            "approach_observed_facts",
+            "inversion_observed_facts",
+            "temporal_windows",
+            "evidence_windows",
+            "observations",
+            "raw_response_text",
+            "error_message",
+            "created_at",
+            "updated_at",
+          ].join(","),
+        )
+        .in("id", evidenceResultIds);
+
+      if (evidenceResultsError) {
+        throw new Error(
+          `Failed to list evidence results: ${evidenceResultsError.message}`,
+        );
+      }
+
+      const evidenceResultRows = (evidenceResults ?? []) as unknown as Array<
+        Record<string, unknown>
+      >;
+
+      for (const evidenceResult of evidenceResultRows) {
+        if (typeof evidenceResult.id === "string") {
+          evidenceResultsById.set(
+            evidenceResult.id,
+            evidenceResult,
+          );
+        }
+      }
+    }
+
+    response.json({
+      moments: momentRows.map((moment) => ({
+        id: moment.id,
+        sessionId: moment.session_id,
+        activityGroupId: moment.activity_group_id,
+        title: moment.title,
+        notes: moment.notes,
+        status: moment.status,
+        occurredAt: moment.occurred_at,
+        sourceVideoUri: moment.source_video_uri,
+        thumbnailUri: moment.thumbnail_uri,
+        durationMs: moment.duration_ms,
+        fileName: moment.file_name,
+        mimeType: moment.mime_type,
+        fileSize: moment.file_size,
+        latestEvidenceResultId: moment.latest_evidence_result_id,
+        latestAnalysisJobId: moment.latest_analysis_job_id,
+        latestEvidenceResult:
+          typeof moment.latest_evidence_result_id === "string"
+            ? evidenceResultsById.get(moment.latest_evidence_result_id) ?? null
+            : null,
+        createdAt: moment.created_at,
+        updatedAt: moment.updated_at,
+      })),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Moment list failed.";
+    console.error("Moment list failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
 app.patch("/api/moments/:momentId/status", async (request, response) => {
   try {
     const client = getSupabaseServerClient();
