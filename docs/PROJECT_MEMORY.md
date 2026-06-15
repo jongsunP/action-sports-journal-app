@@ -54,7 +54,8 @@ Confirmed deployment state:
 - Render backend works at `https://action-sports-journal-api.onrender.com`.
 - Public HTTPS backend is used instead of the local Mac/LAN server.
 - Data remains local-first on the iPhone with AsyncStorage.
-- No database, login, cloud video storage, or CDN exists yet.
+- Supabase Phase 1 connection scaffolding exists, but no user-facing database
+  integration, login, cloud video storage, or CDN exists yet.
 
 Detailed status documents:
 
@@ -219,6 +220,52 @@ Reference documents:
 - `docs/WAKEBOARD_VALIDATION_MATRIX.md`
 - `docs/OPENAI_BENCHMARK_REPORT.md`
 
+## 2026-06-15 Infrastructure Checkpoint
+
+Today's architecture direction shifted from synchronous evidence extraction
+toward durable asynchronous analysis.
+
+Completed planning and scaffolding:
+
+- Supabase was selected as the Phase 1 infrastructure direction.
+- Supabase SDK and React Native URL polyfill were added.
+- `.env.example` now includes Supabase Phase 1 environment placeholders.
+- `src/services/supabase/client.ts` exists as a guarded mobile client scaffold.
+- `scripts/smoke-test-supabase.mjs` checks Supabase connectivity once env
+  values and schema are ready.
+- `supabase/phase1_schema.sql` drafts `users`, `moments`, `analysis_jobs`, and
+  `evidence_results`.
+- Node standard was raised to Node 22 LTS through `.nvmrc`, `package.json`
+  engines, and setup docs.
+- Async analysis transition planning was documented in
+  `docs/ASYNC_ANALYSIS_PLAN.md`.
+
+Important current boundary:
+
+- Supabase is prepared, not product-wired.
+- Auth UI is not implemented.
+- Storage is not connected.
+- Job Queue is not implemented.
+- The app still uses the current local/Render evidence extraction path.
+
+Current next architecture target:
+
+```text
+Moment created
+-> screen returns immediately
+-> AnalysisJob runs in background
+-> EvidenceResult is persisted
+-> Moment becomes completed or failed
+```
+
+Recommended next starting point:
+
+1. Owner prepares Supabase env values.
+2. Create `.env.local` and Render env values.
+3. Run `npm run supabase:smoke`.
+4. Apply `supabase/phase1_schema.sql` manually in the Supabase SQL editor.
+5. Start server-side DB write spike before changing mobile UX.
+
 ## Wakeboard Domain Knowledge
 
 Heelside and Toeside are approach / edge directions, not trick families.
@@ -356,7 +403,7 @@ Product:
 
 Architecture:
 
-- No database yet.
+- No user-facing database integration yet; Supabase Phase 1 scaffolding exists.
 - No login yet.
 - No cloud video storage yet.
 - No CDN yet.

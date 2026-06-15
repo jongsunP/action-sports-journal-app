@@ -129,6 +129,20 @@ Deployment milestone:
 - Coaching requests reach the backend/AI path, but the current next issue is a
   structured parsing failure in the coaching response flow.
 
+Infrastructure milestone on 2026-06-15:
+
+- Supabase Phase 1 preparation is documented and scaffolded.
+- Node standard is now Node 22 LTS.
+- Initial schema draft exists for `users`, `moments`, `analysis_jobs`, and
+  `evidence_results`.
+- Supabase SDK client scaffold exists, but the app is not product-wired to
+  Supabase yet.
+- A smoke test script exists, but it needs owner-provided Supabase env values
+  before it can pass.
+- The next architecture direction is synchronous analysis to asynchronous
+  background analysis.
+- Async transition plan exists at `docs/ASYNC_ANALYSIS_PLAN.md`.
+
 AI evidence checkpoint:
 
 - Gemini evidence extraction works from the standalone app.
@@ -304,19 +318,17 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. Run the real test clip through `InversionObservedFacts` v1 before modifying
-   trick classification again.
-2. Understand why nonexistent inversion evidence is being generated.
-3. Investigate whether inversion detection is using airtime/body position as a
-   proxy for true inversion mechanics.
-4. Investigate the coaching structured parsing failure.
-5. Review Detail Screen on iPhone.
-6. Decide whether the Detail Screen now feels like reviewing a riding moment
-   rather than reading a report.
-7. Review Progression UX.
+1. If continuing infrastructure, add Supabase env values and run
+   `npm run supabase:smoke`.
+2. Apply `supabase/phase1_schema.sql` in the Supabase SQL editor.
+3. Start the server-side DB write spike before changing mobile UX.
+4. Use `docs/ASYNC_ANALYSIS_PLAN.md` as the implementation guide for
+   synchronous to asynchronous analysis.
+5. If returning to AI truthfulness, run the real test clip through
+   `InversionObservedFacts` v1 before modifying trick classification again.
+6. Investigate the coaching structured parsing failure.
+7. Review Detail Screen on iPhone.
 8. Keep Feed mostly frozen unless new iPhone QA identifies a specific issue.
-9. Resume Event Window Detection and trick-recognition consistency after the
-   primary moment experience is stable.
 
 Open questions:
 
@@ -332,4 +344,5 @@ Open questions:
 
 For a new Codex session, read `AGENTS.md`, `docs/HANDOFF.md`,
 `docs/CONTINUITY_CHECKPOINT.md`, `docs/CURRENT_STAGE.md`, and
-`docs/DEV_AI_ANALYSIS_SETUP.md` first.
+`docs/ASYNC_ANALYSIS_PLAN.md` first. Read `docs/DEV_AI_ANALYSIS_SETUP.md` when
+working on the AI backend or model behavior.

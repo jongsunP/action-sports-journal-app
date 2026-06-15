@@ -65,7 +65,7 @@ Stored Session Intelligence
 Latest known project checkpoint:
 
 ```text
-4807a10 Create permanent project memory system
+fcbfb92 Document async analysis transition plan
 ```
 
 Repository:
@@ -153,8 +153,59 @@ Local path:
   judged good in iPhone QA.
 - Coaching requests reach the backend/AI path, but the current next issue is a
   structured parsing failure in the coaching response flow.
+- Supabase Phase 1 preparation is scaffolded but not product-wired.
+- Node standard is Node 22 LTS.
+- Async analysis transition planning is documented.
 
 ## Today's Conclusions
+
+## 2026-06-15 Infrastructure Wrap-Up
+
+Today closed with two pushed commits:
+
+```text
+91e8d7c Prepare Supabase phase 1 and standardize Node 22
+fcbfb92 Document async analysis transition plan
+```
+
+What changed:
+
+- Supabase Phase 1 setup guide was added.
+- Supabase client scaffold was added for future mobile use.
+- Supabase connection smoke test script was added.
+- Initial SQL schema draft was added for `users`, `moments`,
+  `analysis_jobs`, and `evidence_results`.
+- Node project standard was changed to Node 22 LTS.
+- Async analysis transition plan was added.
+
+Current architecture direction:
+
+```text
+Moment created
+-> immediate UI return
+-> AnalysisJob tracks background analysis
+-> EvidenceResult stores Gemini evidence output
+-> Moment status becomes completed or failed
+```
+
+Important boundaries:
+
+- No Auth UI yet.
+- No Storage integration yet.
+- No Job Queue yet.
+- Supabase env values are not committed and still need to be supplied by the
+  owner.
+- The app still uses the current evidence extraction flow until async
+  implementation begins.
+
+Next starting point:
+
+1. Switch local shell to Node 22 LTS with `nvm install && nvm use`.
+2. Add Supabase values to `.env.local` and Render env.
+3. Run `npm run supabase:smoke`.
+4. Apply `supabase/phase1_schema.sql` in Supabase SQL editor.
+5. Start server-side DB write spike.
+6. Then implement async analysis using `docs/ASYNC_ANALYSIS_PLAN.md`.
 
 ## 2026-06-15 AI Evidence Checkpoint
 
@@ -338,7 +389,7 @@ Architecture status:
 
 - Data remains local-first on the iPhone through AsyncStorage.
 - Backend is a thin AI gateway plus thumbnail generation server.
-- No database yet.
+- No user-facing database integration yet; Supabase Phase 1 scaffolding exists.
 - No login yet.
 - No cloud video storage yet.
 - No CDN yet.
@@ -394,6 +445,10 @@ Use Node 22 LTS when running Expo locally.
 - `docs/DEV_AI_ANALYSIS_SETUP.md`: local Gemini/OpenAI setup and spend guardrails
 - `docs/DEPLOYMENT_READINESS_ROADMAP.md`: Render/EAS internal distribution deployment path
 - `docs/OPENAI_BENCHMARK_REPORT.md`: OpenAI vs Gemini benchmark procedure and pending report
+- `docs/SUPABASE_PHASE_1_SETUP.md`: Supabase Phase 1 project and connection setup
+- `docs/ASYNC_ANALYSIS_PLAN.md`: synchronous to asynchronous analysis transition plan
+- `supabase/phase1_schema.sql`: initial Supabase schema draft
+- `scripts/smoke-test-supabase.mjs`: Supabase connection smoke test
 - `REVIEW.md`: Stage 1 repository review
 - `App.tsx`: app entry
 - `src/features/sessions/HomeScreen.tsx`: current first screen
@@ -421,8 +476,8 @@ Do not design features that bypass Session.
 
 ## Do Not Implement Yet
 
-- Database
-- Authentication
+- User-facing database integration
+- Authentication UI
 - Phone login
 - Coupons
 - Expense tracking
@@ -430,6 +485,7 @@ Do not design features that bypass Session.
 - RAG
 - Production video upload or storage
 - Production database/cloud storage implementation
+- Background job queue
 
 Do not put Gemini or OpenAI API keys in the mobile app. Real AI analysis should go through a server/BFF endpoint.
 
@@ -443,7 +499,7 @@ codex
 Suggested first prompt:
 
 ```text
-AGENTS.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, docs/STAGE_3_VIDEO_ANALYSIS_PLAN.md, docs/DEV_AI_ANALYSIS_SETUP.md, docs/OPENAI_BENCHMARK_REPORT.md를 먼저 읽고, Gemini는 유지한 상태에서 OpenAI GPT-5.5 wakeboard benchmark를 이어서 진행해줘.
+AGENTS.md, docs/PROJECT_MEMORY.md, docs/HANDOFF.md, docs/CURRENT_STAGE.md, docs/CONTINUITY_CHECKPOINT.md, docs/SUPABASE_PHASE_1_SETUP.md, docs/ASYNC_ANALYSIS_PLAN.md를 먼저 읽고, Supabase Phase 1 smoke test와 동기 분석 -> 비동기 분석 전환 작업을 이어서 진행해줘.
 ```
 
 ## How To Run Locally For AI Analysis
@@ -509,14 +565,17 @@ If the backend URL changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
-Do not add unrelated product features yet. Continue from the current Moment
-First UX work:
+Do not add unrelated product features yet. Continue from the current Supabase
+Phase 1 and async analysis transition work unless the user explicitly switches
+back to AI evidence truthfulness or UX QA.
 
-1. Investigate the coaching structured parsing failure.
-2. Continue Detail Screen QA on iPhone.
-3. Review Progression UX.
-4. Keep Feed mostly frozen unless QA finds a specific issue.
-5. Keep database/auth/cloud video storage/CDN out of scope.
+1. Prepare Supabase env values.
+2. Run `npm run supabase:smoke`.
+3. Apply `supabase/phase1_schema.sql`.
+4. Prove server-side DB writes for Moment, AnalysisJob, and EvidenceResult.
+5. Use `docs/ASYNC_ANALYSIS_PLAN.md` to start the async analysis transition.
+6. Keep Auth UI, Storage, Push, Queue, scoring, and coaching expansion out of
+   scope until explicitly requested.
 
 ## Related Personal Context Repo
 

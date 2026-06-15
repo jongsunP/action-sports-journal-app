@@ -42,7 +42,7 @@ Render backend deployed and standalone iPhone app working without Expo Go
 The latest known project checkpoint is:
 
 ```text
-4807a10 Create permanent project memory system
+fcbfb92 Document async analysis transition plan
 ```
 
 At the time this checkpoint was updated, local `master` was pushed to
@@ -98,8 +98,57 @@ At the time this checkpoint was updated, local `master` was pushed to
   without exposing key values. The previous `API_KEY_INVALID` issue is fixed.
 - Coaching requests reach the backend/AI path, but the current blocker is a
   structured parsing failure in the coaching response flow.
+- Supabase Phase 1 preparation is scaffolded but not product-wired.
+- Node standard is Node 22 LTS.
+- Async analysis transition planning is documented.
 
 ## Today's Conclusions
+
+## 2026-06-15 End-of-Day Save Point
+
+Current git state at wrap-up:
+
+```text
+origin/master includes:
+91e8d7c Prepare Supabase phase 1 and standardize Node 22
+fcbfb92 Document async analysis transition plan
+```
+
+What changed today:
+
+- Supabase Phase 1 moved from planning to connection scaffolding.
+- `.env.example` now documents Supabase env values.
+- Supabase SDK dependencies are installed.
+- Mobile Supabase client scaffold exists but is not wired into product UI.
+- Supabase smoke test script exists.
+- Initial Supabase SQL schema draft exists.
+- Node standard is Node 22 LTS.
+- Async analysis transition plan exists.
+
+What remains intentionally not done:
+
+- No Auth UI.
+- No Storage connection.
+- No Job Queue.
+- No push notification.
+- No scoring.
+- No coaching expansion.
+- No mobile UX switch to async analysis yet.
+
+Next recommended work:
+
+1. Owner supplies Supabase env values.
+2. Create local `.env.local` values and Render env values.
+3. Run `npm run supabase:smoke`.
+4. Apply `supabase/phase1_schema.sql` manually.
+5. Add server-side DB write spike.
+6. Convert synchronous evidence extraction into async job-backed analysis.
+
+Primary guide:
+
+```text
+docs/ASYNC_ANALYSIS_PLAN.md
+```
 
 2026-06-14 clarified the current product definition:
 
@@ -262,7 +311,7 @@ Architecture status:
 
 - Data remains local-first on the iPhone with AsyncStorage.
 - Backend is a thin AI gateway plus thumbnail generation server.
-- No database yet.
+- No user-facing database integration yet; Supabase Phase 1 scaffolding exists.
 - No login yet.
 - No cloud video storage yet.
 - No CDN yet.
@@ -320,7 +369,7 @@ Open questions:
 
 ## Not Done Yet
 
-- No database.
+- No user-facing database integration.
 - No authentication.
 - No production database/cloud storage.
 - No production video upload or storage.
