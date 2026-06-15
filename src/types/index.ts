@@ -56,6 +56,22 @@ export type EvidenceFact = {
   evidence: string;
 };
 
+export type ObservedBoolean = true | false | 'unknown';
+
+export type InversionObservedFacts = {
+  bodyInverted: ObservedBoolean;
+  boardAboveHead: ObservedBoolean;
+  rollAxisObserved: ObservedBoolean;
+  flipAxisObserved: ObservedBoolean;
+  inversionDuration: {
+    seconds: number | null;
+    confidence: EvidenceConfidence;
+    evidence: string;
+  };
+  inversionEvidenceCount: number;
+  antiInversionEvidence: string[];
+};
+
 export type EvidenceTemporalWindows = {
   takeoffTimestamp: {
     timestampSeconds: number | null;
@@ -154,6 +170,7 @@ export type GeminiEvidenceResult = {
   temporalWindows?: EvidenceTemporalWindows;
   rawApproachType?: EvidenceFact;
   approachObservedFacts?: ApproachObservedFacts;
+  inversionObservedFacts?: InversionObservedFacts;
   approachDecision?: ApproachDecision;
   approachWarnings?: string[];
   approachType: EvidenceFact;

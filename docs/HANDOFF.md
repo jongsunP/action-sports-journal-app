@@ -181,6 +181,12 @@ Confirmed findings:
 - `FinalApproachWindow` design and implementation were added so approach
   detection is anchored near wake crossing and takeoff rather than inferred
   from the whole clip.
+- `InversionObservedFacts` v1 was implemented with observed-only fields:
+  `bodyInverted`, `boardAboveHead`, `rollAxisObserved`, `flipAxisObserved`,
+  `inversionDuration`, `inversionEvidenceCount`, and
+  `antiInversionEvidence`.
+- Invert Family is now blocked unless `boardAboveHead`, `bodyInverted`, or
+  `rollAxisObserved` is true.
 - Toeside detection improved significantly in QA.
 - Invalid Tantrum classifications are now downgraded instead of confidently
   returned as app-facing results.
@@ -216,10 +222,11 @@ Inversion Detection
 
 Next goal:
 
-- Design and validate `InversionObservedFacts` before modifying trick
-  classification again.
-- Candidate facts: `bodyInverted`, `boardAboveHead`, `rollAxis`, `flipAxis`,
-  `rotationInitiation`, and `inversionConfidence`.
+- Validate `InversionObservedFacts` v1 on the real test clip before modifying
+  trick classification again.
+- V1 facts: `bodyInverted`, `boardAboveHead`, `rollAxisObserved`,
+  `flipAxisObserved`, `inversionDuration`, `inversionEvidenceCount`, and
+  `antiInversionEvidence`.
 - First understand why nonexistent inversion evidence is being generated.
 
 2026-06-14 clarified the product identity.

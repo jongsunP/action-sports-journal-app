@@ -144,13 +144,18 @@ AI evidence checkpoint:
   facts instead of a raw heelside/toeside label when possible.
 - `FinalApproachWindow` is implemented so approach evidence is anchored near
   wake crossing and takeoff, not inferred from the whole clip.
+- `InversionObservedFacts` v1 is implemented so inversion evidence is captured
+  as observed facts before family classification.
+- Invert Family is allowed only when `boardAboveHead`, `bodyInverted`, or
+  `rollAxisObserved` is true.
 - Toeside detection improved significantly.
 - Invalid Tantrum classifications are now downgraded instead of confidently
   returned.
 
 Current AI unknowns:
 
-- Unknown: why Gemini still believes inversion exists in the test clip.
+- Unknown: whether `InversionObservedFacts` v1 will correctly report no
+  `boardAboveHead` / no roll-axis on the real test clip.
 - Unknown: whether inversion detection is using incorrect visual cues.
 - Unknown: whether inversion evidence is inferred from airtime/body position
   rather than true inversion mechanics.
@@ -265,6 +270,7 @@ Open questions:
   and consistency warnings
 - Wakeboard Trick Taxonomy Gate for family-level classification safety
 - `ApproachObservedFacts` and `FinalApproachWindow` fields in the evidence path
+- `InversionObservedFacts` v1 fields in the evidence path
 - Motion-aware dense sampling in the OpenAI benchmark path
 - EAS preview environment variable for the dev analysis endpoint
 - EAS preview environment variable for the Render analysis endpoint
@@ -290,7 +296,6 @@ Open questions:
 - Production-quality AI pipeline from confirmed Gemini evidence into GPT
   coaching
 - Long-term model availability strategy for Gemini 503/high-demand periods
-- `InversionObservedFacts` schema and validation
 - Stored user progression analysis across Sessions
 
 ## Next Recommended Step
@@ -299,8 +304,8 @@ Do not add unrelated product features yet.
 
 If returning tomorrow, continue here:
 
-1. Design and validate `InversionObservedFacts` before modifying trick
-   classification again.
+1. Run the real test clip through `InversionObservedFacts` v1 before modifying
+   trick classification again.
 2. Understand why nonexistent inversion evidence is being generated.
 3. Investigate whether inversion detection is using airtime/body position as a
    proxy for true inversion mechanics.

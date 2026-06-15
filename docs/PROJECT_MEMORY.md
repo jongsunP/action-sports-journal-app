@@ -207,6 +207,7 @@ Implemented AI safeguards:
 - Wakeboard Validation Matrix.
 - `ApproachObservedFacts`.
 - `FinalApproachWindow`.
+- `InversionObservedFacts` v1.
 - Debug capture for evidence analysis.
 - Degraded mode handling for fallback model results.
 
@@ -235,6 +236,10 @@ Core taxonomy rules:
 
 - Basic Air / Straight Air is separate from Inverts.
 - A trick cannot enter Inverts unless visible inversion evidence exists.
+- Inversion gate v1 allows Inverts only when `boardAboveHead`, `bodyInverted`,
+  or `rollAxisObserved` is true.
+- `boardAboveHead` is the primary inversion evidence. Do not define inversion
+  only as head-below-hips.
 - Back Roll belongs to invert / roll-axis family.
 - Tantrum belongs to heel-side backflip / invert family.
 - Tantrum cannot be high confidence from a toeside approach.
@@ -263,6 +268,12 @@ Known current classification state:
 - Parsing and post-processing did not create the original false positive.
 - Raw model evidence plus missing taxonomy structure caused the major error.
 - Taxonomy Gate and approach-window safeguards improved the result.
+- `InversionObservedFacts` v1 now records observed inversion evidence before
+  family classification, including `bodyInverted`, `boardAboveHead`,
+  `rollAxisObserved`, `flipAxisObserved`, `inversionDuration`,
+  `inversionEvidenceCount`, and `antiInversionEvidence`.
+- Invert Family is blocked unless `boardAboveHead`, `bodyInverted`, or
+  `rollAxisObserved` is true.
 - Invalid Tantrum classifications are now downgraded instead of confidently
   returned.
 
@@ -282,8 +293,8 @@ Timeline:
 - 2026-06-14 / 2026-06-15: Toeside Basic Jump false positive investigation
   showed raw model hallucination and missing taxonomy structure.
 - 2026-06-15: Wakeboard taxonomy, validation matrix, Taxonomy Gate,
-  `ApproachObservedFacts`, and `FinalApproachWindow` became the active AI
-  quality direction.
+  `ApproachObservedFacts`, `FinalApproachWindow`, and `InversionObservedFacts`
+  became the active AI quality direction.
 
 Why key decisions were made:
 
@@ -307,17 +318,8 @@ Inversion Detection
 
 Next starting point:
 
-- Design and validate `InversionObservedFacts` before modifying trick
-  classification again.
-
-Candidate fields:
-
-- `bodyInverted`
-- `boardAboveHead`
-- `rollAxis`
-- `flipAxis`
-- `rotationInitiation`
-- `inversionConfidence`
+- Validate `InversionObservedFacts` v1 on the real test clip before modifying
+  trick classification again.
 
 Goal:
 

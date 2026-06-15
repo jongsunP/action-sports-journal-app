@@ -59,6 +59,7 @@ type RemoteEvidenceResponse = {
   temporalWindows?: unknown;
   rawApproachType?: unknown;
   approachObservedFacts?: unknown;
+  inversionObservedFacts?: unknown;
   approachDecision?: unknown;
   approachWarnings?: unknown;
   approachType?: unknown;
@@ -269,6 +270,7 @@ function normalizeRemoteEvidence(
     temporalWindows: asEvidenceTemporalWindows(data.temporalWindows),
     rawApproachType: asOptionalEvidenceFact(data.rawApproachType),
     approachObservedFacts: asApproachObservedFacts(data.approachObservedFacts),
+    inversionObservedFacts: asInversionObservedFacts(data.inversionObservedFacts),
     approachDecision: asApproachDecision(data.approachDecision),
     approachWarnings: asStringArray(data.approachWarnings),
     approachType: asEvidenceFact(data.approachType),
@@ -447,6 +449,59 @@ function asApproachObservedFacts(
     handlePosition: asEvidenceFact(facts.handlePosition),
     bodyOrientation: asEvidenceFact(facts.bodyOrientation),
   };
+}
+
+function asInversionObservedFacts(
+  value: unknown,
+): GeminiEvidenceResult['inversionObservedFacts'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+  const duration =
+    facts.inversionDuration && typeof facts.inversionDuration === 'object'
+      ? (facts.inversionDuration as Record<string, unknown>)
+      : {};
+
+  return {
+    bodyInverted: asObservedBoolean(facts.bodyInverted),
+    boardAboveHead: asObservedBoolean(facts.boardAboveHead),
+    rollAxisObserved: asObservedBoolean(facts.rollAxisObserved),
+    flipAxisObserved: asObservedBoolean(facts.flipAxisObserved),
+    inversionDuration: {
+      seconds: asNumber(duration.seconds) ?? null,
+      confidence: asConfidenceLevel(duration.confidence) ?? 'low',
+      evidence:
+        asString(duration.evidence) ??
+        '인버전 지속 시간 근거를 충분히 읽지 못했습니다.',
+    },
+    inversionEvidenceCount:
+      asNumber(facts.inversionEvidenceCount) ??
+      countPositiveInversionFacts(facts),
+    antiInversionEvidence: asStringArray(facts.antiInversionEvidence),
+  };
+}
+
+function asObservedBoolean(value: unknown): true | false | 'unknown' {
+  if (value === true || value === 'true') {
+    return true;
+  }
+
+  if (value === false || value === 'false') {
+    return false;
+  }
+
+  return 'unknown';
+}
+
+function countPositiveInversionFacts(facts: Record<string, unknown>) {
+  return [
+    facts.bodyInverted,
+    facts.boardAboveHead,
+    facts.rollAxisObserved,
+    facts.flipAxisObserved,
+  ].filter((value) => asObservedBoolean(value) === true).length;
 }
 
 function asApproachDecision(

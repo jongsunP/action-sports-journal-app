@@ -426,6 +426,7 @@ app.post(
         temporalWindows: normalizedEvidence.temporalWindows,
         rawApproachType: normalizedEvidence.rawApproachType,
         approachObservedFacts: normalizedEvidence.approachObservedFacts,
+        inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
         approachDecision: normalizedEvidence.approachDecision,
         approachWarnings: normalizedEvidence.approachWarnings,
         approachType: normalizedEvidence.approachType,
@@ -1450,6 +1451,11 @@ function buildGeminiEvidencePrompt({
     "finalApproachWindow는 takeoffTimestamp 약 2~3초 전부터 takeoff 순간까지입니다.",
     "긴 slalom/setup 구간이 있으면 접근 방향 직접 근거로 쓰지 말고 ignoredSetupWindows에 분리하세요.",
     "approachObservedFacts는 finalApproachWindow 내부에서만 추출하세요.",
+    "inversionObservedFacts는 접근/엣지/예상 트릭에서 추론하지 말고 공중 동작에서 보이는 사실만 기록하세요.",
+    "인버트는 머리가 엉덩이보다 아래인지 하나만으로 정의하지 마세요. 1차 근거는 boardAboveHead입니다.",
+    "boardAboveHead는 보드가 라이더 머리보다 위에 명확히 있는지 관찰하세요. 보드가 머리 위에 한 번도 보이지 않으면 antiInversionEvidence에 기록하세요.",
+    "bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved가 불명확하면 unknown으로 반환하세요.",
+    "inversionObservedFacts 안에서는 트릭명, family, Back Roll/Tantrum 같은 분류를 쓰지 말고 관찰 사실만 쓰세요.",
     "earlier slalom/setup, 카메라 프레이밍, 착지/회복 구간은 approachType high의 직접 근거가 될 수 없습니다.",
     "접근 방향은 바로 힐사이드/토사이드로 단정하지 말고 먼저 approachObservedFacts를 채우세요.",
     "approachObservedFacts에는 stance, leadFoot, boardDirection, wakeCrossingPath, edgeDirectionEvidence, handlePosition, bodyOrientation을 관찰 사실로 분리해서 작성하세요.",
@@ -1498,6 +1504,7 @@ function buildGeminiEvidencePrompt({
     "- family: 인버트/스핀/그랩/슬라이드/기본 점프/확인 필요 등 넓은 계열",
     "- temporalWindows: takeoffTimestamp, finalApproachWindow, ignoredSetupWindows, approachWindowConfidence",
     "- approachObservedFacts: 접근 방향 판단 전 관찰 사실",
+    "- inversionObservedFacts: 인버트 판단 전 관찰 사실. bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved, inversionDuration, inversionEvidenceCount, antiInversionEvidence",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
     "- landingOutcome: 착지 성공/불안정 착지/크래시/확인 필요",
@@ -1515,11 +1522,13 @@ function buildGeminiEvidencePrompt({
     "- wakeCrossingPath와 edgeDirectionEvidence는 finalApproachWindow를 참조해야 합니다.",
     "- 웨이크를 넘어가는 기본 점프/스트레이트 에어로 보이면 family는 기본 점프 또는 No invert로 쓰세요.",
     "- 몸/보드가 완전히 뒤집히는 관계가 보이지 않으면 family=인버트 high를 금지하세요.",
+    "- boardAboveHead/bodyInverted/rollAxisObserved 중 true가 하나도 없으면 family=인버트를 쓰지 마세요.",
+    "- boardAboveHead가 false이고 보드가 라이더 머리 위에 한 번도 보이지 않으면 antiInversionEvidence에 그 사실을 쓰세요.",
     "- roll axis가 보이지 않으면 rotationType=No roll axis 또는 확인 필요로 쓰세요.",
     "- 백롤 mechanics가 보이지 않으면 primaryCandidate에 백롤을 쓰지 마세요.",
     "- approachObservedFacts가 부족하면 approachType high를 금지하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -1780,6 +1789,7 @@ type GeminiEvidencePayload = {
     evidence: string;
   };
   approachObservedFacts?: ApproachObservedFactsPayload;
+  inversionObservedFacts?: InversionObservedFactsPayload;
   rotationType: {
     value: string;
     confidence: "high" | "medium" | "low";
@@ -1858,6 +1868,22 @@ type ApproachObservedFactsPayload = {
   edgeDirectionEvidence: ApproachFactPayload;
   handlePosition: ApproachFactPayload;
   bodyOrientation: ApproachFactPayload;
+};
+
+type ObservedBooleanPayload = true | false | "unknown";
+
+type InversionObservedFactsPayload = {
+  bodyInverted: ObservedBooleanPayload;
+  boardAboveHead: ObservedBooleanPayload;
+  rollAxisObserved: ObservedBooleanPayload;
+  flipAxisObserved: ObservedBooleanPayload;
+  inversionDuration: {
+    seconds: number | null;
+    confidence: "high" | "medium" | "low";
+    evidence: string;
+  };
+  inversionEvidenceCount: number;
+  antiInversionEvidence: string[];
 };
 
 type ApproachDecision = {
@@ -2048,6 +2074,7 @@ function parseGeminiEvidence(outputText: string) {
     const temporalWindows = normalizeTemporalWindows(undefined);
     const rawApproachType = normalizeEvidenceFact(undefined, "확인 필요");
     const approachObservedFacts = normalizeApproachObservedFacts(undefined);
+    const inversionObservedFacts = normalizeInversionObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
       rawApproachType,
@@ -2064,6 +2091,7 @@ function parseGeminiEvidence(outputText: string) {
       temporalWindows,
       rawApproachType,
       approachObservedFacts,
+      inversionObservedFacts,
       approachDecision,
       approachWarnings: approachDecision.uncertainty,
       approachType: approachFactFromDecision(
@@ -2112,6 +2140,10 @@ function parsePartialGeminiEvidence(outputText: string) {
     outputText,
     "approachObservedFacts",
   );
+  const inversionObservedFacts = parseObjectProperty(
+    outputText,
+    "inversionObservedFacts",
+  );
   const approachType = parseObjectProperty(outputText, "approachType");
   const rotationType = parseObjectProperty(outputText, "rotationType");
   const landingOutcome = parseObjectProperty(outputText, "landingOutcome");
@@ -2127,6 +2159,8 @@ function parsePartialGeminiEvidence(outputText: string) {
       temporalWindows as GeminiEvidencePayload["temporalWindows"] | undefined,
     approachObservedFacts:
       approachObservedFacts as GeminiEvidencePayload["approachObservedFacts"] | undefined,
+    inversionObservedFacts:
+      inversionObservedFacts as GeminiEvidencePayload["inversionObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
     rotationType: rotationType as GeminiEvidencePayload["rotationType"] | undefined,
     landingOutcome:
@@ -2689,6 +2723,9 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
   const approachObservedFacts = normalizeApproachObservedFacts(
     parsed.approachObservedFacts,
   );
+  const inversionObservedFacts = normalizeInversionObservedFacts(
+    parsed.inversionObservedFacts,
+  );
   const approachDecision = deriveApproachDecision(
     approachObservedFacts,
     rawApproachType,
@@ -2711,6 +2748,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     temporalWindows,
     rawApproachType,
     approachObservedFacts,
+    inversionObservedFacts,
     approachDecision,
     approachWarnings,
     approachType: approachFactFromDecision(approachDecision, rawApproachType),
@@ -2862,6 +2900,75 @@ function normalizeApproachObservedFacts(
     handlePosition: normalizeApproachFact(facts.handlePosition, "unknown"),
     bodyOrientation: normalizeApproachFact(facts.bodyOrientation, "unknown"),
   };
+}
+
+function normalizeInversionObservedFacts(
+  value: unknown,
+): InversionObservedFactsPayload {
+  const facts =
+    value && typeof value === "object"
+      ? (value as Partial<InversionObservedFactsPayload>)
+      : {};
+  const normalized = {
+    bodyInverted: normalizeObservedBoolean(facts.bodyInverted),
+    boardAboveHead: normalizeObservedBoolean(facts.boardAboveHead),
+    rollAxisObserved: normalizeObservedBoolean(facts.rollAxisObserved),
+    flipAxisObserved: normalizeObservedBoolean(facts.flipAxisObserved),
+    inversionDuration: normalizeInversionDuration(facts.inversionDuration),
+    inversionEvidenceCount: normalizeInversionEvidenceCount(
+      facts.inversionEvidenceCount,
+    ),
+    antiInversionEvidence: normalizeStringArray(facts.antiInversionEvidence, []),
+  };
+
+  return {
+    ...normalized,
+    inversionEvidenceCount:
+      normalized.inversionEvidenceCount ??
+      [
+        normalized.bodyInverted,
+        normalized.boardAboveHead,
+        normalized.rollAxisObserved,
+        normalized.flipAxisObserved,
+      ].filter((fact) => fact === true).length,
+  };
+}
+
+function normalizeObservedBoolean(value: unknown): ObservedBooleanPayload {
+  if (value === true || value === "true") {
+    return true;
+  }
+
+  if (value === false || value === "false") {
+    return false;
+  }
+
+  return "unknown";
+}
+
+function normalizeInversionDuration(
+  value: unknown,
+): InversionObservedFactsPayload["inversionDuration"] {
+  const duration =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
+  const seconds = Number(duration.seconds);
+
+  return {
+    seconds: Number.isFinite(seconds) ? seconds : null,
+    confidence: asOpenAiConfidenceLevel(duration.confidence) ?? "low",
+    evidence:
+      typeof duration.evidence === "string"
+        ? duration.evidence
+        : "인버전 지속 시간 근거를 충분히 구조화하지 못했습니다.",
+  };
+}
+
+function normalizeInversionEvidenceCount(value: unknown) {
+  const count = Number(value);
+
+  return Number.isFinite(count) && count >= 0 ? count : undefined;
 }
 
 function normalizeApproachFact(
@@ -3401,8 +3508,11 @@ function validateWakeboardTaxonomy(
   const isBasicAirPlausible = hasBasicAirEvidence(
     `${primaryText} ${familyText} ${rotationText} ${allEvidenceText}`,
   );
-  const visibleInversion = hasVisibleInversionEvidence(allEvidenceText);
-  const visibleRollAxis = hasVisibleRollAxisEvidence(allEvidenceText);
+  const inversionGate = inversionGateEvidence(evidence.inversionObservedFacts);
+  const visibleInversion =
+    inversionGate.boardAboveHead || inversionGate.bodyInverted;
+  const visibleRollAxis = inversionGate.rollAxisObserved;
+  const invertFamilyAllowed = inversionGate.invertFamilyAllowed;
   const visibleRotationInitiation =
     hasVisibleRotationInitiationEvidence(allEvidenceText);
   const heelsideSetup = hasHeelsideSetupEvidence(approachText, allEvidenceText);
@@ -3413,12 +3523,18 @@ function validateWakeboardTaxonomy(
   const warnings: string[] = [];
   const gateFailures: string[] = [];
 
-  if (rawFamily === "invert" && evidence.family.confidence === "high") {
-    if (!visibleInversion) {
-      gateFailures.push("visible inversion evidence is missing");
-      warnings.push("명시적 인버트 근거가 없어 Invert high를 낮춥니다.");
+  if (rawFamily === "invert") {
+    if (!invertFamilyAllowed) {
+      gateFailures.push(
+        "InversionObservedFacts v1 blocks Invert Family: boardAboveHead, bodyInverted, and rollAxisObserved are not true",
+      );
+      warnings.push(
+        "InversionObservedFacts v1에서 boardAboveHead/bodyInverted/rollAxisObserved가 확인되지 않아 Invert family를 차단합니다.",
+      );
     }
+  }
 
+  if (rawFamily === "invert" && evidence.family.confidence === "high") {
     if (!visibleRotationInitiation) {
       gateFailures.push("Invert high requires rotation-initiation evidence");
       warnings.push("인버트 high에 필요한 회전 시작 근거가 부족합니다.");
@@ -3472,21 +3588,16 @@ function validateWakeboardTaxonomy(
   if (
     isInvertSpecificCandidate &&
     isBasicAirPlausible &&
-    !visibleInversion
+    !invertFamilyAllowed
   ) {
     gateFailures.push("Basic Air is plausible and invert evidence is missing");
     warnings.push("Basic Air / Straight Air 가능성이 있어 인버트 계열 high를 낮춥니다.");
   }
 
-  if (rawFamily === "invert" && !visibleInversion && !visibleRollAxis) {
-    gateFailures.push("No invert and no roll-axis evidence visible");
-    warnings.push("인버트와 roll-axis가 보이지 않아 Basic Air / Straight Air를 우선합니다.");
-  }
-
   const safeFamily: TrickFamily =
     gateFailures.length === 0
       ? rawFamily
-      : isBasicAirPlausible || (!visibleInversion && !visibleRollAxis)
+      : isBasicAirPlausible || !invertFamilyAllowed
         ? "basic_air"
         : "unknown";
   const rawPrimaryConfidence = taxonomyConfidence(
@@ -3597,18 +3708,8 @@ function applyGeminiEvidenceConsistency(
   const approachText = normalizeDomainText(evidence.approachType.value);
   const rotationText = normalizeDomainText(evidence.rotationType.value);
   const familyText = normalizeDomainText(evidence.family.value);
-  const allEvidenceText = normalizeDomainText(
-    [
-      evidence.primaryCandidate.evidence,
-      evidence.family.evidence,
-      evidence.approachType.evidence,
-      evidence.rotationType.evidence,
-      evidence.evidence,
-      ...evidence.evidenceWindows.map((window) => window.evidence),
-      ...evidence.observations.map((observation) => observation.detail),
-      ...evidence.uncertainty.reasons,
-    ].join(" "),
-  );
+  const allEvidenceText = evidenceSearchText(evidence);
+  const inversionGate = inversionGateEvidence(evidence.inversionObservedFacts);
   const isHeelsideApproach = includesAnyDomainTerm(approachText, [
     "heelside",
     "heel side",
@@ -3651,25 +3752,9 @@ function applyGeminiEvidenceConsistency(
     isHeelsideApproach &&
     includesAnyDomainTerm(allEvidenceText, ["heelside", "heel side", "힐사이드"]) &&
     includesAnyDomainTerm(allEvidenceText, ["edge", "엣지", "load", "로드"]);
-  const hasRollAxisEvidence = includesAnyDomainTerm(allEvidenceText, [
-    "roll axis",
-    "rotation axis",
-    "회전축",
-    "롤 축",
-    "roll축",
-  ]);
+  const hasRollAxisEvidence = inversionGate.rollAxisObserved;
   const hasExplicitInvertEvidence =
-    includesAnyDomainTerm(allEvidenceText, [
-      "inverted body",
-      "body/board",
-      "body-board",
-      "몸/보드",
-      "몸과 보드",
-      "상하 반전",
-      "완전히 뒤집",
-      "인버트된",
-    ]) &&
-    includesAnyDomainTerm(allEvidenceText, ["머리 위", "overhead", "inverted", "인버트"]);
+    inversionGate.boardAboveHead || inversionGate.bodyInverted;
   const hasRotationInitiationEvidence = includesAnyDomainTerm(allEvidenceText, [
     "rotation initiation",
     "회전 시작",
@@ -3722,9 +3807,11 @@ function applyGeminiEvidenceConsistency(
     }
   }
 
-  if (isInvertFamily && isFamilyHigh && !hasExplicitInvertEvidence) {
+  if (isInvertFamily && isFamilyHigh && !inversionGate.invertFamilyAllowed) {
     consistencyStatus = "inconsistent";
-    warnings.push("인버트 high 추정에 필요한 명시적 몸/보드 반전 근거가 부족합니다.");
+    warnings.push(
+      "Invert family high에 필요한 boardAboveHead/bodyInverted/rollAxisObserved 근거가 부족합니다.",
+    );
   }
 
   if (isHeelsideApproach && isApproachHigh && isToesideMentioned) {
@@ -3832,6 +3919,8 @@ function inferRawTrickFamily({
 }
 
 function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
+  const inversionFacts = evidence.inversionObservedFacts;
+
   return normalizeDomainText(
     [
       evidence.primaryCandidate.name,
@@ -3842,6 +3931,17 @@ function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
       evidence.approachType.evidence,
       evidence.rotationType.value,
       evidence.rotationType.evidence,
+      inversionFacts
+        ? [
+            `bodyInverted ${inversionFacts.bodyInverted}`,
+            `boardAboveHead ${inversionFacts.boardAboveHead}`,
+            `rollAxisObserved ${inversionFacts.rollAxisObserved}`,
+            `flipAxisObserved ${inversionFacts.flipAxisObserved}`,
+            `inversionDuration ${inversionFacts.inversionDuration.seconds ?? "unknown"} ${inversionFacts.inversionDuration.evidence}`,
+            `inversionEvidenceCount ${inversionFacts.inversionEvidenceCount}`,
+            ...inversionFacts.antiInversionEvidence,
+          ].join(" ")
+        : "",
       evidence.evidence,
       ...evidence.evidenceWindows.map(
         (window) => `${window.label} ${window.evidence}`,
@@ -3947,6 +4047,19 @@ function hasHeelsideSetupEvidence(approachText: string, allEvidenceText: string)
     includesAnyDomainTerm(allEvidenceText, ["heelside", "heel side", "힐사이드"]) &&
     includesAnyDomainTerm(allEvidenceText, ["edge", "엣지", "load", "로드"])
   );
+}
+
+function inversionGateEvidence(facts: InversionObservedFactsPayload) {
+  const bodyInverted = facts.bodyInverted === true;
+  const boardAboveHead = facts.boardAboveHead === true;
+  const rollAxisObserved = facts.rollAxisObserved === true;
+
+  return {
+    bodyInverted,
+    boardAboveHead,
+    rollAxisObserved,
+    invertFamilyAllowed: boardAboveHead || bodyInverted || rollAxisObserved,
+  };
 }
 
 function taxonomyEntryEvidence({
@@ -4471,6 +4584,47 @@ const geminiApproachObservedFactsSchema = {
   ],
 };
 
+const geminiObservedBooleanSchema = {
+  type: Type.STRING,
+  enum: ["true", "false", "unknown"],
+};
+
+const geminiInversionObservedFactsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    bodyInverted: geminiObservedBooleanSchema,
+    boardAboveHead: geminiObservedBooleanSchema,
+    rollAxisObserved: geminiObservedBooleanSchema,
+    flipAxisObserved: geminiObservedBooleanSchema,
+    inversionDuration: {
+      type: Type.OBJECT,
+      properties: {
+        seconds: { type: Type.NUMBER, nullable: true },
+        confidence: {
+          type: Type.STRING,
+          enum: ["high", "medium", "low"],
+        },
+        evidence: { type: Type.STRING },
+      },
+      required: ["seconds", "confidence", "evidence"],
+    },
+    inversionEvidenceCount: { type: Type.NUMBER },
+    antiInversionEvidence: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+  },
+  required: [
+    "bodyInverted",
+    "boardAboveHead",
+    "rollAxisObserved",
+    "flipAxisObserved",
+    "inversionDuration",
+    "inversionEvidenceCount",
+    "antiInversionEvidence",
+  ],
+};
+
 const geminiTemporalWindowsSchema = {
   type: Type.OBJECT,
   properties: {
@@ -4536,6 +4690,7 @@ const geminiEvidenceResponseSchema = {
     family: geminiEvidenceFactSchema,
     temporalWindows: geminiTemporalWindowsSchema,
     approachObservedFacts: geminiApproachObservedFactsSchema,
+    inversionObservedFacts: geminiInversionObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
     landingOutcome: geminiEvidenceFactSchema,
@@ -4607,6 +4762,7 @@ const geminiEvidenceResponseSchema = {
     "family",
     "temporalWindows",
     "approachObservedFacts",
+    "inversionObservedFacts",
     "approachType",
     "rotationType",
     "landingOutcome",
