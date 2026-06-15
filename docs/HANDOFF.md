@@ -380,7 +380,7 @@ Open questions for tomorrow:
 - TypeScript: `~5.9.2`
 - AsyncStorage: `2.2.0`
 
-Use Node 20 or newer when running Expo locally.
+Use Node 22 LTS when running Expo locally.
 
 ## Key Files
 

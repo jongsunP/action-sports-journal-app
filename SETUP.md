@@ -9,7 +9,7 @@
 필수:
 
 - Git
-- Node.js 20 이상
+- Node.js 22 LTS
 - npm
 - Xcode 및 Xcode Command Line Tools
 - Homebrew
@@ -25,22 +25,20 @@
 
 ```bash
 xcode-select --install
-brew install node watchman
+brew install node@22 watchman
 ```
 
 ## 2. Node 버전
 
-현재 감사 결과:
+프로젝트 표준:
 
 ```text
-node: v24.7.0
-npm: 11.5.1
+node: 22.x LTS
+npm: 10.x or newer
 ```
 
-프로젝트 기준:
-
-- `docs/HANDOFF.md` 기준 Node 20 이상을 사용합니다.
-- 새 Mac에서는 Node 20 LTS 이상을 설치하면 됩니다.
+- `.nvmrc` 기준 Node 22 LTS를 사용합니다.
+- 새 Mac에서는 `nvm install` 또는 Node 22 LTS 설치를 권장합니다.
 - `node_modules`는 백업하지 말고 `npm install`로 재생성합니다.
 
 확인 명령:
@@ -52,7 +50,7 @@ npm -v
 
 ## 3. npm 버전
 
-현재 npm은 `11.5.1`입니다.
+프로젝트 기준 npm은 Node 22 LTS에 포함된 npm 10 이상입니다.
 
 주의:
 
@@ -249,11 +247,13 @@ xcodebuild -version
 xcode-select --install
 ```
 
-2. Homebrew, Git, Node, Watchman을 준비합니다.
+2. Homebrew, Git, Node 22 LTS, Watchman을 준비합니다.
 
 ```bash
 brew --version
 git --version
+nvm install
+nvm use
 node -v
 npm -v
 brew install watchman
