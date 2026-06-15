@@ -41,7 +41,7 @@ create table if not exists public.moments (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint moments_status_check check (
-    status in ('draft', 'processing', 'completed', 'failed', 'archived')
+    status in ('draft', 'queued', 'processing', 'completed', 'failed', 'archived')
   )
 );
 

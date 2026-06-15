@@ -112,6 +112,7 @@ const app = express();
 
 app.use(cors());
 app.use(rateLimit);
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_request, response) => {
   response.json({
@@ -156,6 +157,110 @@ app.get("/health", (_request, response) => {
       openAiReasoningEffort,
     },
   });
+});
+
+app.post("/api/moments", async (request, response) => {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const status = readMomentStatus(request.body?.status, "queued");
+    const userId = await getOrCreateDefaultSupabaseUser();
+    const sessionId = getField(request.body?.sessionId, "");
+    const fileSize = Number(request.body?.fileSize);
+    const durationMs = Number(request.body?.durationMs);
+    const { data, error } = await client
+      .from("moments")
+      .insert({
+        user_id: userId,
+        session_id: isUuid(sessionId) ? sessionId : null,
+        activity_group_id: getField(request.body?.activityGroupId, "wakeboard"),
+        title: getField(request.body?.title, "Untitled moment"),
+        notes: nullableString(request.body?.notes),
+        status,
+        source: "standalone_app",
+        occurred_at: getField(request.body?.occurredAt, now),
+        source_video_uri: nullableString(request.body?.sourceVideoUri),
+        file_name: nullableString(request.body?.fileName),
+        mime_type: nullableString(request.body?.mimeType),
+        file_size: Number.isFinite(fileSize) ? fileSize : null,
+        duration_ms: Number.isFinite(durationMs) ? durationMs : null,
+      })
+      .select("id,status")
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to insert moment: ${error.message}`);
+    }
+
+    response.json({
+      momentId: data.id,
+      status: data.status,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Moment creation failed.";
+    console.error("Moment creation failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
+app.patch("/api/moments/:momentId/status", async (request, response) => {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const momentId = request.params.momentId;
+
+    if (!isUuid(momentId)) {
+      response.status(400).json({ error: "Invalid moment id." });
+      return;
+    }
+
+    const status = readMomentStatus(request.body?.status);
+
+    if (!status) {
+      response.status(400).json({ error: "Invalid moment status." });
+      return;
+    }
+
+    const { data, error } = await client
+      .from("moments")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", momentId)
+      .select("id,status")
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update moment status: ${error.message}`);
+    }
+
+    response.json({
+      momentId: data.id,
+      status: data.status,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Moment status update failed.";
+    console.error("Moment status update failed:", message);
+    response.status(500).json({ error: message });
+  }
 });
 
 app.get("/debug/evidence-captures", (request, response) => {
@@ -1617,6 +1722,37 @@ async function findMomentByColumn(column: "id" | "session_id", value: string) {
   return data as { id: string; user_id: string } | null;
 }
 
+async function getOrCreateDefaultSupabaseUser() {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const email = "standalone-app@action-sports-journal.invalid";
+  const { data, error } = await client
+    .from("users")
+    .upsert(
+      {
+        email,
+        display_name: "Standalone App User",
+        locale: "ko-KR",
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "email",
+      },
+    )
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to upsert default user: ${error.message}`);
+  }
+
+  return data.id as string;
+}
+
 function getSupabaseServerClient() {
   if (supabaseServerClient !== undefined) {
     return supabaseServerClient;
@@ -1641,6 +1777,25 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
+}
+
+function readMomentStatus(value: unknown, fallback?: "queued") {
+  if (
+    value === "queued" ||
+    value === "processing" ||
+    value === "completed" ||
+    value === "failed"
+  ) {
+    return value;
+  }
+
+  return fallback;
+}
+
+function nullableString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
 }
 
 async function writeEvidenceCaptureArtifact({

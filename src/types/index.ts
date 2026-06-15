@@ -9,6 +9,8 @@ export type ActivityGroup = {
   updatedAt: ISODateString;
 };
 
+export type MomentStatus = 'queued' | 'processing' | 'completed' | 'failed';
+
 export type Session = {
   id: ID;
   activityGroupId: ID;
@@ -16,6 +18,7 @@ export type Session = {
   notes?: string;
   occurredAt: ISODateString;
   videoUri?: string;
+  momentStatus?: MomentStatus;
   analysisResultId?: ID;
   shareResultIds: ID[];
   createdAt: ISODateString;
@@ -23,7 +26,6 @@ export type Session = {
 };
 
 export type AnalysisStatus = 'idle' | 'running' | 'completed' | 'failed';
-export type MomentStatus = 'processing' | 'completed' | 'failed';
 
 export type HighlightScene = {
   id: ID;

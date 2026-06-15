@@ -32,6 +32,11 @@ import {
   createSessionVideoThumbnail,
   hasConfiguredVideoThumbnailEndpoint,
 } from '../../services/video/createSessionVideoThumbnail';
+import {
+  hasConfiguredSupabaseMoments,
+  insertMoment,
+  updateMomentStatus,
+} from '../../services/moments';
 
 import type {
   AnalysisResult,
@@ -52,6 +57,7 @@ type PersistedSessionState = {
   geminiEvidenceBySessionId?: Record<string, GeminiEvidenceResult>;
   userConfirmedTrickBySessionId?: Record<string, string>;
   thumbnailsBySessionId?: Record<string, string>;
+  remoteMomentIdsBySessionId?: Record<string, string>;
 };
 
 export function HomeScreen() {
@@ -80,6 +86,9 @@ export function HomeScreen() {
   const [userConfirmedTrickBySessionId, setUserConfirmedTrickBySessionId] =
     useState<Record<string, string>>({});
   const [thumbnailsBySessionId, setThumbnailsBySessionId] = useState<
+    Record<string, string>
+  >({});
+  const [remoteMomentIdsBySessionId, setRemoteMomentIdsBySessionId] = useState<
     Record<string, string>
   >({});
   const [extractingEvidenceBySessionId, setExtractingEvidenceBySessionId] =
@@ -147,6 +156,13 @@ export function HomeScreen() {
         ) {
           setThumbnailsBySessionId(parsed.thumbnailsBySessionId);
         }
+
+        if (
+          parsed.remoteMomentIdsBySessionId &&
+          typeof parsed.remoteMomentIdsBySessionId === 'object'
+        ) {
+          setRemoteMomentIdsBySessionId(parsed.remoteMomentIdsBySessionId);
+        }
       } catch {
         Alert.alert(
           '기록을 불러오지 못했습니다',
@@ -180,6 +196,7 @@ export function HomeScreen() {
       geminiEvidenceBySessionId,
       userConfirmedTrickBySessionId,
       thumbnailsBySessionId,
+      remoteMomentIdsBySessionId,
     };
 
     AsyncStorage.setItem(
@@ -196,6 +213,7 @@ export function HomeScreen() {
     geminiEvidenceBySessionId,
     isStorageLoaded,
     openAiBenchmarkBySessionId,
+    remoteMomentIdsBySessionId,
     selectedGroupId,
     sessions,
     thumbnailsBySessionId,
@@ -240,6 +258,84 @@ export function HomeScreen() {
 
   const canSaveSession = title.trim().length > 0;
 
+  const updateLocalMomentStatus = (
+    sessionId: string,
+    momentStatus: Session['momentStatus'],
+  ) => {
+    setSessions((current) =>
+      current.map((session) =>
+        session.id === sessionId
+          ? {
+              ...session,
+              momentStatus,
+              updatedAt: new Date().toISOString(),
+            }
+          : session,
+      ),
+    );
+  };
+
+  const persistMomentToSupabase = async (
+    session: Session,
+    video?: SessionVideoAsset | null,
+  ) => {
+    if (!hasConfiguredSupabaseMoments()) {
+      return undefined;
+    }
+
+    try {
+      const remoteMomentId = await insertMoment(session, video);
+
+      if (!remoteMomentId) {
+        return undefined;
+      }
+
+      setRemoteMomentIdsBySessionId((current) => ({
+        ...current,
+        [session.id]: remoteMomentId,
+      }));
+
+      return remoteMomentId;
+    } catch (error) {
+      updateLocalMomentStatus(session.id, 'failed');
+
+      console.warn(
+        'Supabase moment persistence failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+
+      return undefined;
+    }
+  };
+
+  const syncMomentStatus = async (
+    sessionId: string,
+    momentStatus: Session['momentStatus'],
+    remoteMomentIdOverride?: string,
+  ) => {
+    if (!momentStatus) {
+      return;
+    }
+
+    updateLocalMomentStatus(sessionId, momentStatus);
+
+    const remoteMomentId =
+      remoteMomentIdOverride ?? remoteMomentIdsBySessionId[sessionId];
+
+    if (!remoteMomentId) {
+      return;
+    }
+
+    try {
+      await updateMomentStatus(remoteMomentId, momentStatus);
+    } catch (error) {
+      console.warn(
+        'Supabase moment status update failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  };
+
   const openEvidenceSheet = (session: Session) => {
     setSelectedSessionId(session.id);
     setPlayingVideoSessionId(null);
@@ -251,7 +347,7 @@ export function HomeScreen() {
     }
   };
 
-  const handleAddSession = () => {
+  const handleAddSession = async () => {
     if (!selectedGroup || !title.trim()) {
       return;
     }
@@ -264,12 +360,18 @@ export function HomeScreen() {
       notes: notes.trim() || undefined,
       occurredAt: now,
       videoUri: selectedVideo?.uri,
+      momentStatus: 'queued',
       shareResultIds: [],
       createdAt: now,
       updatedAt: now,
     };
 
     setSessions((current) => [nextSession, ...current]);
+    const remoteMomentId = await persistMomentToSupabase(
+      nextSession,
+      selectedVideo,
+    );
+
     if (selectedVideo) {
       setVideosBySessionId((current) => ({
         ...current,
@@ -280,6 +382,7 @@ export function HomeScreen() {
       void handleExtractEvidence(nextSession, {
         openSheet: false,
         videoOverride: selectedVideo,
+        momentIdOverride: remoteMomentId,
       });
     }
     setTitle('');
@@ -348,7 +451,11 @@ export function HomeScreen() {
 
   const handleExtractEvidence = async (
     session: Session,
-    options?: { openSheet?: boolean; videoOverride?: SessionVideoAsset },
+    options?: {
+      openSheet?: boolean;
+      videoOverride?: SessionVideoAsset;
+      momentIdOverride?: string;
+    },
   ) => {
     if (extractingEvidenceBySessionId[session.id]) {
       return;
@@ -377,10 +484,17 @@ export function HomeScreen() {
         ...current,
         [session.id]: true,
       }));
+      await syncMomentStatus(
+        session.id,
+        'processing',
+        options?.momentIdOverride,
+      );
       const evidence = await extractSessionEvidenceWithGemini({
         session,
         activityGroupName: 'Wakeboard',
         video,
+        momentId:
+          options?.momentIdOverride ?? remoteMomentIdsBySessionId[session.id],
         userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
       });
 
@@ -388,10 +502,20 @@ export function HomeScreen() {
         ...current,
         [session.id]: evidence,
       }));
+      await syncMomentStatus(
+        session.id,
+        'completed',
+        options?.momentIdOverride,
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '근거 추출 요청에 실패했습니다.';
 
+      await syncMomentStatus(
+        session.id,
+        'failed',
+        options?.momentIdOverride,
+      );
       setGeminiEvidenceBySessionId((current) => ({
         ...current,
         [session.id]: {
@@ -467,6 +591,9 @@ export function HomeScreen() {
             removeRecordKey(current, session.id),
           );
           setThumbnailsBySessionId((current) => removeRecordKey(current, session.id));
+          setRemoteMomentIdsBySessionId((current) =>
+            removeRecordKey(current, session.id),
+          );
 
           if (selectedSessionId === session.id) {
             setSelectedSessionId(null);
