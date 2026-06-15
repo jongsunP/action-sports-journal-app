@@ -33,7 +33,12 @@ import {
   hasConfiguredVideoThumbnailEndpoint,
 } from '../../services/video/createSessionVideoThumbnail';
 
-import type { AnalysisResult, GeminiEvidenceResult, Session } from '../../types';
+import type {
+  AnalysisResult,
+  GeminiEvidenceResult,
+  MomentStatus,
+  Session,
+} from '../../types';
 
 const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
@@ -218,11 +223,10 @@ export function HomeScreen() {
   const selectedSessionVideo = selectedSession
     ? videosBySessionId[selectedSession.id] ?? getVideoAssetFromSession(selectedSession)
     : null;
-  const selectedSessionCard = selectedSession
-    ? getSessionCardPresentation({
-        session: selectedSession,
+  const selectedMomentStatus = selectedSession
+    ? getMomentStatus({
         evidence: geminiEvidenceBySessionId[selectedSession.id],
-        thumbnailUri: thumbnailsBySessionId[selectedSession.id],
+        isProcessing: Boolean(extractingEvidenceBySessionId[selectedSession.id]),
       })
     : undefined;
   const storyMoments = visibleSessions.slice(0, 8).map((session) => ({
@@ -654,6 +658,10 @@ export function HomeScreen() {
                 });
                 const hasEvidence = Boolean(geminiEvidenceBySessionId[item.id]);
                 const isWorking = extractingEvidenceBySessionId[item.id];
+                const momentStatus = getMomentStatus({
+                  evidence: geminiEvidenceBySessionId[item.id],
+                  isProcessing: Boolean(isWorking),
+                });
 
                 return (
                 <Pressable
@@ -678,12 +686,12 @@ export function HomeScreen() {
                     )}
                     <View style={styles.momentShade} />
                     <View style={styles.momentTopBar}>
-                      <Text style={styles.momentBadge}>
-                        {isWorking
-                          ? '근거 추출 중'
+                      <Text style={[styles.momentBadge, getMomentStatusStyle(momentStatus)]}>
+                        {momentStatus
+                          ? getMomentStatusLabel(momentStatus)
                           : item.videoUri
-                            ? '라이딩 클립'
-                            : '모먼트'}
+                            ? '분석 대기'
+                            : '영상 필요'}
                       </Text>
                       <Text style={styles.momentDate}>
                         {formatSessionDateTime(item.occurredAt)}
@@ -731,6 +739,7 @@ export function HomeScreen() {
         isLoading={
           selectedSession ? Boolean(extractingEvidenceBySessionId[selectedSession.id]) : false
         }
+        momentStatus={selectedMomentStatus}
         onClose={() => {
           setSelectedSessionId(null);
           setPlayingVideoSessionId(null);
@@ -1107,6 +1116,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 8,
     paddingVertical: 5,
+  },
+  momentStatusProcessing: {
+    backgroundColor: '#facc15',
+  },
+  momentStatusCompleted: {
+    backgroundColor: '#03c75a',
+  },
+  momentStatusFailed: {
+    backgroundColor: '#fb7185',
   },
   momentDate: {
     backgroundColor: 'rgba(15, 23, 42, 0.72)',
@@ -2035,6 +2053,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 4,
   },
+  sheetStatusPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  sheetStatusText: {
+    color: '#07110a',
+    fontSize: 11,
+    fontWeight: '900',
+  },
   sheetCloseButton: {
     backgroundColor: '#f8fafc',
     borderRadius: 999,
@@ -2151,6 +2181,56 @@ function removeRecordKey<T>(record: Record<string, T>, key: string) {
   const { [key]: _removed, ...remaining } = record;
 
   return remaining;
+}
+
+function getMomentStatus({
+  evidence,
+  isProcessing,
+}: {
+  evidence?: GeminiEvidenceResult;
+  isProcessing: boolean;
+}): MomentStatus | undefined {
+  if (isProcessing) {
+    return 'processing';
+  }
+
+  if (evidence?.status === 'failed') {
+    return 'failed';
+  }
+
+  if (evidence?.status === 'completed') {
+    return 'completed';
+  }
+
+  return undefined;
+}
+
+function getMomentStatusLabel(status: MomentStatus) {
+  if (status === 'processing') {
+    return '분석 중...';
+  }
+
+  if (status === 'completed') {
+    return '분석 완료';
+  }
+
+  return '분석 실패';
+}
+
+function getMomentStatusStyle(status?: MomentStatus) {
+  if (status === 'processing') {
+    return styles.momentStatusProcessing;
+  }
+
+  if (status === 'completed') {
+    return styles.momentStatusCompleted;
+  }
+
+  if (status === 'failed') {
+    return styles.momentStatusFailed;
+  }
+
+  return undefined;
 }
 
 function getSessionCardPresentation({
@@ -2304,6 +2384,7 @@ function EvidenceBottomSheet({
   debugEndpoint,
   evidence,
   isLoading,
+  momentStatus,
   onClose,
   onDelete,
   onRetry,
@@ -2314,6 +2395,7 @@ function EvidenceBottomSheet({
   debugEndpoint?: string;
   evidence?: GeminiEvidenceResult;
   isLoading: boolean;
+  momentStatus?: MomentStatus;
   onClose: () => void;
   onDelete?: () => void;
   onRetry?: () => void;
@@ -2345,6 +2427,18 @@ function EvidenceBottomSheet({
               <Text style={styles.sheetMeta}>
                 {formatSessionDateTime(session.occurredAt)}
               </Text>
+              {momentStatus ? (
+                <View
+                  style={[
+                    styles.sheetStatusPill,
+                    getMomentStatusStyle(momentStatus),
+                  ]}
+                >
+                  <Text style={styles.sheetStatusText}>
+                    {getMomentStatusLabel(momentStatus)}
+                  </Text>
+                </View>
+              ) : null}
             </View>
             <Pressable
               accessibilityRole="button"
@@ -2372,7 +2466,7 @@ function EvidenceBottomSheet({
             ) : null}
             {isLoading ? (
               <View style={styles.sheetStateCard}>
-                <Text style={styles.sheetStateTitle}>Gemini 근거 추출 중</Text>
+                <Text style={styles.sheetStateTitle}>분석 중...</Text>
                 <Text style={styles.sheetStateText}>
                   영상에서 어프로치, 인버전, 기술 계열 근거를 확인하고 있습니다.
                 </Text>

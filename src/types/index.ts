@@ -23,6 +23,7 @@ export type Session = {
 };
 
 export type AnalysisStatus = 'idle' | 'running' | 'completed' | 'failed';
+export type MomentStatus = 'processing' | 'completed' | 'failed';
 
 export type HighlightScene = {
   id: ID;
