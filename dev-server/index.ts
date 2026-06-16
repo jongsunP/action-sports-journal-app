@@ -4446,11 +4446,7 @@ function deriveApproachObservedFactsV2(
     loadedEdge: loadedEdgeFromText(approachFactText(facts.edgeDirectionEvidence)),
   };
   const wakePathSupport = inferApproachFromWakePathAndStance(facts);
-  const bodyOrientationSupport = inferApproachFromBodyOrientation(
-    facts.bodyOrientation,
-  );
-  const stanceChainSupport =
-    wakePathSupport !== "unknown" ? wakePathSupport : bodyOrientationSupport;
+  const stanceChainSupport = wakePathSupport;
   const signals = [
     createApproachSignal({
       field: "edgeDirectionEvidence",
@@ -4492,7 +4488,6 @@ function deriveApproachObservedFactsV2(
       field: "bodyOrientation",
       fact: facts.bodyOrientation,
       strength: "weak",
-      supportOverride: bodyOrientationSupport,
     }),
     createApproachSignal({
       field: "rawApproachType",
@@ -4546,6 +4541,10 @@ function deriveApproachDecisionV2(
     (signal) => signal.strength !== "primary" && signal.supports !== "unknown",
   );
   const uncertainty: string[] = [];
+  const hasWakePathDirectionalSignal = facts.signals.some(
+    (signal) =>
+      signal.field === "wakeCrossingPath" && signal.supports !== "unknown",
+  );
 
   if (facts.conflictSummary.hasConflict) {
     uncertainty.push(facts.conflictSummary.reason);
@@ -4563,15 +4562,22 @@ function deriveApproachDecisionV2(
   const isAmbiguous =
     top.score > 0 &&
     runnerUp.score > 0 &&
-    (runnerUp.score >= top.score || hasPrimaryConflict);
+    (facts.conflictSummary.hasConflict ||
+      runnerUp.score >= top.score ||
+      hasPrimaryConflict);
   const value: ApproachDecisionV2["value"] =
     top.score === 0 ? "unknown" : isAmbiguous ? "ambiguous" : top.side;
   const confidence: ApproachDecisionV2["confidence"] =
     value === "unknown" || value === "ambiguous"
       ? "low"
-      : top.score >= 5 && runnerUp.score === 0 && uncertainty.length === 0
+      : top.score >= 5 &&
+          runnerUp.score === 0 &&
+          uncertainty.length === 0 &&
+          hasWakePathDirectionalSignal
         ? "high"
-        : "medium";
+        : hasWakePathDirectionalSignal
+          ? "medium"
+          : "low";
 
   if (value === "ambiguous") {
     uncertainty.push(
@@ -4830,37 +4836,6 @@ function wakeCrossingDirectionFromFacts(
     direction: "unknown" as const,
     frame,
   };
-}
-
-function inferApproachFromBodyOrientation(
-  fact: ApproachFactPayload,
-): ApproachEvidenceSignalV2["supports"] {
-  const text = normalizeDomainText(`${fact.value} ${fact.evidence}`);
-
-  if (
-    includesAnyDomainTerm(text, [
-      "chest facing boat",
-      "가슴이 보트",
-      "가슴이 진행 방향",
-      "chest forward",
-    ])
-  ) {
-    return "toeside";
-  }
-
-  if (
-    includesAnyDomainTerm(text, [
-      "facing away",
-      "등이",
-      "등 부분",
-      "back facing",
-      "back toward",
-    ])
-  ) {
-    return "heelside";
-  }
-
-  return "unknown";
 }
 
 function loadedEdgeFromText(text: string): "toe_edge" | "heel_edge" | "unknown" {
