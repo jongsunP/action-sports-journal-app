@@ -166,7 +166,7 @@ Gemini/upload/parse/server error
 -> analysis_jobs.status = failed
 -> analysis_jobs.last_error = safe error message
 -> analysis_jobs.failed_at = now()
--> moments.status = failed
+-> moments.status = failed only when no completed evidence exists for the Moment
 -> optional failed evidence_results row
 ```
 
@@ -176,6 +176,24 @@ Failure 원칙:
 - 실패한 job은 삭제하지 않습니다.
 - retry는 기존 failed job을 덮어쓰지 않고 새 `analysis_jobs` row를 만드는 방향이 안전합니다.
 - 사용자에게는 `failed` 상태와 "다시 시도" 액션만 보여주고 내부 error는 debug-safe 문구로 제한합니다.
+- `analysis_jobs`는 실행 시도 상태이고, `moments.status`는 사용자에게 보여줄 Moment 상태입니다.
+- completed `evidence_results`가 이미 존재하면 후속 retry/job 실패만으로 `moments.status`를 `failed`로 덮지 않습니다.
+- Moment 상태 결정 우선순위는 `completed evidence 있음 -> completed`, `active job만 있음 -> queued/processing`, `completed evidence 없이 실패 -> failed`입니다.
+- daily limit, rate limit, timeout 같은 재시도 실패는 `analysis_jobs.last_error`에 남기되, 기존 completed evidence를 가진 Moment의 최종 결과를 망가뜨리면 안 됩니다.
+
+## 3.1 Operational Notes
+
+2026-06-16 안정성 점검에서 Render `/health`가 `dailyUsageLimitEnabled: true`,
+`dailyAnalysisLimit: 3`을 반환했습니다. 이 설정은 실제 iPhone Async MVP 테스트에서
+세 번의 evidence extraction 이후 `Daily evidence extraction limit reached` 실패를 만들 수 있습니다.
+
+코드는 Stage 3 개발 중인 Async MVP를 막지 않도록 `DAILY_ANALYSIS_LIMIT` 환경변수가
+더 낮게 설정되어 있어도 최소 20회를 적용합니다. 비용 통제가 다시 필요해지면 이 하한은
+운영 정책과 함께 조정해야 합니다.
+
+앱의 `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`가 로컬 IP를 가리키는데 해당 dev-server가 죽어 있으면
+`/api/moments` polling도 실패합니다. 이 경우 앱은 Supabase를 직접 읽지 못하고 마지막
+온디바이스 저장 상태를 계속 보여줄 수 있습니다.
 
 ### Duplicate Prevention
 

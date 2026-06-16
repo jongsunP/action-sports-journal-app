@@ -35,7 +35,10 @@ const openAiMaxVideoBytes =
   readNumberEnv("OPENAI_MAX_VIDEO_MB", 50) * 1024 * 1024;
 const uploadMaxVideoBytes = Math.max(geminiMaxVideoBytes, openAiMaxVideoBytes);
 const dailyUsageLimitEnabled = process.env.NODE_ENV === "production";
-const dailyAnalysisLimit = readNumberEnv("DAILY_ANALYSIS_LIMIT", 30);
+const dailyAnalysisLimit = Math.max(
+  readNumberEnv("DAILY_ANALYSIS_LIMIT", 30),
+  20,
+);
 const rateLimitWindowMs = readNumberEnv("RATE_LIMIT_WINDOW_MS", 60_000);
 const rateLimitMaxRequests = readNumberEnv("RATE_LIMIT_MAX_REQUESTS", 3);
 const geminiMaxOutputTokens = readNumberEnv("GEMINI_MAX_OUTPUT_TOKENS", 1_200);
@@ -82,6 +85,15 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
 let supabaseServerClient: ReturnType<typeof createSupabaseClient<any>> | null | undefined;
+
+type SupabaseServerClient = ReturnType<typeof createSupabaseClient<any>>;
+
+type LinkedMoment = {
+  id: string;
+  user_id: string;
+  status?: string | null;
+  latest_evidence_result_id?: string | null;
+};
 
 const allowedVideoMimeTypes = new Set([
   "video/mp4",
@@ -1683,12 +1695,28 @@ async function persistEvidenceResultForLinkedMoment({
     );
   }
 
+  const completedEvidenceResultId = evidence.parseFailed
+    ? await findCompletedEvidenceResultIdForMoment({
+        client,
+        momentId: linkedMoment.id,
+        preferredEvidenceResultId: linkedMoment.latest_evidence_result_id,
+      })
+    : (evidenceResult.id as string);
+  const shouldKeepMomentCompleted =
+    evidence.parseFailed && Boolean(completedEvidenceResultId);
+
   const { error: momentUpdateError } = await client
     .from("moments")
     .update({
-      status: evidence.parseFailed ? "failed" : "completed",
+      status: shouldKeepMomentCompleted
+        ? "completed"
+        : evidence.parseFailed
+          ? "failed"
+          : "completed",
       latest_analysis_job_id: resolvedAnalysisJobId,
-      latest_evidence_result_id: evidenceResult.id,
+      latest_evidence_result_id: shouldKeepMomentCompleted
+        ? completedEvidenceResultId
+        : evidenceResult.id,
       updated_at: now,
     })
     .eq("id", linkedMoment.id);
@@ -1800,11 +1828,18 @@ async function createQueuedEvidenceAnalysisJob({
     throw new Error(`Failed to insert queued analysis_jobs: ${error.message}`);
   }
 
+  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+    client,
+    momentId,
+  });
   const { error: momentUpdateError } = await client
     .from("moments")
     .update({
-      status: "queued",
+      status: completedEvidenceResultId ? "completed" : "queued",
       latest_analysis_job_id: data.id,
+      ...(completedEvidenceResultId
+        ? { latest_evidence_result_id: completedEvidenceResultId }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", momentId);
@@ -1937,11 +1972,18 @@ async function markEvidenceAnalysisJobProcessing(analysisJobId: string) {
     return null;
   }
 
+  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+    client,
+    momentId: data.moment_id as string,
+  });
   const { error: momentUpdateError } = await client
     .from("moments")
     .update({
-      status: "processing",
+      status: completedEvidenceResultId ? "completed" : "processing",
       latest_analysis_job_id: analysisJobId,
+      ...(completedEvidenceResultId
+        ? { latest_evidence_result_id: completedEvidenceResultId }
+        : {}),
       updated_at: now,
     })
     .eq("id", data.moment_id);
@@ -1989,11 +2031,18 @@ async function markEvidenceAnalysisJobFailed({
     console.error(`Failed to mark analysis job failed: ${jobError.message}`);
   }
 
+  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+    client,
+    momentId,
+  });
   const { error: momentError } = await client
     .from("moments")
     .update({
-      status: "failed",
+      status: completedEvidenceResultId ? "completed" : "failed",
       latest_analysis_job_id: analysisJobId,
+      ...(completedEvidenceResultId
+        ? { latest_evidence_result_id: completedEvidenceResultId }
+        : {}),
       updated_at: now,
     })
     .eq("id", momentId);
@@ -2209,7 +2258,7 @@ async function findMomentByColumn(column: "id" | "session_id", value: string) {
 
   const { data, error } = await client
     .from("moments")
-    .select("id,user_id")
+    .select("id,user_id,status,latest_evidence_result_id")
     .eq(column, value)
     .maybeSingle();
 
@@ -2217,7 +2266,52 @@ async function findMomentByColumn(column: "id" | "session_id", value: string) {
     throw new Error(`Failed to find linked Moment: ${error.message}`);
   }
 
-  return data as { id: string; user_id: string } | null;
+  return data as LinkedMoment | null;
+}
+
+async function findCompletedEvidenceResultIdForMoment({
+  client,
+  momentId,
+  preferredEvidenceResultId,
+}: {
+  client: SupabaseServerClient;
+  momentId: string;
+  preferredEvidenceResultId?: string | null;
+}) {
+  if (preferredEvidenceResultId) {
+    const { data, error } = await client
+      .from("evidence_results")
+      .select("id,status")
+      .eq("id", preferredEvidenceResultId)
+      .eq("moment_id", momentId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(
+        `Failed to inspect latest evidence result: ${error.message}`,
+      );
+    }
+
+    if (data?.id && data.status === "completed") {
+      return data.id as string;
+    }
+  }
+
+  const { data, error } = await client
+    .from("evidence_results")
+    .select("id")
+    .eq("moment_id", momentId)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error(
+      `Failed to find completed evidence result: ${error.message}`,
+    );
+  }
+
+  return data?.[0]?.id ? (data[0].id as string) : null;
 }
 
 async function getOrCreateDefaultSupabaseUser() {

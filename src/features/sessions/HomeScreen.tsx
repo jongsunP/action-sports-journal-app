@@ -2523,16 +2523,16 @@ function getMomentStatus({
   isProcessing: boolean;
   sessionStatus?: MomentStatus;
 }): MomentStatus | undefined {
-  if (isProcessing || sessionStatus === 'processing') {
-    return 'processing';
+  if (sessionStatus === 'completed' || evidence?.status === 'completed') {
+    return 'completed';
   }
 
   if (sessionStatus === 'failed' || evidence?.status === 'failed') {
     return 'failed';
   }
 
-  if (sessionStatus === 'completed' || evidence?.status === 'completed') {
-    return 'completed';
+  if (isProcessing || sessionStatus === 'processing') {
+    return 'processing';
   }
 
   if (sessionStatus === 'queued') {
