@@ -2224,6 +2224,7 @@ async function runGeminiEvidenceExtraction({
     temporalWindows: normalizedEvidence.temporalWindows,
     rawApproachType: normalizedEvidence.rawApproachType,
     approachObservedFacts: normalizedEvidence.approachObservedFacts,
+    edgeLoadObservedFacts: normalizedEvidence.edgeLoadObservedFacts,
     approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
     inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
     approachDecision: normalizedEvidence.approachDecision,
@@ -2546,6 +2547,7 @@ async function writeEvidenceCaptureArtifact({
         },
         normalizedResult,
         approachObservedFacts: normalizedResult.approachObservedFacts,
+        edgeLoadObservedFacts: normalizedResult.edgeLoadObservedFacts,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {
@@ -2658,6 +2660,11 @@ function buildGeminiEvidencePrompt({
     "finalApproachWindow는 takeoffTimestamp 약 2~3초 전부터 takeoff 순간까지입니다.",
     "긴 slalom/setup 구간이 있으면 접근 방향 직접 근거로 쓰지 말고 ignoredSetupWindows에 분리하세요.",
     "approachObservedFacts는 finalApproachWindow 내부에서만 추출하세요.",
+    "edgeLoadObservedFacts는 edgeDirectionEvidence의 라벨 추측과 실제 edge load 물리 근거를 분리해서 작성하세요.",
+    "edgeLoadObservedFacts에는 toeEdgeLoaded, heelEdgeLoaded, edgeLoadVisible, boardTiltDirection, sprayDirection, lineTensionDirection, riderWeightOverEdge, edgeLoadConfidence, edgeLoadEvidenceText, antiEdgeLoadEvidence를 작성하세요.",
+    "toeEdgeLoaded/heelEdgeLoaded는 toe edge 또는 heel edge에 실제 하중이 실린 물리 근거가 보일 때만 true로 쓰고, 라벨만 있으면 unknown으로 쓰세요.",
+    "edge load 물리 근거는 board tilt, spray, line tension, rider weight over edge 같은 보이는 사실만 사용하세요.",
+    "Heelside로 보임, Toeside approach 같은 라벨 echo는 edgeLoadEvidenceText의 물리 근거가 될 수 없습니다.",
     "inversionObservedFacts는 접근/엣지/예상 트릭에서 추론하지 말고 공중 동작에서 보이는 사실만 기록하세요.",
     "인버트는 머리가 엉덩이보다 아래인지 하나만으로 정의하지 마세요. 1차 근거는 boardAboveHead입니다.",
     "boardAboveHead는 보드가 라이더 머리보다 위에 명확히 있는지 관찰하세요. 보드가 머리 위에 한 번도 보이지 않으면 antiInversionEvidence에 기록하세요.",
@@ -2667,6 +2674,7 @@ function buildGeminiEvidencePrompt({
     "접근 방향은 바로 힐사이드/토사이드로 단정하지 말고 먼저 approachObservedFacts를 채우세요.",
     "approachObservedFacts에는 stance, leadFoot, boardDirection, wakeCrossingPath, edgeDirectionEvidence, handlePosition, bodyOrientation을 관찰 사실로 분리해서 작성하세요.",
     "질문 순서: 스탠스는 무엇인가? 어느 발이 앞인가? 보드 방향은? 라이더는 어디서 시작했고 어디서 이륙했고 어디에 착지했는가? 어떤 엣지가 로드됐는가? 핸들은 어디에 있는가? 어떤 시각 사실이 이를 뒷받침하는가?",
+    "edgeDirectionEvidence는 기존 접근 라벨/엣지 설명으로 유지하되, 실제 edge load 물리 근거는 반드시 edgeLoadObservedFacts에 따로 분리하세요.",
     "bodyOrientation은 보조 근거입니다. 가슴/등이 보인다는 사실만으로 힐사이드/토사이드를 확정하지 마세요.",
     "트릭 후보명에서 접근 방향을 역추론하지 마세요. Back Roll/Tantrum 후보라고 해서 힐사이드로 채우면 안 됩니다.",
     "wake crossing direction만으로 approach high를 주지 마세요. stance/leadFoot/wake path/edge evidence가 부족하면 confidence를 낮추세요.",
@@ -2711,6 +2719,7 @@ function buildGeminiEvidencePrompt({
     "- family: 인버트/스핀/그랩/슬라이드/기본 점프/확인 필요 등 넓은 계열",
     "- temporalWindows: takeoffTimestamp, finalApproachWindow, ignoredSetupWindows, approachWindowConfidence",
     "- approachObservedFacts: 접근 방향 판단 전 관찰 사실",
+    "- edgeLoadObservedFacts: 실제 toe/heel edge load 물리 근거. 라벨 추측과 분리",
     "- inversionObservedFacts: 인버트 판단 전 관찰 사실. bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved, inversionDuration, inversionEvidenceCount, antiInversionEvidence",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
@@ -2734,8 +2743,9 @@ function buildGeminiEvidencePrompt({
     "- roll axis가 보이지 않으면 rotationType=No roll axis 또는 확인 필요로 쓰세요.",
     "- 백롤 mechanics가 보이지 않으면 primaryCandidate에 백롤을 쓰지 마세요.",
     "- approachObservedFacts가 부족하면 approachType high를 금지하세요.",
+    "- 실제 toe/heel edge loading이 보이지 않으면 edgeLoadConfidence는 low로 쓰세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -2996,6 +3006,7 @@ type GeminiEvidencePayload = {
     evidence: string;
   };
   approachObservedFacts?: ApproachObservedFactsPayload;
+  edgeLoadObservedFacts?: EdgeLoadObservedFactsPayload;
   inversionObservedFacts?: InversionObservedFactsPayload;
   rotationType: {
     value: string;
@@ -3079,6 +3090,19 @@ type ApproachObservedFactsPayload = {
 
 type ObservedBooleanPayload = true | false | "unknown";
 
+type EdgeLoadObservedFactsPayload = {
+  toeEdgeLoaded: ApproachFactPayload;
+  heelEdgeLoaded: ApproachFactPayload;
+  edgeLoadVisible: ApproachFactPayload;
+  boardTiltDirection: ApproachFactPayload;
+  sprayDirection: ApproachFactPayload;
+  lineTensionDirection: ApproachFactPayload;
+  riderWeightOverEdge: ApproachFactPayload;
+  edgeLoadConfidence: "high" | "medium" | "low";
+  edgeLoadEvidenceText: string;
+  antiEdgeLoadEvidence: string[];
+};
+
 type InversionObservedFactsPayload = {
   bodyInverted: ObservedBooleanPayload;
   boardAboveHead: ObservedBooleanPayload;
@@ -3131,6 +3155,7 @@ type ApproachObservedFactsV2Payload = {
   edgeDirectionEvidence: ApproachFactPayload & {
     loadedEdge: "toe_edge" | "heel_edge" | "unknown";
   };
+  edgeLoadObservedFacts: EdgeLoadObservedFactsPayload;
   handlePosition: ApproachFactPayload;
   bodyOrientation: ApproachFactPayload;
   signals: ApproachEvidenceSignalV2[];
@@ -3333,6 +3358,7 @@ function parseGeminiEvidence(outputText: string) {
     const temporalWindows = normalizeTemporalWindows(undefined);
     const rawApproachType = normalizeEvidenceFact(undefined, "확인 필요");
     const approachObservedFacts = normalizeApproachObservedFacts(undefined);
+    const edgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(undefined);
     const inversionObservedFacts = normalizeInversionObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
@@ -3342,6 +3368,7 @@ function parseGeminiEvidence(outputText: string) {
     const approachObservedFactsV2 = deriveApproachObservedFactsV2(
       approachObservedFacts,
       rawApproachType,
+      edgeLoadObservedFacts,
     );
     const approachDecisionV2 = deriveApproachDecisionV2(
       approachObservedFactsV2,
@@ -3357,6 +3384,7 @@ function parseGeminiEvidence(outputText: string) {
       temporalWindows,
       rawApproachType,
       approachObservedFacts,
+      edgeLoadObservedFacts,
       approachObservedFactsV2,
       inversionObservedFacts,
       approachDecision,
@@ -3408,6 +3436,10 @@ function parsePartialGeminiEvidence(outputText: string) {
     outputText,
     "approachObservedFacts",
   );
+  const edgeLoadObservedFacts = parseObjectProperty(
+    outputText,
+    "edgeLoadObservedFacts",
+  );
   const inversionObservedFacts = parseObjectProperty(
     outputText,
     "inversionObservedFacts",
@@ -3427,6 +3459,8 @@ function parsePartialGeminiEvidence(outputText: string) {
       temporalWindows as GeminiEvidencePayload["temporalWindows"] | undefined,
     approachObservedFacts:
       approachObservedFacts as GeminiEvidencePayload["approachObservedFacts"] | undefined,
+    edgeLoadObservedFacts:
+      edgeLoadObservedFacts as GeminiEvidencePayload["edgeLoadObservedFacts"] | undefined,
     inversionObservedFacts:
       inversionObservedFacts as GeminiEvidencePayload["inversionObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
@@ -3991,6 +4025,9 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
   const approachObservedFacts = normalizeApproachObservedFacts(
     parsed.approachObservedFacts,
   );
+  const edgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(
+    parsed.edgeLoadObservedFacts,
+  );
   const inversionObservedFacts = normalizeInversionObservedFacts(
     parsed.inversionObservedFacts,
   );
@@ -4002,6 +4039,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
   const approachObservedFactsV2 = deriveApproachObservedFactsV2(
     approachObservedFacts,
     rawApproachType,
+    edgeLoadObservedFacts,
   );
   const approachDecisionV2 = deriveApproachDecisionV2(approachObservedFactsV2);
   const approachWarnings = approachDecision.uncertainty;
@@ -4021,6 +4059,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     temporalWindows,
     rawApproachType,
     approachObservedFacts,
+    edgeLoadObservedFacts,
     approachObservedFactsV2,
     inversionObservedFacts,
     approachDecision,
@@ -4174,6 +4213,44 @@ function normalizeApproachObservedFacts(
     ),
     handlePosition: normalizeApproachFact(facts.handlePosition, "unknown"),
     bodyOrientation: normalizeApproachFact(facts.bodyOrientation, "unknown"),
+  };
+}
+
+function normalizeEdgeLoadObservedFacts(
+  value: unknown,
+): EdgeLoadObservedFactsPayload {
+  const facts =
+    value && typeof value === "object"
+      ? (value as Partial<EdgeLoadObservedFactsPayload>)
+      : {};
+
+  return {
+    toeEdgeLoaded: normalizeApproachFact(facts.toeEdgeLoaded, "unknown"),
+    heelEdgeLoaded: normalizeApproachFact(facts.heelEdgeLoaded, "unknown"),
+    edgeLoadVisible: normalizeApproachFact(facts.edgeLoadVisible, "unknown"),
+    boardTiltDirection: normalizeApproachFact(
+      facts.boardTiltDirection,
+      "unknown",
+    ),
+    sprayDirection: normalizeApproachFact(facts.sprayDirection, "unknown"),
+    lineTensionDirection: normalizeApproachFact(
+      facts.lineTensionDirection,
+      "unknown",
+    ),
+    riderWeightOverEdge: normalizeApproachFact(
+      facts.riderWeightOverEdge,
+      "unknown",
+    ),
+    edgeLoadConfidence:
+      asOpenAiConfidenceLevel(facts.edgeLoadConfidence) ?? "low",
+    edgeLoadEvidenceText:
+      typeof facts.edgeLoadEvidenceText === "string"
+        ? facts.edgeLoadEvidenceText
+        : "",
+    antiEdgeLoadEvidence: normalizeStringArray(
+      facts.antiEdgeLoadEvidence,
+      [],
+    ),
   };
 }
 
@@ -4440,6 +4517,7 @@ function deriveApproachDecision(
 function deriveApproachObservedFactsV2(
   facts: ApproachObservedFactsPayload,
   rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
+  edgeLoadObservedFacts: EdgeLoadObservedFactsPayload,
 ): ApproachObservedFactsV2Payload {
   const edgeDirectionEvidence = {
     ...facts.edgeDirectionEvidence,
@@ -4514,6 +4592,7 @@ function deriveApproachObservedFactsV2(
       ),
     },
     edgeDirectionEvidence,
+    edgeLoadObservedFacts,
     handlePosition: facts.handlePosition,
     bodyOrientation: facts.bodyOrientation,
     signals,
@@ -6365,6 +6444,40 @@ const geminiApproachObservedFactsSchema = {
   ],
 };
 
+const geminiEdgeLoadObservedFactsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    toeEdgeLoaded: geminiEvidenceFactSchema,
+    heelEdgeLoaded: geminiEvidenceFactSchema,
+    edgeLoadVisible: geminiEvidenceFactSchema,
+    boardTiltDirection: geminiEvidenceFactSchema,
+    sprayDirection: geminiEvidenceFactSchema,
+    lineTensionDirection: geminiEvidenceFactSchema,
+    riderWeightOverEdge: geminiEvidenceFactSchema,
+    edgeLoadConfidence: {
+      type: Type.STRING,
+      enum: ["high", "medium", "low"],
+    },
+    edgeLoadEvidenceText: { type: Type.STRING },
+    antiEdgeLoadEvidence: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+  },
+  required: [
+    "toeEdgeLoaded",
+    "heelEdgeLoaded",
+    "edgeLoadVisible",
+    "boardTiltDirection",
+    "sprayDirection",
+    "lineTensionDirection",
+    "riderWeightOverEdge",
+    "edgeLoadConfidence",
+    "edgeLoadEvidenceText",
+    "antiEdgeLoadEvidence",
+  ],
+};
+
 const geminiObservedBooleanSchema = {
   type: Type.STRING,
   enum: ["true", "false", "unknown"],
@@ -6471,6 +6584,7 @@ const geminiEvidenceResponseSchema = {
     family: geminiEvidenceFactSchema,
     temporalWindows: geminiTemporalWindowsSchema,
     approachObservedFacts: geminiApproachObservedFactsSchema,
+    edgeLoadObservedFacts: geminiEdgeLoadObservedFactsSchema,
     inversionObservedFacts: geminiInversionObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
@@ -6543,6 +6657,7 @@ const geminiEvidenceResponseSchema = {
     "family",
     "temporalWindows",
     "approachObservedFacts",
+    "edgeLoadObservedFacts",
     "inversionObservedFacts",
     "approachType",
     "rotationType",
