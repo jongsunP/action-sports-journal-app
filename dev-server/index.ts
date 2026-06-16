@@ -4445,6 +4445,12 @@ function deriveApproachObservedFactsV2(
     ...facts.edgeDirectionEvidence,
     loadedEdge: loadedEdgeFromText(approachFactText(facts.edgeDirectionEvidence)),
   };
+  const wakePathSupport = inferApproachFromWakePathAndStance(facts);
+  const bodyOrientationSupport = inferApproachFromBodyOrientation(
+    facts.bodyOrientation,
+  );
+  const stanceChainSupport =
+    wakePathSupport !== "unknown" ? wakePathSupport : bodyOrientationSupport;
   const signals = [
     createApproachSignal({
       field: "edgeDirectionEvidence",
@@ -4457,21 +4463,25 @@ function deriveApproachObservedFactsV2(
       field: "wakeCrossingPath",
       fact: facts.wakeCrossingPath,
       strength: "supporting",
+      supportOverride: wakePathSupport,
     }),
     createApproachSignal({
       field: "boardDirection",
       fact: facts.boardDirection,
       strength: "supporting",
+      supportOverride: stanceChainSupport,
     }),
     createApproachSignal({
       field: "stance",
       fact: facts.stance,
       strength: "weak",
+      supportOverride: stanceChainSupport,
     }),
     createApproachSignal({
       field: "leadFoot",
       fact: facts.leadFoot,
       strength: "weak",
+      supportOverride: stanceChainSupport,
     }),
     createApproachSignal({
       field: "handlePosition",
@@ -4482,6 +4492,7 @@ function deriveApproachObservedFactsV2(
       field: "bodyOrientation",
       fact: facts.bodyOrientation,
       strength: "weak",
+      supportOverride: bodyOrientationSupport,
     }),
     createApproachSignal({
       field: "rawApproachType",
@@ -4595,6 +4606,7 @@ function createApproachSignal({
   field,
   fact,
   strength,
+  supportOverride,
 }: {
   field: string;
   fact:
@@ -4602,6 +4614,7 @@ function createApproachSignal({
     | ApproachObservedFactsPayload["wakeCrossingPath"]
     | ReturnType<typeof normalizeEvidenceFact>;
   strength: ApproachEvidenceSignalV2["strength"];
+  supportOverride?: ApproachEvidenceSignalV2["supports"];
 }): ApproachEvidenceSignalV2 {
   const text = approachFactText(fact);
   const timestamps = extractEvidenceTimestamps(approachFactEvidence(fact));
@@ -4609,7 +4622,9 @@ function createApproachSignal({
   const supports =
     fact.confidence === "low" || !isSpecificApproachFact(fact)
       ? "unknown"
-      : inferred;
+      : supportOverride && supportOverride !== "unknown"
+        ? supportOverride
+        : inferred;
 
   return {
     field,
@@ -4692,6 +4707,162 @@ function signalEvidenceSummary(signal: ApproachEvidenceSignalV2) {
   return `${signal.field} supports ${signal.supports}: ${signal.evidence}`;
 }
 
+function inferApproachFromWakePathAndStance(
+  facts: ApproachObservedFactsPayload,
+): ApproachEvidenceSignalV2["supports"] {
+  const stance = riderStanceFromFacts(facts);
+  const crossing = wakeCrossingDirectionFromFacts(facts.wakeCrossingPath);
+
+  if (stance === "unknown" || crossing.direction === "unknown") {
+    return "unknown";
+  }
+
+  if (crossing.frame === "camera") {
+    return stance === "regular"
+      ? crossing.direction === "left_to_right"
+        ? "toeside"
+        : "heelside"
+      : crossing.direction === "left_to_right"
+        ? "heelside"
+        : "toeside";
+  }
+
+  if (crossing.frame === "boat") {
+    return stance === "regular"
+      ? crossing.direction === "left_to_right"
+        ? "heelside"
+        : "toeside"
+      : crossing.direction === "left_to_right"
+        ? "toeside"
+        : "heelside";
+  }
+
+  return "unknown";
+}
+
+function riderStanceFromFacts(facts: ApproachObservedFactsPayload) {
+  const stanceText = normalizeDomainText(
+    `${facts.stance.value} ${facts.stance.evidence}`,
+  );
+  const leadFootText = normalizeDomainText(
+    `${facts.leadFoot.value} ${facts.leadFoot.evidence}`,
+  );
+
+  if (
+    includesAnyDomainTerm(stanceText, ["regular", "레귤러"]) ||
+    includesAnyDomainTerm(leadFootText, ["left", "왼발", "왼쪽 발"])
+  ) {
+    return "regular" as const;
+  }
+
+  if (
+    includesAnyDomainTerm(stanceText, ["goofy", "구피"]) ||
+    includesAnyDomainTerm(leadFootText, ["right", "오른발", "오른쪽 발"])
+  ) {
+    return "goofy" as const;
+  }
+
+  return "unknown" as const;
+}
+
+function wakeCrossingDirectionFromFacts(
+  path: ApproachObservedFactsPayload["wakeCrossingPath"],
+) {
+  const text = normalizeDomainText(
+    `${path.startPosition} ${path.takeoffPosition} ${path.landingPosition} ${path.direction} ${path.evidence}`,
+  );
+  const frame = inferDirectionFrame(text);
+  const startsLeft = includesAnyDomainTerm(text, [
+    "startposition left",
+    "start left",
+    "stage left",
+    "left to right",
+    "left outside",
+    "왼쪽에서",
+    "왼쪽 바깥",
+    "보트 진행 방향 왼쪽",
+  ]);
+  const startsRight = includesAnyDomainTerm(text, [
+    "startposition right",
+    "start right",
+    "stage right",
+    "right to left",
+    "right outside",
+    "우측에서",
+    "오른쪽에서",
+    "오른쪽 바깥",
+    "보트 진행 방향 오른쪽",
+  ]);
+  const landsLeft = includesAnyDomainTerm(text, [
+    "landingposition left",
+    "landing left",
+    "stage left",
+    "right to left",
+    "좌측에 착지",
+    "왼쪽에 착지",
+    "웨이크 안쪽 (보트 진행 방향 왼쪽)",
+  ]);
+  const landsRight = includesAnyDomainTerm(text, [
+    "landingposition right",
+    "landing right",
+    "stage right",
+    "left to right",
+    "우측에 착지",
+    "오른쪽에 착지",
+    "웨이크 안쪽 (보트 진행 방향 오른쪽)",
+  ]);
+
+  if ((startsLeft && landsRight) || includesAnyDomainTerm(text, ["left to right"])) {
+    return {
+      direction: "left_to_right" as const,
+      frame,
+    };
+  }
+
+  if ((startsRight && landsLeft) || includesAnyDomainTerm(text, ["right to left"])) {
+    return {
+      direction: "right_to_left" as const,
+      frame,
+    };
+  }
+
+  return {
+    direction: "unknown" as const,
+    frame,
+  };
+}
+
+function inferApproachFromBodyOrientation(
+  fact: ApproachFactPayload,
+): ApproachEvidenceSignalV2["supports"] {
+  const text = normalizeDomainText(`${fact.value} ${fact.evidence}`);
+
+  if (
+    includesAnyDomainTerm(text, [
+      "chest facing boat",
+      "가슴이 보트",
+      "가슴이 진행 방향",
+      "chest forward",
+    ])
+  ) {
+    return "toeside";
+  }
+
+  if (
+    includesAnyDomainTerm(text, [
+      "facing away",
+      "등이",
+      "등 부분",
+      "back facing",
+      "back toward",
+    ])
+  ) {
+    return "heelside";
+  }
+
+  return "unknown";
+}
+
 function loadedEdgeFromText(text: string): "toe_edge" | "heel_edge" | "unknown" {
   const approach = approachValueFromText(text);
 
@@ -4709,12 +4880,20 @@ function loadedEdgeFromText(text: string): "toe_edge" | "heel_edge" | "unknown" 
 function inferDirectionFrame(evidence: string): DirectionFrame {
   const text = normalizeDomainText(evidence);
 
-  if (includesAnyDomainTerm(text, ["boat", "wake", "inside", "outside", "보트"])) {
-    return "boat";
+  if (
+    includesAnyDomainTerm(text, [
+      "stage left",
+      "stage right",
+      "camera",
+      "screen",
+      "화면",
+    ])
+  ) {
+    return "camera";
   }
 
-  if (includesAnyDomainTerm(text, ["camera", "screen", "left", "right", "화면"])) {
-    return "camera";
+  if (includesAnyDomainTerm(text, ["boat", "wake", "inside", "outside", "보트"])) {
+    return "boat";
   }
 
   if (includesAnyDomainTerm(text, ["rider", "toe edge", "heel edge", "라이더"])) {
