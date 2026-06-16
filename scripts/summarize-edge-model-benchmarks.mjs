@@ -9,6 +9,7 @@ function emptySummary() {
   return {
     artifactDir,
     runCount: 0,
+    benchmarkModes: [],
     models: [],
   };
 }
@@ -97,25 +98,41 @@ function summarizeModel(model, runs) {
   };
 }
 
+function summarizeScope(runs) {
+  return Array.from(new Set(runs.map((run) => run.model))).map((model) =>
+    summarizeModel(
+      model,
+      runs.filter((run) => run.model === model),
+    ),
+  );
+}
+
 const runs = await readBenchmarkRuns();
 
 if (runs.length === 0) {
   console.log(JSON.stringify(emptySummary(), null, 2));
 } else {
-  const models = Array.from(new Set(runs.map((run) => run.model))).map(
-    (model) =>
-      summarizeModel(
-        model,
-        runs.filter((run) => run.model === model),
-      ),
-  );
+  const benchmarkModes = Array.from(
+    new Set(runs.map((run) => run.benchmarkMode ?? "legacy")),
+  ).map((benchmarkMode) => {
+    const modeRuns = runs.filter(
+      (run) => (run.benchmarkMode ?? "legacy") === benchmarkMode,
+    );
+
+    return {
+      benchmarkMode,
+      runCount: modeRuns.length,
+      models: summarizeScope(modeRuns),
+    };
+  });
 
   console.log(
     JSON.stringify(
       {
         artifactDir,
         runCount: runs.length,
-        models,
+        benchmarkModes,
+        models: summarizeScope(runs),
       },
       null,
       2,

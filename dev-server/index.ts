@@ -501,11 +501,18 @@ app.post(
       const expectedEdge = normalizeBenchmarkExpectedEdge(
         request.body.expectedEdge,
       );
-      const runCount = normalizeBenchmarkRunCount(request.body.runCount);
+      const benchmarkMode = normalizeBenchmarkMode(
+        request.body.benchmarkMode ?? request.body.mode,
+      );
+      const runCount = normalizeBenchmarkRunCount(
+        request.body.runCount,
+        benchmarkMode,
+      );
       const requestedModels = normalizeBenchmarkModels(request.body.models);
       const benchmark = await runNativeVideoEdgeBenchmark({
         clipId,
         expectedEdge,
+        benchmarkMode,
         file: request.file,
         models: requestedModels,
         runCount,
@@ -1089,6 +1096,8 @@ type EvidenceJobVideoFile = {
 
 type EdgeBenchmarkExpectedEdge = "toe" | "heel" | "unknown";
 
+type EdgeBenchmarkMode = "smoke" | "full";
+
 type EdgeBenchmarkParsedResult = {
   predictedEdge: "toe" | "heel" | "unknown" | "ambiguous";
   confidence: "high" | "medium" | "low";
@@ -1105,6 +1114,7 @@ type EdgeBenchmarkParsedResult = {
 type EdgeBenchmarkRunResult = EdgeBenchmarkParsedResult & {
   clipId: string;
   expectedEdge: EdgeBenchmarkExpectedEdge;
+  benchmarkMode: EdgeBenchmarkMode;
   provider: "gemini";
   model: string;
   runIndex: number;
@@ -1120,6 +1130,7 @@ type EdgeBenchmarkSummary = {
   createdAt: string;
   clipId: string;
   expectedEdge: EdgeBenchmarkExpectedEdge;
+  benchmarkMode: EdgeBenchmarkMode;
   provider: "gemini";
   models: string[];
   runCount: number;
@@ -1143,14 +1154,27 @@ function normalizeBenchmarkExpectedEdge(
   return value === "toe" || value === "heel" ? value : "unknown";
 }
 
-function normalizeBenchmarkRunCount(value: unknown) {
+function normalizeBenchmarkMode(value: unknown): EdgeBenchmarkMode {
+  return value === "full" ? "full" : "smoke";
+}
+
+function normalizeBenchmarkRunCount(
+  value: unknown,
+  benchmarkMode: EdgeBenchmarkMode,
+) {
+  if (value === undefined || value === null || value === "") {
+    return benchmarkMode === "full" ? 3 : 1;
+  }
+
   const parsed =
     typeof value === "string" || typeof value === "number"
       ? Number(value)
-      : 1;
+      : benchmarkMode === "full"
+        ? 3
+        : 1;
 
   if (!Number.isFinite(parsed)) {
-    return 1;
+    return benchmarkMode === "full" ? 3 : 1;
   }
 
   return Math.min(Math.max(Math.trunc(parsed), 1), 5);
@@ -1176,12 +1200,14 @@ function normalizeBenchmarkModels(value: unknown) {
 async function runNativeVideoEdgeBenchmark({
   clipId,
   expectedEdge,
+  benchmarkMode,
   file,
   models,
   runCount,
 }: {
   clipId: string;
   expectedEdge: EdgeBenchmarkExpectedEdge;
+  benchmarkMode: EdgeBenchmarkMode;
   file: Express.Multer.File;
   models: string[];
   runCount: number;
@@ -1233,6 +1259,7 @@ async function runNativeVideoEdgeBenchmark({
         ...parsed,
         clipId,
         expectedEdge,
+        benchmarkMode,
         provider: "gemini",
         model,
         runIndex,
@@ -1255,6 +1282,7 @@ async function runNativeVideoEdgeBenchmark({
     createdAt,
     clipId,
     expectedEdge,
+    benchmarkMode,
     provider: "gemini",
     models,
     runCount,
@@ -1429,7 +1457,7 @@ async function writeEdgeBenchmarkRunArtifact(result: EdgeBenchmarkRunResult) {
 
   const artifactPath = join(
     modelBenchmarkArtifactDir,
-    `${evidenceCaptureTimestamp()}-${safeFileSegment(result.clipId)}-${safeFileSegment(result.model)}-run-${result.runIndex}.json`,
+    `${evidenceCaptureTimestamp()}-${safeFileSegment(result.benchmarkMode)}-${safeFileSegment(result.clipId)}-${safeFileSegment(result.model)}-run-${result.runIndex}.json`,
   );
 
   await writeFile(
@@ -1460,7 +1488,7 @@ async function writeEdgeBenchmarkSummaryArtifact(
 
   const artifactPath = join(
     modelBenchmarkArtifactDir,
-    `summary-${evidenceCaptureTimestamp()}-${safeFileSegment(summary.clipId)}.json`,
+    `summary-${evidenceCaptureTimestamp()}-${safeFileSegment(summary.benchmarkMode)}-${safeFileSegment(summary.clipId)}.json`,
   );
 
   await writeFile(

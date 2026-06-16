@@ -88,6 +88,29 @@ Recommended expansion:
 - 3 heel-edge short clips
 - 2 ambiguous or hard clips
 
+Ground Truth Dataset v1:
+
+```text
+dev-artifacts/benchmark-videos/
+```
+
+Included clips:
+
+- `ts_regular_1.mov` ~ `ts_regular_3.mov`
+- `ts_goofy_1.mov` ~ `ts_goofy_3.mov`
+- `hs_regular_1.mov` ~ `hs_regular_3.mov`
+- `hs_goofy_1.mov` ~ `hs_goofy_3.mov`
+
+Total:
+
+```text
+12 clips
+```
+
+The dataset is intentionally small enough to commit to the repository. The
+current total size is about 16.9MB and the clips do not contain known sensitive
+information.
+
 Each clip should have a human label:
 
 ```ts
@@ -257,7 +280,10 @@ Rules:
 - accepts multipart video
 - accepts `expectedEdge`
 - accepts `clipId`
+- accepts `benchmarkMode` or `mode`
 - accepts `models[]` or comma-separated `models`
+- `benchmarkMode=smoke` runs 1 repeat
+- `benchmarkMode=full` runs 3 repeats
 - defaults to `gemini-2.5-flash,gemini-2.5-pro`
 - writes only local artifacts under `dev-artifacts/model-benchmarks/`
 
@@ -293,13 +319,13 @@ dev-artifacts/model-benchmarks/
 One file per model run:
 
 ```text
-YYYY-MM-DD-HH-mm-ss-{clipId}-{model}-run-{n}.json
+YYYY-MM-DD-HH-mm-ss-{benchmarkMode}-{clipId}-{model}-run-{n}.json
 ```
 
 Summary file:
 
 ```text
-summary-{YYYY-MM-DD-HH-mm-ss}.json
+summary-{YYYY-MM-DD-HH-mm-ss}-{benchmarkMode}-{clipId}.json
 ```
 
 ### Step 5: Summary Script
@@ -312,6 +338,7 @@ npm run benchmark:edge:summary
 
 It should compute:
 
+- smoke/full grouping
 - accuracy by model
 - high-confidence wrong count
 - unknown/ambiguous rate
@@ -326,30 +353,90 @@ curl -X POST http://127.0.0.1:8787/debug/benchmarks/edge-native-video \
   -F "video=@/absolute/path/to/clip.mov" \
   -F "clipId=ts-short" \
   -F "expectedEdge=toe" \
+  -F "benchmarkMode=smoke" \
+  -F "models=gemini-2.5-flash"
+```
+
+Full example:
+
+```bash
+curl -X POST http://127.0.0.1:8787/debug/benchmarks/edge-native-video \
+  -F "video=@/absolute/path/to/clip.mov" \
+  -F "clipId=ts-short" \
+  -F "expectedEdge=toe" \
+  -F "benchmarkMode=full" \
   -F "runCount=3" \
   -F "models=gemini-2.5-flash,gemini-2.5-pro"
 ```
 
-## Recommended First Run
+## Benchmark Modes
 
-Use only the two short ground-truth clips first.
+### Smoke
 
-Runs:
+Use smoke mode before full mode.
 
 ```text
-ts short x gemini-2.5-flash x 3
-ts short x gemini-2.5-pro x 3
-hs short x gemini-2.5-flash x 3
-hs short x gemini-2.5-pro x 3
+benchmarkMode=smoke
+runCount=1
 ```
 
 Total:
 
 ```text
-12 model calls
+12 clips x 1 run = 12 requests per model
 ```
 
-If results are unstable, do not add more clips yet. First determine whether the prompt or model is failing.
+This fits under the current Gemini 2.5 Flash free tier daily request limit of 20
+requests, assuming no other same-day Flash calls have already consumed the
+quota.
+
+### Full
+
+Use full mode only after smoke mode is useful.
+
+```text
+benchmarkMode=full
+runCount=3
+```
+
+Total:
+
+```text
+12 clips x 3 runs = 36 requests per model
+```
+
+This cannot complete in one day on the current Gemini 2.5 Flash free tier daily
+limit of 20 requests. Split across days or use a key/project with higher quota.
+
+## Recommended Dataset Smoke Run
+
+Run all 12 Ground Truth Dataset v1 clips with Gemini 2.5 Flash first.
+
+Example shell loop:
+
+```bash
+for clip in \
+  ts_regular_1 ts_regular_2 ts_regular_3 \
+  ts_goofy_1 ts_goofy_2 ts_goofy_3 \
+  hs_regular_1 hs_regular_2 hs_regular_3 \
+  hs_goofy_1 hs_goofy_2 hs_goofy_3
+do
+  expectedEdge=toe
+  case "$clip" in hs_*) expectedEdge=heel ;; esac
+
+  curl -X POST http://127.0.0.1:8787/debug/benchmarks/edge-native-video \
+    -F "video=@dev-artifacts/benchmark-videos/${clip}.mov;type=video/quicktime" \
+    -F "clipId=${clip}" \
+    -F "expectedEdge=${expectedEdge}" \
+    -F "benchmarkMode=smoke" \
+    -F "models=gemini-2.5-flash"
+
+  sleep 15
+done
+```
+
+The `sleep 15` keeps the run below the observed Gemini Flash free tier
+per-minute limit.
 
 ## Decision Rules
 
