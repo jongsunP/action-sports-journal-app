@@ -2196,7 +2196,8 @@ async function runGeminiEvidenceExtraction({
     recoveredFromPartial ||
     normalizedEvidence.consistencyStatus !== "valid" ||
     normalizedEvidence.confidence === "low" ||
-    normalizedEvidence.primaryCandidate.confidence === "low";
+    normalizedEvidence.primaryCandidate.confidence === "low" ||
+    normalizedEvidence.edgeLoadValidation.needsReview;
   recordDailyUsage(usageKey);
   console.log(
     `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
@@ -2225,6 +2226,7 @@ async function runGeminiEvidenceExtraction({
     rawApproachType: normalizedEvidence.rawApproachType,
     approachObservedFacts: normalizedEvidence.approachObservedFacts,
     edgeLoadObservedFacts: normalizedEvidence.edgeLoadObservedFacts,
+    edgeLoadValidation: normalizedEvidence.edgeLoadValidation,
     approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
     inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
     approachDecision: normalizedEvidence.approachDecision,
@@ -2548,6 +2550,7 @@ async function writeEvidenceCaptureArtifact({
         normalizedResult,
         approachObservedFacts: normalizedResult.approachObservedFacts,
         edgeLoadObservedFacts: normalizedResult.edgeLoadObservedFacts,
+        edgeLoadValidation: normalizedResult.edgeLoadValidation,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {
@@ -3122,6 +3125,16 @@ type EdgeLoadObservedFactsPayload = {
   antiEdgeLoadEvidence: string[];
 };
 
+type EdgeLoadValidationResult = {
+  before: EdgeLoadObservedFactsPayload;
+  after: EdgeLoadObservedFactsPayload;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentPhysicalEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
 type InversionObservedFactsPayload = {
   bodyInverted: ObservedBooleanPayload;
   boardAboveHead: ObservedBooleanPayload;
@@ -3377,7 +3390,12 @@ function parseGeminiEvidence(outputText: string) {
     const temporalWindows = normalizeTemporalWindows(undefined);
     const rawApproachType = normalizeEvidenceFact(undefined, "확인 필요");
     const approachObservedFacts = normalizeApproachObservedFacts(undefined);
-    const edgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(undefined);
+    const rawEdgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(undefined);
+    const edgeLoadValidation = validateEdgeLoadObservedFacts({
+      approachObservedFacts,
+      edgeLoadObservedFacts: rawEdgeLoadObservedFacts,
+    });
+    const edgeLoadObservedFacts = edgeLoadValidation.after;
     const inversionObservedFacts = normalizeInversionObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
@@ -3404,6 +3422,7 @@ function parseGeminiEvidence(outputText: string) {
       rawApproachType,
       approachObservedFacts,
       edgeLoadObservedFacts,
+      edgeLoadValidation,
       approachObservedFactsV2,
       inversionObservedFacts,
       approachDecision,
@@ -4044,9 +4063,14 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
   const approachObservedFacts = normalizeApproachObservedFacts(
     parsed.approachObservedFacts,
   );
-  const edgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(
+  const rawEdgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(
     parsed.edgeLoadObservedFacts,
   );
+  const edgeLoadValidation = validateEdgeLoadObservedFacts({
+    approachObservedFacts,
+    edgeLoadObservedFacts: rawEdgeLoadObservedFacts,
+  });
+  const edgeLoadObservedFacts = edgeLoadValidation.after;
   const inversionObservedFacts = normalizeInversionObservedFacts(
     parsed.inversionObservedFacts,
   );
@@ -4079,6 +4103,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     rawApproachType,
     approachObservedFacts,
     edgeLoadObservedFacts,
+    edgeLoadValidation,
     approachObservedFactsV2,
     inversionObservedFacts,
     approachDecision,
@@ -4271,6 +4296,295 @@ function normalizeEdgeLoadObservedFacts(
       [],
     ),
   };
+}
+
+function validateEdgeLoadObservedFacts({
+  approachObservedFacts,
+  edgeLoadObservedFacts,
+}: {
+  approachObservedFacts: ApproachObservedFactsPayload;
+  edgeLoadObservedFacts: EdgeLoadObservedFactsPayload;
+}): EdgeLoadValidationResult {
+  const before = cloneEdgeLoadObservedFacts(edgeLoadObservedFacts);
+  const after = cloneEdgeLoadObservedFacts(edgeLoadObservedFacts);
+  const rulesApplied: string[] = [];
+  const rejectedHighConfidenceReasons: string[] = [];
+  const reviewReasons: string[] = [];
+  const edgeLoadText = [
+    approachObservedFacts.edgeDirectionEvidence.evidence,
+    edgeLoadObservedFacts.edgeLoadEvidenceText,
+  ].join(" ");
+  const independentPhysicalEvidenceCount =
+    countIndependentEdgeLoadEvidence(edgeLoadObservedFacts);
+  const hasBodyOrientationLeak = containsBodyOrientationEvidence(edgeLoadText);
+  const isLabelOnlyEvidence = edgeLoadEvidenceIsLabelOnly(
+    edgeLoadObservedFacts.edgeLoadEvidenceText,
+  );
+  const wasHigh = edgeLoadObservedFacts.edgeLoadConfidence === "high";
+
+  if (hasBodyOrientationLeak) {
+    rejectedHighConfidenceReasons.push(
+      "edgeDirectionEvidence or edgeLoadEvidenceText contains body orientation terms.",
+    );
+    reviewReasons.push("body orientation was used near edge load evidence.");
+  }
+
+  if (isLabelOnlyEvidence) {
+    rejectedHighConfidenceReasons.push(
+      "edgeLoadEvidenceText repeats an edge label without independent physical detail.",
+    );
+    reviewReasons.push("edge load evidence appears label-only.");
+  }
+
+  if (independentPhysicalEvidenceCount < 2) {
+    rejectedHighConfidenceReasons.push(
+      "edgeLoadConfidence high requires at least two independent physical evidence indicators.",
+    );
+  }
+
+  if (
+    edgeLoadObservedFacts.antiEdgeLoadEvidence.length === 0 &&
+    edgeLoadObservedFacts.edgeLoadConfidence === "high"
+  ) {
+    reviewReasons.push(
+      "edgeLoadConfidence was high while antiEdgeLoadEvidence was empty.",
+    );
+    after.antiEdgeLoadEvidence = [
+      "post-validation: antiEdgeLoadEvidence was empty for high confidence.",
+    ];
+  }
+
+  if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
+    after.edgeLoadConfidence =
+      independentPhysicalEvidenceCount >= 1 &&
+      !hasBodyOrientationLeak &&
+      !isLabelOnlyEvidence
+        ? "medium"
+        : "low";
+    rulesApplied.push(
+      `edgeLoadConfidence downgraded from high to ${after.edgeLoadConfidence}.`,
+    );
+    after.toeEdgeLoaded = downgradeEdgeLoadFactConfidence(
+      after.toeEdgeLoaded,
+      after.edgeLoadConfidence,
+    );
+    after.heelEdgeLoaded = downgradeEdgeLoadFactConfidence(
+      after.heelEdgeLoaded,
+      after.edgeLoadConfidence,
+    );
+  }
+
+  if (reviewReasons.length > 0) {
+    rulesApplied.push(...reviewReasons);
+  }
+
+  return {
+    before,
+    after,
+    adjusted: JSON.stringify(before) !== JSON.stringify(after),
+    needsReview: reviewReasons.length > 0,
+    independentPhysicalEvidenceCount,
+    rulesApplied,
+    rejectedHighConfidenceReasons,
+  };
+}
+
+function cloneEdgeLoadObservedFacts(
+  facts: EdgeLoadObservedFactsPayload,
+): EdgeLoadObservedFactsPayload {
+  return {
+    toeEdgeLoaded: { ...facts.toeEdgeLoaded },
+    heelEdgeLoaded: { ...facts.heelEdgeLoaded },
+    edgeLoadVisible: { ...facts.edgeLoadVisible },
+    boardTiltDirection: { ...facts.boardTiltDirection },
+    sprayDirection: { ...facts.sprayDirection },
+    lineTensionDirection: { ...facts.lineTensionDirection },
+    riderWeightOverEdge: { ...facts.riderWeightOverEdge },
+    edgeLoadConfidence: facts.edgeLoadConfidence,
+    edgeLoadEvidenceText: facts.edgeLoadEvidenceText,
+    antiEdgeLoadEvidence: [...facts.antiEdgeLoadEvidence],
+  };
+}
+
+function downgradeEdgeLoadFactConfidence(
+  fact: ApproachFactPayload,
+  confidence: ApproachFactPayload["confidence"],
+): ApproachFactPayload {
+  const text = normalizeDomainText(`${fact.value} ${fact.evidence}`);
+  const isPositiveLoadedFact =
+    includesAnyDomainTerm(text, ["true", "loaded", "로드", "하중", "실림"]) &&
+    fact.confidence === "high";
+
+  return isPositiveLoadedFact
+    ? {
+        ...fact,
+        confidence,
+        evidence: `${fact.evidence} 서버 post-validation에서 ${confidence} confidence로 낮췄습니다.`,
+      }
+    : fact;
+}
+
+function countIndependentEdgeLoadEvidence(
+  facts: EdgeLoadObservedFactsPayload,
+) {
+  const evidenceKeys = new Set<string>();
+
+  addIndependentEdgeLoadEvidence(
+    evidenceKeys,
+    facts.boardTiltDirection,
+    isPhysicalBoardTiltEvidence,
+  );
+  addIndependentEdgeLoadEvidence(
+    evidenceKeys,
+    facts.sprayDirection,
+    isPhysicalEdgeSprayEvidence,
+  );
+  addIndependentEdgeLoadEvidence(
+    evidenceKeys,
+    facts.riderWeightOverEdge,
+    isPhysicalRiderWeightEvidence,
+  );
+
+  return evidenceKeys.size;
+}
+
+function addIndependentEdgeLoadEvidence(
+  evidenceKeys: Set<string>,
+  fact: ApproachFactPayload,
+  predicate: (text: string) => boolean,
+) {
+  const text = normalizeDomainText(`${fact.value} ${fact.evidence}`);
+
+  if (
+    fact.confidence === "low" ||
+    containsBodyOrientationEvidence(text) ||
+    edgeLoadEvidenceIsLabelOnly(text) ||
+    !predicate(text)
+  ) {
+    return;
+  }
+
+  evidenceKeys.add(dedupeEdgeLoadEvidenceText(text));
+}
+
+function dedupeEdgeLoadEvidenceText(text: string) {
+  return text
+    .replace(/\b(toe|heel|toeside|heelside|edge|loaded|load)\b/g, "")
+    .replace(/\b(토|힐|토사이드|힐사이드|엣지|로드|하중)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function containsBodyOrientationEvidence(text: string) {
+  return includesAnyDomainTerm(normalizeDomainText(text), [
+    "back visible",
+    "chest visible",
+    "facing boat",
+    "facing away",
+    "body orientation",
+    "torso",
+    "shoulder",
+    "hips facing",
+    "등이",
+    "등 방향",
+    "가슴",
+    "몸 방향",
+    "몸이",
+    "상체",
+    "어깨",
+    "골반",
+  ]);
+}
+
+function edgeLoadEvidenceIsLabelOnly(text: string) {
+  const normalized = normalizeDomainText(text);
+  const hasEdgeLabel = includesAnyDomainTerm(normalized, [
+    "heel edge",
+    "toe edge",
+    "heelside edge",
+    "toeside edge",
+    "heel edge loaded",
+    "toe edge loaded",
+    "힐 엣지",
+    "토 엣지",
+    "힐사이드 엣지",
+    "토사이드 엣지",
+    "힐 엣지 로드",
+    "토 엣지 로드",
+  ]);
+  const hasPhysicalDetail = includesAnyDomainTerm(normalized, [
+    "spray",
+    "water spray",
+    "board tilt",
+    "tilted",
+    "edge angle",
+    "weight over",
+    "stacked over",
+    "물보라",
+    "물살",
+    "보드 기울",
+    "기울어",
+    "엣지 각도",
+    "체중",
+    "무게 중심",
+    "물에 잠기",
+  ]);
+
+  return hasEdgeLabel && !hasPhysicalDetail;
+}
+
+function isPhysicalBoardTiltEvidence(text: string) {
+  return (
+    includesAnyDomainTerm(text, [
+      "board tilt",
+      "tilted",
+      "edge angle",
+      "보드 기울",
+      "기울어",
+      "엣지 각도",
+      "물에 잠기",
+    ]) &&
+    includesEdgeSideTerm(text)
+  );
+}
+
+function isPhysicalEdgeSprayEvidence(text: string) {
+  return (
+    includesAnyDomainTerm(text, [
+      "spray",
+      "water spray",
+      "물보라",
+      "물살",
+    ]) &&
+    includesEdgeSideTerm(text)
+  );
+}
+
+function isPhysicalRiderWeightEvidence(text: string) {
+  return (
+    includesAnyDomainTerm(text, [
+      "weight over",
+      "stacked over",
+      "rider weight",
+      "체중",
+      "무게 중심",
+      "질량",
+    ]) &&
+    includesEdgeSideTerm(text)
+  );
+}
+
+function includesEdgeSideTerm(text: string) {
+  return includesAnyDomainTerm(text, [
+    "toe edge",
+    "heel edge",
+    "toeside edge",
+    "heelside edge",
+    "토 엣지",
+    "힐 엣지",
+    "토사이드 엣지",
+    "힐사이드 엣지",
+  ]);
 }
 
 function normalizeInversionObservedFacts(
