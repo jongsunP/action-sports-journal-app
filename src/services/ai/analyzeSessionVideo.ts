@@ -71,8 +71,10 @@ type RemoteEvidenceResponse = {
   temporalWindows?: unknown;
   rawApproachType?: unknown;
   approachObservedFacts?: unknown;
+  approachObservedFactsV2?: unknown;
   inversionObservedFacts?: unknown;
   approachDecision?: unknown;
+  approachDecisionV2?: unknown;
   approachWarnings?: unknown;
   approachType?: unknown;
   rotationType?: unknown;
@@ -363,8 +365,12 @@ function normalizeRemoteEvidence(
     temporalWindows: asEvidenceTemporalWindows(data.temporalWindows),
     rawApproachType: asOptionalEvidenceFact(data.rawApproachType),
     approachObservedFacts: asApproachObservedFacts(data.approachObservedFacts),
+    approachObservedFactsV2: asApproachObservedFactsV2(
+      data.approachObservedFactsV2,
+    ),
     inversionObservedFacts: asInversionObservedFacts(data.inversionObservedFacts),
     approachDecision: asApproachDecision(data.approachDecision),
+    approachDecisionV2: asApproachDecisionV2(data.approachDecisionV2),
     approachWarnings: asStringArray(data.approachWarnings),
     approachType: asEvidenceFact(data.approachType),
     rotationType: asEvidenceFact(data.rotationType),
@@ -544,6 +550,71 @@ function asApproachObservedFacts(
   };
 }
 
+function asApproachObservedFactsV2(
+  value: unknown,
+): GeminiEvidenceResult['approachObservedFactsV2'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+  const boardDirection =
+    facts.boardDirection && typeof facts.boardDirection === 'object'
+      ? (facts.boardDirection as Record<string, unknown>)
+      : {};
+  const wakeCrossingPath =
+    facts.wakeCrossingPath && typeof facts.wakeCrossingPath === 'object'
+      ? (facts.wakeCrossingPath as Record<string, unknown>)
+      : {};
+  const edgeDirectionEvidence =
+    facts.edgeDirectionEvidence && typeof facts.edgeDirectionEvidence === 'object'
+      ? (facts.edgeDirectionEvidence as Record<string, unknown>)
+      : {};
+  const conflictSummary =
+    facts.conflictSummary && typeof facts.conflictSummary === 'object'
+      ? (facts.conflictSummary as Record<string, unknown>)
+      : {};
+
+  return {
+    stance: asEvidenceFact(facts.stance),
+    leadFoot: asEvidenceFact(facts.leadFoot),
+    boardDirection: {
+      ...asEvidenceFact(facts.boardDirection),
+      frameOfReference: asDirectionFrame(boardDirection.frameOfReference),
+      noseDirection: asString(boardDirection.noseDirection),
+      travelDirection: asString(boardDirection.travelDirection),
+    },
+    wakeCrossingPath: {
+      startPosition: asString(wakeCrossingPath.startPosition) ?? 'unknown',
+      takeoffPosition: asString(wakeCrossingPath.takeoffPosition) ?? 'unknown',
+      landingPosition: asString(wakeCrossingPath.landingPosition) ?? 'unknown',
+      direction: asString(wakeCrossingPath.direction) ?? 'unknown',
+      frameOfReference: asDirectionFrame(wakeCrossingPath.frameOfReference),
+      confidence: asConfidenceLevel(wakeCrossingPath.confidence) ?? 'low',
+      evidence:
+        asString(wakeCrossingPath.evidence) ??
+        '웨이크 경로 근거를 충분히 읽지 못했습니다.',
+    },
+    edgeDirectionEvidence: {
+      ...asEvidenceFact(facts.edgeDirectionEvidence),
+      loadedEdge: asLoadedEdge(edgeDirectionEvidence.loadedEdge),
+    },
+    handlePosition: asEvidenceFact(facts.handlePosition),
+    bodyOrientation: asEvidenceFact(facts.bodyOrientation),
+    signals: asApproachEvidenceSignals(facts.signals),
+    conflictSummary: {
+      hasConflict: conflictSummary.hasConflict === true,
+      toesideSignals: asNumber(conflictSummary.toesideSignals) ?? 0,
+      heelsideSignals: asNumber(conflictSummary.heelsideSignals) ?? 0,
+      switchSignals: asNumber(conflictSummary.switchSignals) ?? 0,
+      conflictFields: asStringArray(conflictSummary.conflictFields),
+      reason:
+        asString(conflictSummary.reason) ??
+        'v2 approach conflict summary가 제공되지 않았습니다.',
+    },
+  };
+}
+
 function asInversionObservedFacts(
   value: unknown,
 ): GeminiEvidenceResult['inversionObservedFacts'] {
@@ -626,6 +697,57 @@ function asApproachDecision(
   };
 }
 
+function asApproachDecisionV2(
+  value: unknown,
+): GeminiEvidenceResult['approachDecisionV2'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const decision = value as Record<string, unknown>;
+
+  return {
+    value: asApproachSide(decision.value),
+    confidence: asConfidenceLevel(decision.confidence) ?? 'low',
+    primaryEvidence: asStringArray(decision.primaryEvidence),
+    supportingEvidence: asStringArray(decision.supportingEvidence),
+    conflictingEvidence: asStringArray(decision.conflictingEvidence),
+    rejectedAlternatives: asRejectedApproachAlternatives(
+      decision.rejectedAlternatives,
+    ),
+    uncertainty: asStringArray(decision.uncertainty),
+  };
+}
+
+function asApproachEvidenceSignals(
+  value: unknown,
+): NonNullable<GeminiEvidenceResult['approachObservedFactsV2']>['signals'] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const signal = item as Record<string, unknown>;
+
+      return {
+        field: asString(signal.field) ?? 'unknown',
+        supports: asSignalSupport(signal.supports),
+        strength: asSignalStrength(signal.strength),
+        confidence: asConfidenceLevel(signal.confidence) ?? 'low',
+        evidence:
+          asString(signal.evidence) ??
+          'approach v2 signal 근거가 제공되지 않았습니다.',
+        timestampSeconds: asNumber(signal.timestampSeconds) ?? null,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
+
 function asRejectedApproachAlternatives(
   value: unknown,
 ): NonNullable<GeminiEvidenceResult['approachDecision']>['rejectedAlternatives'] {
@@ -656,6 +778,64 @@ function asRejectedApproachAlternatives(
       };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
+
+function asApproachSide(
+  value: unknown,
+): NonNullable<GeminiEvidenceResult['approachDecisionV2']>['value'] {
+  return value === 'heelside' ||
+    value === 'toeside' ||
+    value === 'switch' ||
+    value === 'unknown' ||
+    value === 'ambiguous'
+    ? value
+    : 'unknown';
+}
+
+function asSignalSupport(
+  value: unknown,
+): NonNullable<
+  GeminiEvidenceResult['approachObservedFactsV2']
+>['signals'][number]['supports'] {
+  return value === 'heelside' ||
+    value === 'toeside' ||
+    value === 'switch' ||
+    value === 'unknown'
+    ? value
+    : 'unknown';
+}
+
+function asDirectionFrame(
+  value: unknown,
+): NonNullable<
+  GeminiEvidenceResult['approachObservedFactsV2']
+>['boardDirection']['frameOfReference'] {
+  return value === 'boat' ||
+    value === 'camera' ||
+    value === 'rider' ||
+    value === 'unknown'
+    ? value
+    : 'unknown';
+}
+
+function asLoadedEdge(
+  value: unknown,
+): NonNullable<
+  GeminiEvidenceResult['approachObservedFactsV2']
+>['edgeDirectionEvidence']['loadedEdge'] {
+  return value === 'toe_edge' || value === 'heel_edge' || value === 'unknown'
+    ? value
+    : 'unknown';
+}
+
+function asSignalStrength(
+  value: unknown,
+): NonNullable<
+  GeminiEvidenceResult['approachObservedFactsV2']
+>['signals'][number]['strength'] {
+  return value === 'primary' || value === 'supporting' || value === 'weak'
+    ? value
+    : 'weak';
 }
 
 function asEvidenceWindows(value: unknown): GeminiEvidenceResult['evidenceWindows'] {

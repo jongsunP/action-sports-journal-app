@@ -124,6 +124,59 @@ export type ApproachDecision = {
   uncertainty: string[];
 };
 
+export type ApproachSide = 'heelside' | 'toeside' | 'switch' | 'unknown' | 'ambiguous';
+
+export type DirectionFrame = 'boat' | 'camera' | 'rider' | 'unknown';
+
+export type ApproachEvidenceSignal = {
+  field: string;
+  supports: Exclude<ApproachSide, 'ambiguous'>;
+  strength: 'primary' | 'supporting' | 'weak';
+  confidence: EvidenceConfidence;
+  evidence: string;
+  timestampSeconds?: number | null;
+};
+
+export type ApproachObservedFactsV2 = {
+  stance: EvidenceFact;
+  leadFoot: EvidenceFact;
+  boardDirection: EvidenceFact & {
+    frameOfReference: DirectionFrame;
+    noseDirection?: string;
+    travelDirection?: string;
+  };
+  wakeCrossingPath: ApproachObservedFacts['wakeCrossingPath'] & {
+    frameOfReference: DirectionFrame;
+  };
+  edgeDirectionEvidence: EvidenceFact & {
+    loadedEdge: 'toe_edge' | 'heel_edge' | 'unknown';
+  };
+  handlePosition: EvidenceFact;
+  bodyOrientation: EvidenceFact;
+  signals: ApproachEvidenceSignal[];
+  conflictSummary: {
+    hasConflict: boolean;
+    toesideSignals: number;
+    heelsideSignals: number;
+    switchSignals: number;
+    conflictFields: string[];
+    reason: string;
+  };
+};
+
+export type ApproachDecisionV2 = {
+  value: ApproachSide;
+  confidence: EvidenceConfidence;
+  primaryEvidence: string[];
+  supportingEvidence: string[];
+  conflictingEvidence: string[];
+  rejectedAlternatives: Array<{
+    value: 'heelside' | 'toeside' | 'switch';
+    reason: string;
+  }>;
+  uncertainty: string[];
+};
+
 export type AttemptedTrickEvidence = {
   name: string;
   confidence: EvidenceConfidence;
@@ -173,8 +226,10 @@ export type GeminiEvidenceResult = {
   temporalWindows?: EvidenceTemporalWindows;
   rawApproachType?: EvidenceFact;
   approachObservedFacts?: ApproachObservedFacts;
+  approachObservedFactsV2?: ApproachObservedFactsV2;
   inversionObservedFacts?: InversionObservedFacts;
   approachDecision?: ApproachDecision;
+  approachDecisionV2?: ApproachDecisionV2;
   approachWarnings?: string[];
   approachType: EvidenceFact;
   rotationType: EvidenceFact;

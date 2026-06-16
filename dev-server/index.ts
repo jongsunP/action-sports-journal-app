@@ -2158,8 +2158,10 @@ async function runGeminiEvidenceExtraction({
     temporalWindows: normalizedEvidence.temporalWindows,
     rawApproachType: normalizedEvidence.rawApproachType,
     approachObservedFacts: normalizedEvidence.approachObservedFacts,
+    approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
     inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
     approachDecision: normalizedEvidence.approachDecision,
+    approachDecisionV2: normalizedEvidence.approachDecisionV2,
     approachWarnings: normalizedEvidence.approachWarnings,
     approachType: normalizedEvidence.approachType,
     rotationType: normalizedEvidence.rotationType,
@@ -2478,6 +2480,16 @@ async function writeEvidenceCaptureArtifact({
         },
         normalizedResult,
         approachObservedFacts: normalizedResult.approachObservedFacts,
+        approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
+        approachDecisionV2: normalizedResult.approachDecisionV2,
+        approachV2Comparison: {
+          v1Decision: normalizedResult.approachDecision,
+          v1ApproachType: normalizedResult.approachType,
+          v2Decision: normalizedResult.approachDecisionV2,
+          v2ConflictSummary:
+            normalizedResult.approachObservedFactsV2?.conflictSummary ?? null,
+          v2Signals: normalizedResult.approachObservedFactsV2?.signals ?? [],
+        },
         inversionObservedFacts: normalizedResult.inversionObservedFacts,
         consistencyCheck: {
           status: normalizedResult.consistencyStatus,
@@ -3027,6 +3039,58 @@ type ApproachDecision = {
   uncertainty: string[];
 };
 
+type ApproachSideV2 = "heelside" | "toeside" | "switch" | "unknown" | "ambiguous";
+type DirectionFrame = "boat" | "camera" | "rider" | "unknown";
+
+type ApproachEvidenceSignalV2 = {
+  field: string;
+  supports: Exclude<ApproachSideV2, "ambiguous">;
+  strength: "primary" | "supporting" | "weak";
+  confidence: "high" | "medium" | "low";
+  evidence: string;
+  timestampSeconds: number | null;
+};
+
+type ApproachObservedFactsV2Payload = {
+  stance: ApproachFactPayload;
+  leadFoot: ApproachFactPayload;
+  boardDirection: ApproachFactPayload & {
+    frameOfReference: DirectionFrame;
+    noseDirection?: string;
+    travelDirection?: string;
+  };
+  wakeCrossingPath: ApproachObservedFactsPayload["wakeCrossingPath"] & {
+    frameOfReference: DirectionFrame;
+  };
+  edgeDirectionEvidence: ApproachFactPayload & {
+    loadedEdge: "toe_edge" | "heel_edge" | "unknown";
+  };
+  handlePosition: ApproachFactPayload;
+  bodyOrientation: ApproachFactPayload;
+  signals: ApproachEvidenceSignalV2[];
+  conflictSummary: {
+    hasConflict: boolean;
+    toesideSignals: number;
+    heelsideSignals: number;
+    switchSignals: number;
+    conflictFields: string[];
+    reason: string;
+  };
+};
+
+type ApproachDecisionV2 = {
+  value: ApproachSideV2;
+  confidence: "high" | "medium" | "low";
+  primaryEvidence: string[];
+  supportingEvidence: string[];
+  conflictingEvidence: string[];
+  rejectedAlternatives: Array<{
+    value: "heelside" | "toeside" | "switch";
+    reason: string;
+  }>;
+  uncertainty: string[];
+};
+
 type TrickFamily =
   | "basic_air"
   | "surface_trick"
@@ -3209,6 +3273,13 @@ function parseGeminiEvidence(outputText: string) {
       rawApproachType,
       temporalWindows,
     );
+    const approachObservedFactsV2 = deriveApproachObservedFactsV2(
+      approachObservedFacts,
+      rawApproachType,
+    );
+    const approachDecisionV2 = deriveApproachDecisionV2(
+      approachObservedFactsV2,
+    );
 
     return {
       parseFailed: true,
@@ -3220,8 +3291,10 @@ function parseGeminiEvidence(outputText: string) {
       temporalWindows,
       rawApproachType,
       approachObservedFacts,
+      approachObservedFactsV2,
       inversionObservedFacts,
       approachDecision,
+      approachDecisionV2,
       approachWarnings: approachDecision.uncertainty,
       approachType: approachFactFromDecision(
         approachDecision,
@@ -3860,6 +3933,11 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     rawApproachType,
     temporalWindows,
   );
+  const approachObservedFactsV2 = deriveApproachObservedFactsV2(
+    approachObservedFacts,
+    rawApproachType,
+  );
+  const approachDecisionV2 = deriveApproachDecisionV2(approachObservedFactsV2);
   const approachWarnings = approachDecision.uncertainty;
 
   return {
@@ -3877,8 +3955,10 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     temporalWindows,
     rawApproachType,
     approachObservedFacts,
+    approachObservedFactsV2,
     inversionObservedFacts,
     approachDecision,
+    approachDecisionV2,
     approachWarnings,
     approachType: approachFactFromDecision(approachDecision, rawApproachType),
     rotationType: normalizeEvidenceFact(parsed.rotationType, "확인 필요"),
@@ -4289,6 +4369,303 @@ function deriveApproachDecision(
     rejectedAlternatives,
     uncertainty,
   };
+}
+
+function deriveApproachObservedFactsV2(
+  facts: ApproachObservedFactsPayload,
+  rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
+): ApproachObservedFactsV2Payload {
+  const edgeDirectionEvidence = {
+    ...facts.edgeDirectionEvidence,
+    loadedEdge: loadedEdgeFromText(approachFactText(facts.edgeDirectionEvidence)),
+  };
+  const signals = [
+    createApproachSignal({
+      field: "edgeDirectionEvidence",
+      fact: facts.edgeDirectionEvidence,
+      strength: approachEvidenceOnlyRepeatsLabel(facts.edgeDirectionEvidence)
+        ? "weak"
+        : "primary",
+    }),
+    createApproachSignal({
+      field: "wakeCrossingPath",
+      fact: facts.wakeCrossingPath,
+      strength: "supporting",
+    }),
+    createApproachSignal({
+      field: "boardDirection",
+      fact: facts.boardDirection,
+      strength: "supporting",
+    }),
+    createApproachSignal({
+      field: "stance",
+      fact: facts.stance,
+      strength: "weak",
+    }),
+    createApproachSignal({
+      field: "leadFoot",
+      fact: facts.leadFoot,
+      strength: "weak",
+    }),
+    createApproachSignal({
+      field: "handlePosition",
+      fact: facts.handlePosition,
+      strength: "weak",
+    }),
+    createApproachSignal({
+      field: "bodyOrientation",
+      fact: facts.bodyOrientation,
+      strength: "weak",
+    }),
+    createApproachSignal({
+      field: "rawApproachType",
+      fact: rawApproachType,
+      strength: approachEvidenceOnlyRepeatsLabel(rawApproachType)
+        ? "weak"
+        : "supporting",
+    }),
+  ];
+  const conflictSummary = summarizeApproachSignalConflicts(signals);
+
+  return {
+    stance: facts.stance,
+    leadFoot: facts.leadFoot,
+    boardDirection: {
+      ...facts.boardDirection,
+      frameOfReference: inferDirectionFrame(facts.boardDirection.evidence),
+      noseDirection: extractDirectionHint(facts.boardDirection.evidence, "nose"),
+      travelDirection: extractDirectionHint(
+        facts.boardDirection.evidence,
+        "travel",
+      ),
+    },
+    wakeCrossingPath: {
+      ...facts.wakeCrossingPath,
+      frameOfReference: inferDirectionFrame(
+        approachFactEvidence(facts.wakeCrossingPath),
+      ),
+    },
+    edgeDirectionEvidence,
+    handlePosition: facts.handlePosition,
+    bodyOrientation: facts.bodyOrientation,
+    signals,
+    conflictSummary,
+  };
+}
+
+function deriveApproachDecisionV2(
+  facts: ApproachObservedFactsV2Payload,
+): ApproachDecisionV2 {
+  const scores = approachSignalScores(facts.signals);
+  const directionalEntries = (["heelside", "toeside", "switch"] as const)
+    .map((side) => ({ side, score: scores[side] }))
+    .sort((left, right) => right.score - left.score);
+  const top = directionalEntries[0];
+  const runnerUp = directionalEntries[1];
+  const primarySignals = facts.signals.filter(
+    (signal) => signal.strength === "primary" && signal.supports !== "unknown",
+  );
+  const supportingSignals = facts.signals.filter(
+    (signal) => signal.strength !== "primary" && signal.supports !== "unknown",
+  );
+  const uncertainty: string[] = [];
+
+  if (facts.conflictSummary.hasConflict) {
+    uncertainty.push(facts.conflictSummary.reason);
+  }
+
+  if (top.score === 0) {
+    uncertainty.push(
+      "v2 directional signal이 부족해 Toeside/Heelside를 분리하지 못했습니다.",
+    );
+  }
+
+  const hasPrimaryConflict =
+    primarySignals.length > 0 &&
+    supportingSignals.some((signal) => signal.supports !== primarySignals[0].supports);
+  const isAmbiguous =
+    top.score > 0 &&
+    runnerUp.score > 0 &&
+    (runnerUp.score >= top.score || hasPrimaryConflict);
+  const value: ApproachDecisionV2["value"] =
+    top.score === 0 ? "unknown" : isAmbiguous ? "ambiguous" : top.side;
+  const confidence: ApproachDecisionV2["confidence"] =
+    value === "unknown" || value === "ambiguous"
+      ? "low"
+      : top.score >= 5 && runnerUp.score === 0 && uncertainty.length === 0
+        ? "high"
+        : "medium";
+
+  if (value === "ambiguous") {
+    uncertainty.push(
+      "Toeside와 Heelside를 지지하는 관찰 근거가 동시에 존재해 확정하지 않습니다.",
+    );
+  }
+
+  return {
+    value,
+    confidence,
+    primaryEvidence: primarySignals.map(signalEvidenceSummary),
+    supportingEvidence: supportingSignals.map(signalEvidenceSummary),
+    conflictingEvidence: facts.conflictSummary.conflictFields.map((field) => {
+      const signal = facts.signals.find((item) => item.field === field);
+
+      return signal ? signalEvidenceSummary(signal) : field;
+    }),
+    rejectedAlternatives: (["heelside", "toeside", "switch"] as const)
+      .filter((side) => side !== value)
+      .map((side) => ({
+        value: side,
+        reason:
+          value === "ambiguous"
+            ? `${side}를 지지하거나 반박하는 근거가 충돌해 단정하지 않습니다.`
+            : `${value} 점수=${top.score}, ${side} 점수=${scores[side]}입니다.`,
+      })),
+    uncertainty,
+  };
+}
+
+function createApproachSignal({
+  field,
+  fact,
+  strength,
+}: {
+  field: string;
+  fact:
+    | ApproachFactPayload
+    | ApproachObservedFactsPayload["wakeCrossingPath"]
+    | ReturnType<typeof normalizeEvidenceFact>;
+  strength: ApproachEvidenceSignalV2["strength"];
+}): ApproachEvidenceSignalV2 {
+  const text = approachFactText(fact);
+  const timestamps = extractEvidenceTimestamps(approachFactEvidence(fact));
+  const inferred = approachValueFromText(text) ?? "unknown";
+  const supports =
+    fact.confidence === "low" || !isSpecificApproachFact(fact)
+      ? "unknown"
+      : inferred;
+
+  return {
+    field,
+    supports,
+    strength,
+    confidence: fact.confidence,
+    evidence: approachFactEvidence(fact),
+    timestampSeconds: timestamps[0] ?? null,
+  };
+}
+
+function summarizeApproachSignalConflicts(
+  signals: ApproachEvidenceSignalV2[],
+): ApproachObservedFactsV2Payload["conflictSummary"] {
+  const directionalSignals = signals.filter(
+    (signal) => signal.supports !== "unknown",
+  );
+  const toesideSignals = directionalSignals.filter(
+    (signal) => signal.supports === "toeside",
+  ).length;
+  const heelsideSignals = directionalSignals.filter(
+    (signal) => signal.supports === "heelside",
+  ).length;
+  const switchSignals = directionalSignals.filter(
+    (signal) => signal.supports === "switch",
+  ).length;
+  const supportedSides = [toesideSignals, heelsideSignals, switchSignals].filter(
+    (count) => count > 0,
+  ).length;
+  const hasConflict = supportedSides > 1;
+
+  return {
+    hasConflict,
+    toesideSignals,
+    heelsideSignals,
+    switchSignals,
+    conflictFields: hasConflict
+      ? directionalSignals.map((signal) => signal.field)
+      : [],
+    reason: hasConflict
+      ? `v2 signals conflict: toeside=${toesideSignals}, heelside=${heelsideSignals}, switch=${switchSignals}.`
+      : "v2 signals do not contain cross-side conflict.",
+  };
+}
+
+function approachSignalScores(signals: ApproachEvidenceSignalV2[]) {
+  const scores = {
+    heelside: 0,
+    toeside: 0,
+    switch: 0,
+  };
+
+  for (const signal of signals) {
+    if (signal.supports === "unknown") {
+      continue;
+    }
+
+    scores[signal.supports] += approachSignalWeight(signal);
+  }
+
+  return scores;
+}
+
+function approachSignalWeight(signal: ApproachEvidenceSignalV2) {
+  const strengthWeight = {
+    primary: 3,
+    supporting: 2,
+    weak: 1,
+  }[signal.strength];
+  const confidenceWeight = {
+    high: 1,
+    medium: 0.75,
+    low: 0.25,
+  }[signal.confidence];
+
+  return strengthWeight * confidenceWeight;
+}
+
+function signalEvidenceSummary(signal: ApproachEvidenceSignalV2) {
+  return `${signal.field} supports ${signal.supports}: ${signal.evidence}`;
+}
+
+function loadedEdgeFromText(text: string): "toe_edge" | "heel_edge" | "unknown" {
+  const approach = approachValueFromText(text);
+
+  if (approach === "toeside") {
+    return "toe_edge";
+  }
+
+  if (approach === "heelside") {
+    return "heel_edge";
+  }
+
+  return "unknown";
+}
+
+function inferDirectionFrame(evidence: string): DirectionFrame {
+  const text = normalizeDomainText(evidence);
+
+  if (includesAnyDomainTerm(text, ["boat", "wake", "inside", "outside", "보트"])) {
+    return "boat";
+  }
+
+  if (includesAnyDomainTerm(text, ["camera", "screen", "left", "right", "화면"])) {
+    return "camera";
+  }
+
+  if (includesAnyDomainTerm(text, ["rider", "toe edge", "heel edge", "라이더"])) {
+    return "rider";
+  }
+
+  return "unknown";
+}
+
+function extractDirectionHint(evidence: string, kind: "nose" | "travel") {
+  const text = normalizeDomainText(evidence);
+  const terms =
+    kind === "nose"
+      ? ["nose", "노즈", "board tip", "보드 앞"]
+      : ["travel", "direction of travel", "이동", "진행"];
+
+  return includesAnyDomainTerm(text, terms) ? evidence : undefined;
 }
 
 function approachFactFromDecision(
@@ -5273,7 +5650,7 @@ function normalizeEvidenceFact(
       }
     | undefined,
   fallbackValue: string,
-) {
+): ApproachFactPayload {
   const label =
     typeof value?.name === "string"
       ? value.name
