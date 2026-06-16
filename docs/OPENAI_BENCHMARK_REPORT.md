@@ -1,5 +1,30 @@
 # OpenAI Wakeboard Benchmark Report
 
+## Current Status
+
+This benchmark is now a Phase 2 experiment.
+
+The current model benchmark priority is documented in:
+
+```text
+docs/MODEL_BENCHMARK_PLAN.md
+```
+
+OpenAI frame-based video analysis remains useful, but it is no longer the first
+benchmark path for Toe/Heel edge judgment. Wakeboard edge loading can happen in
+short, video-specific moments, and preselecting frames can introduce frame
+selection bias.
+
+Phase 1 should focus on native video understanding models first:
+
+1. Gemini 2.5 Flash
+2. Gemini 2.5 Pro
+3. Any available Gemini native video alternative
+
+OpenAI frame extraction should be revisited only after the native video
+benchmark establishes whether Gemini video models can reliably solve the edge
+ground-truth clips.
+
 ## Purpose
 
 Determine whether earlier OpenAI wakeboard analysis quality was limited by:
