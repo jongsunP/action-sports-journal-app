@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEventListener } from 'expo';
 import {
   Alert,
-  FlatList,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -451,19 +450,6 @@ export function HomeScreen() {
         sessionStatus: selectedSession.momentStatus,
       })
     : undefined;
-  const storyMoments = visibleSessions.slice(0, 8).map((session) => ({
-    session,
-    card: getSessionCardPresentation({
-      session,
-      evidence: getCompletedMomentEvidence({
-        evidence: geminiEvidenceBySessionId[session.id],
-        isProcessing: Boolean(extractingEvidenceBySessionId[session.id]),
-        sessionStatus: session.momentStatus,
-      }),
-      thumbnailUri: thumbnailsBySessionId[session.id],
-    }),
-  }));
-
   const canSaveSession = title.trim().length > 0;
 
   const updateLocalMomentStatus = (
@@ -781,73 +767,24 @@ export function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {!selectedSession ? (
-            <>
-              <View style={styles.header}>
-                <View>
-                  <Text style={styles.kicker}>Wakeboard Evidence MVP</Text>
-                  <Text style={styles.title}>웨이크보드 근거 추출</Text>
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setIsComposerOpen((current) => !current)}
-                  style={({ pressed }) => [
-                    styles.headerAddButton,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  <Text style={styles.headerAddText}>
-                    {isComposerOpen ? '닫기' : '+'}
-                  </Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.storySection}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={styles.sectionLabel}>최근 모먼트</Text>
-                  <Text style={styles.storyHint}>다시 보기</Text>
-                </View>
-                <FlatList
-                  data={storyMoments}
-                  horizontal
-                  keyExtractor={({ session }) => `story-${session.id}`}
-                  contentContainerStyle={styles.storyRail}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => openEvidenceSheet(item.session)}
-                      style={({ pressed }) => [
-                        styles.storyItem,
-                        pressed ? styles.buttonPressed : undefined,
-                      ]}
-                    >
-                      <View style={styles.storyThumb}>
-                        {item.card.thumbnailUri ? (
-                          <Image
-                            source={{ uri: item.card.thumbnailUri }}
-                            style={styles.storyThumbImage}
-                          />
-                        ) : (
-                          <Text style={styles.storyThumbFallback}>▶</Text>
-                        )}
-                      </View>
-                      <Text style={styles.storyLabel} numberOfLines={2}>
-                        {item.card.momentTitle}
-                      </Text>
-                    </Pressable>
-                  )}
-                  showsHorizontalScrollIndicator={false}
-                />
-              </View>
-
-              <View style={styles.activeSportBanner}>
-                <Text style={styles.activeSportTitle}>Wakeboard</Text>
-                <Text style={styles.activeSportText}>
-                  이번 MVP는 웨이크보드 동작 근거 추출 정확도만 확인합니다.
-                </Text>
-              </View>
-            </>
-          ) : null}
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.kicker}>Wakeboard Moments</Text>
+              <Text style={styles.title}>내 라이딩 갤러리</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setIsComposerOpen((current) => !current)}
+              style={({ pressed }) => [
+                styles.headerAddButton,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text style={styles.headerAddText}>
+                {isComposerOpen ? '닫기' : '+'}
+              </Text>
+            </Pressable>
+          </View>
 
           <View style={styles.section}>
             {isComposerOpen ? (
@@ -861,7 +798,7 @@ export function HomeScreen() {
               </View>
             ) : null}
 
-            {!selectedSession && isComposerOpen ? (
+            {isComposerOpen ? (
               <View style={styles.composer}>
                 <TextInput
                   placeholder="무슨 모먼트였나요?"
@@ -928,7 +865,7 @@ export function HomeScreen() {
                         : undefined,
                     ]}
                   >
-                    피드에 추가
+                    갤러리에 추가
                   </Text>
                 </Pressable>
                 <Text style={styles.helperText}>어떤 시도였는지 짧게 남겨주세요.</Text>
@@ -939,97 +876,86 @@ export function HomeScreen() {
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyTitle}>아직 모먼트가 없습니다</Text>
                   <Text style={styles.emptyText}>
-                    첫 라이딩 클립을 추가해 나만의 피드를 시작해보세요.
+                    첫 라이딩 클립을 추가해 나만의 갤러리를 시작해보세요.
                   </Text>
                 </View>
             ) : (
-              visibleSessions.map((item) => {
-                const isWorking = extractingEvidenceBySessionId[item.id];
-                const momentStatus = getMomentStatus({
-                  evidence: geminiEvidenceBySessionId[item.id],
-                  isProcessing: Boolean(isWorking),
-                  sessionStatus: item.momentStatus,
-                });
-                const completedEvidence = getCompletedMomentEvidence({
-                  evidence: geminiEvidenceBySessionId[item.id],
-                  isProcessing: Boolean(isWorking),
-                  sessionStatus: item.momentStatus,
-                });
-                const card = getSessionCardPresentation({
-                  session: item,
-                  evidence: completedEvidence,
-                  thumbnailUri: thumbnailsBySessionId[item.id],
-                });
-                const hasEvidence = Boolean(completedEvidence);
+              <View style={styles.galleryGrid}>
+                {visibleSessions.map((item) => {
+                  const isWorking = extractingEvidenceBySessionId[item.id];
+                  const momentStatus = getMomentStatus({
+                    evidence: geminiEvidenceBySessionId[item.id],
+                    isProcessing: Boolean(isWorking),
+                    sessionStatus: item.momentStatus,
+                  });
+                  const completedEvidence = getCompletedMomentEvidence({
+                    evidence: geminiEvidenceBySessionId[item.id],
+                    isProcessing: Boolean(isWorking),
+                    sessionStatus: item.momentStatus,
+                  });
+                  const card = getSessionCardPresentation({
+                    session: item,
+                    evidence: completedEvidence,
+                    thumbnailUri: thumbnailsBySessionId[item.id],
+                  });
 
-                return (
-                <Pressable
-                  accessibilityRole="button"
-                  key={item.id}
-                  onPress={() => openEvidenceSheet(item)}
-                  style={({ pressed }) => [
-                    styles.sessionRow,
-                    pressed ? styles.sessionRowPressed : undefined,
-                  ]}
-                >
-                  <View style={styles.momentHero}>
-                    {card.thumbnailUri ? (
-                      <Image source={{ uri: card.thumbnailUri }} style={styles.momentImage} />
-                    ) : (
-                      <View style={styles.momentFallback}>
-                        <Text style={styles.momentFallbackPlay}>▶</Text>
-                        <Text style={styles.momentFallbackText}>
-                          {item.videoUri ? 'RIDE CLIP' : 'ADD CLIP'}
-                        </Text>
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      key={item.id}
+                      onPress={() => openEvidenceSheet(item)}
+                      style={({ pressed }) => [
+                        styles.galleryCard,
+                        pressed ? styles.sessionRowPressed : undefined,
+                      ]}
+                    >
+                      <View style={styles.galleryFrame}>
+                        <View style={styles.galleryThumb}>
+                          {card.thumbnailUri ? (
+                            <Image
+                              source={{ uri: card.thumbnailUri }}
+                              style={styles.galleryImage}
+                            />
+                          ) : (
+                            <View style={styles.galleryFallback}>
+                              <Text style={styles.galleryFallbackPlay}>▶</Text>
+                              <Text style={styles.galleryFallbackText}>
+                                {item.videoUri ? 'CLIP' : 'NO CLIP'}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.galleryTopBar}>
+                            <Text style={styles.galleryDate} numberOfLines={1}>
+                              {formatShortSessionDate(item.occurredAt)}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.galleryBadge,
+                                getMomentStatusStyle(momentStatus),
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {momentStatus
+                                ? getMomentStatusLabel(momentStatus)
+                                : item.videoUri
+                                  ? '대기'
+                                  : '영상 필요'}
+                            </Text>
+                          </View>
+                        </View>
                       </View>
-                    )}
-                    <View style={styles.momentShade} />
-                    <View style={styles.momentTopBar}>
-                      <Text style={[styles.momentBadge, getMomentStatusStyle(momentStatus)]}>
-                        {momentStatus
-                          ? getMomentStatusLabel(momentStatus)
-                          : item.videoUri
-                            ? '분석 대기'
-                            : '영상 필요'}
-                      </Text>
-                      <Text style={styles.momentDate}>
-                        {formatSessionDateTime(item.occurredAt)}
-                      </Text>
-                    </View>
-                    <View style={styles.momentCopy}>
-                      <Text style={styles.momentTitle} numberOfLines={1}>
+                      <Text style={styles.galleryTitle} numberOfLines={1}>
                         {card.momentTitle}
                       </Text>
-                      <Text style={styles.momentReason} numberOfLines={1}>
-                        {card.reason}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.momentFooter}>
-                    <View style={styles.momentFooterCopy}>
-                      <Text style={styles.momentSessionTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.momentWhyOpen} numberOfLines={1}>
-                        {card.openReason}
-                      </Text>
-                    </View>
-                    <View style={styles.momentSignals}>
-                      <SignalDot active={Boolean(item.videoUri)} label="영상" />
-                      <SignalDot active={hasEvidence} label="근거" />
-                    </View>
-                    <Text style={styles.momentOpenText}>
-                      근거
-                    </Text>
-                  </View>
-                </Pressable>
-                );
-              })
+                    </Pressable>
+                  );
+                })}
+              </View>
             )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <EvidenceBottomSheet
+      <MomentDetailModal
         canRequestGeminiEvidence={canRequestGeminiEvidence}
         debugEndpoint={
           __DEV__ ? configuredAiEndpoints.geminiEvidenceEndpoint : undefined
@@ -1099,9 +1025,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#f8fafc',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
-    lineHeight: 22,
+    lineHeight: 27,
   },
   headerAddButton: {
     alignItems: 'center',
@@ -1116,72 +1042,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '900',
     lineHeight: 24,
-  },
-  storySection: {
-    marginBottom: 14,
-  },
-  storyHint: {
-    color: '#6b7280',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  storyRail: {
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 2,
-  },
-  storyItem: {
-    width: 72,
-  },
-  storyThumb: {
-    alignItems: 'center',
-    backgroundColor: '#171a21',
-    borderColor: '#03c75a',
-    borderRadius: 999,
-    borderWidth: 2,
-    height: 68,
-    justifyContent: 'center',
-    marginBottom: 6,
-    overflow: 'hidden',
-    width: 68,
-  },
-  storyThumbImage: {
-    height: '100%',
-    width: '100%',
-  },
-  storyThumbFallback: {
-    color: '#03c75a',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  storyLabel: {
-    color: '#d1d5db',
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 13,
-    textAlign: 'center',
-  },
-  activeSportBanner: {
-    backgroundColor: 'rgba(3, 199, 90, 0.12)',
-    borderColor: 'rgba(3, 199, 90, 0.35)',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 14,
-    marginHorizontal: 16,
-    padding: 12,
-  },
-  activeSportTitle: {
-    color: '#b7f5ce',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
-    textTransform: 'uppercase',
-  },
-  activeSportText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
   section: {
     marginBottom: 14,
@@ -1364,6 +1224,92 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 12,
     marginTop: 8,
+  },
+  galleryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
+  galleryCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    marginBottom: 14,
+    maxWidth: '48%',
+  },
+  galleryFrame: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 5,
+    shadowColor: '#000',
+    shadowOffset: { height: 3, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+  },
+  galleryThumb: {
+    aspectRatio: 1,
+    backgroundColor: '#111318',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  galleryImage: {
+    height: '100%',
+    width: '100%',
+  },
+  galleryFallback: {
+    alignItems: 'center',
+    backgroundColor: '#171a21',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  galleryFallbackPlay: {
+    color: '#03c75a',
+    fontSize: 32,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+  galleryFallbackText: {
+    color: '#cbd5e1',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  galleryTopBar: {
+    alignItems: 'flex-start',
+    gap: 5,
+    left: 7,
+    position: 'absolute',
+    right: 7,
+    top: 7,
+  },
+  galleryDate: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    color: '#f8fafc',
+    fontSize: 10,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  galleryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#94a3b8',
+    color: '#07110a',
+    fontSize: 10,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  galleryTitle: {
+    color: '#e5e7eb',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+    marginTop: 7,
   },
   sessionRow: {
     backgroundColor: '#0b0d12',
@@ -1682,6 +1628,88 @@ const styles = StyleSheet.create({
   detailPanel: {
     backgroundColor: '#0b0d12',
   },
+  detailModalContainer: {
+    backgroundColor: '#0b0d12',
+    flex: 1,
+  },
+  detailModalBody: {
+    paddingBottom: 34,
+  },
+  detailModalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  detailCloseButton: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  detailCloseText: {
+    color: '#0f172a',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  detailHeaderText: {
+    flex: 1,
+  },
+  detailKicker: {
+    color: '#03c75a',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  detailHeaderTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  detailVideoFrame: {
+    aspectRatio: 1,
+    backgroundColor: '#0f172a',
+    marginBottom: 12,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  detailSummaryCard: {
+    backgroundColor: '#111318',
+    borderColor: 'rgba(248, 250, 252, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    padding: 14,
+  },
+  detailSummaryTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  detailStateCard: {
+    backgroundColor: '#111318',
+    borderColor: 'rgba(248, 250, 252, 0.1)',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+  },
+  detailStateTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+  detailStateText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
   backButton: {
     alignSelf: 'flex-start',
     backgroundColor: '#1f2937',
@@ -1882,7 +1910,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
+    marginHorizontal: 16,
     marginTop: 12,
+  },
+  detailRetryButton: {
+    alignItems: 'center',
+    backgroundColor: '#03c75a',
+    borderRadius: 999,
+    flexGrow: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  detailRetryButtonDisabled: {
+    backgroundColor: '#475569',
+  },
+  detailRetryText: {
+    color: '#07110a',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  detailDeleteButton: {
+    alignItems: 'center',
+    backgroundColor: '#fff1f2',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  detailDeleteText: {
+    color: '#be123c',
+    fontSize: 13,
+    fontWeight: '900',
   },
   detailHint: {
     color: '#94a3b8',
@@ -2318,136 +2375,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
-  sheetBackdrop: {
-    backgroundColor: 'rgba(3, 7, 18, 0.62)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheetPanel: {
-    backgroundColor: '#0b0d12',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    maxHeight: '88%',
-    overflow: 'hidden',
-    paddingTop: 8,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    backgroundColor: '#475569',
-    borderRadius: 999,
-    height: 4,
-    marginBottom: 10,
-    width: 46,
-  },
-  sheetHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  sheetKicker: {
-    color: '#03c75a',
-    fontSize: 11,
-    fontWeight: '900',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  sheetTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 23,
-  },
-  sheetMeta: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  sheetStatusPill: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    marginTop: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  sheetStatusText: {
-    color: '#07110a',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  sheetCloseButton: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  sheetCloseText: {
-    color: '#0f172a',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  sheetBody: {
-    paddingBottom: 22,
-  },
-  sheetStateCard: {
-    backgroundColor: '#111318',
-    borderColor: 'rgba(248, 250, 252, 0.1)',
-    borderRadius: 16,
-    borderWidth: 1,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 14,
-  },
-  sheetStateTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-  sheetStateText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  sheetActionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 4,
-  },
-  sheetRetryButton: {
-    alignItems: 'center',
-    backgroundColor: '#03c75a',
-    borderRadius: 999,
-    flexGrow: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  sheetRetryButtonDisabled: {
-    backgroundColor: '#475569',
-  },
-  sheetRetryText: {
-    color: '#07110a',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  sheetDeleteButton: {
-    alignItems: 'center',
-    backgroundColor: '#fff1f2',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  sheetDeleteText: {
-    color: '#be123c',
-    fontSize: 13,
-    fontWeight: '900',
-  },
   debugBox: {
     backgroundColor: '#020617',
     borderColor: '#334155',
@@ -2771,7 +2698,7 @@ function LocalSessionVideoPlayer({ videoUri }: { videoUri: string }) {
   );
 }
 
-function EvidenceBottomSheet({
+function MomentDetailModal({
   canRequestGeminiEvidence,
   debugEndpoint,
   evidence,
@@ -2814,62 +2741,72 @@ function EvidenceBottomSheet({
     <Modal
       animationType="slide"
       onRequestClose={onClose}
-      transparent
       visible={Boolean(session)}
     >
-      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheetPanel} onPress={(event) => event.stopPropagation()}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sheetKicker}>Wakeboard Evidence</Text>
-              <Text style={styles.sheetTitle} numberOfLines={2}>
-                {session.title}
-              </Text>
-              <Text style={styles.sheetMeta}>
-                {formatSessionDateTime(session.occurredAt)}
-              </Text>
-              {momentStatus ? (
-                <View
-                  style={[
-                    styles.sheetStatusPill,
-                    getMomentStatusStyle(momentStatus),
-                  ]}
-                >
-                  <Text style={styles.sheetStatusText}>
-                    {getMomentStatusLabel(momentStatus)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+      <SafeAreaView style={styles.detailModalContainer}>
+        <ScrollView
+          contentContainerStyle={styles.detailModalBody}
+          showsVerticalScrollIndicator
+        >
+          <View style={styles.detailModalHeader}>
             <Pressable
               accessibilityRole="button"
               onPress={onClose}
               style={({ pressed }) => [
-                styles.sheetCloseButton,
+                styles.detailCloseButton,
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
-              <Text style={styles.sheetCloseText}>닫기</Text>
+              <Text style={styles.detailCloseText}>닫기</Text>
             </Pressable>
+            <View style={styles.detailHeaderText}>
+              <Text style={styles.detailKicker}>Moment Detail</Text>
+              <Text style={styles.detailHeaderTitle} numberOfLines={1}>
+                {session.title}
+              </Text>
+            </View>
           </View>
-          <ScrollView
-            contentContainerStyle={styles.sheetBody}
-            showsVerticalScrollIndicator={false}
-          >
-            {!video ? (
-              <View style={styles.sheetStateCard}>
-                <Text style={styles.sheetStateTitle}>영상이 필요합니다</Text>
-                <Text style={styles.sheetStateText}>
+
+          <View style={styles.detailVideoFrame}>
+            {video ? (
+              <LocalSessionVideoPlayer videoUri={video.uri} />
+            ) : (
+              <View style={styles.videoMissingFallback}>
+                <Text style={styles.videoMissingTitle}>영상이 필요합니다</Text>
+                <Text style={styles.videoMissingText}>
                   Evidence Extraction MVP는 웨이크보드 영상을 기준으로 동작 근거를
                   추출합니다.
                 </Text>
               </View>
+            )}
+          </View>
+
+          <View style={styles.detailSummaryCard}>
+            <View style={styles.detailSummaryTopRow}>
+              <Text style={styles.detailMomentDate}>
+                {formatSessionDateTime(session.occurredAt)}
+              </Text>
+              {momentStatus ? (
+                <Text
+                  style={[
+                    styles.momentBadge,
+                    getMomentStatusStyle(momentStatus),
+                  ]}
+                >
+                  {getMomentStatusLabel(momentStatus)}
+                </Text>
+              ) : null}
+            </View>
+            <Text style={styles.detailMomentTitle}>{session.title}</Text>
+            {session.notes ? (
+              <Text style={styles.detailMomentReason}>{session.notes}</Text>
             ) : null}
+          </View>
+
             {shouldShowStatusMessage && statusMessage ? (
-              <View style={styles.sheetStateCard}>
-                <Text style={styles.sheetStateTitle}>{statusMessage.title}</Text>
-                <Text style={styles.sheetStateText}>
+              <View style={styles.detailStateCard}>
+                <Text style={styles.detailStateTitle}>{statusMessage.title}</Text>
+                <Text style={styles.detailStateText}>
                   {statusMessage.body}
                 </Text>
               </View>
@@ -2881,25 +2818,25 @@ function EvidenceBottomSheet({
                 onConfirmTrick={() => undefined}
               />
             ) : !shouldShowStatusMessage && !isLoading && video ? (
-              <View style={styles.sheetStateCard}>
-                <Text style={styles.sheetStateTitle}>아직 추출 결과가 없습니다</Text>
-                <Text style={styles.sheetStateText}>
+              <View style={styles.detailStateCard}>
+                <Text style={styles.detailStateTitle}>아직 추출 결과가 없습니다</Text>
+                <Text style={styles.detailStateText}>
                   다시 시도를 누르면 Gemini evidence endpoint만 호출합니다.
                 </Text>
               </View>
             ) : null}
-            <View style={styles.sheetActionRow}>
+            <View style={styles.detailActionRow}>
               <Pressable
                 accessibilityRole="button"
                 disabled={!canRetry}
                 onPress={onRetry}
                 style={({ pressed }) => [
-                  styles.sheetRetryButton,
-                  !canRetry ? styles.sheetRetryButtonDisabled : undefined,
+                  styles.detailRetryButton,
+                  !canRetry ? styles.detailRetryButtonDisabled : undefined,
                   pressed ? styles.buttonPressed : undefined,
                 ]}
               >
-                <Text style={styles.sheetRetryText}>
+                <Text style={styles.detailRetryText}>
                   {isLoading ? '추출 중...' : '근거 추출 다시 시도'}
                 </Text>
               </Pressable>
@@ -2908,11 +2845,11 @@ function EvidenceBottomSheet({
                   accessibilityRole="button"
                   onPress={onDelete}
                   style={({ pressed }) => [
-                    styles.sheetDeleteButton,
+                    styles.detailDeleteButton,
                     pressed ? styles.buttonPressed : undefined,
                   ]}
                 >
-                  <Text style={styles.sheetDeleteText}>삭제</Text>
+                  <Text style={styles.detailDeleteText}>삭제</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -2923,9 +2860,8 @@ function EvidenceBottomSheet({
                 </Text>
               </View>
             ) : null}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
+        </ScrollView>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -3560,6 +3496,13 @@ function formatSessionDateTime(value: string) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+  });
+}
+
+function formatShortSessionDate(value: string) {
+  return new Date(value).toLocaleDateString('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
   });
 }
 
