@@ -80,6 +80,9 @@ const benchmarkArtifactDir =
 const evidenceCaptureArtifactDir =
   process.env.EVIDENCE_CAPTURE_ARTIFACT_DIR ??
   "dev-artifacts/evidence-captures";
+const modelBenchmarkArtifactDir =
+  process.env.MODEL_BENCHMARK_ARTIFACT_DIR ??
+  "dev-artifacts/model-benchmarks";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
@@ -466,6 +469,60 @@ app.get("/debug/evidence-captures", (request, response) => {
     captures: evidenceDebugCaptures,
   });
 });
+
+app.post(
+  "/debug/benchmarks/edge-native-video",
+  upload.single("video"),
+  async (request, response) => {
+    try {
+      if (process.env.NODE_ENV === "production") {
+        response.status(404).json({ error: "Benchmark endpoint is disabled." });
+        return;
+      }
+
+      if (debugCaptureToken && getDebugToken(request) !== debugCaptureToken) {
+        response.status(401).json({ error: "Unauthorized." });
+        return;
+      }
+
+      if (!process.env.GEMINI_API_KEY) {
+        response.status(500).json({
+          error: "GEMINI_API_KEY is not configured on the server.",
+        });
+        return;
+      }
+
+      if (!request.file) {
+        response.status(400).json({ error: "video file is required." });
+        return;
+      }
+
+      const clipId = getField(request.body.clipId, request.file.originalname);
+      const expectedEdge = normalizeBenchmarkExpectedEdge(
+        request.body.expectedEdge,
+      );
+      const runCount = normalizeBenchmarkRunCount(request.body.runCount);
+      const requestedModels = normalizeBenchmarkModels(request.body.models);
+      const benchmark = await runNativeVideoEdgeBenchmark({
+        clipId,
+        expectedEdge,
+        file: request.file,
+        models: requestedModels,
+        runCount,
+      });
+
+      response.json(benchmark);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Edge benchmark failed.";
+      console.error("Edge native video benchmark failed:", message);
+
+      response.status(500).json({
+        error: message,
+      });
+    }
+  },
+);
 
 app.post(
   "/api/create-session-thumbnail",
@@ -1029,6 +1086,399 @@ type EvidenceJobVideoFile = {
   originalname: string;
   size: number;
 };
+
+type EdgeBenchmarkExpectedEdge = "toe" | "heel" | "unknown";
+
+type EdgeBenchmarkParsedResult = {
+  predictedEdge: "toe" | "heel" | "unknown" | "ambiguous";
+  confidence: "high" | "medium" | "low";
+  visibleEvidence: string[];
+  inferredEvidence: string[];
+  hallucinationFlags: string[];
+  timestampEvidence: {
+    startSec: number | null;
+    endSec: number | null;
+    description: string;
+  };
+};
+
+type EdgeBenchmarkRunResult = EdgeBenchmarkParsedResult & {
+  clipId: string;
+  expectedEdge: EdgeBenchmarkExpectedEdge;
+  provider: "gemini";
+  model: string;
+  runIndex: number;
+  latencyMs: number;
+  estimatedCost: number | null;
+  rawResponseText: string;
+  rawResponseArtifactPath: string;
+  correct: boolean | null;
+  highConfidenceWrong: boolean;
+};
+
+type EdgeBenchmarkSummary = {
+  createdAt: string;
+  clipId: string;
+  expectedEdge: EdgeBenchmarkExpectedEdge;
+  provider: "gemini";
+  models: string[];
+  runCount: number;
+  results: EdgeBenchmarkRunResult[];
+  aggregate: Array<{
+    model: string;
+    total: number;
+    correct: number;
+    accuracy: number | null;
+    highConfidenceWrong: number;
+    unknownOrAmbiguous: number;
+    averageLatencyMs: number;
+    hallucinationFlagCount: number;
+  }>;
+  summaryArtifactPath: string;
+};
+
+function normalizeBenchmarkExpectedEdge(
+  value: unknown,
+): EdgeBenchmarkExpectedEdge {
+  return value === "toe" || value === "heel" ? value : "unknown";
+}
+
+function normalizeBenchmarkRunCount(value: unknown) {
+  const parsed =
+    typeof value === "string" || typeof value === "number"
+      ? Number(value)
+      : 1;
+
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(Math.trunc(parsed), 1), 5);
+}
+
+function normalizeBenchmarkModels(value: unknown) {
+  const rawModels = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",")
+      : [];
+  const models = rawModels
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.startsWith("gemini-"));
+  const uniqueModels = Array.from(new Set(models));
+
+  return uniqueModels.length > 0
+    ? uniqueModels
+    : ["gemini-2.5-flash", "gemini-2.5-pro"];
+}
+
+async function runNativeVideoEdgeBenchmark({
+  clipId,
+  expectedEdge,
+  file,
+  models,
+  runCount,
+}: {
+  clipId: string;
+  expectedEdge: EdgeBenchmarkExpectedEdge;
+  file: Express.Multer.File;
+  models: string[];
+  runCount: number;
+}): Promise<EdgeBenchmarkSummary> {
+  const client = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  });
+  const uploadedFile = await uploadVideoForGemini({
+    client,
+    buffer: file.buffer,
+    mimeType: file.mimetype || "video/quicktime",
+    originalName: file.originalname,
+  });
+  const results: EdgeBenchmarkRunResult[] = [];
+
+  for (const model of models) {
+    for (let runIndex = 1; runIndex <= runCount; runIndex += 1) {
+      const startedAt = Date.now();
+      const prompt = buildEdgeNativeVideoBenchmarkPrompt({
+        clipId,
+        expectedEdge,
+        runIndex,
+      });
+      const response = await withTimeout(
+        client.models.generateContent({
+          model,
+          contents: [
+            createPartFromUri(
+              uploadedFile.uri ?? "",
+              uploadedFile.mimeType ?? file.mimetype,
+            ),
+            prompt,
+          ],
+          config: {
+            maxOutputTokens: 1_200,
+            responseMimeType: "application/json",
+            responseSchema: geminiEdgeBenchmarkResponseSchema,
+          },
+        }),
+        geminiEvidenceRequestTimeoutMs,
+        `Gemini edge benchmark timed out for ${model}.`,
+      );
+      const latencyMs = Date.now() - startedAt;
+      const rawResponseText = response.text ?? "";
+      const parsed = parseEdgeBenchmarkResult(rawResponseText);
+      const correct =
+        expectedEdge === "unknown" ? null : parsed.predictedEdge === expectedEdge;
+      const runResult: EdgeBenchmarkRunResult = {
+        ...parsed,
+        clipId,
+        expectedEdge,
+        provider: "gemini",
+        model,
+        runIndex,
+        latencyMs,
+        estimatedCost: null,
+        rawResponseText,
+        rawResponseArtifactPath: "",
+        correct,
+        highConfidenceWrong: correct === false && parsed.confidence === "high",
+      };
+
+      runResult.rawResponseArtifactPath =
+        await writeEdgeBenchmarkRunArtifact(runResult);
+      results.push(runResult);
+    }
+  }
+
+  const createdAt = new Date().toISOString();
+  const summary: EdgeBenchmarkSummary = {
+    createdAt,
+    clipId,
+    expectedEdge,
+    provider: "gemini",
+    models,
+    runCount,
+    results,
+    aggregate: aggregateEdgeBenchmarkResults(results),
+    summaryArtifactPath: "",
+  };
+  summary.summaryArtifactPath = await writeEdgeBenchmarkSummaryArtifact(summary);
+
+  return summary;
+}
+
+function buildEdgeNativeVideoBenchmarkPrompt({
+  clipId,
+  expectedEdge,
+  runIndex,
+}: {
+  clipId: string;
+  expectedEdge: EdgeBenchmarkExpectedEdge;
+  runIndex: number;
+}) {
+  return `You are evaluating wakeboard edge direction from native video.
+
+Task:
+Return observed facts only for Toe/Heel edge use in this clip.
+
+Clip:
+- clipId: ${clipId}
+- expectedEdge is provided only for benchmark bookkeeping: ${expectedEdge}
+- runIndex: ${runIndex}
+
+Rules:
+- Do not use the clip name or expectedEdge as visual evidence.
+- Decide predictedEdge only from what is visible in the video.
+- Use "unknown" when the edge cannot be seen.
+- Use "ambiguous" when toe and heel evidence conflict.
+- High confidence requires timestamped, directly visible physical evidence.
+- Visible evidence must describe board tilt, spray, line tension, rider weight over edge, or another concrete visual cue.
+- Inferred evidence is allowed but must be separated from visible evidence.
+- Add hallucinationFlags when the answer relies on labels, trick expectations, body orientation alone, or non-visible assumptions.
+- Timestamp evidence should point to the most relevant visible moment. Use null startSec/endSec if no timestamp can be identified.
+
+Return only JSON matching this schema:
+{
+  "predictedEdge": "toe | heel | unknown | ambiguous",
+  "confidence": "high | medium | low",
+  "visibleEvidence": ["specific visible evidence"],
+  "inferredEvidence": ["inferences or assumptions, empty if none"],
+  "hallucinationFlags": ["risk flags, empty if none"],
+  "timestampEvidence": {
+    "startSec": 0,
+    "endSec": 0,
+    "description": "what is visible at that moment"
+  }
+}`;
+}
+
+function parseEdgeBenchmarkResult(
+  rawResponseText: string,
+): EdgeBenchmarkParsedResult {
+  try {
+    const parsed = JSON.parse(extractJsonObject(rawResponseText)) as Partial<
+      EdgeBenchmarkParsedResult
+    >;
+    const predictedEdge =
+      parsed.predictedEdge === "toe" ||
+      parsed.predictedEdge === "heel" ||
+      parsed.predictedEdge === "ambiguous" ||
+      parsed.predictedEdge === "unknown"
+        ? parsed.predictedEdge
+        : "unknown";
+    const confidence = asOpenAiConfidenceLevel(parsed.confidence) ?? "low";
+
+    return {
+      predictedEdge,
+      confidence,
+      visibleEvidence: normalizeStringArray(parsed.visibleEvidence, []),
+      inferredEvidence: normalizeStringArray(parsed.inferredEvidence, []),
+      hallucinationFlags: normalizeStringArray(parsed.hallucinationFlags, []),
+      timestampEvidence: normalizeEdgeBenchmarkTimestampEvidence(
+        parsed.timestampEvidence,
+      ),
+    };
+  } catch (error) {
+    return {
+      predictedEdge: "unknown",
+      confidence: "low",
+      visibleEvidence: [],
+      inferredEvidence: [],
+      hallucinationFlags: ["invalid_json_response"],
+      timestampEvidence: {
+        startSec: null,
+        endSec: null,
+        description: "Model did not return valid benchmark JSON.",
+      },
+    };
+  }
+}
+
+function normalizeEdgeBenchmarkTimestampEvidence(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {
+      startSec: null,
+      endSec: null,
+      description: "No timestamp evidence provided.",
+    };
+  }
+
+  const record = value as Record<string, unknown>;
+  const startSec =
+    typeof record.startSec === "number" && Number.isFinite(record.startSec)
+      ? record.startSec
+      : null;
+  const endSec =
+    typeof record.endSec === "number" && Number.isFinite(record.endSec)
+      ? record.endSec
+      : null;
+  const description =
+    typeof record.description === "string" && record.description.trim()
+      ? record.description
+      : "No timestamp evidence provided.";
+
+  return {
+    startSec,
+    endSec,
+    description,
+  };
+}
+
+function aggregateEdgeBenchmarkResults(results: EdgeBenchmarkRunResult[]) {
+  return Array.from(new Set(results.map((result) => result.model))).map(
+    (model) => {
+      const modelResults = results.filter((result) => result.model === model);
+      const knownResults = modelResults.filter(
+        (result) => result.correct !== null,
+      );
+      const correct = knownResults.filter((result) => result.correct).length;
+      const latencyTotal = modelResults.reduce(
+        (sum, result) => sum + result.latencyMs,
+        0,
+      );
+
+      return {
+        model,
+        total: modelResults.length,
+        correct,
+        accuracy:
+          knownResults.length > 0 ? correct / knownResults.length : null,
+        highConfidenceWrong: modelResults.filter(
+          (result) => result.highConfidenceWrong,
+        ).length,
+        unknownOrAmbiguous: modelResults.filter(
+          (result) =>
+            result.predictedEdge === "unknown" ||
+            result.predictedEdge === "ambiguous",
+        ).length,
+        averageLatencyMs:
+          modelResults.length > 0
+            ? Math.round(latencyTotal / modelResults.length)
+            : 0,
+        hallucinationFlagCount: modelResults.reduce(
+          (sum, result) => sum + result.hallucinationFlags.length,
+          0,
+        ),
+      };
+    },
+  );
+}
+
+async function writeEdgeBenchmarkRunArtifact(result: EdgeBenchmarkRunResult) {
+  await mkdir(modelBenchmarkArtifactDir, { recursive: true });
+
+  const artifactPath = join(
+    modelBenchmarkArtifactDir,
+    `${evidenceCaptureTimestamp()}-${safeFileSegment(result.clipId)}-${safeFileSegment(result.model)}-run-${result.runIndex}.json`,
+  );
+
+  await writeFile(
+    artifactPath,
+    JSON.stringify(
+      {
+        kind: "edge-native-video-benchmark-run",
+        createdAt: new Date().toISOString(),
+        nodeEnv: process.env.NODE_ENV ?? "development",
+        result: {
+          ...result,
+          rawResponseArtifactPath: artifactPath,
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  return artifactPath;
+}
+
+async function writeEdgeBenchmarkSummaryArtifact(
+  summary: EdgeBenchmarkSummary,
+) {
+  await mkdir(modelBenchmarkArtifactDir, { recursive: true });
+
+  const artifactPath = join(
+    modelBenchmarkArtifactDir,
+    `summary-${evidenceCaptureTimestamp()}-${safeFileSegment(summary.clipId)}.json`,
+  );
+
+  await writeFile(
+    artifactPath,
+    JSON.stringify(
+      {
+        kind: "edge-native-video-benchmark-summary",
+        ...summary,
+        summaryArtifactPath: artifactPath,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  return artifactPath;
+}
 
 function getSessionMetadata(request: express.Request): SessionMetadata {
   return {
@@ -6806,6 +7256,49 @@ const geminiAnalysisResponseSchema = {
     },
   },
   required: ["summary", "highlights", "highlightScenes", "suggestions"],
+};
+
+const geminiEdgeBenchmarkResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    predictedEdge: {
+      type: Type.STRING,
+      enum: ["toe", "heel", "unknown", "ambiguous"],
+    },
+    confidence: {
+      type: Type.STRING,
+      enum: ["high", "medium", "low"],
+    },
+    visibleEvidence: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    inferredEvidence: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    hallucinationFlags: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    timestampEvidence: {
+      type: Type.OBJECT,
+      properties: {
+        startSec: { type: Type.NUMBER, nullable: true },
+        endSec: { type: Type.NUMBER, nullable: true },
+        description: { type: Type.STRING },
+      },
+      required: ["startSec", "endSec", "description"],
+    },
+  },
+  required: [
+    "predictedEdge",
+    "confidence",
+    "visibleEvidence",
+    "inferredEvidence",
+    "hallucinationFlags",
+    "timestampEvidence",
+  ],
 };
 
 const geminiEvidenceFactSchema = {

@@ -244,7 +244,7 @@ Prompt should ask:
 
 Add one isolated endpoint or script.
 
-Recommended endpoint:
+Implemented dev-only endpoint:
 
 ```text
 POST /debug/benchmarks/edge-native-video
@@ -257,7 +257,9 @@ Rules:
 - accepts multipart video
 - accepts `expectedEdge`
 - accepts `clipId`
-- accepts `models[]`
+- accepts `models[]` or comma-separated `models`
+- defaults to `gemini-2.5-flash,gemini-2.5-pro`
+- writes only local artifacts under `dev-artifacts/model-benchmarks/`
 
 Alternative lower-risk first step:
 
@@ -265,7 +267,8 @@ Alternative lower-risk first step:
 scripts/run-edge-model-benchmark.mjs
 ```
 
-The script is safer because it avoids adding another server route.
+The product analysis flow remains untouched; the benchmark route is isolated
+under `/debug`.
 
 ### Step 3: Gemini Runner
 
@@ -315,6 +318,17 @@ It should compute:
 - average latency
 - hallucination flags count
 - average evidence quality score
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8787/debug/benchmarks/edge-native-video \
+  -F "video=@/absolute/path/to/clip.mov" \
+  -F "clipId=ts-short" \
+  -F "expectedEdge=toe" \
+  -F "runCount=3" \
+  -F "models=gemini-2.5-flash,gemini-2.5-pro"
+```
 
 ## Recommended First Run
 

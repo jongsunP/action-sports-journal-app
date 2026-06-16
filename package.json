@@ -36,6 +36,7 @@
     "start": "expo start",
     "server:dev": "tsx dev-server/index.ts",
     "server:start": "tsx dev-server/index.ts",
+    "benchmark:edge:summary": "node scripts/summarize-edge-model-benchmarks.mjs",
     "supabase:smoke": "node scripts/smoke-test-supabase.mjs",
     "supabase:write-smoke": "node scripts/smoke-test-supabase-writes.mjs",
     "typecheck": "tsc --noEmit",
