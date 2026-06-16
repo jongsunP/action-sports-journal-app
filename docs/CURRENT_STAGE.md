@@ -193,6 +193,52 @@ Current infrastructure boundary:
 - No Supabase Storage, cloud video storage, external queue, Auth, Push, or CDN
   exists yet.
 
+UX and model benchmark milestone on 2026-06-16:
+
+- Gemini native video model benchmark runner exists for dev-only edge judgment
+  experiments.
+- Ground Truth Dataset v1 is committed under
+  `dev-artifacts/benchmark-videos/`.
+- Dataset composition is 12 short clips:
+  - Toe 6 / Heel 6
+  - Regular 6 / Goofy 6
+  - Regular Toe 3 / Regular Heel 3
+  - Goofy Toe 3 / Goofy Heel 3
+- Benchmark modes are available:
+  - `smoke`: 1 run per clip
+  - `full`: 3 runs per clip
+- Flash vs Pro smoke benchmark report exists at
+  `docs/MODEL_BENCHMARK_REPORT_2026_06_16.md`.
+- Smoke benchmark conclusion:
+  - Gemini 2.5 Flash: 10/12, 83.3%, with 1 high-confidence wrong and 1 invalid
+    JSON/unknown result.
+  - Gemini 2.5 Pro: 12/12, 100%, with 0 high-confidence wrong on this dataset.
+  - Flash is faster, but Goofy clips exposed reliability risk.
+  - Pro is slower, but currently stronger for edge-critical decisions.
+- Home UI was simplified away from Instagram feed / bottom sheet structure.
+- Current Home is now an iOS Photos-style personal gallery:
+  - 2-column square Moment grid
+  - minimal date/status badge on each tile
+  - no story rail
+  - no feed card structure
+  - no bottom sheet for details
+- Detail UI is now a full-screen modal:
+  - video first
+  - Moment metadata next
+  - analysis/evidence text below in a normal vertical ScrollView
+  - no bottom-sheet clipping behavior
+- Latest EAS preview/internal distribution build for iPhone UI QA:
+
+```text
+https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/d015ec0b-0c0f-4862-8e94-429faaa9442d
+```
+
+- Latest pushed UI checkpoint:
+
+```text
+c1ed80a Simplify home to gallery layout
+```
+
 AI evidence checkpoint:
 
 - Gemini evidence extraction works from the standalone app.
@@ -225,6 +271,19 @@ Current AI unknowns:
   rather than true inversion mechanics.
 
 ## Today's Conclusions
+
+2026-06-16 end-of-day conclusion:
+
+- Personal gallery UX is now a better fit than SNS feed UX for the current
+  product stage because the app is primarily for reviewing the user's own
+  Moments.
+- Bottom Sheet detail UI caused clipping and poor scrolling, so it was replaced
+  by a full-screen detail modal.
+- Gemini 2.5 Pro is the current quality leader for wakeboard Toe/Heel edge
+  native video judgment on the smoke dataset.
+- Gemini 2.5 Flash remains useful for speed/cost, but should be treated as
+  risky for high-confidence edge decisions unless validated or routed through
+  a stronger model.
 
 Today's product conclusion: Session First became Moment First.
 

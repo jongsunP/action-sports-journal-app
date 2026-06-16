@@ -159,6 +159,102 @@ Local path:
 
 ## Today's Conclusions
 
+## 2026-06-16 Gallery UX and Model Benchmark Wrap-Up
+
+Latest confirmed checkpoint:
+
+```text
+c1ed80a Simplify home to gallery layout
+```
+
+Latest EAS preview/internal distribution build:
+
+```text
+Profile: preview
+Platform: iOS
+Build URL: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/d015ec0b-0c0f-4862-8e94-429faaa9442d
+```
+
+Confirmed repository state at wrap-up:
+
+```text
+local HEAD = origin/master = c1ed80a
+git status = clean
+```
+
+What changed today:
+
+- Added dev-only native video edge benchmark runner.
+- Added Ground Truth Dataset v1 under `dev-artifacts/benchmark-videos/`.
+- Added benchmark smoke/full modes.
+- Ran and documented Gemini 2.5 Flash vs Gemini 2.5 Pro smoke benchmark.
+- Simplified Home from Instagram-style feed/story/bottom-sheet UX to a private
+  iOS Photos-style Moment gallery.
+- Replaced bottom sheet detail UI with a full-screen detail modal so content
+  scrolls naturally and does not clip at the bottom.
+- Created an EAS preview build for real iPhone QA of the new gallery/detail UI.
+
+Important benchmark documents:
+
+```text
+docs/MODEL_BENCHMARK_PLAN.md
+docs/MODEL_BENCHMARK_FLASH_PARTIAL_REPORT.md
+docs/MODEL_BENCHMARK_REPORT_2026_06_16.md
+```
+
+Benchmark conclusions:
+
+- Ground Truth Dataset v1 has 12 clips:
+  - Toe 6 / Heel 6
+  - Regular 6 / Goofy 6
+  - Regular Toe 3 / Regular Heel 3
+  - Goofy Toe 3 / Goofy Heel 3
+- Gemini 2.5 Flash smoke result:
+  - 10/12 correct, 83.3%.
+  - 1 high-confidence wrong.
+  - 1 unknown/invalid JSON case.
+  - Goofy clips exposed reliability risk.
+- Gemini 2.5 Pro smoke result:
+  - 12/12 correct, 100%.
+  - 0 high-confidence wrong.
+  - 0 hallucination flags.
+  - About 2x slower than Flash.
+- Product implication:
+  - Flash is fast and cheaper but risky for edge-critical high-confidence
+    decisions.
+  - Pro is slower but currently much more reliable on the smoke dataset.
+  - Next model strategy should consider full benchmark or hybrid routing.
+
+UX conclusions:
+
+- The app currently fits a personal gallery model better than an SNS feed model.
+- Users are primarily reviewing their own riding Moments.
+- Story rail and feed card structure added visual noise for the current product
+  stage.
+- Bottom Sheet detail UI was not appropriate because analysis/evidence content
+  can be long and needs natural vertical scrolling.
+
+Next starting point:
+
+1. Install/open the latest EAS preview build on the registered iPhone.
+2. QA Home gallery:
+   - 2-column square tiles
+   - thumbnail framing
+   - status badge readability
+   - add Moment flow
+3. QA full-screen detail modal:
+   - video playback at top
+   - evidence text scrolling
+   - no bottom clipping
+   - retry/delete controls
+4. If UI feels acceptable, decide next:
+   - run full benchmark (`benchmarkMode=full`) for Flash/Pro, or
+   - design hybrid routing for edge-critical cases, or
+   - harden async analysis with durable video storage.
+
+Do not start new backend/Auth/storage/product expansion before iPhone QA of the
+new gallery/detail UI unless the user explicitly changes priority.
+
 ## 2026-06-16 Async Analysis MVP Validation Wrap-Up
 
 Latest confirmed checkpoint:
