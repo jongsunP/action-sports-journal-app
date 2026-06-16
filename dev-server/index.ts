@@ -4446,7 +4446,6 @@ function deriveApproachObservedFactsV2(
     loadedEdge: loadedEdgeFromText(approachFactText(facts.edgeDirectionEvidence)),
   };
   const wakePathSupport = inferApproachFromWakePathAndStance(facts);
-  const stanceChainSupport = wakePathSupport;
   const signals = [
     createApproachSignal({
       field: "edgeDirectionEvidence",
@@ -4458,26 +4457,23 @@ function deriveApproachObservedFactsV2(
     createApproachSignal({
       field: "wakeCrossingPath",
       fact: facts.wakeCrossingPath,
-      strength: "supporting",
+      strength: "weak",
       supportOverride: wakePathSupport,
     }),
     createApproachSignal({
       field: "boardDirection",
       fact: facts.boardDirection,
       strength: "supporting",
-      supportOverride: stanceChainSupport,
     }),
     createApproachSignal({
       field: "stance",
       fact: facts.stance,
       strength: "weak",
-      supportOverride: stanceChainSupport,
     }),
     createApproachSignal({
       field: "leadFoot",
       fact: facts.leadFoot,
       strength: "weak",
-      supportOverride: stanceChainSupport,
     }),
     createApproachSignal({
       field: "handlePosition",
@@ -4541,10 +4537,12 @@ function deriveApproachDecisionV2(
     (signal) => signal.strength !== "primary" && signal.supports !== "unknown",
   );
   const uncertainty: string[] = [];
-  const hasWakePathDirectionalSignal = facts.signals.some(
-    (signal) =>
-      signal.field === "wakeCrossingPath" && signal.supports !== "unknown",
+  const explicitEdgeSupport = explicitApproachEdgeSupport(
+    facts.edgeDirectionEvidence,
   );
+  const hasExplicitEdgeUseForTop =
+    (top.side === "toeside" && explicitEdgeSupport === "toeside") ||
+    (top.side === "heelside" && explicitEdgeSupport === "heelside");
 
   if (facts.conflictSummary.hasConflict) {
     uncertainty.push(facts.conflictSummary.reason);
@@ -4573,9 +4571,9 @@ function deriveApproachDecisionV2(
       : top.score >= 5 &&
           runnerUp.score === 0 &&
           uncertainty.length === 0 &&
-          hasWakePathDirectionalSignal
+          hasExplicitEdgeUseForTop
         ? "high"
-        : hasWakePathDirectionalSignal
+        : hasExplicitEdgeUseForTop
           ? "medium"
           : "low";
 
@@ -4839,7 +4837,11 @@ function wakeCrossingDirectionFromFacts(
 }
 
 function loadedEdgeFromText(text: string): "toe_edge" | "heel_edge" | "unknown" {
-  const approach = approachValueFromText(text);
+  const approach = explicitApproachEdgeSupport({
+    value: "",
+    confidence: "high",
+    evidence: text,
+  });
 
   if (approach === "toeside") {
     return "toe_edge";
@@ -4847,6 +4849,48 @@ function loadedEdgeFromText(text: string): "toe_edge" | "heel_edge" | "unknown" 
 
   if (approach === "heelside") {
     return "heel_edge";
+  }
+
+  return "unknown";
+}
+
+function explicitApproachEdgeSupport(
+  fact: ApproachFactPayload,
+):
+  | Extract<ApproachEvidenceSignalV2["supports"], "toeside" | "heelside">
+  | "unknown" {
+  const text = normalizeDomainText(`${fact.value} ${fact.evidence}`);
+
+  if (
+    includesAnyDomainTerm(text, [
+      "toe edge",
+      "toe-edge",
+      "toeside edge",
+      "toe side edge",
+      "토 엣지",
+      "토엣지",
+      "토사이드 엣지",
+      "발가락 쪽 엣지",
+      "발가락 엣지",
+    ])
+  ) {
+    return "toeside";
+  }
+
+  if (
+    includesAnyDomainTerm(text, [
+      "heel edge",
+      "heel-edge",
+      "heelside edge",
+      "heel side edge",
+      "힐 엣지",
+      "힐엣지",
+      "힐사이드 엣지",
+      "뒤꿈치 쪽 엣지",
+      "뒤꿈치 엣지",
+    ])
+  ) {
+    return "heelside";
   }
 
   return "unknown";
@@ -4867,7 +4911,18 @@ function inferDirectionFrame(evidence: string): DirectionFrame {
     return "camera";
   }
 
-  if (includesAnyDomainTerm(text, ["boat", "wake", "inside", "outside", "보트"])) {
+  if (
+    includesAnyDomainTerm(text, [
+      "boat",
+      "boat's",
+      "boat direction",
+      "boat frame",
+      "toward the boat",
+      "away from the boat",
+      "보트",
+      "보트 진행 방향",
+    ])
+  ) {
     return "boat";
   }
 
