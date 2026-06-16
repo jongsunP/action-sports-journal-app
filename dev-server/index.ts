@@ -2664,7 +2664,9 @@ function buildGeminiEvidencePrompt({
     "긴 slalom/setup 구간이 있으면 접근 방향 직접 근거로 쓰지 말고 ignoredSetupWindows에 분리하세요.",
     "approachObservedFacts는 finalApproachWindow 내부에서만 추출하세요.",
     "edgeLoadObservedFacts는 edgeDirectionEvidence의 라벨 추측과 실제 edge load 물리 근거를 분리해서 작성하세요.",
-    "edgeLoadObservedFacts에는 toeEdgeLoaded, heelEdgeLoaded, edgeLoadVisible, boardTiltDirection, sprayDirection, lineTensionDirection, riderWeightOverEdge, edgeLoadConfidence, edgeLoadEvidenceText, antiEdgeLoadEvidence를 작성하세요.",
+    "edgeLoadObservedFacts에는 toeEdgeLoaded, heelEdgeLoaded, edgeLoadVisible, edgeLoadTiming, boardTiltDirection, sprayDirection, lineTensionDirection, riderWeightOverEdge, edgeLoadConfidence, edgeLoadEvidenceText, antiEdgeLoadEvidence를 작성하세요.",
+    "edgeLoadTiming에는 startSec, endSec, observedMoment, evidenceFrameDescription을 작성하세요.",
+    "edgeLoadTiming은 board tilt, spray, rider weight가 직접 보이는 특정 시간대여야 하며 finalApproachWindow 안에 있어야 합니다.",
     "EdgeLoadObservedFacts v2 원칙: 보이는 사실(visible evidence)과 추정(inferred label)을 반드시 분리하세요.",
     "toeEdgeLoaded/heelEdgeLoaded는 실제 board edge contact/load가 보일 때만 true로 쓰세요.",
     "approach label, trick name, expected trick family, bodyOrientation, wakeCrossingPath, stance에서 toeEdgeLoaded/heelEdgeLoaded=true를 추론하지 마세요.",
@@ -2679,6 +2681,7 @@ function buildGeminiEvidencePrompt({
     "riderWeightOverEdge를 chest/back orientation, regular/goofy stance, 진행 방향만으로 추론하지 마세요.",
     "edgeLoadEvidenceText에는 실제 물리 근거만 쓰세요. 라벨, trick expectation, body orientation, wake path 추론은 쓰지 마세요.",
     "edgeLoadConfidence=high는 finalApproachWindow 안에서 서로 독립적인 visible physical indicators가 최소 2개 이상 있을 때만 허용하세요.",
+    "edgeLoadConfidence=high는 edgeLoadTiming.startSec/endSec가 finalApproachWindow와 겹칠 때만 허용하세요.",
     "독립 physical indicators 예: visible board edge angle, edge-specific spray, rider weight over visible edge. 같은 라벨 추정에서 파생된 반복 문장은 독립 근거가 아닙니다.",
     "edgeLoadConfidence=medium은 명확한 visible physical indicator가 1개 있을 때만 허용하세요.",
     "label-only, inferred, timing-unclear, camera-obscured, bodyOrientation-only이면 edgeLoadConfidence는 low로 쓰세요.",
@@ -2765,6 +2768,8 @@ function buildGeminiEvidencePrompt({
     "- approachObservedFacts가 부족하면 approachType high를 금지하세요.",
     "- 실제 toe/heel edge loading이 보이지 않으면 edgeLoadConfidence는 low로 쓰세요.",
     "- EdgeLoadObservedFacts에서 high confidence는 독립적인 visible physical evidence 2개 이상이 없으면 금지하세요.",
+    "- EdgeLoadObservedFacts에서 timestamp 없는 edge load high confidence는 금지하세요.",
+    "- edgeLoadTiming이 finalApproachWindow 밖이거나 unknown이면 edgeLoadConfidence는 medium 이하로 쓰세요.",
     "- bodyOrientation, wake path, stance, trick name만 있는 경우 antiEdgeLoadEvidence에 근거 부족을 기록하세요.",
     "",
     "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
@@ -3116,6 +3121,12 @@ type EdgeLoadObservedFactsPayload = {
   toeEdgeLoaded: ApproachFactPayload;
   heelEdgeLoaded: ApproachFactPayload;
   edgeLoadVisible: ApproachFactPayload;
+  edgeLoadTiming: {
+    startSec: number | null;
+    endSec: number | null;
+    observedMoment: string;
+    evidenceFrameDescription: string;
+  };
   boardTiltDirection: ApproachFactPayload;
   sprayDirection: ApproachFactPayload;
   lineTensionDirection: ApproachFactPayload;
@@ -3188,6 +3199,7 @@ type ApproachObservedFactsV2Payload = {
     loadedEdge: "toe_edge" | "heel_edge" | "unknown";
   };
   edgeLoadObservedFacts: EdgeLoadObservedFactsPayload;
+  edgeLoadValidation: EdgeLoadValidationResult;
   handlePosition: ApproachFactPayload;
   bodyOrientation: ApproachFactPayload;
   signals: ApproachEvidenceSignalV2[];
@@ -3392,6 +3404,7 @@ function parseGeminiEvidence(outputText: string) {
     const approachObservedFacts = normalizeApproachObservedFacts(undefined);
     const rawEdgeLoadObservedFacts = normalizeEdgeLoadObservedFacts(undefined);
     const edgeLoadValidation = validateEdgeLoadObservedFacts({
+      temporalWindows,
       approachObservedFacts,
       edgeLoadObservedFacts: rawEdgeLoadObservedFacts,
     });
@@ -3406,6 +3419,7 @@ function parseGeminiEvidence(outputText: string) {
       approachObservedFacts,
       rawApproachType,
       edgeLoadObservedFacts,
+      edgeLoadValidation,
     );
     const approachDecisionV2 = deriveApproachDecisionV2(
       approachObservedFactsV2,
@@ -4067,6 +4081,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     parsed.edgeLoadObservedFacts,
   );
   const edgeLoadValidation = validateEdgeLoadObservedFacts({
+    temporalWindows,
     approachObservedFacts,
     edgeLoadObservedFacts: rawEdgeLoadObservedFacts,
   });
@@ -4083,6 +4098,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     approachObservedFacts,
     rawApproachType,
     edgeLoadObservedFacts,
+    edgeLoadValidation,
   );
   const approachDecisionV2 = deriveApproachDecisionV2(approachObservedFactsV2);
   const approachWarnings = approachDecision.uncertainty;
@@ -4272,6 +4288,7 @@ function normalizeEdgeLoadObservedFacts(
     toeEdgeLoaded: normalizeApproachFact(facts.toeEdgeLoaded, "unknown"),
     heelEdgeLoaded: normalizeApproachFact(facts.heelEdgeLoaded, "unknown"),
     edgeLoadVisible: normalizeApproachFact(facts.edgeLoadVisible, "unknown"),
+    edgeLoadTiming: normalizeEdgeLoadTiming(facts.edgeLoadTiming),
     boardTiltDirection: normalizeApproachFact(
       facts.boardTiltDirection,
       "unknown",
@@ -4298,10 +4315,36 @@ function normalizeEdgeLoadObservedFacts(
   };
 }
 
+function normalizeEdgeLoadTiming(
+  value: unknown,
+): EdgeLoadObservedFactsPayload["edgeLoadTiming"] {
+  const timing =
+    value && typeof value === "object"
+      ? (value as Partial<EdgeLoadObservedFactsPayload["edgeLoadTiming"]>)
+      : {};
+  const startSec = Number(timing.startSec);
+  const endSec = Number(timing.endSec);
+
+  return {
+    startSec: Number.isFinite(startSec) ? startSec : null,
+    endSec: Number.isFinite(endSec) ? endSec : null,
+    observedMoment:
+      typeof timing.observedMoment === "string"
+        ? timing.observedMoment
+        : "unknown",
+    evidenceFrameDescription:
+      typeof timing.evidenceFrameDescription === "string"
+        ? timing.evidenceFrameDescription
+        : "",
+  };
+}
+
 function validateEdgeLoadObservedFacts({
+  temporalWindows,
   approachObservedFacts,
   edgeLoadObservedFacts,
 }: {
+  temporalWindows: EvidenceTemporalWindowsPayload;
   approachObservedFacts: ApproachObservedFactsPayload;
   edgeLoadObservedFacts: EdgeLoadObservedFactsPayload;
 }): EdgeLoadValidationResult {
@@ -4320,6 +4363,10 @@ function validateEdgeLoadObservedFacts({
   const isLabelOnlyEvidence = edgeLoadEvidenceIsLabelOnly(
     edgeLoadObservedFacts.edgeLoadEvidenceText,
   );
+  const hasFinalApproachTiming = edgeLoadTimingOverlapsFinalApproach(
+    edgeLoadObservedFacts.edgeLoadTiming,
+    temporalWindows.finalApproachWindow,
+  );
   const wasHigh = edgeLoadObservedFacts.edgeLoadConfidence === "high";
 
   if (hasBodyOrientationLeak) {
@@ -4327,6 +4374,10 @@ function validateEdgeLoadObservedFacts({
       "edgeDirectionEvidence or edgeLoadEvidenceText contains body orientation terms.",
     );
     reviewReasons.push("body orientation was used near edge load evidence.");
+    addPostValidationAntiEvidence(
+      after,
+      "post-validation: body orientation terms appeared near edge load evidence.",
+    );
   }
 
   if (isLabelOnlyEvidence) {
@@ -4334,11 +4385,28 @@ function validateEdgeLoadObservedFacts({
       "edgeLoadEvidenceText repeats an edge label without independent physical detail.",
     );
     reviewReasons.push("edge load evidence appears label-only.");
+    addPostValidationAntiEvidence(
+      after,
+      "post-validation: edgeLoadEvidenceText appears label-only.",
+    );
   }
 
   if (independentPhysicalEvidenceCount < 2) {
     rejectedHighConfidenceReasons.push(
       "edgeLoadConfidence high requires at least two independent physical evidence indicators.",
+    );
+  }
+
+  if (!hasFinalApproachTiming) {
+    rejectedHighConfidenceReasons.push(
+      "edgeLoadConfidence high requires timestamped visual evidence inside finalApproachWindow.",
+    );
+    reviewReasons.push(
+      "edge load timing is missing or outside finalApproachWindow.",
+    );
+    addPostValidationAntiEvidence(
+      after,
+      "post-validation: edgeLoadTiming is missing or outside finalApproachWindow.",
     );
   }
 
@@ -4349,9 +4417,10 @@ function validateEdgeLoadObservedFacts({
     reviewReasons.push(
       "edgeLoadConfidence was high while antiEdgeLoadEvidence was empty.",
     );
-    after.antiEdgeLoadEvidence = [
+    addPostValidationAntiEvidence(
+      after,
       "post-validation: antiEdgeLoadEvidence was empty for high confidence.",
-    ];
+    );
   }
 
   if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
@@ -4389,6 +4458,15 @@ function validateEdgeLoadObservedFacts({
   };
 }
 
+function addPostValidationAntiEvidence(
+  facts: EdgeLoadObservedFactsPayload,
+  reason: string,
+) {
+  if (!facts.antiEdgeLoadEvidence.includes(reason)) {
+    facts.antiEdgeLoadEvidence.push(reason);
+  }
+}
+
 function cloneEdgeLoadObservedFacts(
   facts: EdgeLoadObservedFactsPayload,
 ): EdgeLoadObservedFactsPayload {
@@ -4396,6 +4474,7 @@ function cloneEdgeLoadObservedFacts(
     toeEdgeLoaded: { ...facts.toeEdgeLoaded },
     heelEdgeLoaded: { ...facts.heelEdgeLoaded },
     edgeLoadVisible: { ...facts.edgeLoadVisible },
+    edgeLoadTiming: { ...facts.edgeLoadTiming },
     boardTiltDirection: { ...facts.boardTiltDirection },
     sprayDirection: { ...facts.sprayDirection },
     lineTensionDirection: { ...facts.lineTensionDirection },
@@ -4404,6 +4483,25 @@ function cloneEdgeLoadObservedFacts(
     edgeLoadEvidenceText: facts.edgeLoadEvidenceText,
     antiEdgeLoadEvidence: [...facts.antiEdgeLoadEvidence],
   };
+}
+
+function edgeLoadTimingOverlapsFinalApproach(
+  timing: EdgeLoadObservedFactsPayload["edgeLoadTiming"],
+  finalApproachWindow: EvidenceTemporalWindowsPayload["finalApproachWindow"],
+) {
+  if (
+    timing.startSec === null ||
+    timing.endSec === null ||
+    !Number.isFinite(timing.startSec) ||
+    !Number.isFinite(timing.endSec)
+  ) {
+    return false;
+  }
+
+  return (
+    timing.endSec >= finalApproachWindow.startSeconds &&
+    timing.startSec <= finalApproachWindow.endSeconds
+  );
 }
 
 function downgradeEdgeLoadFactConfidence(
@@ -4851,6 +4949,7 @@ function deriveApproachObservedFactsV2(
   facts: ApproachObservedFactsPayload,
   rawApproachType: ReturnType<typeof normalizeEvidenceFact>,
   edgeLoadObservedFacts: EdgeLoadObservedFactsPayload,
+  edgeLoadValidation: EdgeLoadValidationResult,
 ): ApproachObservedFactsV2Payload {
   const edgeDirectionEvidence = {
     ...facts.edgeDirectionEvidence,
@@ -4926,6 +5025,7 @@ function deriveApproachObservedFactsV2(
     },
     edgeDirectionEvidence,
     edgeLoadObservedFacts,
+    edgeLoadValidation,
     handlePosition: facts.handlePosition,
     bodyOrientation: facts.bodyOrientation,
     signals,
@@ -6783,6 +6883,21 @@ const geminiEdgeLoadObservedFactsSchema = {
     toeEdgeLoaded: geminiEvidenceFactSchema,
     heelEdgeLoaded: geminiEvidenceFactSchema,
     edgeLoadVisible: geminiEvidenceFactSchema,
+    edgeLoadTiming: {
+      type: Type.OBJECT,
+      properties: {
+        startSec: { type: Type.NUMBER, nullable: true },
+        endSec: { type: Type.NUMBER, nullable: true },
+        observedMoment: { type: Type.STRING },
+        evidenceFrameDescription: { type: Type.STRING },
+      },
+      required: [
+        "startSec",
+        "endSec",
+        "observedMoment",
+        "evidenceFrameDescription",
+      ],
+    },
     boardTiltDirection: geminiEvidenceFactSchema,
     sprayDirection: geminiEvidenceFactSchema,
     lineTensionDirection: geminiEvidenceFactSchema,
@@ -6801,6 +6916,7 @@ const geminiEdgeLoadObservedFactsSchema = {
     "toeEdgeLoaded",
     "heelEdgeLoaded",
     "edgeLoadVisible",
+    "edgeLoadTiming",
     "boardTiltDirection",
     "sprayDirection",
     "lineTensionDirection",
