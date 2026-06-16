@@ -76,38 +76,12 @@ export type InversionObservedFacts = {
 };
 
 export type PopObservedFacts = {
-  popDetected: EvidenceFact;
-  popTiming: {
-    value:
-      | 'early_release'
-      | 'on_wake'
-      | 'late_pop'
-      | 'no_clear_pop'
-      | 'unknown';
-    confidence: EvidenceConfidence;
-    evidence: string;
-    timestampSeconds: number | null;
-  };
-  popType: {
-    value:
-      | 'progressive_pop'
-      | 'trip_pop'
-      | 'ollie_pop'
-      | 'flat_release'
-      | 'early_release'
-      | 'late_pop'
-      | 'unknown';
-    confidence: EvidenceConfidence;
-    evidence: string;
-  };
-  wakeContactAtRelease: EvidenceFact;
-  boardReleaseAngle: EvidenceFact;
-  lineTensionAtPop: EvidenceFact;
-  riderExtensionAtPop: EvidenceFact;
-  upwardTrajectory: EvidenceFact;
-  popConfidence: EvidenceConfidence;
-  popEvidenceText: string;
-  antiPopEvidence: string[];
+  popType: string | null;
+  timing: string | null;
+  intensity: string | null;
+  evidenceText: string | null;
+  confidence: EvidenceConfidence;
+  antiEvidence: string[];
 };
 
 export type PopValidationResult = {

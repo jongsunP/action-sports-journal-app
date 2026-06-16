@@ -627,40 +627,14 @@ function asPopObservedFacts(
   }
 
   const facts = value as Record<string, unknown>;
-  const popTiming =
-    facts.popTiming && typeof facts.popTiming === 'object'
-      ? (facts.popTiming as Record<string, unknown>)
-      : {};
-  const popType =
-    facts.popType && typeof facts.popType === 'object'
-      ? (facts.popType as Record<string, unknown>)
-      : {};
 
   return {
-    popDetected: asEvidenceFact(facts.popDetected),
-    popTiming: {
-      value: asPopTimingValue(popTiming.value),
-      confidence: asConfidenceLevel(popTiming.confidence) ?? 'low',
-      evidence:
-        asString(popTiming.evidence) ??
-        '팝 타이밍 근거를 충분히 읽지 못했습니다.',
-      timestampSeconds: asNumber(popTiming.timestampSeconds) ?? null,
-    },
-    popType: {
-      value: asPopTypeValue(popType.value),
-      confidence: asConfidenceLevel(popType.confidence) ?? 'low',
-      evidence:
-        asString(popType.evidence) ??
-        '팝 타입 근거를 충분히 읽지 못했습니다.',
-    },
-    wakeContactAtRelease: asEvidenceFact(facts.wakeContactAtRelease),
-    boardReleaseAngle: asEvidenceFact(facts.boardReleaseAngle),
-    lineTensionAtPop: asEvidenceFact(facts.lineTensionAtPop),
-    riderExtensionAtPop: asEvidenceFact(facts.riderExtensionAtPop),
-    upwardTrajectory: asEvidenceFact(facts.upwardTrajectory),
-    popConfidence: asConfidenceLevel(facts.popConfidence) ?? 'low',
-    popEvidenceText: asString(facts.popEvidenceText) ?? '',
-    antiPopEvidence: asStringArray(facts.antiPopEvidence),
+    popType: asString(facts.popType) ?? null,
+    timing: asString(facts.timing) ?? null,
+    intensity: asString(facts.intensity) ?? null,
+    evidenceText: asString(facts.evidenceText) ?? null,
+    confidence: asConfidenceLevel(facts.confidence) ?? 'low',
+    antiEvidence: asStringArray(facts.antiEvidence),
   };
 }
 
@@ -691,30 +665,6 @@ function asPopValidation(
       validation.rejectedHighConfidenceReasons,
     ),
   };
-}
-
-function asPopTimingValue(
-  value: unknown,
-): NonNullable<GeminiEvidenceResult['popObservedFacts']>['popTiming']['value'] {
-  return value === 'early_release' ||
-    value === 'on_wake' ||
-    value === 'late_pop' ||
-    value === 'no_clear_pop'
-    ? value
-    : 'unknown';
-}
-
-function asPopTypeValue(
-  value: unknown,
-): NonNullable<GeminiEvidenceResult['popObservedFacts']>['popType']['value'] {
-  return value === 'progressive_pop' ||
-    value === 'trip_pop' ||
-    value === 'ollie_pop' ||
-    value === 'flat_release' ||
-    value === 'early_release' ||
-    value === 'late_pop'
-    ? value
-    : 'unknown';
 }
 
 function asInversionObservedFacts(
