@@ -330,6 +330,8 @@ app.get("/api/moments", async (_request, response) => {
         "approach_decision_v2",
         "approach_v2_signals",
         "approach_v2_conflict_summary",
+        "pop_observed_facts",
+        "pop_validation",
         ...evidenceResultColumnsV1.slice(14),
       ];
       let evidenceResultsQuery = await client
@@ -1635,7 +1637,9 @@ function isMissingApproachV2ColumnError(error: unknown) {
     message.includes("approach_observed_facts_v2") ||
     message.includes("approach_decision_v2") ||
     message.includes("approach_v2_signals") ||
-    message.includes("approach_v2_conflict_summary")
+    message.includes("approach_v2_conflict_summary") ||
+    message.includes("pop_observed_facts") ||
+    message.includes("pop_validation")
   );
 }
 
@@ -2196,6 +2200,8 @@ async function persistEvidenceResultForLinkedMoment({
     approach_v2_signals: evidence.approachObservedFactsV2?.signals ?? [],
     approach_v2_conflict_summary:
       evidence.approachObservedFactsV2?.conflictSummary ?? null,
+    pop_observed_facts: evidence.popObservedFacts,
+    pop_validation: evidence.popValidation,
     inversion_observed_facts: evidence.inversionObservedFacts,
     temporal_windows: evidence.temporalWindows,
     evidence_windows: evidence.evidenceWindows,
@@ -2217,6 +2223,8 @@ async function persistEvidenceResultForLinkedMoment({
       approach_decision_v2,
       approach_v2_signals,
       approach_v2_conflict_summary,
+      pop_observed_facts,
+      pop_validation,
       ...v1EvidenceResultValues
     } = evidenceResultValues;
 
@@ -2675,7 +2683,8 @@ async function runGeminiEvidenceExtraction({
     normalizedEvidence.consistencyStatus !== "valid" ||
     normalizedEvidence.confidence === "low" ||
     normalizedEvidence.primaryCandidate.confidence === "low" ||
-    normalizedEvidence.edgeLoadValidation.needsReview;
+    normalizedEvidence.edgeLoadValidation.needsReview ||
+    normalizedEvidence.popValidation.needsReview;
   recordDailyUsage(usageKey);
   console.log(
     `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
@@ -2705,6 +2714,8 @@ async function runGeminiEvidenceExtraction({
     approachObservedFacts: normalizedEvidence.approachObservedFacts,
     edgeLoadObservedFacts: normalizedEvidence.edgeLoadObservedFacts,
     edgeLoadValidation: normalizedEvidence.edgeLoadValidation,
+    popObservedFacts: normalizedEvidence.popObservedFacts,
+    popValidation: normalizedEvidence.popValidation,
     approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
     inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
     approachDecision: normalizedEvidence.approachDecision,
@@ -3029,6 +3040,8 @@ async function writeEvidenceCaptureArtifact({
         approachObservedFacts: normalizedResult.approachObservedFacts,
         edgeLoadObservedFacts: normalizedResult.edgeLoadObservedFacts,
         edgeLoadValidation: normalizedResult.edgeLoadValidation,
+        popObservedFacts: normalizedResult.popObservedFacts,
+        popValidation: normalizedResult.popValidation,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {
@@ -3166,6 +3179,17 @@ function buildGeminiEvidencePrompt({
     "toeEdgeLoaded와 heelEdgeLoaded가 충돌하면 edgeLoadConfidence는 low로 낮추고 antiEdgeLoadEvidence에 충돌 이유를 쓰세요.",
     "antiEdgeLoadEvidence는 적극적으로 작성하세요. 누락/차단 근거가 있으면 반드시 기록하세요.",
     "antiEdgeLoadEvidence 예: board edge angle not visible, spray not tied to a specific edge, body orientation only not edge load, label-only edge claim, timing outside finalApproachWindow.",
+    "popObservedFacts는 takeoff/pop mechanics에 대한 관찰 사실만 기록하세요. 트릭명이나 family를 근거로 팝을 추론하지 마세요.",
+    "popObservedFacts에는 popDetected, popTiming, popType, wakeContactAtRelease, boardReleaseAngle, lineTensionAtPop, riderExtensionAtPop, upwardTrajectory, popConfidence, popEvidenceText, antiPopEvidence를 작성하세요.",
+    "popTiming.value는 early_release, on_wake, late_pop, no_clear_pop, unknown 중 하나로 쓰고 timestampSeconds는 takeoffTimestamp 근처의 실제 팝 순간이어야 합니다.",
+    "popType.value는 progressive_pop, trip_pop, ollie_pop, flat_release, early_release, late_pop, unknown 중 하나로 쓰세요.",
+    "progressive_pop은 wake lip/top of wake에서 line tension, board release angle, leg extension, upward trajectory가 보일 때만 medium 이상으로 쓰세요.",
+    "trip_pop은 edge가 wake에서 trip/release되는 물리 단서가 보일 때만 medium 이상으로 쓰세요.",
+    "late_pop/early_release는 takeoffTimestamp와 popTiming이 맞지 않는 경우에만 쓰고 근거 timestamp를 명시하세요.",
+    "popConfidence=high는 takeoffTimestamp 근처에서 서로 독립적인 visible physical pop indicators가 최소 2개 이상 있을 때만 허용하세요.",
+    "독립 pop indicators 예: wake lip/top contact at release, board release angle, line/handle tension, rider leg extension, upward trajectory.",
+    "popEvidenceText에는 실제 물리 근거만 쓰세요. Basic Jump, Tantrum, Back Roll 같은 trick label은 pop 근거가 아닙니다.",
+    "antiPopEvidence는 적극적으로 작성하세요. 팝 순간이 가려짐, 립 접촉 불명확, 라인 텐션 불명확, 다리 펴짐 불명확, label-only pop claim 등을 기록하세요.",
     "inversionObservedFacts는 접근/엣지/예상 트릭에서 추론하지 말고 공중 동작에서 보이는 사실만 기록하세요.",
     "인버트는 머리가 엉덩이보다 아래인지 하나만으로 정의하지 마세요. 1차 근거는 boardAboveHead입니다.",
     "boardAboveHead는 보드가 라이더 머리보다 위에 명확히 있는지 관찰하세요. 보드가 머리 위에 한 번도 보이지 않으면 antiInversionEvidence에 기록하세요.",
@@ -3221,6 +3245,7 @@ function buildGeminiEvidencePrompt({
     "- temporalWindows: takeoffTimestamp, finalApproachWindow, ignoredSetupWindows, approachWindowConfidence",
     "- approachObservedFacts: 접근 방향 판단 전 관찰 사실",
     "- edgeLoadObservedFacts: 실제 toe/heel edge load 물리 근거. 라벨 추측과 분리",
+    "- popObservedFacts: takeoff/pop mechanics 관찰 사실. popDetected, popTiming, popType, wakeContactAtRelease, boardReleaseAngle, lineTensionAtPop, riderExtensionAtPop, upwardTrajectory, antiPopEvidence",
     "- inversionObservedFacts: 인버트 판단 전 관찰 사실. bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved, inversionDuration, inversionEvidenceCount, antiInversionEvidence",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
@@ -3249,8 +3274,11 @@ function buildGeminiEvidencePrompt({
     "- EdgeLoadObservedFacts에서 timestamp 없는 edge load high confidence는 금지하세요.",
     "- edgeLoadTiming이 finalApproachWindow 밖이거나 unknown이면 edgeLoadConfidence는 medium 이하로 쓰세요.",
     "- bodyOrientation, wake path, stance, trick name만 있는 경우 antiEdgeLoadEvidence에 근거 부족을 기록하세요.",
+    "- PopObservedFacts에서 high confidence는 takeoffTimestamp 근처의 독립적인 visible physical evidence 2개 이상이 없으면 금지하세요.",
+    "- popTiming.timestampSeconds가 없거나 takeoffTimestamp와 맞지 않으면 popConfidence high를 금지하세요.",
+    "- trick name, family, airtime만으로 popType을 확정하지 말고 antiPopEvidence에 근거 부족을 기록하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -3512,6 +3540,7 @@ type GeminiEvidencePayload = {
   };
   approachObservedFacts?: ApproachObservedFactsPayload;
   edgeLoadObservedFacts?: EdgeLoadObservedFactsPayload;
+  popObservedFacts?: PopObservedFactsPayload;
   inversionObservedFacts?: InversionObservedFactsPayload;
   rotationType: {
     value: string;
@@ -3617,6 +3646,51 @@ type EdgeLoadObservedFactsPayload = {
 type EdgeLoadValidationResult = {
   before: EdgeLoadObservedFactsPayload;
   after: EdgeLoadObservedFactsPayload;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentPhysicalEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
+type PopObservedFactsPayload = {
+  popDetected: ApproachFactPayload;
+  popTiming: {
+    value:
+      | "early_release"
+      | "on_wake"
+      | "late_pop"
+      | "no_clear_pop"
+      | "unknown";
+    confidence: "high" | "medium" | "low";
+    evidence: string;
+    timestampSeconds: number | null;
+  };
+  popType: {
+    value:
+      | "progressive_pop"
+      | "trip_pop"
+      | "ollie_pop"
+      | "flat_release"
+      | "early_release"
+      | "late_pop"
+      | "unknown";
+    confidence: "high" | "medium" | "low";
+    evidence: string;
+  };
+  wakeContactAtRelease: ApproachFactPayload;
+  boardReleaseAngle: ApproachFactPayload;
+  lineTensionAtPop: ApproachFactPayload;
+  riderExtensionAtPop: ApproachFactPayload;
+  upwardTrajectory: ApproachFactPayload;
+  popConfidence: "high" | "medium" | "low";
+  popEvidenceText: string;
+  antiPopEvidence: string[];
+};
+
+type PopValidationResult = {
+  before: PopObservedFactsPayload;
+  after: PopObservedFactsPayload;
   adjusted: boolean;
   needsReview: boolean;
   independentPhysicalEvidenceCount: number;
@@ -3887,6 +3961,12 @@ function parseGeminiEvidence(outputText: string) {
       edgeLoadObservedFacts: rawEdgeLoadObservedFacts,
     });
     const edgeLoadObservedFacts = edgeLoadValidation.after;
+    const rawPopObservedFacts = normalizePopObservedFacts(undefined);
+    const popValidation = validatePopObservedFacts({
+      temporalWindows,
+      popObservedFacts: rawPopObservedFacts,
+    });
+    const popObservedFacts = popValidation.after;
     const inversionObservedFacts = normalizeInversionObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
@@ -3915,6 +3995,8 @@ function parseGeminiEvidence(outputText: string) {
       approachObservedFacts,
       edgeLoadObservedFacts,
       edgeLoadValidation,
+      popObservedFacts,
+      popValidation,
       approachObservedFactsV2,
       inversionObservedFacts,
       approachDecision,
@@ -3970,6 +4052,10 @@ function parsePartialGeminiEvidence(outputText: string) {
     outputText,
     "edgeLoadObservedFacts",
   );
+  const popObservedFacts = parseObjectProperty(
+    outputText,
+    "popObservedFacts",
+  );
   const inversionObservedFacts = parseObjectProperty(
     outputText,
     "inversionObservedFacts",
@@ -3991,6 +4077,8 @@ function parsePartialGeminiEvidence(outputText: string) {
       approachObservedFacts as GeminiEvidencePayload["approachObservedFacts"] | undefined,
     edgeLoadObservedFacts:
       edgeLoadObservedFacts as GeminiEvidencePayload["edgeLoadObservedFacts"] | undefined,
+    popObservedFacts:
+      popObservedFacts as GeminiEvidencePayload["popObservedFacts"] | undefined,
     inversionObservedFacts:
       inversionObservedFacts as GeminiEvidencePayload["inversionObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
@@ -4564,6 +4652,14 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     edgeLoadObservedFacts: rawEdgeLoadObservedFacts,
   });
   const edgeLoadObservedFacts = edgeLoadValidation.after;
+  const rawPopObservedFacts = normalizePopObservedFacts(
+    parsed.popObservedFacts,
+  );
+  const popValidation = validatePopObservedFacts({
+    temporalWindows,
+    popObservedFacts: rawPopObservedFacts,
+  });
+  const popObservedFacts = popValidation.after;
   const inversionObservedFacts = normalizeInversionObservedFacts(
     parsed.inversionObservedFacts,
   );
@@ -4598,6 +4694,8 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     approachObservedFacts,
     edgeLoadObservedFacts,
     edgeLoadValidation,
+    popObservedFacts,
+    popValidation,
     approachObservedFactsV2,
     inversionObservedFacts,
     approachDecision,
@@ -5049,6 +5147,463 @@ function dedupeEdgeLoadEvidenceText(text: string) {
     .replace(/\b(토|힐|토사이드|힐사이드|엣지|로드|하중)\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizePopObservedFacts(value: unknown): PopObservedFactsPayload {
+  const facts =
+    value && typeof value === "object"
+      ? (value as Partial<PopObservedFactsPayload>)
+      : {};
+
+  return {
+    popDetected: normalizeApproachFact(facts.popDetected, "unknown"),
+    popTiming: normalizePopTiming(facts.popTiming),
+    popType: normalizePopType(facts.popType),
+    wakeContactAtRelease: normalizeApproachFact(
+      facts.wakeContactAtRelease,
+      "unknown",
+    ),
+    boardReleaseAngle: normalizeApproachFact(
+      facts.boardReleaseAngle,
+      "unknown",
+    ),
+    lineTensionAtPop: normalizeApproachFact(
+      facts.lineTensionAtPop,
+      "unknown",
+    ),
+    riderExtensionAtPop: normalizeApproachFact(
+      facts.riderExtensionAtPop,
+      "unknown",
+    ),
+    upwardTrajectory: normalizeApproachFact(facts.upwardTrajectory, "unknown"),
+    popConfidence: asOpenAiConfidenceLevel(facts.popConfidence) ?? "low",
+    popEvidenceText:
+      typeof facts.popEvidenceText === "string"
+        ? facts.popEvidenceText
+        : "",
+    antiPopEvidence: normalizeStringArray(facts.antiPopEvidence, []),
+  };
+}
+
+function normalizePopTiming(
+  value: unknown,
+): PopObservedFactsPayload["popTiming"] {
+  const timing =
+    value && typeof value === "object"
+      ? (value as Partial<PopObservedFactsPayload["popTiming"]>)
+      : {};
+  const timestampSeconds = Number(timing.timestampSeconds);
+  const allowedValues: Array<PopObservedFactsPayload["popTiming"]["value"]> = [
+    "early_release",
+    "on_wake",
+    "late_pop",
+    "no_clear_pop",
+    "unknown",
+  ];
+
+  return {
+    value: allowedValues.includes(
+      timing.value as PopObservedFactsPayload["popTiming"]["value"],
+    )
+      ? (timing.value as PopObservedFactsPayload["popTiming"]["value"])
+      : "unknown",
+    confidence: asOpenAiConfidenceLevel(timing.confidence) ?? "low",
+    evidence:
+      typeof timing.evidence === "string"
+        ? timing.evidence
+        : "팝 타이밍 근거를 충분히 구조화하지 못했습니다.",
+    timestampSeconds: Number.isFinite(timestampSeconds)
+      ? timestampSeconds
+      : null,
+  };
+}
+
+function normalizePopType(value: unknown): PopObservedFactsPayload["popType"] {
+  const popType =
+    value && typeof value === "object"
+      ? (value as Partial<PopObservedFactsPayload["popType"]>)
+      : {};
+  const allowedValues: Array<PopObservedFactsPayload["popType"]["value"]> = [
+    "progressive_pop",
+    "trip_pop",
+    "ollie_pop",
+    "flat_release",
+    "early_release",
+    "late_pop",
+    "unknown",
+  ];
+
+  return {
+    value: allowedValues.includes(
+      popType.value as PopObservedFactsPayload["popType"]["value"],
+    )
+      ? (popType.value as PopObservedFactsPayload["popType"]["value"])
+      : "unknown",
+    confidence: asOpenAiConfidenceLevel(popType.confidence) ?? "low",
+    evidence:
+      typeof popType.evidence === "string"
+        ? popType.evidence
+        : "팝 타입 근거를 충분히 구조화하지 못했습니다.",
+  };
+}
+
+function validatePopObservedFacts({
+  temporalWindows,
+  popObservedFacts,
+}: {
+  temporalWindows: EvidenceTemporalWindowsPayload;
+  popObservedFacts: PopObservedFactsPayload;
+}): PopValidationResult {
+  const before = clonePopObservedFacts(popObservedFacts);
+  const after = clonePopObservedFacts(popObservedFacts);
+  const rulesApplied: string[] = [];
+  const rejectedHighConfidenceReasons: string[] = [];
+  const reviewReasons: string[] = [];
+  const independentPhysicalEvidenceCount =
+    countIndependentPopEvidence(popObservedFacts);
+  const hasTakeoffTimestamp =
+    temporalWindows.takeoffTimestamp.timestampSeconds !== null;
+  const timingNearTakeoff = popTimingNearTakeoff(
+    popObservedFacts.popTiming,
+    temporalWindows.takeoffTimestamp,
+  );
+  const labelOnlyEvidence = popEvidenceIsLabelOnly(
+    [
+      popObservedFacts.popEvidenceText,
+      popObservedFacts.popDetected.evidence,
+      popObservedFacts.popType.evidence,
+    ].join(" "),
+  );
+  const wasHigh = popObservedFacts.popConfidence === "high";
+
+  if (!hasTakeoffTimestamp) {
+    rejectedHighConfidenceReasons.push(
+      "popConfidence high requires a detected takeoffTimestamp.",
+    );
+    reviewReasons.push("takeoffTimestamp is missing for pop validation.");
+    addPostValidationAntiPopEvidence(
+      after,
+      "post-validation: takeoffTimestamp is missing.",
+    );
+  }
+
+  if (!timingNearTakeoff) {
+    rejectedHighConfidenceReasons.push(
+      "popConfidence high requires popTiming near takeoffTimestamp.",
+    );
+    reviewReasons.push("popTiming is missing or not near takeoffTimestamp.");
+    addPostValidationAntiPopEvidence(
+      after,
+      "post-validation: popTiming is missing or not near takeoffTimestamp.",
+    );
+  }
+
+  if (independentPhysicalEvidenceCount < 2) {
+    rejectedHighConfidenceReasons.push(
+      "popConfidence high requires at least two independent visible physical pop indicators.",
+    );
+  }
+
+  if (labelOnlyEvidence) {
+    rejectedHighConfidenceReasons.push(
+      "pop evidence repeats a pop label without independent physical detail.",
+    );
+    reviewReasons.push("pop evidence appears label-only.");
+    addPostValidationAntiPopEvidence(
+      after,
+      "post-validation: pop evidence appears label-only.",
+    );
+  }
+
+  if (
+    popObservedFacts.antiPopEvidence.length === 0 &&
+    popObservedFacts.popConfidence === "high"
+  ) {
+    reviewReasons.push(
+      "popConfidence was high while antiPopEvidence was empty.",
+    );
+    addPostValidationAntiPopEvidence(
+      after,
+      "post-validation: antiPopEvidence was empty for high confidence.",
+    );
+  }
+
+  if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
+    after.popConfidence =
+      independentPhysicalEvidenceCount >= 1 && !labelOnlyEvidence
+        ? "medium"
+        : "low";
+    rulesApplied.push(
+      `popConfidence downgraded from high to ${after.popConfidence}.`,
+    );
+    after.popDetected = downgradePopFactConfidence(
+      after.popDetected,
+      after.popConfidence,
+    );
+    after.popTiming = downgradePopTimingConfidence(
+      after.popTiming,
+      after.popConfidence,
+    );
+    after.popType = downgradePopTypeConfidence(
+      after.popType,
+      after.popConfidence,
+    );
+  }
+
+  if (reviewReasons.length > 0) {
+    rulesApplied.push(...reviewReasons);
+  }
+
+  return {
+    before,
+    after,
+    adjusted: JSON.stringify(before) !== JSON.stringify(after),
+    needsReview: reviewReasons.length > 0,
+    independentPhysicalEvidenceCount,
+    rulesApplied,
+    rejectedHighConfidenceReasons,
+  };
+}
+
+function clonePopObservedFacts(
+  facts: PopObservedFactsPayload,
+): PopObservedFactsPayload {
+  return {
+    popDetected: { ...facts.popDetected },
+    popTiming: { ...facts.popTiming },
+    popType: { ...facts.popType },
+    wakeContactAtRelease: { ...facts.wakeContactAtRelease },
+    boardReleaseAngle: { ...facts.boardReleaseAngle },
+    lineTensionAtPop: { ...facts.lineTensionAtPop },
+    riderExtensionAtPop: { ...facts.riderExtensionAtPop },
+    upwardTrajectory: { ...facts.upwardTrajectory },
+    popConfidence: facts.popConfidence,
+    popEvidenceText: facts.popEvidenceText,
+    antiPopEvidence: [...facts.antiPopEvidence],
+  };
+}
+
+function addPostValidationAntiPopEvidence(
+  facts: PopObservedFactsPayload,
+  reason: string,
+) {
+  if (!facts.antiPopEvidence.includes(reason)) {
+    facts.antiPopEvidence.push(reason);
+  }
+}
+
+function popTimingNearTakeoff(
+  timing: PopObservedFactsPayload["popTiming"],
+  takeoffTimestamp: EvidenceTemporalWindowsPayload["takeoffTimestamp"],
+) {
+  if (
+    timing.timestampSeconds === null ||
+    takeoffTimestamp.timestampSeconds === null
+  ) {
+    return false;
+  }
+
+  return Math.abs(timing.timestampSeconds - takeoffTimestamp.timestampSeconds) <= 0.75;
+}
+
+function downgradePopFactConfidence(
+  fact: ApproachFactPayload,
+  confidence: ApproachFactPayload["confidence"],
+): ApproachFactPayload {
+  return fact.confidence === "high"
+    ? {
+        ...fact,
+        confidence,
+        evidence: `${fact.evidence} 서버 post-validation에서 ${confidence} confidence로 낮췄습니다.`,
+      }
+    : fact;
+}
+
+function downgradePopTimingConfidence(
+  timing: PopObservedFactsPayload["popTiming"],
+  confidence: ApproachFactPayload["confidence"],
+): PopObservedFactsPayload["popTiming"] {
+  return timing.confidence === "high"
+    ? {
+        ...timing,
+        confidence,
+        evidence: `${timing.evidence} 서버 post-validation에서 ${confidence} confidence로 낮췄습니다.`,
+      }
+    : timing;
+}
+
+function downgradePopTypeConfidence(
+  popType: PopObservedFactsPayload["popType"],
+  confidence: ApproachFactPayload["confidence"],
+): PopObservedFactsPayload["popType"] {
+  return popType.confidence === "high"
+    ? {
+        ...popType,
+        confidence,
+        evidence: `${popType.evidence} 서버 post-validation에서 ${confidence} confidence로 낮췄습니다.`,
+      }
+    : popType;
+}
+
+function countIndependentPopEvidence(facts: PopObservedFactsPayload) {
+  const evidenceKeys = new Set<string>();
+
+  addIndependentPopEvidence(
+    evidenceKeys,
+    facts.wakeContactAtRelease,
+    isPhysicalWakeReleaseEvidence,
+  );
+  addIndependentPopEvidence(
+    evidenceKeys,
+    facts.boardReleaseAngle,
+    isPhysicalBoardReleaseEvidence,
+  );
+  addIndependentPopEvidence(
+    evidenceKeys,
+    facts.lineTensionAtPop,
+    isPhysicalLineTensionEvidence,
+  );
+  addIndependentPopEvidence(
+    evidenceKeys,
+    facts.riderExtensionAtPop,
+    isPhysicalRiderExtensionEvidence,
+  );
+  addIndependentPopEvidence(
+    evidenceKeys,
+    facts.upwardTrajectory,
+    isPhysicalUpwardTrajectoryEvidence,
+  );
+
+  return evidenceKeys.size;
+}
+
+function addIndependentPopEvidence(
+  evidenceKeys: Set<string>,
+  fact: ApproachFactPayload,
+  predicate: (text: string) => boolean,
+) {
+  const text = normalizeDomainText(`${fact.value} ${fact.evidence}`);
+
+  if (fact.confidence === "low" || popEvidenceIsLabelOnly(text) || !predicate(text)) {
+    return;
+  }
+
+  evidenceKeys.add(dedupePopEvidenceText(text));
+}
+
+function dedupePopEvidenceText(text: string) {
+  return text
+    .replace(/\b(pop|progressive|trip|late|early|release|wake)\b/g, "")
+    .replace(/\b(팝|프로그레시브|트립|릴리즈|웨이크|이륙)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function popEvidenceIsLabelOnly(text: string) {
+  const normalized = normalizeDomainText(text);
+
+  if (!normalized.trim()) {
+    return true;
+  }
+
+  return (
+    includesAnyDomainTerm(normalized, [
+      "progressive pop",
+      "trip pop",
+      "late pop",
+      "early release",
+      "pop detected",
+      "프로그레시브 팝",
+      "트립 팝",
+      "늦은 팝",
+      "이른 릴리즈",
+    ]) &&
+    !includesAnyDomainTerm(normalized, [
+      "wake lip",
+      "top of wake",
+      "board angle",
+      "line tension",
+      "handle tension",
+      "leg extension",
+      "knees",
+      "upward trajectory",
+      "vertical lift",
+      "웨이크 립",
+      "웨이크 정상",
+      "보드 각도",
+      "라인 텐션",
+      "핸들 텐션",
+      "다리",
+      "무릎",
+      "상승",
+      "수직",
+    ])
+  );
+}
+
+function isPhysicalWakeReleaseEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "wake lip",
+    "top of wake",
+    "release",
+    "takeoff",
+    "leaves the wake",
+    "웨이크 립",
+    "웨이크 정상",
+    "이륙",
+    "릴리즈",
+  ]);
+}
+
+function isPhysicalBoardReleaseEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "board angle",
+    "nose",
+    "tail",
+    "ramp",
+    "edge angle",
+    "보드 각도",
+    "노즈",
+    "테일",
+    "엣지 각도",
+  ]);
+}
+
+function isPhysicalLineTensionEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "line tension",
+    "rope tension",
+    "handle tension",
+    "taut line",
+    "라인 텐션",
+    "로프 텐션",
+    "핸들 텐션",
+  ]);
+}
+
+function isPhysicalRiderExtensionEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "leg extension",
+    "knees extend",
+    "stands tall",
+    "hips rise",
+    "다리",
+    "무릎",
+    "펴",
+    "힙",
+  ]);
+}
+
+function isPhysicalUpwardTrajectoryEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "upward trajectory",
+    "vertical lift",
+    "rises",
+    "upward",
+    "상승",
+    "수직",
+    "위로",
+  ]);
 }
 
 function containsBodyOrientationEvidence(text: string) {
@@ -6691,6 +7246,7 @@ function inferRawTrickFamily({
 
 function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
   const inversionFacts = evidence.inversionObservedFacts;
+  const popFacts = evidence.popObservedFacts;
 
   return normalizeDomainText(
     [
@@ -6702,6 +7258,21 @@ function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
       evidence.approachType.evidence,
       evidence.rotationType.value,
       evidence.rotationType.evidence,
+      popFacts
+        ? [
+            `popDetected ${popFacts.popDetected.value} ${popFacts.popDetected.evidence}`,
+            `popTiming ${popFacts.popTiming.value} ${popFacts.popTiming.timestampSeconds ?? "unknown"} ${popFacts.popTiming.evidence}`,
+            `popType ${popFacts.popType.value} ${popFacts.popType.evidence}`,
+            `wakeContactAtRelease ${popFacts.wakeContactAtRelease.value} ${popFacts.wakeContactAtRelease.evidence}`,
+            `boardReleaseAngle ${popFacts.boardReleaseAngle.value} ${popFacts.boardReleaseAngle.evidence}`,
+            `lineTensionAtPop ${popFacts.lineTensionAtPop.value} ${popFacts.lineTensionAtPop.evidence}`,
+            `riderExtensionAtPop ${popFacts.riderExtensionAtPop.value} ${popFacts.riderExtensionAtPop.evidence}`,
+            `upwardTrajectory ${popFacts.upwardTrajectory.value} ${popFacts.upwardTrajectory.evidence}`,
+            `popConfidence ${popFacts.popConfidence}`,
+            popFacts.popEvidenceText,
+            ...popFacts.antiPopEvidence,
+          ].join(" ")
+        : "",
       inversionFacts
         ? [
             `bodyInverted ${inversionFacts.bodyInverted}`,
@@ -7453,6 +8024,85 @@ const geminiObservedBooleanSchema = {
   enum: ["true", "false", "unknown"],
 };
 
+const geminiPopObservedFactsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    popDetected: geminiEvidenceFactSchema,
+    popTiming: {
+      type: Type.OBJECT,
+      properties: {
+        value: {
+          type: Type.STRING,
+          enum: [
+            "early_release",
+            "on_wake",
+            "late_pop",
+            "no_clear_pop",
+            "unknown",
+          ],
+        },
+        confidence: {
+          type: Type.STRING,
+          enum: ["high", "medium", "low"],
+        },
+        evidence: { type: Type.STRING },
+        timestampSeconds: { type: Type.NUMBER, nullable: true },
+      },
+      required: ["value", "confidence", "evidence", "timestampSeconds"],
+    },
+    popType: {
+      type: Type.OBJECT,
+      properties: {
+        value: {
+          type: Type.STRING,
+          enum: [
+            "progressive_pop",
+            "trip_pop",
+            "ollie_pop",
+            "flat_release",
+            "early_release",
+            "late_pop",
+            "unknown",
+          ],
+        },
+        confidence: {
+          type: Type.STRING,
+          enum: ["high", "medium", "low"],
+        },
+        evidence: { type: Type.STRING },
+      },
+      required: ["value", "confidence", "evidence"],
+    },
+    wakeContactAtRelease: geminiEvidenceFactSchema,
+    boardReleaseAngle: geminiEvidenceFactSchema,
+    lineTensionAtPop: geminiEvidenceFactSchema,
+    riderExtensionAtPop: geminiEvidenceFactSchema,
+    upwardTrajectory: geminiEvidenceFactSchema,
+    popConfidence: {
+      type: Type.STRING,
+      enum: ["high", "medium", "low"],
+    },
+    popEvidenceText: { type: Type.STRING },
+    antiPopEvidence: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+  },
+  required: [
+    "popDetected",
+    "popTiming",
+    "popType",
+    "wakeContactAtRelease",
+    "boardReleaseAngle",
+    "lineTensionAtPop",
+    "riderExtensionAtPop",
+    "upwardTrajectory",
+    "popConfidence",
+    "popEvidenceText",
+    "antiPopEvidence",
+  ],
+};
+
 const geminiInversionObservedFactsSchema = {
   type: Type.OBJECT,
   properties: {
@@ -7555,6 +8205,7 @@ const geminiEvidenceResponseSchema = {
     temporalWindows: geminiTemporalWindowsSchema,
     approachObservedFacts: geminiApproachObservedFactsSchema,
     edgeLoadObservedFacts: geminiEdgeLoadObservedFactsSchema,
+    popObservedFacts: geminiPopObservedFactsSchema,
     inversionObservedFacts: geminiInversionObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
@@ -7628,6 +8279,7 @@ const geminiEvidenceResponseSchema = {
     "temporalWindows",
     "approachObservedFacts",
     "edgeLoadObservedFacts",
+    "popObservedFacts",
     "inversionObservedFacts",
     "approachType",
     "rotationType",

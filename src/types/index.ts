@@ -75,6 +75,51 @@ export type InversionObservedFacts = {
   antiInversionEvidence: string[];
 };
 
+export type PopObservedFacts = {
+  popDetected: EvidenceFact;
+  popTiming: {
+    value:
+      | 'early_release'
+      | 'on_wake'
+      | 'late_pop'
+      | 'no_clear_pop'
+      | 'unknown';
+    confidence: EvidenceConfidence;
+    evidence: string;
+    timestampSeconds: number | null;
+  };
+  popType: {
+    value:
+      | 'progressive_pop'
+      | 'trip_pop'
+      | 'ollie_pop'
+      | 'flat_release'
+      | 'early_release'
+      | 'late_pop'
+      | 'unknown';
+    confidence: EvidenceConfidence;
+    evidence: string;
+  };
+  wakeContactAtRelease: EvidenceFact;
+  boardReleaseAngle: EvidenceFact;
+  lineTensionAtPop: EvidenceFact;
+  riderExtensionAtPop: EvidenceFact;
+  upwardTrajectory: EvidenceFact;
+  popConfidence: EvidenceConfidence;
+  popEvidenceText: string;
+  antiPopEvidence: string[];
+};
+
+export type PopValidationResult = {
+  before: PopObservedFacts;
+  after: PopObservedFacts;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentPhysicalEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
 export type EvidenceTemporalWindows = {
   takeoffTimestamp: {
     timestampSeconds: number | null;
@@ -227,6 +272,8 @@ export type GeminiEvidenceResult = {
   rawApproachType?: EvidenceFact;
   approachObservedFacts?: ApproachObservedFacts;
   approachObservedFactsV2?: ApproachObservedFactsV2;
+  popObservedFacts?: PopObservedFacts;
+  popValidation?: PopValidationResult;
   inversionObservedFacts?: InversionObservedFacts;
   approachDecision?: ApproachDecision;
   approachDecisionV2?: ApproachDecisionV2;

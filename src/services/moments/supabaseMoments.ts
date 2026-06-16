@@ -234,6 +234,12 @@ function normalizeRemoteEvidenceResult(
     approachObservedFactsV2: asRecord(evidence.approach_observed_facts_v2) as
       | GeminiEvidenceResult['approachObservedFactsV2']
       | undefined,
+    popObservedFacts: asRecord(evidence.pop_observed_facts) as
+      | GeminiEvidenceResult['popObservedFacts']
+      | undefined,
+    popValidation: asRecord(evidence.pop_validation) as
+      | GeminiEvidenceResult['popValidation']
+      | undefined,
     inversionObservedFacts: asRecord(evidence.inversion_observed_facts) as
       | GeminiEvidenceResult['inversionObservedFacts']
       | undefined,

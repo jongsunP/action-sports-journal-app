@@ -90,6 +90,8 @@ create table if not exists public.evidence_results (
   approach_decision_v2 jsonb,
   approach_v2_signals jsonb not null default '[]',
   approach_v2_conflict_summary jsonb,
+  pop_observed_facts jsonb,
+  pop_validation jsonb,
   inversion_observed_facts jsonb,
   temporal_windows jsonb,
   evidence_windows jsonb,
