@@ -297,35 +297,55 @@ app.get("/api/moments", async (_request, response) => {
     const evidenceResultsById = new Map<string, Record<string, unknown>>();
 
     if (evidenceResultIds.length > 0) {
-      const { data: evidenceResults, error: evidenceResultsError } = await client
+      const evidenceResultColumnsV1 = [
+        "id",
+        "moment_id",
+        "analysis_job_id",
+        "provider",
+        "model",
+        "status",
+        "quality_mode",
+        "predicted_trick",
+        "family",
+        "confidence",
+        "needs_review",
+        "consistency_status",
+        "consistency_warnings",
+        "approach_observed_facts",
+        "inversion_observed_facts",
+        "temporal_windows",
+        "evidence_windows",
+        "observations",
+        "raw_response_text",
+        "error_message",
+        "created_at",
+        "updated_at",
+      ];
+      const evidenceResultColumnsV2 = [
+        ...evidenceResultColumnsV1.slice(0, 14),
+        "approach_observed_facts_v2",
+        "approach_decision_v2",
+        "approach_v2_signals",
+        "approach_v2_conflict_summary",
+        ...evidenceResultColumnsV1.slice(14),
+      ];
+      let evidenceResultsQuery = await client
         .from("evidence_results")
-        .select(
-          [
-            "id",
-            "moment_id",
-            "analysis_job_id",
-            "provider",
-            "model",
-            "status",
-            "quality_mode",
-            "predicted_trick",
-            "family",
-            "confidence",
-            "needs_review",
-            "consistency_status",
-            "consistency_warnings",
-            "approach_observed_facts",
-            "inversion_observed_facts",
-            "temporal_windows",
-            "evidence_windows",
-            "observations",
-            "raw_response_text",
-            "error_message",
-            "created_at",
-            "updated_at",
-          ].join(","),
-        )
+        .select(evidenceResultColumnsV2.join(","))
         .in("id", evidenceResultIds);
+
+      if (isMissingApproachV2ColumnError(evidenceResultsQuery.error)) {
+        console.warn(
+          "ApproachObservedFacts v2 columns are not applied yet; falling back to v1 evidence result reads.",
+        );
+        evidenceResultsQuery = await client
+          .from("evidence_results")
+          .select(evidenceResultColumnsV1.join(","))
+          .in("id", evidenceResultIds);
+      }
+
+      const { data: evidenceResults, error: evidenceResultsError } =
+        evidenceResultsQuery;
 
       if (evidenceResultsError) {
         throw new Error(
@@ -1123,6 +1143,24 @@ function recordDailyUsage(usageKey: string) {
   dailyUsage.set(usageKey, (dailyUsage.get(usageKey) ?? 0) + 1);
 }
 
+function isMissingApproachV2ColumnError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const message =
+    "message" in error && typeof error.message === "string"
+      ? error.message
+      : "";
+
+  return (
+    message.includes("approach_observed_facts_v2") ||
+    message.includes("approach_decision_v2") ||
+    message.includes("approach_v2_signals") ||
+    message.includes("approach_v2_conflict_summary")
+  );
+}
+
 async function uploadVideoForGemini({
   client,
   buffer,
@@ -1660,34 +1698,62 @@ async function persistEvidenceResultForLinkedMoment({
       now,
     }));
 
-  const { data: evidenceResult, error: evidenceResultError } = await client
+  const evidenceResultValues = {
+    user_id: linkedMoment.user_id,
+    moment_id: linkedMoment.id,
+    analysis_job_id: resolvedAnalysisJobId,
+    provider: "gemini",
+    model,
+    status: evidence.parseFailed ? "failed" : "completed",
+    quality_mode: qualityMode,
+    predicted_trick: evidence.primaryCandidate.name,
+    family: evidence.family.value,
+    confidence: evidence.confidence,
+    needs_review: requiresUserConfirmation,
+    consistency_status: evidence.consistencyStatus,
+    consistency_warnings: evidence.consistencyWarnings,
+    approach_observed_facts: evidence.approachObservedFacts,
+    approach_observed_facts_v2: evidence.approachObservedFactsV2,
+    approach_decision_v2: evidence.approachDecisionV2,
+    approach_v2_signals: evidence.approachObservedFactsV2?.signals ?? [],
+    approach_v2_conflict_summary:
+      evidence.approachObservedFactsV2?.conflictSummary ?? null,
+    inversion_observed_facts: evidence.inversionObservedFacts,
+    temporal_windows: evidence.temporalWindows,
+    evidence_windows: evidence.evidenceWindows,
+    observations: evidence.observations,
+    raw_response_text: rawResponseText,
+    error_message: evidence.parseFailed
+      ? evidence.uncertainty.reasons.join(" ")
+      : null,
+  };
+  let evidenceResultQuery = await client
     .from("evidence_results")
-    .insert({
-      user_id: linkedMoment.user_id,
-      moment_id: linkedMoment.id,
-      analysis_job_id: resolvedAnalysisJobId,
-      provider: "gemini",
-      model,
-      status: evidence.parseFailed ? "failed" : "completed",
-      quality_mode: qualityMode,
-      predicted_trick: evidence.primaryCandidate.name,
-      family: evidence.family.value,
-      confidence: evidence.confidence,
-      needs_review: requiresUserConfirmation,
-      consistency_status: evidence.consistencyStatus,
-      consistency_warnings: evidence.consistencyWarnings,
-      approach_observed_facts: evidence.approachObservedFacts,
-      inversion_observed_facts: evidence.inversionObservedFacts,
-      temporal_windows: evidence.temporalWindows,
-      evidence_windows: evidence.evidenceWindows,
-      observations: evidence.observations,
-      raw_response_text: rawResponseText,
-      error_message: evidence.parseFailed
-        ? evidence.uncertainty.reasons.join(" ")
-        : null,
-    })
+    .insert(evidenceResultValues)
     .select("id")
     .single();
+
+  if (isMissingApproachV2ColumnError(evidenceResultQuery.error)) {
+    const {
+      approach_observed_facts_v2,
+      approach_decision_v2,
+      approach_v2_signals,
+      approach_v2_conflict_summary,
+      ...v1EvidenceResultValues
+    } = evidenceResultValues;
+
+    console.warn(
+      "ApproachObservedFacts v2 columns are not applied yet; saving v1 evidence result only.",
+    );
+    evidenceResultQuery = await client
+      .from("evidence_results")
+      .insert(v1EvidenceResultValues)
+      .select("id")
+      .single();
+  }
+
+  const { data: evidenceResult, error: evidenceResultError } =
+    evidenceResultQuery;
 
   if (evidenceResultError) {
     throw new Error(

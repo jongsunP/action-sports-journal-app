@@ -91,6 +91,59 @@ try {
         evidence: 'smoke test',
       },
     },
+    approach_observed_facts_v2: {
+      edgeDirectionEvidence: {
+        value: 'unknown',
+        confidence: 'low',
+        evidence: 'smoke test',
+        loadedEdge: 'unknown',
+      },
+      signals: [
+        {
+          field: 'edgeDirectionEvidence',
+          supports: 'unknown',
+          strength: 'primary',
+          confidence: 'low',
+          evidence: 'smoke test',
+          timestampSeconds: null,
+        },
+      ],
+      conflictSummary: {
+        hasConflict: false,
+        toesideSignals: 0,
+        heelsideSignals: 0,
+        switchSignals: 0,
+        conflictFields: [],
+        reason: 'smoke test',
+      },
+    },
+    approach_decision_v2: {
+      value: 'unknown',
+      confidence: 'low',
+      primaryEvidence: [],
+      supportingEvidence: [],
+      conflictingEvidence: [],
+      rejectedAlternatives: [],
+      uncertainty: ['smoke test'],
+    },
+    approach_v2_signals: [
+      {
+        field: 'edgeDirectionEvidence',
+        supports: 'unknown',
+        strength: 'primary',
+        confidence: 'low',
+        evidence: 'smoke test',
+        timestampSeconds: null,
+      },
+    ],
+    approach_v2_conflict_summary: {
+      hasConflict: false,
+      toesideSignals: 0,
+      heelsideSignals: 0,
+      switchSignals: 0,
+      conflictFields: [],
+      reason: 'smoke test',
+    },
     inversion_observed_facts: {
       bodyInverted: 'unknown',
       boardAboveHead: 'unknown',
@@ -105,6 +158,17 @@ try {
     raw_response_text: '{"smokeTest":true}',
   });
   evidenceResultId = evidenceResult.id;
+
+  const v2WriteReady = Boolean(
+    evidenceResult.approach_observed_facts_v2 &&
+      evidenceResult.approach_decision_v2 &&
+      Array.isArray(evidenceResult.approach_v2_signals) &&
+      evidenceResult.approach_v2_conflict_summary,
+  );
+
+  if (!v2WriteReady) {
+    throw new Error('Failed to round-trip ApproachObservedFacts v2 columns.');
+  }
 
   const { data: updatedMoment, error: updateError } = await client
     .from('moments')
@@ -133,6 +197,7 @@ try {
           evidenceResultId,
         },
         updatedMoment,
+        v2WriteReady,
         cleanup: keepRows ? 'skipped' : 'deleted user cascade',
       },
       null,

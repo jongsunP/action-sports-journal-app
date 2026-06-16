@@ -231,8 +231,14 @@ function normalizeRemoteEvidenceResult(
     approachObservedFacts: asRecord(evidence.approach_observed_facts) as
       | GeminiEvidenceResult['approachObservedFacts']
       | undefined,
+    approachObservedFactsV2: asRecord(evidence.approach_observed_facts_v2) as
+      | GeminiEvidenceResult['approachObservedFactsV2']
+      | undefined,
     inversionObservedFacts: asRecord(evidence.inversion_observed_facts) as
       | GeminiEvidenceResult['inversionObservedFacts']
+      | undefined,
+    approachDecisionV2: asRecord(evidence.approach_decision_v2) as
+      | GeminiEvidenceResult['approachDecisionV2']
       | undefined,
     approachType: {
       value: '확인 필요',
