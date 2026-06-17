@@ -3990,6 +3990,7 @@ function parseGeminiEvidence(outputText: string) {
     const popObservedFacts = popValidation.after;
     const rawRotationObservedFacts = normalizeRotationObservedFacts(undefined);
     const rotationValidation = validateRotationObservedFacts({
+      family: normalizeEvidenceFact(undefined, "확인 필요"),
       rotationObservedFacts: rawRotationObservedFacts,
     });
     const rotationObservedFacts = rotationValidation.after;
@@ -4669,6 +4670,7 @@ function normalizeGeminiAnalysis(parsed: Partial<GeminiAnalysisPayload>) {
 }
 
 function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
+  const family = normalizeEvidenceFact(parsed.family, "확인 필요");
   const rawApproachType = normalizeEvidenceFact(
     parsed.approachType,
     "확인 필요",
@@ -4698,6 +4700,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     parsed.rotationObservedFacts,
   );
   const rotationValidation = validateRotationObservedFacts({
+    family,
     rotationObservedFacts: rawRotationObservedFacts,
   });
   const rotationObservedFacts = rotationValidation.after;
@@ -4729,7 +4732,7 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     alternativeCandidates: normalizeTrickCandidates(
       parsed.alternativeCandidates,
     ),
-    family: normalizeEvidenceFact(parsed.family, "확인 필요"),
+    family,
     temporalWindows,
     rawApproachType,
     approachObservedFacts,
@@ -5574,8 +5577,10 @@ function normalizeSpinDegrees(value: unknown) {
 }
 
 function validateRotationObservedFacts({
+  family,
   rotationObservedFacts,
 }: {
+  family: ApproachFactPayload;
   rotationObservedFacts: RotationObservedFactsPayload;
 }): RotationValidationResult {
   const before = cloneRotationObservedFacts(rotationObservedFacts);
@@ -5599,8 +5604,12 @@ function validateRotationObservedFacts({
   const hasEvidenceText = Boolean(rotationObservedFacts.evidenceText);
   const labelOnlyEvidence = rotationEvidenceIsLabelOnly(evidenceText);
   const wasHigh = rotationObservedFacts.confidence === "high";
+  const clearNonRotationBasicJumpEvidence =
+    isBasicJumpFamily(family) &&
+    hasNoRotationObservedFacts(rotationObservedFacts) &&
+    hasClearNoRotationEvidence(evidenceText);
 
-  if (!hasAxis && wasHigh) {
+  if (!hasAxis && wasHigh && !clearNonRotationBasicJumpEvidence) {
     rejectedHighConfidenceReasons.push(
       "Rotation high confidence requires a visible rotationAxis.",
     );
@@ -5622,7 +5631,11 @@ function validateRotationObservedFacts({
     );
   }
 
-  if (independentRotationEvidenceCount < 2 && wasHigh) {
+  if (
+    independentRotationEvidenceCount < 2 &&
+    wasHigh &&
+    !clearNonRotationBasicJumpEvidence
+  ) {
     rejectedHighConfidenceReasons.push(
       "Rotation high confidence requires at least two independent visible rotation indicators.",
     );
@@ -5641,7 +5654,8 @@ function validateRotationObservedFacts({
 
   if (
     rotationObservedFacts.antiEvidence.length === 0 &&
-    rotationObservedFacts.confidence === "high"
+    rotationObservedFacts.confidence === "high" &&
+    !clearNonRotationBasicJumpEvidence
   ) {
     rejectedHighConfidenceReasons.push(
       "Rotation high confidence requires antiEvidence to document missing or contradictory cues.",
@@ -5655,7 +5669,12 @@ function validateRotationObservedFacts({
     );
   }
 
-  if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
+  if (wasHigh && clearNonRotationBasicJumpEvidence) {
+    after.confidence = "medium";
+    rulesApplied.push(
+      "Rotation confidence calibrated from high to medium for clear no-rotation Basic Jump evidence.",
+    );
+  } else if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
     after.confidence =
       independentRotationEvidenceCount >= 1 && !labelOnlyEvidence
         ? "medium"
@@ -5678,6 +5697,46 @@ function validateRotationObservedFacts({
     rulesApplied,
     rejectedHighConfidenceReasons,
   };
+}
+
+function isBasicJumpFamily(family: ApproachFactPayload) {
+  const text = normalizeDomainText(`${family.value} ${family.evidence}`);
+
+  return includesAnyDomainTerm(text, [
+    "basic jump",
+    "basic air",
+    "straight air",
+    "wake jump",
+    "기본 점프",
+    "베이직 점프",
+    "스트레이트 에어",
+  ]);
+}
+
+function hasNoRotationObservedFacts(facts: RotationObservedFactsPayload) {
+  return (
+    facts.rotationAxis === "none" &&
+    facts.rotationDirection === "none" &&
+    facts.inversionDetected === false &&
+    facts.spinDegrees === "0" &&
+    facts.handlePassObserved === false
+  );
+}
+
+function hasClearNoRotationEvidence(text: string) {
+  return includesAnyDomainTerm(normalizeDomainText(text), [
+    "회전 없음",
+    "회전 없이",
+    "회전도 관찰되지",
+    "어떠한 회전도 관찰되지 않음",
+    "안정적인 자세",
+    "no rotation",
+    "without rotation",
+    "stable body position",
+    "no spin",
+    "no inversion",
+    "no invert",
+  ]);
 }
 
 function cloneRotationObservedFacts(
