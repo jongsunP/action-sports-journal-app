@@ -5170,6 +5170,13 @@ function validatePopObservedFacts({
     temporalWindows.takeoffTimestamp.timestampSeconds !== null;
   const hasTiming = Boolean(popObservedFacts.timing);
   const labelOnlyEvidence = popEvidenceIsLabelOnly(evidenceText);
+  const shouldKeepProgressiveWakePopAtMedium =
+    isPlausibleProgressiveWakePop({
+      popObservedFacts,
+      evidenceText,
+      hasTakeoffTimestamp,
+      labelOnlyEvidence,
+    });
   const wasHigh = popObservedFacts.confidence === "high";
 
   if (!hasTakeoffTimestamp) {
@@ -5215,6 +5222,9 @@ function validatePopObservedFacts({
     popObservedFacts.antiEvidence.length === 0 &&
     popObservedFacts.confidence === "high"
   ) {
+    rejectedHighConfidenceReasons.push(
+      "Pop high confidence requires antiEvidence to document missing or contradictory cues.",
+    );
     reviewReasons.push("Pop confidence was high while antiEvidence was empty.");
     addPostValidationAntiPopEvidence(
       after,
@@ -5224,7 +5234,8 @@ function validatePopObservedFacts({
 
   if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
     after.confidence =
-      independentPhysicalEvidenceCount >= 1 && !labelOnlyEvidence
+      (independentPhysicalEvidenceCount >= 1 && !labelOnlyEvidence) ||
+      shouldKeepProgressiveWakePopAtMedium
         ? "medium"
         : "low";
     rulesApplied.push(
@@ -5267,6 +5278,49 @@ function addPostValidationAntiPopEvidence(
   if (!facts.antiEvidence.includes(reason)) {
     facts.antiEvidence.push(reason);
   }
+}
+
+function isPlausibleProgressiveWakePop({
+  popObservedFacts,
+  evidenceText,
+  hasTakeoffTimestamp,
+  labelOnlyEvidence,
+}: {
+  popObservedFacts: PopObservedFactsPayload;
+  evidenceText: string;
+  hasTakeoffTimestamp: boolean;
+  labelOnlyEvidence: boolean;
+}) {
+  return (
+    hasTakeoffTimestamp &&
+    popObservedFacts.popType === "progressive_pop" &&
+    popObservedFacts.timing === "on_wake" &&
+    popObservedFacts.intensity === "moderate" &&
+    popObservedFacts.antiEvidence.length > 0 &&
+    !labelOnlyEvidence &&
+    hasWakeEdgeReleasePopEvidence(evidenceText)
+  );
+}
+
+function hasWakeEdgeReleasePopEvidence(text: string) {
+  return includesAnyDomainTerm(normalizeDomainText(text), [
+    "wake",
+    "edge",
+    "release",
+    "takeoff",
+    "wake lip",
+    "top of wake",
+    "leaves the wake",
+    "웨이크",
+    "엣지",
+    "릴리즈",
+    "이륙",
+    "웨이크 끝까지",
+    "웨이크 경사",
+    "자연스럽게 뜸",
+    "웨이크 정점",
+    "수면에서 떨어짐",
+  ]);
 }
 
 function countIndependentPopEvidence(text: string) {
@@ -5328,8 +5382,10 @@ function isPhysicalWakeReleaseEvidence(text: string) {
     "leaves the wake",
     "웨이크 립",
     "웨이크 정상",
+    "웨이크 정점",
     "이륙",
     "릴리즈",
+    "수면에서 떨어짐",
   ]);
 }
 
@@ -5367,6 +5423,7 @@ function isPhysicalRiderExtensionEvidence(text: string) {
     "hips rise",
     "다리",
     "무릎",
+    "다리를 펴",
     "펴",
     "힙",
   ]);
@@ -5381,6 +5438,7 @@ function isPhysicalUpwardTrajectoryEvidence(text: string) {
     "상승",
     "수직",
     "위로",
+    "수면에서 떨어짐",
   ]);
 }
 
