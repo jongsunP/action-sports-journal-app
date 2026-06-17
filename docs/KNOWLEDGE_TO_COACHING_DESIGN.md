@@ -1,10 +1,12 @@
 # KnowledgeInsight To Coaching Design
 
-This document designs how Wakeboard Knowledge Base v1 should connect to the
-Coaching Layer later.
+This document records how Wakeboard Knowledge Base v1 connects to the Coaching
+Layer.
 
-This is a design document only. It does not change code, prompts, database
-schema, UI, or deployment architecture.
+The first implementation is intentionally limited. It connects safe
+`CoachingInsightContext` items to the Gemini short-analysis prompt only. It does
+not add database storage, UI rendering, Supabase migrations, OpenAI benchmark
+integration, or Progression integration.
 
 ## Current Status
 
@@ -13,9 +15,16 @@ Confirmed Fact:
 - Wakeboard Knowledge Base v1 is implemented.
 - Render + Gemini 2.5 Pro E2E verified that `knowledgeInsights` are returned in
   evidence/debug response.
-- `knowledgeInsights` are not stored in Supabase.
-- No UI renders `knowledgeInsights`.
-- Coaching does not consume `knowledgeInsights` yet.
+- `CoachingInsightContext` transform is implemented.
+- Render + Gemini 2.5 Pro E2E verified that `coachingInsightContext` is returned
+  in response/debug metadata.
+- Gemini short analysis now consumes compact `CoachingInsightContext` prompt
+  context.
+- `internal_only` is excluded from rider-facing prompt context.
+- `review_context` is instructed to remain review-only.
+- `knowledgeInsights` and `coachingInsightContext` are not stored in Supabase.
+- No dedicated UI renders `knowledgeInsights` or `coachingInsightContext`.
+- OpenAI benchmark and Progression are not connected.
 
 Current relevant documents:
 
@@ -571,26 +580,27 @@ Only after calibration should the app expose this in regular coaching UX.
 - RAG/vector search.
 - Rewriting the full coaching system.
 
-## Expected Implementation Files
+## Implemented Files
 
-Likely files:
+Implemented files:
 
 - `src/types/index.ts`
-  - add `CoachingInsightContext` type if shared with app.
+  - defines `CoachingInsightContext`.
 
 - `src/services/knowledge/`
-  - add transform function, likely
-    `buildCoachingInsightContext(knowledgeInsights)`.
+  - `coachingInsightContext.ts` transforms KnowledgeInsights into coaching
+    modes.
+  - `coachingPromptContext.ts` builds compact prompt context for Gemini short
+    analysis.
 
 - `dev-server/index.ts`
-  - later inject `CoachingInsightContext` into the chosen coaching prompt.
-  - likely candidates:
-    - `buildOpenAiBenchmarkPrompt`
-    - future dedicated coaching endpoint
-    - possibly `buildGeminiAnalysisPrompt` if that path remains active.
+  - injects compact `CoachingInsightContext` into `buildGeminiAnalysisPrompt`
+    only.
+  - does not inject into OpenAI benchmark prompts.
 
 - `src/services/ai/analyzeSessionVideo.ts`
-  - only if the app needs to receive transformed context.
+  - supports optional `coachingInsightContext` for the Gemini short-analysis
+    path.
 
 Files not expected for MVP:
 
@@ -600,9 +610,9 @@ Files not expected for MVP:
 
 ## Recommended First Implementation
 
-Recommendation:
+Status:
 
-Start with a pure transform and debug-only exposure.
+Completed.
 
 ```text
 KnowledgeInsight[]
@@ -610,34 +620,40 @@ KnowledgeInsight[]
 buildCoachingInsightContext
 ↓
 debug artifact / response metadata
+↓
+compact Gemini short-analysis prompt context
 ```
 
-Then test with the existing `ts_regular_1.mov` flow:
+Verified with the existing `ts_regular_1.mov` flow:
 
 - Confirm safe insights become `direct_cue` or `review_context`.
 - Confirm `coachingSafe=false` becomes `internal_only`.
 - Confirm low confidence is never converted into direct advice.
+- Confirm `internal_only` does not leak to rider-facing output.
+- Confirm `review_context` does not become a hard cause diagnosis.
 
-Only after this should prompt injection happen.
+Prompt injection is now implemented only for Gemini short analysis.
 
 ## Prompt Injection Draft
 
-When prompt injection happens, add a compact section like:
+Implemented prompt injection uses a compact section like:
 
 ```text
-KnowledgeInsight coaching context:
+코칭 참고 신호:
+아래 신호는 확정 진단이 아닙니다. confidence를 유지하고 과장하지 마세요.
+review_context는 "확인 필요"로만 표현하세요. internal_only는 제외되었습니다.
 
-- direct_cue: safe to phrase as coaching, preserving confidence.
-- review_context: mention only as 확인 필요 / possible review point.
-- internal_only: do not give this as rider advice. Use it only to avoid
-  overclaiming.
-
-Rules:
-- Do not say a low-confidence insight as fact.
-- Do not turn review_context into a cause.
-- Do not invent facts not listed in sourceFacts.
-- If source facts are uncertain, say the video evidence is limited.
+1. mode=direct_cue / rule=... / pop / confidence=medium / severity=info
+   message=...
+   wording=관찰 기반 cue로만 표현
 ```
+
+Implementation note:
+
+- The Gemini short-analysis path uses `thinkingBudget: 0` to preserve short
+  structured JSON output stability.
+- The context is limited to the first few non-`internal_only` items.
+- This is not connected to OpenAI benchmark prompts.
 
 ## Risks
 
@@ -697,10 +713,9 @@ the wrong one.
 
 Mitigation:
 
-- Start with debug-only transform.
-- Choose one coaching path later.
-- Prefer the future dedicated coaching endpoint over broad changes to both
-  Gemini short analysis and OpenAI benchmark at once.
+- The first prompt connection is limited to Gemini short analysis only.
+- Do not connect OpenAI benchmark, dedicated coaching, UI, DB, or Progression
+  until wording coverage is stronger.
 
 ### Grab Attempt False Positive Propagation
 
@@ -728,8 +743,8 @@ Mitigation:
 
 ## Acceptance Criteria Before Prompt Injection
 
-Do not inject `CoachingInsightContext` into a coaching prompt until all criteria
-below are satisfied.
+The first prompt injection was allowed only after the criteria below were
+satisfied.
 
 ### Transform Correctness
 
@@ -769,20 +784,66 @@ below are satisfied.
 - The coach output is compared against raw `CoachingInsightContext` to verify it
   did not overstate uncertainty.
 
+## Operating Verification - 2026-06-17
+
+Confirmed Fact:
+
+The Gemini short-analysis path was verified on Render + Gemini 2.5 Pro after
+commit `b0ae214`.
+
+Endpoint:
+
+```text
+POST /api/analyze-session-video
+```
+
+Context without Knowledge:
+
+```text
+status: completed
+summary: 웨이크보딩 기술 훈련 영상입니다.
+suggestions:
+- 팔 동작에 집중하세요
+- 더 강한 턴을 연습하세요
+```
+
+Context with Knowledge:
+
+```text
+status: completed
+summary: 웨이크보딩 기본 동작을 배우는 영상입니다.
+suggestions:
+- 기본 자세를 더 연습하세요.
+- 물살을 타는 감각을 익히세요.
+```
+
+Safety checks:
+
+- Gemini short-analysis JSON did not truncate after latest deployment.
+- `internal_only` did not leak to rider-facing output.
+- `review_context` did not become a hard cause diagnosis.
+- OpenAI benchmark path was not changed.
+- DB, UI, Supabase migrations, and Progression remained disconnected.
+
+Observed operational caveat:
+
+- During verification, Gemini Pro produced occasional busy/congestion responses.
+  A later retry completed successfully.
+
 ## Recommendation
 
-Do not connect KnowledgeInsights directly to user-facing coaching yet.
+The first limited prompt connection is complete.
 
 Next step should be:
 
 ```text
-Implement buildCoachingInsightContext()
+Run Knowledge -> Coaching wording matrix
 ↓
-Expose debug-only transformed context
+Compare raw CoachingInsightContext vs rider-facing output
 ↓
-Validate wording modes on real samples
+Validate no-grab, true-grab, low-confidence, failed landing, and invert samples
 ↓
-Only then inject into coaching prompt
+Only then consider broader coaching integration
 ```
 
 This keeps the system aligned with the current product principle:

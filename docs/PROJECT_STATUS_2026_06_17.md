@@ -71,6 +71,10 @@ LandingObservedFacts
 ↓
 Validator
 ↓
+KnowledgeInsights
+↓
+CoachingInsightContext
+↓
 EvidenceResult
 ```
 
@@ -81,6 +85,9 @@ Implementation reality:
 - Evidence extraction results are persisted to Supabase `evidence_results`.
 - The app restores Moment and latest Evidence state from Supabase.
 - AI keys live only in Render/local environment variables.
+- KnowledgeInsights and CoachingInsightContext are currently response/debug and
+  Gemini short-analysis prompt context only. They are not stored in Supabase and
+  are not rendered as a dedicated UI feature.
 
 ## Completed ObservedFacts Layers
 
@@ -348,6 +355,48 @@ Confirmed Fact:
 - Async Analysis MVP works for queued/processing/completed restoration.
 - Gemini 2.5 Pro is the operating evidence model.
 - Landing and Grab both completed Render + Gemini Pro E2E verification.
+- Wakeboard Knowledge Base v1 is implemented and operationally verified.
+- CoachingInsightContext transform is implemented and operationally verified.
+- Knowledge -> Coaching prompt injection is connected only to the Gemini short
+  analysis path and operationally verified on Render + Gemini 2.5 Pro.
+
+Knowledge / Coaching connection status:
+
+- `knowledgeInsights` are generated from validated ObservedFacts.
+- `coachingInsightContext` converts safe KnowledgeInsights into prompt context
+  modes:
+  - `direct_cue`
+  - `review_context`
+  - `internal_only`
+- Only `direct_cue` and `review_context` can enter the Gemini short-analysis
+  prompt.
+- `internal_only` is excluded from rider-facing prompt context.
+- The connection is limited to `POST /api/analyze-session-video`.
+- Not connected:
+  - DB storage,
+  - dedicated UI rendering,
+  - Supabase migration,
+  - OpenAI benchmark path,
+  - Progression layer.
+
+Operating verification:
+
+```text
+Render health:
+ok: true
+geminiModel: gemini-2.5-pro
+geminiEvidence.model: gemini-2.5-pro
+
+Gemini short analysis without Knowledge context:
+status: completed
+summary: 웨이크보딩 기술 훈련 영상입니다.
+
+Gemini short analysis with Knowledge context:
+status: completed
+summary: 웨이크보딩 기본 동작을 배우는 영상입니다.
+internal_only leaked to rider output: false
+review_context became hard cause diagnosis: false
+```
 
 Recent important commits:
 
@@ -355,6 +404,9 @@ Recent important commits:
 615781e feat: add landing observed facts MVP
 b9e84ad feat: add grab observed facts MVP
 5b5380e fix: reduce grab false positives
+4e550c feat: add wakeboard knowledge rules v1
+def259f feat: add coaching insight context transform
+b0ae214 feat: connect knowledge insights to coaching prompt
 ```
 
 ## Known Issues And Risks
@@ -374,6 +426,43 @@ Recommendation:
 
 Next Grab validation should use at least one known true grab sample and one
 known no-grab Basic Air sample.
+
+### Coaching Sample Coverage
+
+Confirmed Fact:
+
+Knowledge -> Coaching prompt injection was verified on Render + Gemini 2.5 Pro
+with the stable `ts_regular_1.mov` sample.
+
+Unknown:
+
+Whether the wording remains safe across a wider range of rider levels, failed
+landings, true grabs, spins, and inverts.
+
+Recommendation:
+
+Before expanding to the OpenAI benchmark path, dedicated UI, or Progression,
+run a small coaching wording matrix:
+
+- no-grab Basic Air,
+- known true grab,
+- weak/low-confidence evidence,
+- clean landing,
+- failed landing,
+- invert sample.
+
+### Gemini Pro Availability / Congestion
+
+Observation:
+
+During operating verification, Gemini Pro occasionally returned a temporary
+busy/congestion error. Retrying later produced a completed response.
+
+Recommendation:
+
+Keep short-analysis calls resilient and do not treat a single Gemini busy
+response as a product regression. If this becomes frequent, add user-facing
+retry copy or a targeted fallback strategy.
 
 ### Gemini Schema Complexity
 
@@ -430,10 +519,12 @@ Next work candidates:
 - Run operating Render + Gemini Pro E2E on true grab footage.
 - Compare `grabDetected`, `contactVisible`, `grabDuration`, and
   `grabValidation`.
+- Run a broader Knowledge -> Coaching wording matrix before connecting any
+  additional coaching paths.
 - Add upload/stuck-job recovery for async analysis.
 - Fresh Back Roll validation with accessible source video.
-- Begin Wakeboard Knowledge Base / RAG reference only after observed-facts
-  validation has enough sample coverage.
+- Keep Knowledge -> Coaching disconnected from DB/UI/Progression until wording
+  coverage is stronger.
 
 ## CTO Summary
 
@@ -454,9 +545,13 @@ Current confidence:
 - Approach, EdgeLoad, Pop, Rotation, Landing, and Grab observed-facts layers are
   implemented.
 - Landing and Grab E2E paths have been verified in production.
+- Knowledge Base v1, CoachingInsightContext, and limited Gemini short-analysis
+  prompt injection have been verified in production.
 
 Current uncertainty:
 
 - True-grab positive detection quality is not validated.
 - Fresh Back Roll validation still needs accessible source footage.
 - Upload-stage timeout recovery remains an infrastructure issue.
+- Coaching wording has only limited sample coverage.
+- Gemini Pro can be temporarily busy/congested.

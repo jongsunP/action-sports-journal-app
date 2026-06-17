@@ -99,6 +99,10 @@ Confirmed complete:
 - LandingObservedFacts E2E is complete on Render + Gemini Pro.
 - GrabObservedFacts E2E is complete on Render + Gemini Pro.
 - Grab false-positive hardening was revalidated on Render + Gemini Pro.
+- Wakeboard Knowledge Base v1 is complete and operationally verified.
+- CoachingInsightContext transform is complete and operationally verified.
+- Knowledge -> Coaching prompt injection is connected only to the Gemini short
+  analysis path and operationally verified on Render + Gemini Pro.
 
 Current production model:
 
@@ -189,12 +193,53 @@ Key rule:
 - Hand near board, overlap, occlusion, style motion, knee tuck, arm swing, or
   handle movement is not enough.
 
+## Knowledge / Coaching Status
+
+Confirmed complete:
+
+- `KnowledgeInsight[]` is produced from validated ObservedFacts by Wakeboard
+  Knowledge Base v1.
+- `CoachingInsightContext[]` transforms KnowledgeInsights into three modes:
+  - `direct_cue`
+  - `review_context`
+  - `internal_only`
+- Gemini short analysis (`POST /api/analyze-session-video`) receives a compact
+  prompt context from `direct_cue` and `review_context` only.
+- `internal_only` is excluded from rider-facing prompt context.
+- Render + Gemini 2.5 Pro E2E verified the short-analysis path with context.
+
+Still not connected:
+
+- DB storage for KnowledgeInsights or CoachingInsightContext.
+- Dedicated UI rendering.
+- Supabase migration.
+- OpenAI benchmark path.
+- Progression layer.
+- Additional Knowledge Rules beyond v1.
+
+Operating verification sample:
+
+```text
+Contextなし:
+status: completed
+summary: 웨이크보딩 기술 훈련 영상입니다.
+
+Contextあり:
+status: completed
+summary: 웨이크보딩 기본 동작을 배우는 영상입니다.
+internal_only leaked: false
+review_context became hard diagnosis: false
+```
+
 ## Recent Important Commits
 
 ```text
 615781e feat: add landing observed facts MVP
 b9e84ad feat: add grab observed facts MVP
 5b5380e fix: reduce grab false positives
+4e550c feat: add wakeboard knowledge rules v1
+def259f feat: add coaching insight context transform
+b0ae214 feat: connect knowledge insights to coaching prompt
 ```
 
 Landing commit:
@@ -211,6 +256,25 @@ Grab false-positive commit:
 
 - Made Grab prompt and validator more conservative after visual review showed
   `ts_regular_1.mov` did not clearly show hand-to-board contact.
+
+Knowledge rules commit:
+
+- Added Wakeboard Knowledge Base v1 rule engine and six MVP rules.
+- Connected `knowledgeInsights` to response/debug metadata only.
+
+Coaching context transform commit:
+
+- Added `CoachingInsightContext` transform.
+- Verified `direct_cue`, `review_context`, and `internal_only` modes.
+- Exposed transformed context in response/debug metadata only.
+
+Knowledge -> Coaching prompt commit:
+
+- Connected `CoachingInsightContext` to the Gemini short-analysis prompt only.
+- Kept DB, UI, Supabase, OpenAI benchmark, and Progression disconnected.
+- Added short-analysis stability guardrails including compact prompt context and
+  `thinkingBudget: 0`.
+- Verified Render + Gemini 2.5 Pro E2E.
 
 ## Known Risks
 
@@ -262,29 +326,64 @@ Unknown:
 - Fresh Back Roll behavior with the latest Rotation/Grab/Landing layers still
   needs accessible source footage.
 
+### Coaching Wording Coverage
+
+Confirmed Fact:
+
+- Knowledge -> Coaching prompt injection works on the stable `ts_regular_1.mov`
+  sample.
+
+Unknown:
+
+- Whether the wording stays safe across true grabs, failed landings, spins, and
+  inverts.
+
+Risk:
+
+- `review_context` may become too generic or too causal on harder samples unless
+  tested with a broader matrix.
+
+### Gemini Pro Congestion
+
+Observation:
+
+- Operating verification hit temporary Gemini busy/congestion responses before a
+  later retry completed.
+
+Recommendation:
+
+- Treat occasional Pro congestion as an external availability risk. Add UX or
+  retry strategy only if it becomes frequent.
+
 ## Next Work Candidates
 
 Recommended highest-priority next task:
 
 ```text
-Grab true-positive validation
+Knowledge -> Coaching wording matrix
 ```
 
 Suggested sequence:
 
-1. Identify one known true grab sample and one known no-grab Basic Air sample.
-2. Run Render + Gemini Pro E2E on both.
-3. Compare `grabDetected`, `contactVisible`, `grabDuration`, `evidenceText`,
-   and `grabValidation`.
-4. Tune only after visual evidence review.
+1. Keep the current connection limited to Gemini short analysis.
+2. Run Render + Gemini Pro with:
+   - no-grab Basic Air,
+   - known true grab,
+   - weak/low-confidence evidence,
+   - failed landing,
+   - invert sample.
+3. Compare rider-facing wording against raw `CoachingInsightContext`.
+4. Confirm `review_context` stays review-only and `internal_only` never leaks.
+5. Only then consider wider coaching integration.
 
 Other useful next tasks:
 
+- Grab true-positive validation with known true-grab footage.
 - Add stale processing job recovery.
 - Fresh Back Roll validation with accessible source video.
 - Continue building validation matrix coverage.
-- Begin Wakeboard Knowledge Base / RAG reference only after observed-facts
-  validation has enough sample coverage.
+- Keep Knowledge/Coaching disconnected from DB/UI/Progression until wording
+  coverage is stronger.
 
 ## Codex / CTO Collaboration Method
 
@@ -323,11 +422,13 @@ Action Sports Journal 작업 재개.
 docs/PROJECT_STATUS_2026_06_17.md,
 docs/CTO_HANDOFF_2026_06_17.md를 읽고 현재 상태를 복원해줘.
 
-다음 목표는 Grab true-positive validation이다.
-known true grab sample과 no-grab Basic Air sample을 비교해서
-GrabObservedFacts가 너무 보수적인지 검증한다.
+다음 목표는 Knowledge -> Coaching wording matrix 검증이다.
+현재 연결은 Gemini short analysis path 하나에만 제한되어 있다.
+Render + Gemini 2.5 Pro에서 no-grab Basic Air, true grab, low-confidence,
+failed landing, invert 샘플을 비교해 review_context가 확정 진단으로 변하지
+않는지 확인한다.
 
-코드 수정 전 운영/시각 검증 계획부터 제시해줘.
+코드 수정 전 운영 검증 계획과 샘플 기준부터 제시해줘.
 ```
 
 ## Final CTO Note
