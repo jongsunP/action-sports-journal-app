@@ -5728,6 +5728,8 @@ function hasClearNoRotationEvidence(text: string) {
     "회전 없음",
     "회전 없이",
     "회전도 관찰되지",
+    "회전축이나 스핀 동작이 전혀 관찰되지",
+    "전혀 관찰되지",
     "어떠한 회전도 관찰되지 않음",
     "안정적인 자세",
     "no rotation",
