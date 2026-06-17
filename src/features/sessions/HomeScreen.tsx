@@ -39,6 +39,7 @@ import {
   type RemoteMomentRecord,
   updateMomentStatus,
 } from '../../services/moments';
+import { DebugResultViewer } from './DebugResultViewer';
 
 import type {
   AnalysisResult,
@@ -49,6 +50,8 @@ import type {
 
 const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
+const ENABLE_INTERNAL_DEBUG_VIEWER =
+  __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
 
 type PersistedSessionState = {
   selectedGroupId?: string;
@@ -3127,6 +3130,9 @@ function GeminiEvidenceView({
           </Text>
         ))}
       </View>
+      {ENABLE_INTERNAL_DEBUG_VIEWER ? (
+        <DebugResultViewer evidence={evidence} />
+      ) : null}
     </View>
   );
 }
