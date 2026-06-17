@@ -338,6 +338,7 @@ unknown
 Use `true` only when:
 
 - actual hand-to-board contact is visible,
+- the hand/finger and board contact point is visible,
 - the contact occurs before water landing,
 - contact is not inferred from body style, knee tuck, expected trick name, or
   handle movement.
@@ -348,6 +349,7 @@ Do not use `true` for:
 
 - hand passing near board,
 - hand reaching downward with contact hidden,
+- hand/board overlap without a visible contact point,
 - board poked toward hand,
 - knees tucked near chest,
 - arm swing after takeoff,
@@ -377,6 +379,7 @@ High confidence is prohibited when:
 
 - `grabDetected=true` and `contactVisible` is not `true`,
 - evidenceText does not describe actual contact,
+- evidenceText does not identify a visible hand/finger-board contact point,
 - the positive claim is based on a grab name or style cue.
 
 ### contactVisible
@@ -390,6 +393,12 @@ unknown
 ```
 
 Use `true` only when hand-to-board contact itself is visible.
+
+Stricter MVP rule:
+
+- The visible contact point between hand/fingers and board must be observable.
+- Hand near board, hand/board overlap, body occlusion, board poke/style, and
+  "appears to grab" language are not enough.
 
 Use `false` when:
 
@@ -630,6 +639,7 @@ The following cues are not sufficient for `grabDetected=true`:
 - board poke,
 - stylish body position,
 - hand passing near board,
+- hand/board overlap without visible contact point,
 - rider looking down at board,
 - hand near knee or boot,
 - body/board overlap,
@@ -669,6 +679,10 @@ Hard rule:
 ```text
 No visible hand-to-board contact
 -> no positive grab high confidence
+
+No visible hand/finger-board contact point
+-> no positive grab result
+-> use unknown or attempted_reach
 ```
 
 ## Anti-Evidence Rules
@@ -718,6 +732,9 @@ Required rules:
 13. `attempted_reach` must not be normalized into a positive grab.
 14. Clear no-grab evidence may keep `confidence=high` when the airborne phase,
     hands, and board are visible enough to reject contact.
+15. `grabDetected=true + contactVisible=true` is still downgraded if
+    evidenceText only says near/overlap/appears/likely/close or does not name a
+    visible hand/finger-board contact point.
 
 Recommended independent evidence count:
 
@@ -782,6 +799,13 @@ grabDetected=true + evidenceText label-only
 -> after.confidence=low
 -> needsReview=true
 
+grabDetected=true + contactVisible=true + no explicit contact point
+-> after.grabDetected=unknown
+-> after.contactVisible=unknown
+-> after.grabDuration=attempted_reach or unknown
+-> after.confidence=low
+-> needsReview=true
+
 grabDuration=held + no sustained-contact evidence
 -> after.grabDuration=momentary or unknown
 -> after.confidence <= medium
@@ -796,6 +820,59 @@ clear no-grab evidence
 -> confidence may remain high
 -> needsReview=false
 ```
+
+## Calibration Case - ts_regular_1 False Positive
+
+Date:
+
+```text
+2026-06-17
+```
+
+Source:
+
+```text
+dev-artifacts/benchmark-videos/ts_regular_1.mov
+```
+
+Operating Gemini Pro output before calibration:
+
+```text
+grabDetected: true
+contactVisible: true
+grabbingHand: rear_hand
+grabbedBoardZone: toe_edge_between_bindings
+grabDuration: held
+confidence: medium after validator downgrade
+```
+
+Gemini evidence text:
+
+```text
+뒷손(오른손)이 핸들에서 떨어져 보드의 토우 엣지 중앙을 잡는 것이 1.50초부터 명확히 보임.
+```
+
+Manual visual check artifacts:
+
+```text
+dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_50s_crop.jpg
+dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_65s_crop.jpg
+```
+
+Observation:
+
+- The rider and board overlap visually around 1.50s-1.65s.
+- Clear hand/finger-board contact point is not confirmed.
+- The model likely interpreted hand/board proximity or overlap as a grab.
+
+Design decision:
+
+- `contactVisible=true` must require a visible contact point, not just a
+  plausible grab posture.
+- "잡는 것이 보임" without explicit contact-point evidence should be treated as
+  weak positive evidence.
+- Validator should downgrade/review positive grab claims that do not describe a
+  visible hand/finger-board contact point.
 
 ## DB Schema Draft
 

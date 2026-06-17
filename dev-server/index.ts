@@ -3245,12 +3245,14 @@ function buildGeminiEvidencePrompt({
     "grabbedBoardZone은 toe_edge_between_bindings, heel_edge_between_bindings, nose, tail, frontside_edge, backside_edge, center_board, unknown_zone, none 중 하나 또는 null로 쓰세요.",
     "grabTiming은 takeoff, rising, peak_air, descent, landing, unknown, none 중 하나 또는 null로 쓰세요.",
     "grabDuration은 momentary, held, attempted_reach, none, unknown 중 하나 또는 null로 쓰세요.",
-    "contactVisible=true는 손이 보드에 닿는 장면이 실제로 보일 때만 쓰세요. hand passing near board, knee tuck, arm swing, handle movement, board poke/style만으로 grabDetected=true를 쓰지 마세요.",
+    "contactVisible=true는 손/손가락과 보드의 실제 접촉점이 보일 때만 쓰세요. 손이 보드 근처에 있음, 겹쳐 보임, 가까워 보임, likely/appears to/near/close 수준의 표현은 contactVisible=true가 아닙니다.",
+    "hand passing near board, knee tuck, arm swing, handle movement, board poke/style, body-board overlap, occlusion, camera crop만으로 grabDetected=true를 쓰지 마세요.",
     "attempted_reach는 actual grab이 아닙니다. 손이 보드 쪽으로 가지만 접촉이 보이지 않으면 grabDetected는 unknown 또는 false로 쓰고 grabDuration=attempted_reach로 쓰세요.",
     "Indy, Melon, Mute, Stalefish 같은 grab name을 이 계층에서 분류하지 마세요. hand + board zone + timing + duration만 기록하세요.",
     "grabDuration=held는 여러 프레임/순간에 걸친 지속 접촉이 보일 때만 쓰세요.",
     "명확히 그랩이 없고 양손이 핸들에 남아 있거나 hand-board contact가 보이지 않으면 grabDetected=false로 쓰고 confidence는 medium/high도 가능합니다.",
     "crop, spray, body overlap, low resolution 때문에 손/보드 접촉이 안 보이면 unknown 또는 low로 쓰고 antiEvidence에 이유를 기록하세요.",
+    "positive grab evidenceText에는 visible hand/finger-board contact point를 써야 합니다. 접촉점이 불명확하면 grabDetected=true를 금지하세요.",
     "grabObservedFacts는 primaryCandidate, family, approachType, rotationType을 직접 변경하는 근거가 아닙니다.",
     "landingObservedFacts는 착지와 즉시 회복에 대한 관찰 사실만 기록하세요. 트릭명, family, 접근 방향, 회전 타입에서 착지 결과를 추론하지 마세요.",
     "schema complexity를 줄이기 위해 landingObservedFacts는 객체가 아니라 JSON 문자열로 작성하세요.",
@@ -3359,8 +3361,9 @@ function buildGeminiEvidencePrompt({
     "- RotationObservedFacts에서 high confidence는 rotation axis, body axis, board path 중 독립적인 visible evidence 2개 이상이 없으면 금지하세요.",
     "- airtime, trick name, body twist만으로 rotationAxis를 확정하지 말고 antiEvidence에 근거 부족을 기록하세요.",
     "- rotationAxis=none 또는 spinDegrees=0이면 spin/invert trick high를 금지하세요.",
-    "- GrabObservedFacts에서 grabDetected=true는 contactVisible=true 또는 명확한 hand-board contact evidence가 있어야 합니다.",
+    "- GrabObservedFacts에서 grabDetected=true는 손/손가락과 보드의 실제 접촉점이 보이는 경우에만 허용하세요.",
     "- GrabObservedFacts에서 hand-board contact 근거 없는 high confidence를 금지하세요.",
+    "- near/close/appears/likely/겹쳐 보임/근처/가까움 수준이면 grabDetected=true와 contactVisible=true를 금지하세요.",
     "- knee tuck, arm swing, handle movement, board poke/style, hand passing near board, occlusion/camera crop만으로 grabDetected=true를 쓰지 마세요.",
     "- attempted_reach와 actual grab을 분리하세요. 접촉이 보이지 않으면 positive grab high를 금지하세요.",
     "- grab name label만 있고 contactVisible 근거가 없으면 Grab confidence를 low로 쓰세요.",
@@ -6117,6 +6120,9 @@ function validateGrabObservedFacts({
   const isClearNoGrab = hasClearNoGrabEvidence(grabObservedFacts, evidenceText);
   const hasEvidenceText = Boolean(grabObservedFacts.evidenceText);
   const labelOnlyEvidence = grabEvidenceIsLabelOnly(evidenceText);
+  const hasExplicitContactPoint =
+    hasExplicitGrabContactPointEvidence(evidenceText);
+  const hasWeakPositiveGrabLanguage = hasWeakGrabPositiveEvidence(evidenceText);
 
   if (isPositiveGrab && grabObservedFacts.contactVisible !== true) {
     rejectedHighConfidenceReasons.push(
@@ -6129,6 +6135,30 @@ function validateGrabObservedFacts({
     addPostValidationAntiGrabEvidence(
       after,
       "post-validation: positive grab requires visible hand-board contact.",
+    );
+  }
+
+  if (
+    isPositiveGrab &&
+    grabObservedFacts.contactVisible === true &&
+    (!hasExplicitContactPoint || hasWeakPositiveGrabLanguage)
+  ) {
+    rejectedHighConfidenceReasons.push(
+      "Positive grab requires an explicit visible hand/finger-board contact point.",
+    );
+    reviewReasons.push(
+      "positive grab was downgraded because contact point evidence is weak or implicit.",
+    );
+    after.grabDetected = "unknown";
+    after.contactVisible = "unknown";
+    after.grabDuration =
+      grabObservedFacts.grabDuration === "held"
+        ? "attempted_reach"
+        : (grabObservedFacts.grabDuration ?? "unknown");
+    after.confidence = "low";
+    addPostValidationAntiGrabEvidence(
+      after,
+      "post-validation: no explicit visible hand/finger-board contact point.",
     );
   }
 
@@ -6359,7 +6389,7 @@ function grabEvidenceIsLabelOnly(text: string) {
   const normalized = normalizeDomainText(text);
 
   if (!normalized.trim()) {
-    return true;
+    return false;
   }
 
   return (
@@ -6404,6 +6434,51 @@ function hasHandBoardContactEvidence(text: string) {
     "보드를 잡",
     "보드 접촉",
     "손-보드 접촉",
+  ]);
+}
+
+function hasExplicitGrabContactPointEvidence(text: string) {
+  return includesAnyDomainTerm(normalizeDomainText(text), [
+    "finger touches board",
+    "fingers touch board",
+    "hand visibly touches board",
+    "visible hand-to-board contact point",
+    "visible contact point",
+    "contact point",
+    "hand contacts the board",
+    "hand is in contact with the board",
+    "palm on board",
+    "gripping the board edge",
+    "손가락이 보드에 닿",
+    "손이 보드에 닿",
+    "손과 보드의 접촉점",
+    "접촉점",
+    "보드 엣지를 잡고",
+    "보드에 손이 닿",
+  ]);
+}
+
+function hasWeakGrabPositiveEvidence(text: string) {
+  return includesAnyDomainTerm(normalizeDomainText(text), [
+    "appears to",
+    "seems to",
+    "likely",
+    "possibly",
+    "near the board",
+    "close to the board",
+    "overlap",
+    "overlapping",
+    "occluded",
+    "partially hidden",
+    "looks like",
+    "보이는 듯",
+    "처럼",
+    "근처",
+    "가까",
+    "겹쳐",
+    "가려",
+    "불명확",
+    "추정",
   ]);
 }
 

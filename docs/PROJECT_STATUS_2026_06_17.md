@@ -13,6 +13,7 @@ Read this together with:
 - `docs/WAKEBOARD_OBSERVED_FACTS_V3_PLAN.md`
 - `docs/PRO_OPERATION_VALIDATION_2026_06_16.md`
 - `docs/ROTATION_OBSERVED_FACTS_PLAN.md`
+- `docs/GRAB_OBSERVED_FACTS_DESIGN.md`
 
 ## Current Operating Model
 
@@ -76,6 +77,10 @@ EdgeLoadObservedFacts
 PopObservedFacts
 ↓
 RotationObservedFacts
+↓
+GrabObservedFacts
+↓
+LandingObservedFacts
 ↓
 Validator
 ↓
@@ -223,8 +228,7 @@ Recent rotation validation result:
 
 Confirmed Fact:
 
-`LandingObservedFacts` MVP has been implemented locally, but it is not fully
-operationally verified yet.
+`LandingObservedFacts` MVP has been implemented and operationally verified.
 
 Current fields:
 
@@ -258,7 +262,7 @@ Important implementation detail:
 - The server parses that string, normalizes it, validates it, and exposes a
   normal object to the app/backend response.
 
-Local verification:
+Verification:
 
 - `npm run typecheck` passes.
 - `git diff --check` passes.
@@ -266,13 +270,23 @@ Local verification:
 - Local Gemini Flash evidence extraction completed after switching
   `landingObservedFacts` to the compact JSON-string carrier.
 - Debug artifact confirmed `landingObservedFacts` and `landingValidation`.
+- Supabase remote migration has been applied.
+- Render/Gemini Pro operating verification completed successfully.
+- Supabase `landing_observed_facts` / `landing_validation` persistence was
+  verified on the remote DB.
 
-Not yet complete:
+Operating verification sample:
 
-- Supabase remote migration has not been applied.
-- Render/Gemini Pro operating verification has not been run.
-- Supabase `landing_observed_facts` / `landing_validation` persistence has not
-  been verified on the remote DB.
+```text
+Moment ID: b548a645-d0bf-4886-aeb0-ec4cc77e4d2c
+Analysis Job ID: 926942f7-3ec5-4892-a478-ab47bca8c93b
+Evidence Result ID: 21d5d4d8-2323-4a4d-bace-d786df0a63a2
+model: gemini-2.5-pro
+landingVisible: true
+landingOutcome: rides_away
+landing confidence: medium
+landingValidation.needsReview: false
+```
 
 Migration prepared:
 
@@ -307,28 +321,132 @@ alter table public.evidence_results
   drop column if exists landing_validation;
 ```
 
+### Grab
+
+Confirmed Fact:
+
+`GrabObservedFacts` MVP has been implemented and system E2E verified.
+
+Current fields:
+
+```text
+grabDetected
+contactVisible
+grabbingHand
+grabbedBoardZone
+grabTiming
+grabDuration
+evidenceText
+confidence
+antiEvidence
+```
+
+Current implementation status:
+
+- TypeScript types are added.
+- Server-side normalization and validation are added.
+- Gemini prompt now asks for grab observed facts.
+- Gemini schema uses a JSON string carrier for `grabObservedFacts`.
+- Debug capture and response fields are wired.
+- Supabase persistence/restore paths are wired.
+- `supabase/phase6_grab_observed_facts.sql` exists and was applied remotely.
+
+Operating verification:
+
+```text
+Moment ID: 7090da09-6676-405f-81c8-0b77601ab49f
+Analysis Job ID: d09bca5c-4624-494e-8292-2c50dd774f98
+Evidence Result ID: d1e7d5ac-2a13-4760-8d46-fd941af90253
+model: gemini-2.5-pro
+analysis_jobs.status: completed
+evidence_results.grab_observed_facts: present
+evidence_results.grab_validation: present
+debug response grabObservedFacts: present
+debug response grabValidation: present
+```
+
+Observed system behavior:
+
+- Storage path works.
+- API response path works.
+- Debug artifact path works.
+- Existing Approach, Pop, Rotation, and Landing observed-facts outputs remained
+  present.
+- Validator downgraded a raw high-confidence grab to medium because independent
+  contact indicators were insufficient and precise timing was not supported.
+
+Quality validation finding:
+
+Gemini Pro produced:
+
+```text
+grabDetected: true
+contactVisible: true
+grabbingHand: rear_hand
+grabbedBoardZone: toe_edge_between_bindings
+grabTiming: unknown
+grabDuration: held
+confidence: medium
+```
+
+Gemini evidence text:
+
+```text
+뒷손(오른손)이 핸들에서 떨어져 보드의 토우 엣지 중앙을 잡는 것이 1.50초부터 명확히 보임.
+```
+
+Manual visual check:
+
+- Source video: `dev-artifacts/benchmark-videos/ts_regular_1.mov`
+- Generated artifacts:
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/ts_regular_1_1.2-2.0.mp4`
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_20s.jpg`
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_35s.jpg`
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_50s.jpg`
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_65s.jpg`
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_50s_crop.jpg`
+  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_65s_crop.jpg`
+
+Observation:
+
+- At 1.20s and 1.35s, hand-board contact is not visible.
+- At 1.50s, the rider is rising and the board is vertical, but the hand appears
+  near the handle/upper body rather than clearly touching the board.
+- At 1.65s, the hand/board region is closer and partly overlapping, but clear
+  hand-to-board contact is still not confirmed from the extracted frame.
+
+Current judgment:
+
+- System E2E is successful.
+- Positive grab quality is not yet validated.
+- The `ts_regular_1` positive grab result may be a false positive or at least
+  an overconfident interpretation of hand/board overlap.
+- Next Grab work should make positive grab validation more conservative before
+  trusting positive grab labels.
+
 ## Remaining Observed-Facts Layers
 
-Not implemented yet:
+All planned MVP V3 observed-facts layers are now represented in the evidence
+path:
 
-- `GrabObservedFacts`
+- Approach
+- EdgeLoad
+- Pop
+- Rotation
+- Grab
+- Landing
 
 Next validation step:
 
 ```text
-Apply LandingObservedFacts migration
+Calibrate GrabObservedFacts positive detection
 ↓
-Deploy Render
+Collect or identify a known true grab sample
 ↓
-Run one Gemini Pro evidence extraction
+Compare true grab vs no-grab Basic Air samples
 ↓
-Verify landingObservedFacts response/debug/Supabase persistence
+Adjust validator/prompt only after visual evidence review
 ```
-
-Reason:
-
-- LandingObservedFacts exists locally but needs remote DB and operating
-  verification before it should be considered fully deployed.
 
 ## Known Issues
 
@@ -399,41 +517,39 @@ needs an accessible Back Roll video file.
 Recommended next start:
 
 ```text
-LandingObservedFacts design
+GrabObservedFacts positive detection calibration
 ↓
-LandingObservedFacts implementation
+Known true grab / no-grab sample comparison
 ```
 
 Suggested opening task:
 
 ```text
-Design LandingObservedFacts using the same flat schema pattern as
-PopObservedFacts and RotationObservedFacts. Do not implement Grab yet.
+Review the GrabObservedFacts E2E result for ts_regular_1.
+Use the generated 1.2s-1.65s visual artifacts to determine whether the
+positive grab result is a false positive. Do not change prompt or validator
+until visual evidence is reviewed.
 ```
 
-Suggested LandingObservedFacts fields:
+Suggested next validation questions:
 
 ```text
-landingOutcome
-edgeOnLanding
-handlePositionOnLanding
-bodyPositionOnLanding
-boardControl
-fallDetected
-recoveryObserved
-evidenceText
-confidence
-antiEvidence
+Does ts_regular_1 show actual hand-board contact?
+Should contactVisible=true require a visible finger/hand-board contact point?
+Should grabDuration=held require multiple extracted frames with visible contact?
+Should positive grab medium also require more than one independent indicator?
+Do we need a known true grab sample before further tuning?
 ```
 
 Validation ideas:
 
-- Clean landing should require visible board contact and continued riding.
-- Butt check should require visible hip/seat contact or clear loss of riding
-  posture.
-- Edge catch should require visible edge dig, abrupt deceleration, or fall.
-- High confidence should require direct landing evidence, not inferred trick
-  difficulty.
+- Positive grab should require visible hand-board contact, not only overlap.
+- Attempted reach should remain separate from actual grab.
+- Board poke/style should not count as grab evidence.
+- No-grab Basic Air should be accepted as valid evidence when hands/board are
+  visible.
+- Prompt/validator changes should be based on visual review, not on model text
+  alone.
 
 ## CTO Summary
 
