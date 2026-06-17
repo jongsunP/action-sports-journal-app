@@ -94,6 +94,27 @@ export type PopValidationResult = {
   rejectedHighConfidenceReasons: string[];
 };
 
+export type RotationObservedFacts = {
+  rotationAxis: string | null;
+  rotationDirection: string | null;
+  inversionDetected: ObservedBoolean;
+  spinDegrees: string | null;
+  handlePassObserved: ObservedBoolean;
+  evidenceText: string | null;
+  confidence: EvidenceConfidence;
+  antiEvidence: string[];
+};
+
+export type RotationValidationResult = {
+  before: RotationObservedFacts;
+  after: RotationObservedFacts;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentRotationEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
 export type EvidenceTemporalWindows = {
   takeoffTimestamp: {
     timestampSeconds: number | null;
@@ -248,6 +269,8 @@ export type GeminiEvidenceResult = {
   approachObservedFactsV2?: ApproachObservedFactsV2;
   popObservedFacts?: PopObservedFacts;
   popValidation?: PopValidationResult;
+  rotationObservedFacts?: RotationObservedFacts;
+  rotationValidation?: RotationValidationResult;
   inversionObservedFacts?: InversionObservedFacts;
   approachDecision?: ApproachDecision;
   approachDecisionV2?: ApproachDecisionV2;

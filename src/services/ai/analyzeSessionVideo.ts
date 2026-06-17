@@ -74,6 +74,8 @@ type RemoteEvidenceResponse = {
   approachObservedFactsV2?: unknown;
   popObservedFacts?: unknown;
   popValidation?: unknown;
+  rotationObservedFacts?: unknown;
+  rotationValidation?: unknown;
   inversionObservedFacts?: unknown;
   approachDecision?: unknown;
   approachDecisionV2?: unknown;
@@ -372,6 +374,8 @@ function normalizeRemoteEvidence(
     ),
     popObservedFacts: asPopObservedFacts(data.popObservedFacts),
     popValidation: asPopValidation(data.popValidation),
+    rotationObservedFacts: asRotationObservedFacts(data.rotationObservedFacts),
+    rotationValidation: asRotationValidation(data.rotationValidation),
     inversionObservedFacts: asInversionObservedFacts(data.inversionObservedFacts),
     approachDecision: asApproachDecision(data.approachDecision),
     approachDecisionV2: asApproachDecisionV2(data.approachDecisionV2),
@@ -660,6 +664,59 @@ function asPopValidation(
     needsReview: validation.needsReview === true,
     independentPhysicalEvidenceCount:
       asNumber(validation.independentPhysicalEvidenceCount) ?? 0,
+    rulesApplied: asStringArray(validation.rulesApplied),
+    rejectedHighConfidenceReasons: asStringArray(
+      validation.rejectedHighConfidenceReasons,
+    ),
+  };
+}
+
+function asRotationObservedFacts(
+  value: unknown,
+): GeminiEvidenceResult['rotationObservedFacts'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+
+  return {
+    rotationAxis: asString(facts.rotationAxis) ?? null,
+    rotationDirection: asString(facts.rotationDirection) ?? null,
+    inversionDetected: asObservedBoolean(facts.inversionDetected),
+    spinDegrees:
+      typeof facts.spinDegrees === 'number'
+        ? String(facts.spinDegrees)
+        : (asString(facts.spinDegrees) ?? null),
+    handlePassObserved: asObservedBoolean(facts.handlePassObserved),
+    evidenceText: asString(facts.evidenceText) ?? null,
+    confidence: asConfidenceLevel(facts.confidence) ?? 'low',
+    antiEvidence: asStringArray(facts.antiEvidence),
+  };
+}
+
+function asRotationValidation(
+  value: unknown,
+): GeminiEvidenceResult['rotationValidation'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const validation = value as Record<string, unknown>;
+  const before = asRotationObservedFacts(validation.before);
+  const after = asRotationObservedFacts(validation.after);
+
+  if (!before || !after) {
+    return undefined;
+  }
+
+  return {
+    before,
+    after,
+    adjusted: validation.adjusted === true,
+    needsReview: validation.needsReview === true,
+    independentRotationEvidenceCount:
+      asNumber(validation.independentRotationEvidenceCount) ?? 0,
     rulesApplied: asStringArray(validation.rulesApplied),
     rejectedHighConfidenceReasons: asStringArray(
       validation.rejectedHighConfidenceReasons,

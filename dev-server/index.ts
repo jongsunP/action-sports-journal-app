@@ -332,6 +332,8 @@ app.get("/api/moments", async (_request, response) => {
         "approach_v2_conflict_summary",
         "pop_observed_facts",
         "pop_validation",
+        "rotation_observed_facts",
+        "rotation_validation",
         ...evidenceResultColumnsV1.slice(14),
       ];
       let evidenceResultsQuery = await client
@@ -1639,7 +1641,9 @@ function isMissingApproachV2ColumnError(error: unknown) {
     message.includes("approach_v2_signals") ||
     message.includes("approach_v2_conflict_summary") ||
     message.includes("pop_observed_facts") ||
-    message.includes("pop_validation")
+    message.includes("pop_validation") ||
+    message.includes("rotation_observed_facts") ||
+    message.includes("rotation_validation")
   );
 }
 
@@ -2202,6 +2206,8 @@ async function persistEvidenceResultForLinkedMoment({
       evidence.approachObservedFactsV2?.conflictSummary ?? null,
     pop_observed_facts: evidence.popObservedFacts,
     pop_validation: evidence.popValidation,
+    rotation_observed_facts: evidence.rotationObservedFacts,
+    rotation_validation: evidence.rotationValidation,
     inversion_observed_facts: evidence.inversionObservedFacts,
     temporal_windows: evidence.temporalWindows,
     evidence_windows: evidence.evidenceWindows,
@@ -2225,6 +2231,8 @@ async function persistEvidenceResultForLinkedMoment({
       approach_v2_conflict_summary,
       pop_observed_facts,
       pop_validation,
+      rotation_observed_facts,
+      rotation_validation,
       ...v1EvidenceResultValues
     } = evidenceResultValues;
 
@@ -2684,7 +2692,8 @@ async function runGeminiEvidenceExtraction({
     normalizedEvidence.confidence === "low" ||
     normalizedEvidence.primaryCandidate.confidence === "low" ||
     normalizedEvidence.edgeLoadValidation.needsReview ||
-    normalizedEvidence.popValidation.needsReview;
+    normalizedEvidence.popValidation.needsReview ||
+    normalizedEvidence.rotationValidation.needsReview;
   recordDailyUsage(usageKey);
   console.log(
     `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
@@ -2716,6 +2725,8 @@ async function runGeminiEvidenceExtraction({
     edgeLoadValidation: normalizedEvidence.edgeLoadValidation,
     popObservedFacts: normalizedEvidence.popObservedFacts,
     popValidation: normalizedEvidence.popValidation,
+    rotationObservedFacts: normalizedEvidence.rotationObservedFacts,
+    rotationValidation: normalizedEvidence.rotationValidation,
     approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
     inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
     approachDecision: normalizedEvidence.approachDecision,
@@ -3042,6 +3053,8 @@ async function writeEvidenceCaptureArtifact({
         edgeLoadValidation: normalizedResult.edgeLoadValidation,
         popObservedFacts: normalizedResult.popObservedFacts,
         popValidation: normalizedResult.popValidation,
+        rotationObservedFacts: normalizedResult.rotationObservedFacts,
+        rotationValidation: normalizedResult.rotationValidation,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {
@@ -3189,6 +3202,15 @@ function buildGeminiEvidencePrompt({
     "독립 pop indicators 예: wake lip/top contact at release, board release angle, line/handle tension, rider leg extension, upward trajectory.",
     "evidenceText에는 실제 물리 근거만 한 문장으로 쓰세요. Basic Jump, Tantrum, Back Roll 같은 trick label은 pop 근거가 아닙니다.",
     "antiEvidence는 적극적으로 작성하세요. 팝 순간이 가려짐, 립 접촉 불명확, 라인 텐션 불명확, 다리 펴짐 불명확, label-only pop claim 등을 기록하세요.",
+    "rotationObservedFacts는 공중 회전 mechanics에 대한 관찰 사실만 기록하세요. 트릭명이나 family를 근거로 회전을 추론하지 마세요.",
+    "rotationObservedFacts는 단순 schema로 작성하세요: rotationAxis, rotationDirection, inversionDetected, spinDegrees, handlePassObserved, evidenceText, confidence, antiEvidence.",
+    "rotationAxis는 roll_axis, flip_axis, spin_yaw_axis, off_axis, none, unknown 중 하나로 쓰세요.",
+    "rotationDirection은 frontside, backside, left, right, none, unknown 중 하나로 쓰세요.",
+    "inversionDetected와 handlePassObserved는 true, false, unknown 중 하나로 쓰세요.",
+    "spinDegrees는 0, 180, 360, 540, unknown 중 하나로 쓰세요.",
+    "evidenceText에는 body axis, board path, handle path, landing direction처럼 보이는 mechanics만 한 문장으로 쓰세요. Back Roll/Tantrum/KGB/Crow Mobe 같은 trick label은 rotation 근거가 아닙니다.",
+    "confidence=high는 visible rotation axis, body axis evidence, board path evidence 중 독립적인 근거가 최소 2개 이상 있을 때만 허용하세요.",
+    "antiEvidence는 적극적으로 작성하세요. no visible roll axis, no board path rotation, handle pass not visible, camera pan may create apparent rotation 같은 누락/반례를 기록하세요.",
     "inversionObservedFacts는 접근/엣지/예상 트릭에서 추론하지 말고 공중 동작에서 보이는 사실만 기록하세요.",
     "인버트는 머리가 엉덩이보다 아래인지 하나만으로 정의하지 마세요. 1차 근거는 boardAboveHead입니다.",
     "boardAboveHead는 보드가 라이더 머리보다 위에 명확히 있는지 관찰하세요. 보드가 머리 위에 한 번도 보이지 않으면 antiInversionEvidence에 기록하세요.",
@@ -3245,6 +3267,7 @@ function buildGeminiEvidencePrompt({
     "- approachObservedFacts: 접근 방향 판단 전 관찰 사실",
     "- edgeLoadObservedFacts: 실제 toe/heel edge load 물리 근거. 라벨 추측과 분리",
     "- popObservedFacts: takeoff/pop mechanics 관찰 사실. popType, timing, intensity, evidenceText, confidence, antiEvidence",
+    "- rotationObservedFacts: 공중 회전 mechanics 관찰 사실. rotationAxis, rotationDirection, inversionDetected, spinDegrees, handlePassObserved, evidenceText, confidence, antiEvidence",
     "- inversionObservedFacts: 인버트 판단 전 관찰 사실. bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved, inversionDuration, inversionEvidenceCount, antiInversionEvidence",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
@@ -3276,8 +3299,11 @@ function buildGeminiEvidencePrompt({
     "- PopObservedFacts에서 high confidence는 takeoffTimestamp 근처의 독립적인 visible physical evidence 2개 이상이 없으면 금지하세요.",
     "- timing이 takeoffTimestamp 근처를 설명하지 못하면 Pop confidence high를 금지하세요.",
     "- trick name, family, airtime만으로 popType을 확정하지 말고 antiEvidence에 근거 부족을 기록하세요.",
+    "- RotationObservedFacts에서 high confidence는 rotation axis, body axis, board path 중 독립적인 visible evidence 2개 이상이 없으면 금지하세요.",
+    "- airtime, trick name, body twist만으로 rotationAxis를 확정하지 말고 antiEvidence에 근거 부족을 기록하세요.",
+    "- rotationAxis=none 또는 spinDegrees=0이면 spin/invert trick high를 금지하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, rotationObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -3540,6 +3566,7 @@ type GeminiEvidencePayload = {
   approachObservedFacts?: ApproachObservedFactsPayload;
   edgeLoadObservedFacts?: EdgeLoadObservedFactsPayload;
   popObservedFacts?: PopObservedFactsPayload;
+  rotationObservedFacts?: RotationObservedFactsPayload;
   inversionObservedFacts?: InversionObservedFactsPayload;
   rotationType: {
     value: string;
@@ -3667,6 +3694,27 @@ type PopValidationResult = {
   adjusted: boolean;
   needsReview: boolean;
   independentPhysicalEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
+type RotationObservedFactsPayload = {
+  rotationAxis: string | null;
+  rotationDirection: string | null;
+  inversionDetected: ObservedBooleanPayload;
+  spinDegrees: string | null;
+  handlePassObserved: ObservedBooleanPayload;
+  evidenceText: string | null;
+  confidence: "high" | "medium" | "low";
+  antiEvidence: string[];
+};
+
+type RotationValidationResult = {
+  before: RotationObservedFactsPayload;
+  after: RotationObservedFactsPayload;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentRotationEvidenceCount: number;
   rulesApplied: string[];
   rejectedHighConfidenceReasons: string[];
 };
@@ -3940,6 +3988,11 @@ function parseGeminiEvidence(outputText: string) {
       popObservedFacts: rawPopObservedFacts,
     });
     const popObservedFacts = popValidation.after;
+    const rawRotationObservedFacts = normalizeRotationObservedFacts(undefined);
+    const rotationValidation = validateRotationObservedFacts({
+      rotationObservedFacts: rawRotationObservedFacts,
+    });
+    const rotationObservedFacts = rotationValidation.after;
     const inversionObservedFacts = normalizeInversionObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
@@ -3970,6 +4023,8 @@ function parseGeminiEvidence(outputText: string) {
       edgeLoadValidation,
       popObservedFacts,
       popValidation,
+      rotationObservedFacts,
+      rotationValidation,
       approachObservedFactsV2,
       inversionObservedFacts,
       approachDecision,
@@ -4029,6 +4084,10 @@ function parsePartialGeminiEvidence(outputText: string) {
     outputText,
     "popObservedFacts",
   );
+  const rotationObservedFacts = parseObjectProperty(
+    outputText,
+    "rotationObservedFacts",
+  );
   const inversionObservedFacts = parseObjectProperty(
     outputText,
     "inversionObservedFacts",
@@ -4052,6 +4111,8 @@ function parsePartialGeminiEvidence(outputText: string) {
       edgeLoadObservedFacts as GeminiEvidencePayload["edgeLoadObservedFacts"] | undefined,
     popObservedFacts:
       popObservedFacts as GeminiEvidencePayload["popObservedFacts"] | undefined,
+    rotationObservedFacts:
+      rotationObservedFacts as GeminiEvidencePayload["rotationObservedFacts"] | undefined,
     inversionObservedFacts:
       inversionObservedFacts as GeminiEvidencePayload["inversionObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
@@ -4633,6 +4694,13 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     popObservedFacts: rawPopObservedFacts,
   });
   const popObservedFacts = popValidation.after;
+  const rawRotationObservedFacts = normalizeRotationObservedFacts(
+    parsed.rotationObservedFacts,
+  );
+  const rotationValidation = validateRotationObservedFacts({
+    rotationObservedFacts: rawRotationObservedFacts,
+  });
+  const rotationObservedFacts = rotationValidation.after;
   const inversionObservedFacts = normalizeInversionObservedFacts(
     parsed.inversionObservedFacts,
   );
@@ -4669,6 +4737,8 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     edgeLoadValidation,
     popObservedFacts,
     popValidation,
+    rotationObservedFacts,
+    rotationValidation,
     approachObservedFactsV2,
     inversionObservedFacts,
     approachDecision,
@@ -5439,6 +5509,310 @@ function isPhysicalUpwardTrajectoryEvidence(text: string) {
     "수직",
     "위로",
     "수면에서 떨어짐",
+  ]);
+}
+
+function normalizeRotationObservedFacts(
+  value: unknown,
+): RotationObservedFactsPayload {
+  const facts =
+    value && typeof value === "object"
+      ? (value as Partial<RotationObservedFactsPayload>)
+      : {};
+
+  return {
+    rotationAxis: normalizeRotationAxis(facts.rotationAxis),
+    rotationDirection: normalizeRotationDirection(facts.rotationDirection),
+    inversionDetected: normalizeObservedBoolean(facts.inversionDetected),
+    spinDegrees: normalizeSpinDegrees(facts.spinDegrees),
+    handlePassObserved: normalizeObservedBoolean(facts.handlePassObserved),
+    evidenceText: normalizeNullableString(facts.evidenceText),
+    confidence: asOpenAiConfidenceLevel(facts.confidence) ?? "low",
+    antiEvidence: normalizeStringArray(facts.antiEvidence, []),
+  };
+}
+
+function normalizeRotationAxis(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    ["roll_axis", "flip_axis", "spin_yaw_axis", "off_axis", "none", "unknown"].includes(
+      text,
+    )
+  ) {
+    return text;
+  }
+
+  return "unknown";
+}
+
+function normalizeRotationDirection(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    ["frontside", "backside", "left", "right", "none", "unknown"].includes(text)
+  ) {
+    return text;
+  }
+
+  return "unknown";
+}
+
+function normalizeSpinDegrees(value: unknown) {
+  const text =
+    typeof value === "number" && Number.isFinite(value)
+      ? String(value)
+      : normalizeNullableString(value);
+
+  if (text && ["0", "180", "360", "540", "unknown"].includes(text)) {
+    return text;
+  }
+
+  return "unknown";
+}
+
+function validateRotationObservedFacts({
+  rotationObservedFacts,
+}: {
+  rotationObservedFacts: RotationObservedFactsPayload;
+}): RotationValidationResult {
+  const before = cloneRotationObservedFacts(rotationObservedFacts);
+  const after = cloneRotationObservedFacts(rotationObservedFacts);
+  const rulesApplied: string[] = [];
+  const rejectedHighConfidenceReasons: string[] = [];
+  const reviewReasons: string[] = [];
+  const evidenceText = [
+    rotationObservedFacts.rotationAxis,
+    rotationObservedFacts.rotationDirection,
+    rotationObservedFacts.spinDegrees,
+    rotationObservedFacts.evidenceText,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const independentRotationEvidenceCount =
+    countIndependentRotationEvidence(evidenceText);
+  const hasAxis =
+    rotationObservedFacts.rotationAxis !== null &&
+    !["unknown", "none"].includes(rotationObservedFacts.rotationAxis);
+  const hasEvidenceText = Boolean(rotationObservedFacts.evidenceText);
+  const labelOnlyEvidence = rotationEvidenceIsLabelOnly(evidenceText);
+  const wasHigh = rotationObservedFacts.confidence === "high";
+
+  if (!hasAxis && wasHigh) {
+    rejectedHighConfidenceReasons.push(
+      "Rotation high confidence requires a visible rotationAxis.",
+    );
+    reviewReasons.push("rotationAxis is missing for high confidence.");
+    addPostValidationAntiRotationEvidence(
+      after,
+      "post-validation: rotationAxis is missing for high confidence.",
+    );
+  }
+
+  if (!hasEvidenceText && wasHigh) {
+    rejectedHighConfidenceReasons.push(
+      "Rotation high confidence requires visible mechanics evidenceText.",
+    );
+    reviewReasons.push("rotation evidenceText is missing.");
+    addPostValidationAntiRotationEvidence(
+      after,
+      "post-validation: rotation evidenceText is missing.",
+    );
+  }
+
+  if (independentRotationEvidenceCount < 2 && wasHigh) {
+    rejectedHighConfidenceReasons.push(
+      "Rotation high confidence requires at least two independent visible rotation indicators.",
+    );
+  }
+
+  if (labelOnlyEvidence) {
+    rejectedHighConfidenceReasons.push(
+      "Rotation evidence repeats labels without independent mechanics.",
+    );
+    reviewReasons.push("rotation evidence appears label-only.");
+    addPostValidationAntiRotationEvidence(
+      after,
+      "post-validation: rotation evidence appears label-only.",
+    );
+  }
+
+  if (
+    rotationObservedFacts.antiEvidence.length === 0 &&
+    rotationObservedFacts.confidence === "high"
+  ) {
+    rejectedHighConfidenceReasons.push(
+      "Rotation high confidence requires antiEvidence to document missing or contradictory cues.",
+    );
+    reviewReasons.push(
+      "Rotation confidence was high while antiEvidence was empty.",
+    );
+    addPostValidationAntiRotationEvidence(
+      after,
+      "post-validation: antiEvidence was empty for high confidence.",
+    );
+  }
+
+  if (wasHigh && rejectedHighConfidenceReasons.length > 0) {
+    after.confidence =
+      independentRotationEvidenceCount >= 1 && !labelOnlyEvidence
+        ? "medium"
+        : "low";
+    rulesApplied.push(
+      `Rotation confidence downgraded from high to ${after.confidence}.`,
+    );
+  }
+
+  if (reviewReasons.length > 0) {
+    rulesApplied.push(...reviewReasons);
+  }
+
+  return {
+    before,
+    after,
+    adjusted: JSON.stringify(before) !== JSON.stringify(after),
+    needsReview: reviewReasons.length > 0,
+    independentRotationEvidenceCount,
+    rulesApplied,
+    rejectedHighConfidenceReasons,
+  };
+}
+
+function cloneRotationObservedFacts(
+  facts: RotationObservedFactsPayload,
+): RotationObservedFactsPayload {
+  return {
+    rotationAxis: facts.rotationAxis,
+    rotationDirection: facts.rotationDirection,
+    inversionDetected: facts.inversionDetected,
+    spinDegrees: facts.spinDegrees,
+    handlePassObserved: facts.handlePassObserved,
+    evidenceText: facts.evidenceText,
+    confidence: facts.confidence,
+    antiEvidence: [...facts.antiEvidence],
+  };
+}
+
+function addPostValidationAntiRotationEvidence(
+  facts: RotationObservedFactsPayload,
+  reason: string,
+) {
+  if (!facts.antiEvidence.includes(reason)) {
+    facts.antiEvidence.push(reason);
+  }
+}
+
+function countIndependentRotationEvidence(text: string) {
+  const normalized = normalizeDomainText(text);
+  const evidenceKeys = new Set<string>();
+
+  if (isBodyAxisRotationEvidence(normalized)) {
+    evidenceKeys.add("body_axis");
+  }
+
+  if (isBoardPathRotationEvidence(normalized)) {
+    evidenceKeys.add("board_path");
+  }
+
+  if (isHandlePathRotationEvidence(normalized)) {
+    evidenceKeys.add("handle_path");
+  }
+
+  if (isLandingDirectionRotationEvidence(normalized)) {
+    evidenceKeys.add("landing_direction");
+  }
+
+  return evidenceKeys.size;
+}
+
+function rotationEvidenceIsLabelOnly(text: string) {
+  const normalized = normalizeDomainText(text);
+
+  if (!normalized.trim()) {
+    return true;
+  }
+
+  return (
+    includesAnyDomainTerm(normalized, [
+      "roll_axis",
+      "flip_axis",
+      "spin_yaw_axis",
+      "off_axis",
+      "frontside",
+      "backside",
+      "180",
+      "360",
+      "540",
+      "롤 축",
+      "플립 축",
+      "스핀",
+      "프론트사이드",
+      "백사이드",
+    ]) &&
+    countIndependentRotationEvidence(normalized) === 0
+  );
+}
+
+function isBodyAxisRotationEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "shoulder",
+    "hip",
+    "torso",
+    "body axis",
+    "rolls",
+    "pitches",
+    "yaws",
+    "어깨",
+    "골반",
+    "상체",
+    "몸축",
+    "몸 축",
+    "구르",
+    "말리",
+    "회전",
+  ]);
+}
+
+function isBoardPathRotationEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "board path",
+    "board nose",
+    "board direction",
+    "board rises",
+    "board stays",
+    "board rotates",
+    "보드 경로",
+    "보드 노즈",
+    "보드 방향",
+    "보드가",
+    "보드 회전",
+  ]);
+}
+
+function isHandlePathRotationEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "handle path",
+    "handle pass",
+    "hands",
+    "behind the back",
+    "핸들",
+    "핸들 패스",
+    "손",
+  ]);
+}
+
+function isLandingDirectionRotationEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "landing direction",
+    "takeoff direction",
+    "lands switch",
+    "same direction",
+    "착지 방향",
+    "이륙 방향",
+    "스위치 착지",
+    "같은 방향",
   ]);
 }
 
@@ -7083,6 +7457,7 @@ function inferRawTrickFamily({
 function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
   const inversionFacts = evidence.inversionObservedFacts;
   const popFacts = evidence.popObservedFacts;
+  const rotationFacts = evidence.rotationObservedFacts;
 
   return normalizeDomainText(
     [
@@ -7102,6 +7477,18 @@ function evidenceSearchText(evidence: NormalizedGeminiEvidence) {
             `popConfidence ${popFacts.confidence}`,
             popFacts.evidenceText ?? "",
             ...popFacts.antiEvidence,
+          ].join(" ")
+        : "",
+      rotationFacts
+        ? [
+            `rotationAxis ${rotationFacts.rotationAxis ?? "unknown"}`,
+            `rotationDirection ${rotationFacts.rotationDirection ?? "unknown"}`,
+            `inversionDetected ${rotationFacts.inversionDetected}`,
+            `spinDegrees ${rotationFacts.spinDegrees ?? "unknown"}`,
+            `handlePassObserved ${rotationFacts.handlePassObserved}`,
+            `rotationConfidence ${rotationFacts.confidence}`,
+            rotationFacts.evidenceText ?? "",
+            ...rotationFacts.antiEvidence,
           ].join(" ")
         : "",
       inversionFacts
@@ -7881,6 +8268,36 @@ const geminiPopObservedFactsSchema = {
   ],
 };
 
+const geminiRotationObservedFactsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    rotationAxis: { type: Type.STRING, nullable: true },
+    rotationDirection: { type: Type.STRING, nullable: true },
+    inversionDetected: geminiObservedBooleanSchema,
+    spinDegrees: { type: Type.STRING, nullable: true },
+    handlePassObserved: geminiObservedBooleanSchema,
+    evidenceText: { type: Type.STRING, nullable: true },
+    confidence: {
+      type: Type.STRING,
+      enum: ["high", "medium", "low"],
+    },
+    antiEvidence: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+  },
+  required: [
+    "rotationAxis",
+    "rotationDirection",
+    "inversionDetected",
+    "spinDegrees",
+    "handlePassObserved",
+    "evidenceText",
+    "confidence",
+    "antiEvidence",
+  ],
+};
+
 const geminiInversionObservedFactsSchema = {
   type: Type.OBJECT,
   properties: {
@@ -7984,6 +8401,7 @@ const geminiEvidenceResponseSchema = {
     approachObservedFacts: geminiApproachObservedFactsSchema,
     edgeLoadObservedFacts: geminiEdgeLoadObservedFactsSchema,
     popObservedFacts: geminiPopObservedFactsSchema,
+    rotationObservedFacts: geminiRotationObservedFactsSchema,
     inversionObservedFacts: geminiInversionObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
@@ -8058,6 +8476,7 @@ const geminiEvidenceResponseSchema = {
     "approachObservedFacts",
     "edgeLoadObservedFacts",
     "popObservedFacts",
+    "rotationObservedFacts",
     "inversionObservedFacts",
     "approachType",
     "rotationType",

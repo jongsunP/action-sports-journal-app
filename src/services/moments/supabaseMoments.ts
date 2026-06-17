@@ -240,6 +240,12 @@ function normalizeRemoteEvidenceResult(
     popValidation: asRecord(evidence.pop_validation) as
       | GeminiEvidenceResult['popValidation']
       | undefined,
+    rotationObservedFacts: asRecord(evidence.rotation_observed_facts) as
+      | GeminiEvidenceResult['rotationObservedFacts']
+      | undefined,
+    rotationValidation: asRecord(evidence.rotation_validation) as
+      | GeminiEvidenceResult['rotationValidation']
+      | undefined,
     inversionObservedFacts: asRecord(evidence.inversion_observed_facts) as
       | GeminiEvidenceResult['inversionObservedFacts']
       | undefined,

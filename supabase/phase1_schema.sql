@@ -92,6 +92,8 @@ create table if not exists public.evidence_results (
   approach_v2_conflict_summary jsonb,
   pop_observed_facts jsonb,
   pop_validation jsonb,
+  rotation_observed_facts jsonb,
+  rotation_validation jsonb,
   inversion_observed_facts jsonb,
   temporal_windows jsonb,
   evidence_windows jsonb,
