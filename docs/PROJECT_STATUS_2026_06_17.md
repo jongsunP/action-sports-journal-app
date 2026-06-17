@@ -1,19 +1,17 @@
 # Project Status - 2026-06-17
 
-## Purpose
-
-This document captures the current operating state of Action Sports Journal as
-of 2026-06-17. A future GPT or Codex session should be able to restore the
-current project context from this file without relying on chat history.
+This document is the current operating snapshot for Action Sports Journal on
+2026-06-17. It is written so a future GPT, Codex session, or successor CTO can
+resume without relying on chat history.
 
 Read this together with:
 
 - `docs/PROJECT_MEMORY.md`
 - `docs/CURRENT_STAGE.md`
 - `docs/WAKEBOARD_OBSERVED_FACTS_V3_PLAN.md`
-- `docs/PRO_OPERATION_VALIDATION_2026_06_16.md`
-- `docs/ROTATION_OBSERVED_FACTS_PLAN.md`
+- `docs/LANDING_OBSERVED_FACTS_DESIGN.md`
 - `docs/GRAB_OBSERVED_FACTS_DESIGN.md`
+- `docs/PRO_OPERATION_VALIDATION_2026_06_16.md`
 
 ## Current Operating Model
 
@@ -25,10 +23,9 @@ The production evidence extraction model is:
 gemini-2.5-pro
 ```
 
-The model is configured through Render environment variables. The iPhone app
-does not need an EAS rebuild to switch evidence extraction models because the
-standalone app calls the Render backend, and Render chooses the Gemini model
-server-side.
+Render owns the operating model configuration. The standalone iPhone app calls
+the Render backend, so changing the Gemini model through Render environment
+variables does not require an EAS rebuild.
 
 Current Render model configuration:
 
@@ -39,23 +36,13 @@ GEMINI_FALLBACK_MODEL=gemini-2.5-flash-lite
 
 Flash to Pro transition background:
 
-- Gemini Flash was useful for early iteration and cost control.
-- Real wakeboard approach and trick-family classification showed quality
-  limits, especially around toeside/heelside approach and invert hallucination.
-- Benchmark and operating validation showed Pro produced more reliable
-  approach and family-level results on recent practical samples.
-- Pro is now the operating default for evidence extraction.
-
-Benchmark summary:
-
-- Observation: Pro improved practical reliability for `nee toe` and
-  `nee heel`.
-- Observation: Pro correctly distinguished toe and heel in those recent
-  operating checks.
-- Observation: Trick/family outputs were more consistent than the earlier
-  Flash-era behavior.
-- Unknown: Pro is not a complete solution by itself. Domain decomposition and
-  validators are still required.
+- Flash was useful for early iteration and cost control.
+- Flash-era behavior struggled with wakeboard approach and parent-family
+  accuracy, including toeside/heelside confusion and invert hallucination.
+- Operating checks on recent `nee toe` and `nee heel` samples showed Pro gave
+  more reliable approach and family-level outputs.
+- Pro is not treated as a complete solution. The product direction is still
+  domain decomposition plus validation, not model confidence alone.
 
 ## Current Evidence Pipeline
 
@@ -90,27 +77,37 @@ EvidenceResult
 Implementation reality:
 
 - The standalone iPhone app creates a Moment.
-- The backend creates an AnalysisJob.
-- Evidence extraction is run through the Render backend.
-- Results are persisted to Supabase `evidence_results`.
+- The Render backend creates an AnalysisJob and starts evidence extraction.
+- Evidence extraction results are persisted to Supabase `evidence_results`.
 - The app restores Moment and latest Evidence state from Supabase.
+- AI keys live only in Render/local environment variables.
 
-## Completed Observed-Facts Layers
+## Completed ObservedFacts Layers
+
+All MVP V3 observed-facts layers are now represented in the evidence path:
+
+- Approach
+- EdgeLoad
+- Pop
+- Rotation
+- Landing
+- Grab
 
 ### Approach
 
 Confirmed Fact:
 
-`ApproachObservedFacts` and approach decision logic exist.
+`ApproachObservedFacts` and derived approach decision logic exist.
 
-Current domain rule:
+Current rule:
 
 - Do not ask only "heelside or toeside?"
-- Extract stance, lead foot, board direction, wake crossing path, takeoff
-  position, landing position, edge direction evidence, handle position, and
-  body orientation first.
+- Extract stance, lead foot, board direction, wake crossing path, edge evidence,
+  handle position, and body orientation first.
 - Body orientation is supporting evidence only.
 - Chest/back visibility alone must not determine heelside or toeside.
+- Approach evidence should be anchored to the final approach window near
+  takeoff, not the whole slalom/setup section.
 
 ### EdgeLoad
 
@@ -118,7 +115,7 @@ Confirmed Fact:
 
 `EdgeLoadObservedFacts` exists and is connected to validation.
 
-Current domain rule:
+Current rule:
 
 - Edge load should come from board tilt, spray, line tension, rider weight over
   edge, and final approach context.
@@ -128,21 +125,26 @@ Current domain rule:
 
 Confirmed Fact:
 
-`PopObservedFacts` exists with a simplified flat schema.
+`PopObservedFacts` exists with a simplified flat schema and Supabase storage.
 
-Current status:
+Current rule:
 
-- Pop storage in Supabase is confirmed.
-- Pop validator calibration has been adjusted so plausible
-  `progressive_pop / on_wake / moderate` cases are not over-downgraded to low.
-- Schema complexity was reduced after Gemini structured schema returned
-  `400 INVALID_ARGUMENT` when the schema became too complex.
+- Pop observes takeoff mechanics only.
+- It should not infer trick identity.
+- Plausible `progressive_pop / on_wake / moderate` cases should not be
+  automatically downgraded to low when physical evidence exists.
+
+Important lesson:
+
+- A richer nested Pop schema caused Gemini structured response complexity
+  issues. Keep observed-facts schemas flat.
 
 ### Rotation
 
 Confirmed Fact:
 
-`RotationObservedFacts` exists with a simplified flat schema.
+`RotationObservedFacts` exists with a simplified flat schema and Supabase
+storage.
 
 Current fields:
 
@@ -157,78 +159,31 @@ confidence
 antiEvidence
 ```
 
-Current status:
+Current rule:
 
-- Rotation storage in Supabase is confirmed.
-- Rotation validation is calibrated for Basic Jump no-rotation cases.
-- For Basic Jump / Basic Air cases, clear absence of rotation is now accepted
-  as valid physical evidence.
-
-Current no-rotation validation behavior:
-
-- If `family` is Basic Jump / Basic Air / Straight Air,
-- and `rotationAxis=none`,
-- and `inversionDetected=false`,
-- and `spinDegrees=0`,
-- and `handlePassObserved=false`,
-- and the evidence text clearly says rotation/spin/axis is not observed,
-- then `rotationValidation.needsReview=false` is allowed.
+- For Basic Air / Straight Air, clear absence of rotation can be valid physical
+  evidence.
+- For Back Roll / Tantrum / Invert-family candidates, high confidence still
+  requires visible rotation or inversion mechanics.
 
 Operating verification:
 
 ```text
 predicted_trick: Toeside Basic Jump
-family: 기본 점프
+family: Basic Air / Basic Jump
 rotationAxis: none
 inversionDetected: false
 spinDegrees: 0
 handlePassObserved: false
-rotation confidence: medium
 rotationValidation.needsReview: false
 ```
-
-## Current Operating Verification State
-
-Confirmed Fact:
-
-- Pro operating deployment is complete.
-- `/health` reports Gemini evidence extraction configured.
-- Evidence extraction uses `gemini-2.5-pro`.
-- Pop storage is confirmed.
-- Rotation storage is confirmed.
-- Stuck job cleanup was completed manually.
-
-Stuck job cleanup:
-
-```text
-job_status: failed
-moment_status: failed
-latest_evidence_result_id: null
-last_error: manual cleanup: stuck processing job after timeout
-evidence_result_count: 0
-```
-
-Rotation migration:
-
-Confirmed applied columns:
-
-```text
-evidence_results.rotation_observed_facts
-evidence_results.rotation_validation
-```
-
-Recent rotation validation result:
-
-- Basic Jump no-rotation result is persisted.
-- `rotationValidation.needsReview=false` was confirmed after calibration.
-- Back Roll / Tantrum / Invert high-confidence requirements remain stricter
-  and still require visible rotation or inversion mechanics.
 
 ### Landing
 
 Confirmed Fact:
 
-`LandingObservedFacts` MVP has been implemented and operationally verified.
+`LandingObservedFacts` MVP has been implemented and operationally verified on
+Render + Gemini 2.5 Pro.
 
 Current fields:
 
@@ -244,36 +199,17 @@ confidence
 antiEvidence
 ```
 
-Current implementation status:
+Implementation status:
 
-- Local TypeScript types are added.
-- Server-side normalization and validation are added.
-- Gemini prompt now asks for landing/recovery observed facts.
+- TypeScript types are added.
+- Server normalization and validation are added.
+- Gemini prompt asks for landing/recovery observed facts.
+- Gemini schema uses a JSON string carrier for `landingObservedFacts`.
 - Debug capture and response fields are wired.
 - Supabase persistence/restore paths are wired.
-- `supabase/phase5_landing_observed_facts.sql` exists.
-
-Important implementation detail:
-
-- Direct Gemini object schema for `landingObservedFacts` caused
-  `400 INVALID_ARGUMENT` due to structured schema complexity.
-- The MVP now asks Gemini to return `landingObservedFacts` as a compact JSON
-  string.
-- The server parses that string, normalizes it, validates it, and exposes a
-  normal object to the app/backend response.
-
-Verification:
-
-- `npm run typecheck` passes.
-- `git diff --check` passes.
-- Local server `/health` passes.
-- Local Gemini Flash evidence extraction completed after switching
-  `landingObservedFacts` to the compact JSON-string carrier.
-- Debug artifact confirmed `landingObservedFacts` and `landingValidation`.
-- Supabase remote migration has been applied.
-- Render/Gemini Pro operating verification completed successfully.
-- Supabase `landing_observed_facts` / `landing_validation` persistence was
-  verified on the remote DB.
+- Remote Supabase columns are applied:
+  - `evidence_results.landing_observed_facts`
+  - `evidence_results.landing_validation`
 
 Operating verification sample:
 
@@ -288,44 +224,19 @@ landing confidence: medium
 landingValidation.needsReview: false
 ```
 
-Migration prepared:
+Current rule:
 
-```sql
-alter table public.evidence_results
-  add column if not exists landing_observed_facts jsonb,
-  add column if not exists landing_validation jsonb;
-```
-
-Verification SQL after applying migration:
-
-```sql
-select
-  column_name,
-  data_type,
-  is_nullable
-from information_schema.columns
-where table_schema = 'public'
-  and table_name = 'evidence_results'
-  and column_name in (
-    'landing_observed_facts',
-    'landing_validation'
-  )
-order by column_name;
-```
-
-Rollback SQL if needed:
-
-```sql
-alter table public.evidence_results
-  drop column if exists landing_observed_facts,
-  drop column if exists landing_validation;
-```
+- Landing observes outcome and recovery only.
+- Landing must not create or override trick identity.
+- Landing fields should be low confidence or unknown when landing is obscured by
+  camera crop, splash, video end, or aftermath-only frames.
 
 ### Grab
 
 Confirmed Fact:
 
-`GrabObservedFacts` MVP has been implemented and system E2E verified.
+`GrabObservedFacts` MVP has been implemented and operationally verified on
+Render + Gemini 2.5 Pro.
 
 Current fields:
 
@@ -341,17 +252,19 @@ confidence
 antiEvidence
 ```
 
-Current implementation status:
+Implementation status:
 
 - TypeScript types are added.
-- Server-side normalization and validation are added.
-- Gemini prompt now asks for grab observed facts.
+- Server normalization and validation are added.
+- Gemini prompt asks for grab observed facts.
 - Gemini schema uses a JSON string carrier for `grabObservedFacts`.
 - Debug capture and response fields are wired.
 - Supabase persistence/restore paths are wired.
-- `supabase/phase6_grab_observed_facts.sql` exists and was applied remotely.
+- Remote Supabase columns are applied:
+  - `evidence_results.grab_observed_facts`
+  - `evidence_results.grab_validation`
 
-Operating verification:
+Initial operating verification:
 
 ```text
 Moment ID: 7090da09-6676-405f-81c8-0b77601ab49f
@@ -359,224 +272,191 @@ Analysis Job ID: d09bca5c-4624-494e-8292-2c50dd774f98
 Evidence Result ID: d1e7d5ac-2a13-4760-8d46-fd941af90253
 model: gemini-2.5-pro
 analysis_jobs.status: completed
-evidence_results.grab_observed_facts: present
-evidence_results.grab_validation: present
-debug response grabObservedFacts: present
-debug response grabValidation: present
+grab_observed_facts: present
+grab_validation: present
 ```
 
-Observed system behavior:
+False-positive finding:
 
-- Storage path works.
-- API response path works.
-- Debug artifact path works.
-- Existing Approach, Pop, Rotation, and Landing observed-facts outputs remained
-  present.
-- Validator downgraded a raw high-confidence grab to medium because independent
-  contact indicators were insufficient and precise timing was not supported.
+- On `dev-artifacts/benchmark-videos/ts_regular_1.mov`, Gemini Pro initially
+  reported a positive grab.
+- Manual frame review around 1.20s to 1.65s did not confirm clear hand-to-board
+  contact.
+- This was treated as a probable false positive or overconfident interpretation
+  of hand/board overlap.
 
-Quality validation finding:
-
-Gemini Pro produced:
+Visual review artifacts:
 
 ```text
-grabDetected: true
-contactVisible: true
-grabbingHand: rear_hand
-grabbedBoardZone: toe_edge_between_bindings
-grabTiming: unknown
-grabDuration: held
-confidence: medium
+dev-artifacts/grab-validation/ts_regular_1_2026-06-17/
 ```
 
-Gemini evidence text:
+False-positive hardening:
+
+- Commit `5b5380e` made Grab prompt/validator more conservative.
+- Positive grab now requires visible hand/finger-to-board contact point.
+- Hand near board, overlap, occlusion, board poke, style motion, knee tuck, arm
+  swing, handle movement, or "appears likely" phrasing must not create a
+  positive grab.
+
+Post-hardening operating verification:
 
 ```text
-뒷손(오른손)이 핸들에서 떨어져 보드의 토우 엣지 중앙을 잡는 것이 1.50초부터 명확히 보임.
+Moment ID: a0fe9185-9ec6-42a1-a04d-c9c0a02ead3d
+Analysis Job ID: bbb58903-e035-44b5-9a96-a71b0fc5d024
+Evidence Result ID: b8f9405e-4e0a-4c2a-aba5-c746201538da
+model: gemini-2.5-pro
+analysis_jobs.status: completed
+grabDetected: false
+contactVisible: false
+grabValidation.needsReview: false
 ```
 
-Manual visual check:
+Post-hardening sample:
 
-- Source video: `dev-artifacts/benchmark-videos/ts_regular_1.mov`
-- Generated artifacts:
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/ts_regular_1_1.2-2.0.mp4`
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_20s.jpg`
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_35s.jpg`
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_50s.jpg`
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_65s.jpg`
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_50s_crop.jpg`
-  - `dev-artifacts/grab-validation/ts_regular_1_2026-06-17/frame_1_65s_crop.jpg`
+```json
+{
+  "grabDetected": false,
+  "contactVisible": false,
+  "grabbingHand": "none",
+  "grabbedBoardZone": "none",
+  "grabTiming": "none",
+  "grabDuration": "none",
+  "evidenceText": "라이더의 양손이 공중 동작 내내 핸들을 잡고 있으며, 보드를 잡으려는 시도가 없습니다.",
+  "confidence": "high",
+  "antiEvidence": [
+    "손과 보드 사이에 충분한 거리가 유지됩니다."
+  ]
+}
+```
 
-Observation:
+Current Grab judgment:
 
-- At 1.20s and 1.35s, hand-board contact is not visible.
-- At 1.50s, the rider is rising and the board is vertical, but the hand appears
-  near the handle/upper body rather than clearly touching the board.
-- At 1.65s, the hand/board region is closer and partly overlapping, but clear
-  hand-to-board contact is still not confirmed from the extracted frame.
+- System E2E is complete.
+- The known false positive on `ts_regular_1.mov` was reduced.
+- Unknown: true-grab positive quality is not validated yet.
+- Risk: the stricter validator may create false negatives until tested against
+  known true grab footage.
 
-Current judgment:
+## Current Operating Verification State
 
-- System E2E is successful.
-- Positive grab quality is not yet validated.
-- The `ts_regular_1` positive grab result may be a false positive or at least
-  an overconfident interpretation of hand/board overlap.
-- Next Grab work should make positive grab validation more conservative before
-  trusting positive grab labels.
+Confirmed Fact:
 
-## Remaining Observed-Facts Layers
+- Standalone iPhone app works without Expo Go.
+- Render backend works.
+- Supabase Moment/Evidence persistence works.
+- Async Analysis MVP works for queued/processing/completed restoration.
+- Gemini 2.5 Pro is the operating evidence model.
+- Landing and Grab both completed Render + Gemini Pro E2E verification.
 
-All planned MVP V3 observed-facts layers are now represented in the evidence
-path:
-
-- Approach
-- EdgeLoad
-- Pop
-- Rotation
-- Grab
-- Landing
-
-Next validation step:
+Recent important commits:
 
 ```text
-Calibrate GrabObservedFacts positive detection
-↓
-Collect or identify a known true grab sample
-↓
-Compare true grab vs no-grab Basic Air samples
-↓
-Adjust validator/prompt only after visual evidence review
+615781e feat: add landing observed facts MVP
+b9e84ad feat: add grab observed facts MVP
+5b5380e fix: reduce grab false positives
 ```
 
-## Known Issues
+## Known Issues And Risks
+
+### Grab True Positive Not Validated
+
+Confirmed Fact:
+
+The no-grab false positive on `ts_regular_1.mov` was reduced after conservative
+Grab prompt/validator changes.
+
+Unknown:
+
+Whether the stricter Grab rules correctly detect a known true grab.
+
+Recommendation:
+
+Next Grab validation should use at least one known true grab sample and one
+known no-grab Basic Air sample.
 
 ### Gemini Schema Complexity
 
 Confirmed Fact:
 
-Gemini structured response schema can fail with `400 INVALID_ARGUMENT` if the
+Gemini structured response schema can fail with `400 INVALID_ARGUMENT` when the
 schema becomes too complex.
 
 Current rule:
 
 - Keep new observed-facts schemas flat.
 - Avoid nested confidence objects.
-- Avoid adding many enums and deeply nested required fields.
 - Prefer one top-level confidence field per observed-facts layer.
+- Use JSON string carriers for new complex observed-facts sections when needed.
 
 ### Upload / Processing Timeout Recovery
 
 Observation:
 
-Some async evidence jobs can remain in `processing` with:
-
-```text
-last_error: null
-completed_at: null
-failed_at: null
-latest_evidence_result_id: null
-```
-
-Hypothesis:
-
-The job can be marked `processing` and then fail to reach the catch/failure
-path if the server process is interrupted or if the upload stage hangs before
-the timed Gemini generation call.
+Async evidence jobs can get stuck in `processing` if the server is interrupted
+or the upload/file activation path does not reach the failure handler.
 
 Recommendation:
 
 Add recovery logic later:
 
-- timeout wrapper around Gemini file upload / file activation,
+- timeout wrapper around Gemini file upload and file activation,
 - stale processing job cleanup,
-- retry or fail-safe transition for jobs stuck beyond an expected age,
+- retry or fail-safe transition for jobs stuck beyond expected age,
 - clearer job-level logging with job id and moment id.
 
-Do not treat this as solved yet.
-
-### Back Roll Fresh Rotation Validation
-
-Observation:
-
-Existing Back Roll Moments exist in Supabase, but their source video URIs point
-to iPhone sandbox paths and are not available to the Render server or local Mac
-for re-upload.
-
-Confirmed Fact:
-
-Existing Back Roll evidence rows were created before RotationObservedFacts
-columns were added, so `rotation_observed_facts` is null on those old rows.
+### Fresh Back Roll Validation
 
 Unknown:
 
-Fresh Back Roll validation against the new RotationObservedFacts layer still
-needs an accessible Back Roll video file.
+Fresh Back Roll validation against the new Rotation/Grab/Landing layers still
+requires an accessible Back Roll source video file.
 
-## Next Session Recommended Starting Point
+## Next Priorities
 
 Recommended next start:
 
 ```text
-GrabObservedFacts positive detection calibration
+Grab true-positive validation
 ↓
-Known true grab / no-grab sample comparison
+Known true grab sample vs no-grab Basic Air comparison
+↓
+Only then tune Grab prompt/validator further
 ```
 
-Suggested opening task:
+Next work candidates:
 
-```text
-Review the GrabObservedFacts E2E result for ts_regular_1.
-Use the generated 1.2s-1.65s visual artifacts to determine whether the
-positive grab result is a false positive. Do not change prompt or validator
-until visual evidence is reviewed.
-```
-
-Suggested next validation questions:
-
-```text
-Does ts_regular_1 show actual hand-board contact?
-Should contactVisible=true require a visible finger/hand-board contact point?
-Should grabDuration=held require multiple extracted frames with visible contact?
-Should positive grab medium also require more than one independent indicator?
-Do we need a known true grab sample before further tuning?
-```
-
-Validation ideas:
-
-- Positive grab should require visible hand-board contact, not only overlap.
-- Attempted reach should remain separate from actual grab.
-- Board poke/style should not count as grab evidence.
-- No-grab Basic Air should be accepted as valid evidence when hands/board are
-  visible.
-- Prompt/validator changes should be based on visual review, not on model text
-  alone.
+- Collect or identify known true grab footage.
+- Run operating Render + Gemini Pro E2E on true grab footage.
+- Compare `grabDetected`, `contactVisible`, `grabDuration`, and
+  `grabValidation`.
+- Add upload/stuck-job recovery for async analysis.
+- Fresh Back Roll validation with accessible source video.
+- Begin Wakeboard Knowledge Base / RAG reference only after observed-facts
+  validation has enough sample coverage.
 
 ## CTO Summary
 
-Current project state:
+Action Sports Journal is no longer primarily an "AI Video Analyzer" project.
+It is becoming a Wakeboard Knowledge System.
 
-```text
-Action Sports Journal has moved past the stage of "make the AI guess better."
-It has entered the stage of building a Wakeboard Knowledge System.
-```
+The important architectural shift:
 
-The important shift is architectural:
-
-- Do not rely on one model pass to name the trick.
 - Extract observed facts first.
 - Validate those facts with wakeboard domain rules.
-- Only then classify family, trick, and coaching implications.
+- Keep trick naming downstream from observed facts.
+- Prefer uncertainty over confident but unsupported labels.
 
 Current confidence:
 
 - The deployed standalone app and Render/Supabase pipeline are operational.
-- Gemini Pro is the current best operating model.
-- Approach, EdgeLoad, Pop, and Rotation observed-facts layers are implemented.
-- Basic Jump no-rotation validation now behaves more realistically.
+- Gemini Pro is the current operating model.
+- Approach, EdgeLoad, Pop, Rotation, Landing, and Grab observed-facts layers are
+  implemented.
+- Landing and Grab E2E paths have been verified in production.
 
 Current uncertainty:
 
-- Fresh Back Roll validation with RotationObservedFacts still requires an
-  accessible Back Roll source video.
+- True-grab positive detection quality is not validated.
+- Fresh Back Roll validation still needs accessible source footage.
 - Upload-stage timeout recovery remains an infrastructure issue.
-- Landing and Grab observed-facts layers are not implemented yet.
