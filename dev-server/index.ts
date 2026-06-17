@@ -18,6 +18,8 @@ import ffmpegPath from "ffmpeg-static";
 import multer from "multer";
 import OpenAI from "openai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { applyWakeboardKnowledgeRules } from "../src/services/knowledge/wakeboardKnowledgeRules";
+import type { GeminiEvidenceResult } from "../src/types";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -2700,6 +2702,19 @@ async function runGeminiEvidenceExtraction({
   const normalizedEvidence = applyGeminiEvidenceConsistency(
     taxonomyAdjustedEvidence,
   );
+  const knowledgeInsights = applyWakeboardKnowledgeRules({
+    ...normalizedEvidence,
+    id: `evidence-${Date.now()}`,
+    sessionId: metadata.sessionId,
+    status: normalizedEvidence.parseFailed ? "failed" : "completed",
+    provider: "gemini",
+    model: result.model,
+    qualityMode,
+    recoveredFromPartial: isPartialRecoveredEvidence(normalizedEvidence),
+    requiresUserConfirmation: false,
+    rawResponseText: rawOutputText,
+    createdAt: new Date().toISOString(),
+  } as GeminiEvidenceResult);
   const recoveredFromPartial = isPartialRecoveredEvidence(normalizedEvidence);
   const requiresUserConfirmation =
     qualityMode === "degraded" ||
@@ -2762,6 +2777,7 @@ async function runGeminiEvidenceExtraction({
     evidenceWindows: normalizedEvidence.evidenceWindows,
     observations: normalizedEvidence.observations,
     uncertainty: normalizedEvidence.uncertainty,
+    knowledgeInsights,
     createdAt: new Date().toISOString(),
   };
 
@@ -2806,6 +2822,7 @@ async function runGeminiEvidenceExtraction({
       taxonomyGateResult: taxonomyAdjustedEvidence,
       normalizedResult: normalizedEvidence,
       evidenceResponse,
+      knowledgeInsights,
       modelInfo: {
         requestedModel: geminiModel,
         fallbackModel: geminiFallbackModel,
@@ -3003,6 +3020,7 @@ async function writeEvidenceCaptureArtifact({
   taxonomyGateResult,
   normalizedResult,
   evidenceResponse,
+  knowledgeInsights,
   modelInfo,
 }: {
   metadata: SessionMetadata;
@@ -3015,6 +3033,7 @@ async function writeEvidenceCaptureArtifact({
   taxonomyGateResult: TaxonomyGatedEvidence;
   normalizedResult: TaxonomyGatedEvidence;
   evidenceResponse: Record<string, unknown>;
+  knowledgeInsights: ReturnType<typeof applyWakeboardKnowledgeRules>;
   modelInfo: {
     requestedModel: string;
     fallbackModel: string;
@@ -3081,6 +3100,7 @@ async function writeEvidenceCaptureArtifact({
         grabValidation: normalizedResult.grabValidation,
         landingObservedFacts: normalizedResult.landingObservedFacts,
         landingValidation: normalizedResult.landingValidation,
+        knowledgeInsights,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {

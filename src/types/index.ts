@@ -94,6 +94,35 @@ export type PopValidationResult = {
   rejectedHighConfidenceReasons: string[];
 };
 
+export type EdgeLoadObservedFacts = {
+  toeEdgeLoaded: EvidenceFact;
+  heelEdgeLoaded: EvidenceFact;
+  edgeLoadVisible: EvidenceFact;
+  edgeLoadTiming: {
+    startSec: number | null;
+    endSec: number | null;
+    observedMoment: string;
+    evidenceFrameDescription: string;
+  };
+  boardTiltDirection: EvidenceFact;
+  sprayDirection: EvidenceFact;
+  lineTensionDirection: EvidenceFact;
+  riderWeightOverEdge: EvidenceFact;
+  edgeLoadConfidence: EvidenceConfidence;
+  edgeLoadEvidenceText: string;
+  antiEdgeLoadEvidence: string[];
+};
+
+export type EdgeLoadValidationResult = {
+  before: EdgeLoadObservedFacts;
+  after: EdgeLoadObservedFacts;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentPhysicalEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
 export type RotationObservedFacts = {
   rotationAxis: string | null;
   rotationDirection: string | null;
@@ -288,6 +317,39 @@ export type MotionObservation = {
   confidence: EvidenceConfidence;
 };
 
+export type KnowledgeInsightCategory =
+  | 'approach'
+  | 'edge_load'
+  | 'pop'
+  | 'rotation'
+  | 'grab'
+  | 'landing'
+  | 'completion'
+  | 'progression'
+  | 'review';
+
+export type KnowledgeInsightSeverity = 'info' | 'low' | 'medium' | 'high';
+
+export type KnowledgeInsight = {
+  id: string;
+  ruleId: string;
+  category: KnowledgeInsightCategory;
+  message: string;
+  sourceFacts: string[];
+  confidence: EvidenceConfidence;
+  severity: KnowledgeInsightSeverity;
+  requiresReview: boolean;
+  coachingSafe: boolean;
+};
+
+export type WakeboardKnowledgeRule = {
+  id: string;
+  title: string;
+  category: KnowledgeInsightCategory;
+  inputFacts: string[];
+  apply: (evidenceResult: GeminiEvidenceResult) => KnowledgeInsight[];
+};
+
 export type GeminiEvidenceResult = {
   id: ID;
   sessionId: ID;
@@ -311,6 +373,8 @@ export type GeminiEvidenceResult = {
   rawApproachType?: EvidenceFact;
   approachObservedFacts?: ApproachObservedFacts;
   approachObservedFactsV2?: ApproachObservedFactsV2;
+  edgeLoadObservedFacts?: EdgeLoadObservedFacts;
+  edgeLoadValidation?: EdgeLoadValidationResult;
   popObservedFacts?: PopObservedFacts;
   popValidation?: PopValidationResult;
   rotationObservedFacts?: RotationObservedFacts;
@@ -334,6 +398,7 @@ export type GeminiEvidenceResult = {
     level: EvidenceConfidence;
     reasons: string[];
   };
+  knowledgeInsights?: KnowledgeInsight[];
   createdAt: ISODateString;
 };
 

@@ -72,6 +72,8 @@ type RemoteEvidenceResponse = {
   rawApproachType?: unknown;
   approachObservedFacts?: unknown;
   approachObservedFactsV2?: unknown;
+  edgeLoadObservedFacts?: unknown;
+  edgeLoadValidation?: unknown;
   popObservedFacts?: unknown;
   popValidation?: unknown;
   rotationObservedFacts?: unknown;
@@ -92,6 +94,7 @@ type RemoteEvidenceResponse = {
   evidenceWindows?: unknown;
   observations?: unknown;
   uncertainty?: unknown;
+  knowledgeInsights?: unknown;
   createdAt?: unknown;
 };
 
@@ -376,6 +379,8 @@ function normalizeRemoteEvidence(
     approachObservedFactsV2: asApproachObservedFactsV2(
       data.approachObservedFactsV2,
     ),
+    edgeLoadObservedFacts: asEdgeLoadObservedFacts(data.edgeLoadObservedFacts),
+    edgeLoadValidation: asEdgeLoadValidation(data.edgeLoadValidation),
     popObservedFacts: asPopObservedFacts(data.popObservedFacts),
     popValidation: asPopValidation(data.popValidation),
     rotationObservedFacts: asRotationObservedFacts(data.rotationObservedFacts),
@@ -396,6 +401,7 @@ function normalizeRemoteEvidence(
     evidenceWindows: asEvidenceWindows(data.evidenceWindows),
     observations: asMotionObservations(data.observations),
     uncertainty: asEvidenceUncertainty(data.uncertainty),
+    knowledgeInsights: asKnowledgeInsights(data.knowledgeInsights),
     createdAt: asString(data.createdAt) ?? now,
   };
 }
@@ -647,6 +653,70 @@ function asPopObservedFacts(
     evidenceText: asString(facts.evidenceText) ?? null,
     confidence: asConfidenceLevel(facts.confidence) ?? 'low',
     antiEvidence: asStringArray(facts.antiEvidence),
+  };
+}
+
+function asEdgeLoadObservedFacts(
+  value: unknown,
+): GeminiEvidenceResult['edgeLoadObservedFacts'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+  const timing =
+    facts.edgeLoadTiming && typeof facts.edgeLoadTiming === 'object'
+      ? (facts.edgeLoadTiming as Record<string, unknown>)
+      : {};
+
+  return {
+    toeEdgeLoaded: asEvidenceFact(facts.toeEdgeLoaded),
+    heelEdgeLoaded: asEvidenceFact(facts.heelEdgeLoaded),
+    edgeLoadVisible: asEvidenceFact(facts.edgeLoadVisible),
+    edgeLoadTiming: {
+      startSec: asNumber(timing.startSec) ?? null,
+      endSec: asNumber(timing.endSec) ?? null,
+      observedMoment: asString(timing.observedMoment) ?? 'unknown',
+      evidenceFrameDescription:
+        asString(timing.evidenceFrameDescription) ??
+        'edge load timing 근거를 충분히 읽지 못했습니다.',
+    },
+    boardTiltDirection: asEvidenceFact(facts.boardTiltDirection),
+    sprayDirection: asEvidenceFact(facts.sprayDirection),
+    lineTensionDirection: asEvidenceFact(facts.lineTensionDirection),
+    riderWeightOverEdge: asEvidenceFact(facts.riderWeightOverEdge),
+    edgeLoadConfidence: asConfidenceLevel(facts.edgeLoadConfidence) ?? 'low',
+    edgeLoadEvidenceText: asString(facts.edgeLoadEvidenceText) ?? '',
+    antiEdgeLoadEvidence: asStringArray(facts.antiEdgeLoadEvidence),
+  };
+}
+
+function asEdgeLoadValidation(
+  value: unknown,
+): GeminiEvidenceResult['edgeLoadValidation'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const validation = value as Record<string, unknown>;
+  const before = asEdgeLoadObservedFacts(validation.before);
+  const after = asEdgeLoadObservedFacts(validation.after);
+
+  if (!before || !after) {
+    return undefined;
+  }
+
+  return {
+    before,
+    after,
+    adjusted: validation.adjusted === true,
+    needsReview: validation.needsReview === true,
+    independentPhysicalEvidenceCount:
+      asNumber(validation.independentPhysicalEvidenceCount) ?? 0,
+    rulesApplied: asStringArray(validation.rulesApplied),
+    rejectedHighConfidenceReasons: asStringArray(
+      validation.rejectedHighConfidenceReasons,
+    ),
   };
 }
 
@@ -1130,6 +1200,49 @@ function asEvidenceUncertainty(
 
 function asQualityMode(value: unknown): GeminiEvidenceResult['qualityMode'] {
   return value === 'standard' || value === 'degraded' ? value : undefined;
+}
+
+function asKnowledgeInsights(
+  value: unknown,
+): GeminiEvidenceResult['knowledgeInsights'] {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const insights = value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const confidence = asConfidenceLevel(candidate.confidence);
+      const category = asString(candidate.category);
+      const severity = asString(candidate.severity);
+
+      if (!confidence || !category || !severity) {
+        return null;
+      }
+
+      return {
+        id: asString(candidate.id) ?? `knowledge-${Date.now()}`,
+        ruleId: asString(candidate.ruleId) ?? 'unknown-rule',
+        category: category as NonNullable<
+          GeminiEvidenceResult['knowledgeInsights']
+        >[number]['category'],
+        message: asString(candidate.message) ?? '',
+        sourceFacts: asStringArray(candidate.sourceFacts),
+        confidence,
+        severity: severity as NonNullable<
+          GeminiEvidenceResult['knowledgeInsights']
+        >[number]['severity'],
+        requiresReview: candidate.requiresReview === true,
+        coachingSafe: candidate.coachingSafe === true,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  return insights.length > 0 ? insights : undefined;
 }
 
 function asConsistencyStatus(
