@@ -2236,6 +2236,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginBottom: 6,
   },
+  rawResponseToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  rawResponseToggleText: {
+    color: '#0f766e',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   resultDetailText: {
     color: '#334155',
     fontSize: 13,
@@ -3155,7 +3165,7 @@ function ApproachObservedFactsSummary({
 }) {
   return (
     <View style={styles.evidenceSection}>
-      <Text style={styles.evidenceSectionTitle}>approachObservedFacts</Text>
+      <Text style={styles.evidenceSectionTitle}>어프로치 관찰 세부</Text>
       <Text style={styles.evidenceText}>
         stance: {facts.stance.value} ({facts.stance.confidence})
       </Text>
@@ -3195,7 +3205,7 @@ function InversionObservedFactsSummary({
 
   return (
     <View style={styles.evidenceSection}>
-      <Text style={styles.evidenceSectionTitle}>inversionObservedFacts</Text>
+      <Text style={styles.evidenceSectionTitle}>인버트 관찰 세부</Text>
       <Text style={styles.evidenceText}>
         bodyInverted: {formatObservedBoolean(facts.bodyInverted)}
       </Text>
@@ -3266,6 +3276,9 @@ function CoachingResultDetail({
   title: string;
   onBack: () => void;
 }) {
+  const [isRawResponseOpen, setIsRawResponseOpen] = useState(false);
+  const rawResponse = result.rawResponseText ?? result.summary;
+
   return (
     <View>
       <Pressable
@@ -3287,11 +3300,28 @@ function CoachingResultDetail({
         </Text>
       ) : null}
       <ResultSection title="요약" items={[result.humanReadableAnalysis ?? result.summary]} />
-      <ResultSection
-        title="응답 원문"
-        items={[result.rawResponseText ?? result.summary]}
-        preserveWhitespace
-      />
+      {rawResponse.trim().length > 0 ? (
+        <View style={styles.resultDetailSection}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setIsRawResponseOpen((current) => !current)}
+            style={({ pressed }) => [
+              styles.rawResponseToggle,
+              pressed ? styles.buttonPressed : undefined,
+            ]}
+          >
+            <Text style={styles.resultDetailSectionTitle}>응답 원문</Text>
+            <Text style={styles.rawResponseToggleText}>
+              {isRawResponseOpen ? '접기' : '펼치기'}
+            </Text>
+          </Pressable>
+          {isRawResponseOpen ? (
+            <Text selectable style={[styles.resultDetailText, styles.rawResponseText]}>
+              {rawResponse}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       <ResultSection title="하이라이트" items={result.highlights} />
       <ObservationSection title="관찰" items={result.observations} />
       <ObservationSection title="패턴" items={result.patternRecognition} />
