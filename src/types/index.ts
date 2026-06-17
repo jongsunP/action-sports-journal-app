@@ -366,6 +366,19 @@ export type WakeboardKnowledgeRule = {
   apply: (evidenceResult: GeminiEvidenceResult) => KnowledgeInsight[];
 };
 
+export type CandidateTrace = {
+  rawCandidateName?: string;
+  rawFamily?: string;
+  rawRotationType?: string;
+  safePredictedTrick: string;
+  safeFamily: string;
+  observedSignals: string[];
+  downgradedBy: string[];
+  needsReview: boolean;
+  displayLabel?: string;
+  confidence: EvidenceConfidence;
+};
+
 export type GeminiEvidenceResult = {
   id: ID;
   sessionId: ID;
@@ -381,6 +394,7 @@ export type GeminiEvidenceResult = {
   safeFamilyCandidate?: string;
   taxonomyWarnings?: string[];
   gateFailures?: string[];
+  candidateTrace?: CandidateTrace;
   rawResponseText?: string;
   primaryCandidate: TrickCandidateEvidence;
   alternativeCandidates: TrickCandidateEvidence[];

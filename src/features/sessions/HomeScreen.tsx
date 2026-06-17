@@ -2956,6 +2956,7 @@ function GeminiEvidenceView({
   const hasConsistencyIssue =
     evidence.consistencyStatus === 'inconsistent' ||
     evidence.consistencyStatus === 'needs_review';
+  const candidateTrace = evidence.candidateTrace;
 
   return (
     <View style={styles.evidencePanel}>
@@ -3015,6 +3016,22 @@ function GeminiEvidenceView({
           {evidence.primaryCandidate.evidence ?? evidence.evidence}
         </Text>
       </View>
+      {candidateTrace?.displayLabel ? (
+        <View style={styles.evidenceFactRow}>
+          <Text style={styles.evidenceFactLabel}>관찰된 가능성</Text>
+          <Text style={styles.evidenceFactValue}>
+            {candidateTrace.displayLabel} ({candidateTrace.confidence})
+          </Text>
+          <Text style={styles.evidenceWarningText}>
+            확정 기술명이 아니라, 저장된 관찰 신호를 바탕으로 남긴 검토 후보입니다.
+          </Text>
+          {candidateTrace.observedSignals.slice(0, 4).map((signal) => (
+            <Text key={signal} style={styles.evidenceText}>
+              - {signal}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       <EvidenceFactRow
         label="계열"
         value={evidence.family.value}

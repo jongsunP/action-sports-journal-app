@@ -1,4 +1,5 @@
 import type {
+  CandidateTrace,
   EvidenceConfidence,
   GeminiEvidenceResult,
   MomentStatus,
@@ -199,6 +200,53 @@ function normalizeRemoteEvidenceResult(
   const predictedTrick = asString(evidence.predicted_trick) ?? '확인 필요';
   const family = asString(evidence.family) ?? '확인 필요';
   const errorMessage = asString(evidence.error_message);
+  const approachObservedFacts = asRecord(evidence.approach_observed_facts) as
+    | GeminiEvidenceResult['approachObservedFacts']
+    | undefined;
+  const approachObservedFactsV2 = asRecord(evidence.approach_observed_facts_v2) as
+    | GeminiEvidenceResult['approachObservedFactsV2']
+    | undefined;
+  const approachDecisionV2 = asRecord(evidence.approach_decision_v2) as
+    | GeminiEvidenceResult['approachDecisionV2']
+    | undefined;
+  const popObservedFacts = asRecord(evidence.pop_observed_facts) as
+    | GeminiEvidenceResult['popObservedFacts']
+    | undefined;
+  const popValidation = asRecord(evidence.pop_validation) as
+    | GeminiEvidenceResult['popValidation']
+    | undefined;
+  const rotationObservedFacts = asRecord(evidence.rotation_observed_facts) as
+    | GeminiEvidenceResult['rotationObservedFacts']
+    | undefined;
+  const rotationValidation = asRecord(evidence.rotation_validation) as
+    | GeminiEvidenceResult['rotationValidation']
+    | undefined;
+  const grabObservedFacts = asRecord(evidence.grab_observed_facts) as
+    | GeminiEvidenceResult['grabObservedFacts']
+    | undefined;
+  const grabValidation = asRecord(evidence.grab_validation) as
+    | GeminiEvidenceResult['grabValidation']
+    | undefined;
+  const landingObservedFacts = asRecord(evidence.landing_observed_facts) as
+    | GeminiEvidenceResult['landingObservedFacts']
+    | undefined;
+  const landingValidation = asRecord(evidence.landing_validation) as
+    | GeminiEvidenceResult['landingValidation']
+    | undefined;
+  const inversionObservedFacts = asRecord(evidence.inversion_observed_facts) as
+    | GeminiEvidenceResult['inversionObservedFacts']
+    | undefined;
+  const candidateTrace = deriveRestoredCandidateTrace({
+    predictedTrick,
+    family,
+    confidence,
+    needsReview: evidence.needs_review === true,
+    approachDecisionV2,
+    popObservedFacts,
+    rotationObservedFacts,
+    rotationValidation,
+    inversionObservedFacts,
+  });
 
   return {
     id: asString(evidence.id) ?? `evidence-${Date.now()}`,
@@ -228,42 +276,19 @@ function normalizeRemoteEvidenceResult(
     temporalWindows: asRecord(evidence.temporal_windows) as
       | GeminiEvidenceResult['temporalWindows']
       | undefined,
-    approachObservedFacts: asRecord(evidence.approach_observed_facts) as
-      | GeminiEvidenceResult['approachObservedFacts']
-      | undefined,
-    approachObservedFactsV2: asRecord(evidence.approach_observed_facts_v2) as
-      | GeminiEvidenceResult['approachObservedFactsV2']
-      | undefined,
-    popObservedFacts: asRecord(evidence.pop_observed_facts) as
-      | GeminiEvidenceResult['popObservedFacts']
-      | undefined,
-    popValidation: asRecord(evidence.pop_validation) as
-      | GeminiEvidenceResult['popValidation']
-      | undefined,
-    rotationObservedFacts: asRecord(evidence.rotation_observed_facts) as
-      | GeminiEvidenceResult['rotationObservedFacts']
-      | undefined,
-    rotationValidation: asRecord(evidence.rotation_validation) as
-      | GeminiEvidenceResult['rotationValidation']
-      | undefined,
-    grabObservedFacts: asRecord(evidence.grab_observed_facts) as
-      | GeminiEvidenceResult['grabObservedFacts']
-      | undefined,
-    grabValidation: asRecord(evidence.grab_validation) as
-      | GeminiEvidenceResult['grabValidation']
-      | undefined,
-    landingObservedFacts: asRecord(evidence.landing_observed_facts) as
-      | GeminiEvidenceResult['landingObservedFacts']
-      | undefined,
-    landingValidation: asRecord(evidence.landing_validation) as
-      | GeminiEvidenceResult['landingValidation']
-      | undefined,
-    inversionObservedFacts: asRecord(evidence.inversion_observed_facts) as
-      | GeminiEvidenceResult['inversionObservedFacts']
-      | undefined,
-    approachDecisionV2: asRecord(evidence.approach_decision_v2) as
-      | GeminiEvidenceResult['approachDecisionV2']
-      | undefined,
+    approachObservedFacts,
+    approachObservedFactsV2,
+    popObservedFacts,
+    popValidation,
+    rotationObservedFacts,
+    rotationValidation,
+    grabObservedFacts,
+    grabValidation,
+    landingObservedFacts,
+    landingValidation,
+    inversionObservedFacts,
+    approachDecisionV2,
+    candidateTrace,
     approachType: {
       value: '확인 필요',
       confidence: 'low',
@@ -298,6 +323,95 @@ function normalizeActivityGroupId(value?: string) {
   }
 
   return value;
+}
+
+function deriveRestoredCandidateTrace({
+  predictedTrick,
+  family,
+  confidence,
+  needsReview,
+  approachDecisionV2,
+  popObservedFacts,
+  rotationObservedFacts,
+  rotationValidation,
+  inversionObservedFacts,
+}: {
+  predictedTrick: string;
+  family: string;
+  confidence: EvidenceConfidence;
+  needsReview: boolean;
+  approachDecisionV2?: GeminiEvidenceResult['approachDecisionV2'];
+  popObservedFacts?: GeminiEvidenceResult['popObservedFacts'];
+  rotationObservedFacts?: GeminiEvidenceResult['rotationObservedFacts'];
+  rotationValidation?: GeminiEvidenceResult['rotationValidation'];
+  inversionObservedFacts?: GeminiEvidenceResult['inversionObservedFacts'];
+}): CandidateTrace | undefined {
+  const observedSignals = compactStrings([
+    approachDecisionV2?.value &&
+    approachDecisionV2.value !== 'unknown' &&
+    approachDecisionV2.value !== 'ambiguous'
+      ? `approach=${approachDecisionV2.value}/${approachDecisionV2.confidence}`
+      : undefined,
+    popObservedFacts
+      ? `pop=${[popObservedFacts.popType, popObservedFacts.timing, popObservedFacts.intensity]
+          .filter(Boolean)
+          .join('/')}/${popObservedFacts.confidence}`
+      : undefined,
+    rotationObservedFacts?.rotationAxis
+      ? `rotationAxis=${rotationObservedFacts.rotationAxis}/${rotationObservedFacts.confidence}`
+      : undefined,
+    rotationObservedFacts?.inversionDetected !== undefined
+      ? `inversionDetected=${String(rotationObservedFacts.inversionDetected)}`
+      : undefined,
+    inversionObservedFacts?.boardAboveHead === true
+      ? 'boardAboveHead=true'
+      : undefined,
+    inversionObservedFacts?.bodyInverted === true
+      ? 'bodyInverted=true'
+      : undefined,
+    inversionObservedFacts?.rollAxisObserved === true
+      ? 'rollAxisObserved=true'
+      : undefined,
+  ]);
+  const isUnknownTopLevel =
+    predictedTrick === '확인 필요' ||
+    predictedTrick.toLowerCase().includes('unknown');
+  const hasBackRollSignals =
+    approachDecisionV2?.value === 'heelside' &&
+    rotationObservedFacts?.rotationAxis === 'roll_axis' &&
+    rotationObservedFacts.inversionDetected === true &&
+    (inversionObservedFacts?.boardAboveHead === true ||
+      inversionObservedFacts?.bodyInverted === true ||
+      inversionObservedFacts?.rollAxisObserved === true);
+
+  if (!isUnknownTopLevel || !hasBackRollSignals) {
+    return undefined;
+  }
+
+  return {
+    safePredictedTrick: predictedTrick,
+    safeFamily: family,
+    observedSignals,
+    downgradedBy: compactStrings([
+      needsReview ? 'persisted evidence result requires review' : undefined,
+      rotationValidation?.needsReview
+        ? 'rotationValidation requires review'
+        : undefined,
+    ]),
+    needsReview: true,
+    displayLabel: '관찰된 가능성: 백롤 계열 · 확인 필요',
+    confidence,
+  };
+}
+
+function compactStrings(values: Array<string | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .filter((value): value is string => Boolean(value && value.trim()))
+        .map((value) => value.trim()),
+    ),
+  );
 }
 
 function asMomentStatus(value: unknown): MomentStatus | undefined {

@@ -93,6 +93,7 @@ export function DebugResultViewer({
           <TemporalWindowsSection evidence={evidence} />
           <ObservedFactsSection evidence={evidence} />
           <ValidationSummary evidence={evidence} />
+          <CandidateTraceSection evidence={evidence} />
           <KnowledgeInsightsSection evidence={evidence} />
           <CoachingInsightContextSection evidence={evidence} />
           <RawJsonSection evidence={evidence} />
@@ -242,6 +243,43 @@ function ValidationCard({
         ])}
       />
     </View>
+  );
+}
+
+function CandidateTraceSection({
+  evidence,
+}: {
+  evidence: GeminiEvidenceResult;
+}) {
+  const trace = evidence.candidateTrace;
+
+  if (!trace) {
+    return (
+      <DebugSection title="CandidateTrace">
+        <EmptyLine label="candidateTrace" />
+      </DebugSection>
+    );
+  }
+
+  return (
+    <DebugSection title="CandidateTrace">
+      <View style={styles.card}>
+        <DebugRows
+          rows={compactDebugRows([
+            ['rawCandidateName', trace.rawCandidateName],
+            ['rawFamily', trace.rawFamily],
+            ['rawRotationType', trace.rawRotationType],
+            ['safePredictedTrick', trace.safePredictedTrick],
+            ['safeFamily', trace.safeFamily],
+            ['displayLabel', trace.displayLabel],
+            ['confidence', trace.confidence],
+            ['needsReview', trace.needsReview],
+            ['observedSignals', formatDebugList(trace.observedSignals)],
+            ['downgradedBy', formatDebugList(trace.downgradedBy)],
+          ])}
+        />
+      </View>
+    </DebugSection>
   );
 }
 

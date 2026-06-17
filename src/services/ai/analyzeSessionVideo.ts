@@ -70,6 +70,7 @@ type RemoteEvidenceResponse = {
   safeFamilyCandidate?: unknown;
   taxonomyWarnings?: unknown;
   gateFailures?: unknown;
+  candidateTrace?: unknown;
   rawResponseText?: unknown;
   primaryCandidate?: unknown;
   alternativeCandidates?: unknown;
@@ -394,6 +395,7 @@ function normalizeRemoteEvidence(
     safeFamilyCandidate: asString(data.safeFamilyCandidate),
     taxonomyWarnings: asStringArray(data.taxonomyWarnings),
     gateFailures: asStringArray(data.gateFailures),
+    candidateTrace: asCandidateTrace(data.candidateTrace),
     rawResponseText: asString(data.rawResponseText),
     primaryCandidate: asTrickCandidate(data.primaryCandidate),
     alternativeCandidates: asTrickCandidates(data.alternativeCandidates),
@@ -1271,6 +1273,36 @@ function asKnowledgeInsights(
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   return insights.length > 0 ? insights : undefined;
+}
+
+function asCandidateTrace(
+  value: unknown,
+): GeminiEvidenceResult['candidateTrace'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const safePredictedTrick = asString(candidate.safePredictedTrick);
+  const safeFamily = asString(candidate.safeFamily);
+  const confidence = asConfidenceLevel(candidate.confidence);
+
+  if (!safePredictedTrick || !safeFamily || !confidence) {
+    return undefined;
+  }
+
+  return {
+    rawCandidateName: asString(candidate.rawCandidateName),
+    rawFamily: asString(candidate.rawFamily),
+    rawRotationType: asString(candidate.rawRotationType),
+    safePredictedTrick,
+    safeFamily,
+    observedSignals: asStringArray(candidate.observedSignals),
+    downgradedBy: asStringArray(candidate.downgradedBy),
+    needsReview: candidate.needsReview === true,
+    displayLabel: asString(candidate.displayLabel),
+    confidence,
+  };
 }
 
 function asCoachingInsightContext(

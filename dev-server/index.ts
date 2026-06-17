@@ -21,7 +21,11 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { buildCoachingInsightContext } from "../src/services/knowledge/coachingInsightContext";
 import { buildCoachingInsightPromptSection } from "../src/services/knowledge/coachingPromptContext";
 import { applyWakeboardKnowledgeRules } from "../src/services/knowledge/wakeboardKnowledgeRules";
-import type { CoachingInsightContext, GeminiEvidenceResult } from "../src/types";
+import type {
+  CandidateTrace,
+  CoachingInsightContext,
+  GeminiEvidenceResult,
+} from "../src/types";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -2809,6 +2813,11 @@ async function runGeminiEvidenceExtraction({
   const normalizedEvidence = applyGeminiEvidenceConsistency(
     taxonomyAdjustedEvidence,
   );
+  const candidateTrace = buildCandidateTrace({
+    rawEvidence: qualityAdjustedEvidence,
+    taxonomyAdjustedEvidence,
+    normalizedEvidence,
+  });
   const knowledgeInsights = applyWakeboardKnowledgeRules({
     ...normalizedEvidence,
     id: `evidence-${Date.now()}`,
@@ -2856,6 +2865,7 @@ async function runGeminiEvidenceExtraction({
     safeFamilyCandidate: normalizedEvidence.safeFamilyCandidate,
     taxonomyWarnings: normalizedEvidence.taxonomyWarnings,
     gateFailures: normalizedEvidence.gateFailures,
+    candidateTrace,
     rawResponseText: rawOutputText,
     primaryCandidate: normalizedEvidence.primaryCandidate,
     alternativeCandidates: normalizedEvidence.alternativeCandidates,
@@ -2932,6 +2942,7 @@ async function runGeminiEvidenceExtraction({
       taxonomyGateResult: taxonomyAdjustedEvidence,
       normalizedResult: normalizedEvidence,
       evidenceResponse,
+      candidateTrace,
       knowledgeInsights,
       coachingInsightContext,
       modelInfo: {
@@ -3120,6 +3131,195 @@ function nullableString(value: unknown) {
     : null;
 }
 
+function buildCandidateTrace({
+  rawEvidence,
+  taxonomyAdjustedEvidence,
+  normalizedEvidence,
+}: {
+  rawEvidence: NormalizedGeminiEvidence;
+  taxonomyAdjustedEvidence: TaxonomyGatedEvidence;
+  normalizedEvidence: TaxonomyGatedEvidence;
+}): CandidateTrace {
+  const rawCandidateName = nonEmptyTraceValue(rawEvidence.primaryCandidate.name);
+  const rawFamily = nonEmptyTraceValue(rawEvidence.family.value);
+  const rawRotationType = nonEmptyTraceValue(rawEvidence.rotationType.value);
+  const safePredictedTrick =
+    nonEmptyTraceValue(normalizedEvidence.primaryCandidate.name) ?? "확인 필요";
+  const safeFamily =
+    nonEmptyTraceValue(normalizedEvidence.family.value) ?? "확인 필요";
+  const downgradedBy = uniqueStrings([
+    rawCandidateName && rawCandidateName !== safePredictedTrick
+      ? `candidate changed from ${rawCandidateName} to ${safePredictedTrick}`
+      : undefined,
+    rawFamily && rawFamily !== safeFamily
+      ? `family changed from ${rawFamily} to ${safeFamily}`
+      : undefined,
+    ...(taxonomyAdjustedEvidence.taxonomyWarnings ?? []),
+    ...(taxonomyAdjustedEvidence.gateFailures ?? []),
+    ...(normalizedEvidence.consistencyWarnings ?? []),
+    normalizedEvidence.rotationValidation?.needsReview
+      ? "rotationValidation requires review"
+      : undefined,
+    normalizedEvidence.popValidation?.needsReview
+      ? "popValidation requires review"
+      : undefined,
+    normalizedEvidence.grabValidation?.needsReview
+      ? "grabValidation requires review"
+      : undefined,
+    normalizedEvidence.landingValidation?.needsReview
+      ? "landingValidation requires review"
+      : undefined,
+  ]);
+  const observedSignals = collectCandidateTraceSignals(normalizedEvidence);
+  const needsReview =
+    normalizedEvidence.consistencyStatus !== "valid" ||
+    normalizedEvidence.confidence === "low" ||
+    normalizedEvidence.primaryCandidate.confidence === "low" ||
+    downgradedBy.length > 0;
+
+  return {
+    rawCandidateName,
+    rawFamily,
+    rawRotationType,
+    safePredictedTrick,
+    safeFamily,
+    observedSignals,
+    downgradedBy,
+    needsReview,
+    displayLabel: candidateTraceDisplayLabel({
+      rawCandidateName,
+      rawFamily,
+      rawRotationType,
+      safePredictedTrick,
+      observedSignals,
+      needsReview,
+    }),
+    confidence: needsReview
+      ? "low"
+      : (normalizedEvidence.confidence as CandidateTrace["confidence"]),
+  };
+}
+
+function collectCandidateTraceSignals(evidence: TaxonomyGatedEvidence) {
+  const signals: string[] = [];
+  const approach = evidence.approachDecisionV2?.value;
+  const approachConfidence = evidence.approachDecisionV2?.confidence;
+  const rotation = evidence.rotationObservedFacts;
+  const inversion = evidence.inversionObservedFacts;
+  const pop = evidence.popObservedFacts;
+
+  if (approach && approach !== "unknown" && approach !== "ambiguous") {
+    signals.push(`approach=${approach}/${approachConfidence ?? "unknown"}`);
+  }
+
+  if (pop?.popType || pop?.timing || pop?.intensity) {
+    signals.push(
+      `pop=${[pop.popType, pop.timing, pop.intensity]
+        .filter(Boolean)
+        .join("/")}/${pop.confidence}`,
+    );
+  }
+
+  if (rotation?.rotationAxis) {
+    signals.push(`rotationAxis=${rotation.rotationAxis}/${rotation.confidence}`);
+  }
+
+  if (rotation?.inversionDetected !== undefined) {
+    signals.push(`inversionDetected=${String(rotation.inversionDetected)}`);
+  }
+
+  if (inversion?.boardAboveHead === true) {
+    signals.push("boardAboveHead=true");
+  }
+
+  if (inversion?.bodyInverted === true) {
+    signals.push("bodyInverted=true");
+  }
+
+  if (inversion?.rollAxisObserved === true) {
+    signals.push("rollAxisObserved=true");
+  }
+
+  return uniqueStrings(signals);
+}
+
+function candidateTraceDisplayLabel({
+  rawCandidateName,
+  rawFamily,
+  rawRotationType,
+  safePredictedTrick,
+  observedSignals,
+  needsReview,
+}: {
+  rawCandidateName?: string;
+  rawFamily?: string;
+  rawRotationType?: string;
+  safePredictedTrick: string;
+  observedSignals: string[];
+  needsReview: boolean;
+}) {
+  if (!needsReview) {
+    return undefined;
+  }
+
+  const rawText = normalizeDomainText(
+    `${rawCandidateName ?? ""} ${rawFamily ?? ""} ${rawRotationType ?? ""}`,
+  );
+  const signalText = normalizeDomainText(observedSignals.join(" "));
+  const safeText = normalizeDomainText(safePredictedTrick);
+  const safeIsUnknown =
+    includesAnyDomainTerm(safeText, ["확인 필요", "unknown", "unknown invert"]) ||
+    safeText.length === 0;
+  const hasBackRollRaw = includesAnyDomainTerm(rawText, [
+    "back roll",
+    "backroll",
+    "백롤",
+  ]);
+  const hasBackRollSignals =
+    includesAnyDomainTerm(signalText, ["approach=heelside"]) &&
+    includesAnyDomainTerm(signalText, ["rotationaxis=roll_axis"]) &&
+    includesAnyDomainTerm(signalText, [
+      "inversiondetected=true",
+      "boardabovehead=true",
+      "bodyinverted=true",
+      "rollaxisobserved=true",
+    ]);
+
+  if (safeIsUnknown && (hasBackRollRaw || hasBackRollSignals)) {
+    return "관찰된 가능성: 백롤 계열 · 확인 필요";
+  }
+
+  if (safeIsUnknown && rawCandidateName && !isUnknownCandidateName(rawCandidateName)) {
+    return `관찰된 가능성: ${rawCandidateName} · 확인 필요`;
+  }
+
+  return undefined;
+}
+
+function isUnknownCandidateName(value: string) {
+  return includesAnyDomainTerm(normalizeDomainText(value), [
+    "확인 필요",
+    "unknown",
+    "n/a",
+  ]);
+}
+
+function nonEmptyTraceValue(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function uniqueStrings(values: Array<string | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .filter((value): value is string => Boolean(value && value.trim()))
+        .map((value) => value.trim()),
+    ),
+  );
+}
+
 async function writeEvidenceCaptureArtifact({
   metadata,
   fileName,
@@ -3131,6 +3331,7 @@ async function writeEvidenceCaptureArtifact({
   taxonomyGateResult,
   normalizedResult,
   evidenceResponse,
+  candidateTrace,
   knowledgeInsights,
   coachingInsightContext,
   modelInfo,
@@ -3145,6 +3346,7 @@ async function writeEvidenceCaptureArtifact({
   taxonomyGateResult: TaxonomyGatedEvidence;
   normalizedResult: TaxonomyGatedEvidence;
   evidenceResponse: Record<string, unknown>;
+  candidateTrace: CandidateTrace;
   knowledgeInsights: ReturnType<typeof applyWakeboardKnowledgeRules>;
   coachingInsightContext: ReturnType<typeof buildCoachingInsightContext>;
   modelInfo: {
@@ -3213,6 +3415,7 @@ async function writeEvidenceCaptureArtifact({
         grabValidation: normalizedResult.grabValidation,
         landingObservedFacts: normalizedResult.landingObservedFacts,
         landingValidation: normalizedResult.landingValidation,
+        candidateTrace,
         knowledgeInsights,
         coachingInsightContext,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
