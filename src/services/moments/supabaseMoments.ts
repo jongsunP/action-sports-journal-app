@@ -150,6 +150,24 @@ function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
   const occurredAt = asString(moment.occurredAt) ?? now;
   const sourceVideoUri = asString(moment.sourceVideoUri);
   const durationMs = asNumber(moment.durationMs);
+  const status = asMomentStatus(moment.status);
+  const fileName = asString(moment.fileName);
+  const fileSize = asNumber(moment.fileSize);
+  const latestEvidenceResult = asRecord(moment.latestEvidenceResult);
+
+  if (
+    isIncompleteQueuedMoment({
+      status,
+      sourceVideoUri,
+      fileName,
+      fileSize,
+      durationMs,
+      latestEvidenceResult,
+    })
+  ) {
+    return null;
+  }
+
   const sessionId = asString(moment.sessionId) ?? remoteMomentId;
   const session: Session = {
     id: sessionId,
@@ -158,7 +176,7 @@ function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
     notes: asString(moment.notes),
     occurredAt,
     videoUri: sourceVideoUri,
-    momentStatus: asMomentStatus(moment.status),
+    momentStatus: status,
     shareResultIds: [],
     createdAt: asString(moment.createdAt) ?? occurredAt,
     updatedAt: asString(moment.updatedAt) ?? occurredAt,
@@ -166,14 +184,14 @@ function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
   const video = sourceVideoUri
     ? {
         uri: sourceVideoUri,
-        fileName: asString(moment.fileName),
-        fileSize: asNumber(moment.fileSize),
+        fileName,
+        fileSize,
         mimeType: asString(moment.mimeType),
         duration: typeof durationMs === 'number' ? durationMs : null,
       }
     : undefined;
   const evidence = normalizeRemoteEvidenceResult(
-    moment.latestEvidenceResult,
+    latestEvidenceResult,
     session.id,
   );
 
@@ -412,6 +430,41 @@ function compactStrings(values: Array<string | undefined>) {
         .map((value) => value.trim()),
     ),
   );
+}
+
+function isIncompleteQueuedMoment({
+  status,
+  sourceVideoUri,
+  fileName,
+  fileSize,
+  durationMs,
+  latestEvidenceResult,
+}: {
+  status?: MomentStatus;
+  sourceVideoUri?: string;
+  fileName?: string;
+  fileSize?: number;
+  durationMs?: number;
+  latestEvidenceResult?: Record<string, unknown>;
+}) {
+  if (status !== 'queued') {
+    return false;
+  }
+
+  if (latestEvidenceResult) {
+    return false;
+  }
+
+  return (
+    !sourceVideoUri &&
+    !fileName &&
+    !isPositiveNumber(fileSize) &&
+    !isPositiveNumber(durationMs)
+  );
+}
+
+function isPositiveNumber(value?: number) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 function asMomentStatus(value: unknown): MomentStatus | undefined {
