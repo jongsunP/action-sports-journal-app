@@ -5724,7 +5724,37 @@ function hasNoRotationObservedFacts(facts: RotationObservedFactsPayload) {
 }
 
 function hasClearNoRotationEvidence(text: string) {
-  return includesAnyDomainTerm(normalizeDomainText(text), [
+  const normalized = normalizeDomainText(text);
+  const hasRotationSubject = includesAnyDomainTerm(normalized, [
+    "rotation",
+    "spin",
+    "inversion",
+    "invert",
+    "axis",
+    "회전",
+    "스핀",
+    "인버트",
+    "축",
+  ]);
+  const hasNoObservation = includesAnyDomainTerm(normalized, [
+    "not observed",
+    "not visible",
+    "not seen",
+    "none observed",
+    "no visible",
+    "보이지 않음",
+    "관찰되지",
+    "관찰되지 않음",
+    "관찰되지 않았",
+    "없음",
+    "없이",
+  ]);
+
+  if (hasRotationSubject && hasNoObservation) {
+    return true;
+  }
+
+  return includesAnyDomainTerm(normalized, [
     "회전 없음",
     "회전 없이",
     "회전도 관찰되지",
