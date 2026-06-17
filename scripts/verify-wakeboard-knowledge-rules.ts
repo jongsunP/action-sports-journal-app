@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { buildCoachingInsightContext } from '../src/services/knowledge/coachingInsightContext';
 import { applyWakeboardKnowledgeRules } from '../src/services/knowledge/wakeboardKnowledgeRules';
 import type {
   EdgeLoadObservedFacts,
@@ -161,6 +162,52 @@ for (const scenario of scenarios) {
 
   console.log(`${scenario.name}: ${ruleIds.join(', ') || 'no insights'}`);
 }
+
+const coachingContext = buildCoachingInsightContext([
+  {
+    id: 'direct-fixture',
+    ruleId: 'direct_rule.v1',
+    category: 'pop',
+    message: 'Direct cue fixture.',
+    sourceFacts: ['popObservedFacts'],
+    confidence: 'medium',
+    severity: 'info',
+    requiresReview: false,
+    coachingSafe: true,
+  },
+  {
+    id: 'review-fixture',
+    ruleId: 'review_rule.v1',
+    category: 'review',
+    message: 'Review context fixture.',
+    sourceFacts: ['popValidation'],
+    confidence: 'high',
+    severity: 'medium',
+    requiresReview: true,
+    coachingSafe: true,
+  },
+  {
+    id: 'internal-fixture',
+    ruleId: 'internal_rule.v1',
+    category: 'rotation',
+    message: 'Internal only fixture.',
+    sourceFacts: ['rotationObservedFacts'],
+    confidence: 'low',
+    severity: 'medium',
+    requiresReview: true,
+    coachingSafe: false,
+  },
+]);
+
+assert.equal(coachingContext[0]?.mode, 'direct_cue');
+assert.equal(coachingContext[1]?.mode, 'review_context');
+assert.equal(coachingContext[2]?.mode, 'internal_only');
+
+console.log(
+  `coaching insight context modes: ${coachingContext
+    .map((context) => context.mode)
+    .join(', ')}`,
+);
 
 function fact(
   value: string,

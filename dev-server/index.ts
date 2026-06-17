@@ -18,6 +18,7 @@ import ffmpegPath from "ffmpeg-static";
 import multer from "multer";
 import OpenAI from "openai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { buildCoachingInsightContext } from "../src/services/knowledge/coachingInsightContext";
 import { applyWakeboardKnowledgeRules } from "../src/services/knowledge/wakeboardKnowledgeRules";
 import type { GeminiEvidenceResult } from "../src/types";
 
@@ -2715,6 +2716,8 @@ async function runGeminiEvidenceExtraction({
     rawResponseText: rawOutputText,
     createdAt: new Date().toISOString(),
   } as GeminiEvidenceResult);
+  const coachingInsightContext =
+    buildCoachingInsightContext(knowledgeInsights);
   const recoveredFromPartial = isPartialRecoveredEvidence(normalizedEvidence);
   const requiresUserConfirmation =
     qualityMode === "degraded" ||
@@ -2778,6 +2781,7 @@ async function runGeminiEvidenceExtraction({
     observations: normalizedEvidence.observations,
     uncertainty: normalizedEvidence.uncertainty,
     knowledgeInsights,
+    coachingInsightContext,
     createdAt: new Date().toISOString(),
   };
 
@@ -2823,6 +2827,7 @@ async function runGeminiEvidenceExtraction({
       normalizedResult: normalizedEvidence,
       evidenceResponse,
       knowledgeInsights,
+      coachingInsightContext,
       modelInfo: {
         requestedModel: geminiModel,
         fallbackModel: geminiFallbackModel,
@@ -3021,6 +3026,7 @@ async function writeEvidenceCaptureArtifact({
   normalizedResult,
   evidenceResponse,
   knowledgeInsights,
+  coachingInsightContext,
   modelInfo,
 }: {
   metadata: SessionMetadata;
@@ -3034,6 +3040,7 @@ async function writeEvidenceCaptureArtifact({
   normalizedResult: TaxonomyGatedEvidence;
   evidenceResponse: Record<string, unknown>;
   knowledgeInsights: ReturnType<typeof applyWakeboardKnowledgeRules>;
+  coachingInsightContext: ReturnType<typeof buildCoachingInsightContext>;
   modelInfo: {
     requestedModel: string;
     fallbackModel: string;
@@ -3101,6 +3108,7 @@ async function writeEvidenceCaptureArtifact({
         landingObservedFacts: normalizedResult.landingObservedFacts,
         landingValidation: normalizedResult.landingValidation,
         knowledgeInsights,
+        coachingInsightContext,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {

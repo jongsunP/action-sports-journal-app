@@ -342,6 +342,22 @@ export type KnowledgeInsight = {
   coachingSafe: boolean;
 };
 
+export type CoachingInsightMode =
+  | 'direct_cue'
+  | 'review_context'
+  | 'internal_only';
+
+export type CoachingInsightContext = {
+  mode: CoachingInsightMode;
+  sourceRuleId: string;
+  category: KnowledgeInsightCategory;
+  message: string;
+  confidence: EvidenceConfidence;
+  severity: KnowledgeInsightSeverity;
+  requiresReview: boolean;
+  coachingSafe: boolean;
+};
+
 export type WakeboardKnowledgeRule = {
   id: string;
   title: string;
@@ -399,6 +415,7 @@ export type GeminiEvidenceResult = {
     reasons: string[];
   };
   knowledgeInsights?: KnowledgeInsight[];
+  coachingInsightContext?: CoachingInsightContext[];
   createdAt: ISODateString;
 };
 

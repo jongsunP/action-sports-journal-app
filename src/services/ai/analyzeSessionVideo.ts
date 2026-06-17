@@ -95,6 +95,7 @@ type RemoteEvidenceResponse = {
   observations?: unknown;
   uncertainty?: unknown;
   knowledgeInsights?: unknown;
+  coachingInsightContext?: unknown;
   createdAt?: unknown;
 };
 
@@ -402,6 +403,9 @@ function normalizeRemoteEvidence(
     observations: asMotionObservations(data.observations),
     uncertainty: asEvidenceUncertainty(data.uncertainty),
     knowledgeInsights: asKnowledgeInsights(data.knowledgeInsights),
+    coachingInsightContext: asCoachingInsightContext(
+      data.coachingInsightContext,
+    ),
     createdAt: asString(data.createdAt) ?? now,
   };
 }
@@ -1243,6 +1247,63 @@ function asKnowledgeInsights(
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   return insights.length > 0 ? insights : undefined;
+}
+
+function asCoachingInsightContext(
+  value: unknown,
+): GeminiEvidenceResult['coachingInsightContext'] {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const contexts = value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const mode = asCoachingInsightMode(candidate.mode);
+      const category = asString(candidate.category);
+      const confidence = asConfidenceLevel(candidate.confidence);
+      const severity = asString(candidate.severity);
+
+      if (!mode || !category || !confidence || !severity) {
+        return null;
+      }
+
+      return {
+        mode,
+        sourceRuleId: asString(candidate.sourceRuleId) ?? 'unknown-rule',
+        category: category as NonNullable<
+          GeminiEvidenceResult['coachingInsightContext']
+        >[number]['category'],
+        message: asString(candidate.message) ?? '',
+        confidence,
+        severity: severity as NonNullable<
+          GeminiEvidenceResult['coachingInsightContext']
+        >[number]['severity'],
+        requiresReview: candidate.requiresReview === true,
+        coachingSafe: candidate.coachingSafe === true,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  return contexts.length > 0 ? contexts : undefined;
+}
+
+function asCoachingInsightMode(
+  value: unknown,
+): NonNullable<GeminiEvidenceResult['coachingInsightContext']>[number]['mode'] | undefined {
+  if (
+    value === 'direct_cue' ||
+    value === 'review_context' ||
+    value === 'internal_only'
+  ) {
+    return value;
+  }
+
+  return undefined;
 }
 
 function asConsistencyStatus(
