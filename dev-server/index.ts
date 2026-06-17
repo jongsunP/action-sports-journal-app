@@ -334,6 +334,8 @@ app.get("/api/moments", async (_request, response) => {
         "pop_validation",
         "rotation_observed_facts",
         "rotation_validation",
+        "grab_observed_facts",
+        "grab_validation",
         "landing_observed_facts",
         "landing_validation",
         ...evidenceResultColumnsV1.slice(14),
@@ -1646,6 +1648,8 @@ function isMissingApproachV2ColumnError(error: unknown) {
     message.includes("pop_validation") ||
     message.includes("rotation_observed_facts") ||
     message.includes("rotation_validation") ||
+    message.includes("grab_observed_facts") ||
+    message.includes("grab_validation") ||
     message.includes("landing_observed_facts") ||
     message.includes("landing_validation")
   );
@@ -2212,6 +2216,8 @@ async function persistEvidenceResultForLinkedMoment({
     pop_validation: evidence.popValidation,
     rotation_observed_facts: evidence.rotationObservedFacts,
     rotation_validation: evidence.rotationValidation,
+    grab_observed_facts: evidence.grabObservedFacts,
+    grab_validation: evidence.grabValidation,
     landing_observed_facts: evidence.landingObservedFacts,
     landing_validation: evidence.landingValidation,
     inversion_observed_facts: evidence.inversionObservedFacts,
@@ -2239,6 +2245,8 @@ async function persistEvidenceResultForLinkedMoment({
       pop_validation,
       rotation_observed_facts,
       rotation_validation,
+      grab_observed_facts,
+      grab_validation,
       landing_observed_facts,
       landing_validation,
       ...v1EvidenceResultValues
@@ -2702,6 +2710,7 @@ async function runGeminiEvidenceExtraction({
     normalizedEvidence.edgeLoadValidation.needsReview ||
     normalizedEvidence.popValidation.needsReview ||
     normalizedEvidence.rotationValidation.needsReview ||
+    normalizedEvidence.grabValidation.needsReview ||
     normalizedEvidence.landingValidation.needsReview;
   recordDailyUsage(usageKey);
   console.log(
@@ -2736,6 +2745,8 @@ async function runGeminiEvidenceExtraction({
     popValidation: normalizedEvidence.popValidation,
     rotationObservedFacts: normalizedEvidence.rotationObservedFacts,
     rotationValidation: normalizedEvidence.rotationValidation,
+    grabObservedFacts: normalizedEvidence.grabObservedFacts,
+    grabValidation: normalizedEvidence.grabValidation,
     landingObservedFacts: normalizedEvidence.landingObservedFacts,
     landingValidation: normalizedEvidence.landingValidation,
     approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
@@ -3066,6 +3077,8 @@ async function writeEvidenceCaptureArtifact({
         popValidation: normalizedResult.popValidation,
         rotationObservedFacts: normalizedResult.rotationObservedFacts,
         rotationValidation: normalizedResult.rotationValidation,
+        grabObservedFacts: normalizedResult.grabObservedFacts,
+        grabValidation: normalizedResult.grabValidation,
         landingObservedFacts: normalizedResult.landingObservedFacts,
         landingValidation: normalizedResult.landingValidation,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
@@ -3224,6 +3237,21 @@ function buildGeminiEvidencePrompt({
     "evidenceText에는 body axis, board path, handle path, landing direction처럼 보이는 mechanics만 한 문장으로 쓰세요. Back Roll/Tantrum/KGB/Crow Mobe 같은 trick label은 rotation 근거가 아닙니다.",
     "confidence=high는 visible rotation axis, body axis evidence, board path evidence 중 독립적인 근거가 최소 2개 이상 있을 때만 허용하세요.",
     "antiEvidence는 적극적으로 작성하세요. no visible roll axis, no board path rotation, handle pass not visible, camera pan may create apparent rotation 같은 누락/반례를 기록하세요.",
+    "grabObservedFacts는 공중 동작 중 손과 보드의 실제 접촉 관찰 사실만 기록하세요. trick name, family, 스타일, 무릎 접힘, 예상 grab 이름에서 grab을 추론하지 마세요.",
+    "schema complexity를 줄이기 위해 grabObservedFacts는 객체가 아니라 JSON 문자열로 작성하세요.",
+    "grabObservedFacts 문자열 안에는 grabDetected, contactVisible, grabbingHand, grabbedBoardZone, grabTiming, grabDuration, evidenceText, confidence, antiEvidence를 넣으세요.",
+    "grabDetected와 contactVisible은 true, false, unknown 중 하나로 쓰세요.",
+    "grabbingHand는 front_hand, rear_hand, both_hands, unknown, none 중 하나 또는 null로 쓰세요.",
+    "grabbedBoardZone은 toe_edge_between_bindings, heel_edge_between_bindings, nose, tail, frontside_edge, backside_edge, center_board, unknown_zone, none 중 하나 또는 null로 쓰세요.",
+    "grabTiming은 takeoff, rising, peak_air, descent, landing, unknown, none 중 하나 또는 null로 쓰세요.",
+    "grabDuration은 momentary, held, attempted_reach, none, unknown 중 하나 또는 null로 쓰세요.",
+    "contactVisible=true는 손이 보드에 닿는 장면이 실제로 보일 때만 쓰세요. hand passing near board, knee tuck, arm swing, handle movement, board poke/style만으로 grabDetected=true를 쓰지 마세요.",
+    "attempted_reach는 actual grab이 아닙니다. 손이 보드 쪽으로 가지만 접촉이 보이지 않으면 grabDetected는 unknown 또는 false로 쓰고 grabDuration=attempted_reach로 쓰세요.",
+    "Indy, Melon, Mute, Stalefish 같은 grab name을 이 계층에서 분류하지 마세요. hand + board zone + timing + duration만 기록하세요.",
+    "grabDuration=held는 여러 프레임/순간에 걸친 지속 접촉이 보일 때만 쓰세요.",
+    "명확히 그랩이 없고 양손이 핸들에 남아 있거나 hand-board contact가 보이지 않으면 grabDetected=false로 쓰고 confidence는 medium/high도 가능합니다.",
+    "crop, spray, body overlap, low resolution 때문에 손/보드 접촉이 안 보이면 unknown 또는 low로 쓰고 antiEvidence에 이유를 기록하세요.",
+    "grabObservedFacts는 primaryCandidate, family, approachType, rotationType을 직접 변경하는 근거가 아닙니다.",
     "landingObservedFacts는 착지와 즉시 회복에 대한 관찰 사실만 기록하세요. 트릭명, family, 접근 방향, 회전 타입에서 착지 결과를 추론하지 마세요.",
     "schema complexity를 줄이기 위해 landingObservedFacts는 객체가 아니라 JSON 문자열로 작성하세요.",
     "landingObservedFacts 문자열 안에는 landingVisible, landingOutcome, boardContact, edgeOnLanding, handlePosition, balanceRecovery, evidenceText, confidence, antiEvidence를 넣으세요.",
@@ -3295,6 +3323,7 @@ function buildGeminiEvidencePrompt({
     "- edgeLoadObservedFacts: 실제 toe/heel edge load 물리 근거. 라벨 추측과 분리",
     "- popObservedFacts: takeoff/pop mechanics 관찰 사실. popType, timing, intensity, evidenceText, confidence, antiEvidence",
     "- rotationObservedFacts: 공중 회전 mechanics 관찰 사실. rotationAxis, rotationDirection, inversionDetected, spinDegrees, handlePassObserved, evidenceText, confidence, antiEvidence",
+    "- grabObservedFacts: airborne hand-to-board contact 관찰 사실을 담은 JSON 문자열. grabDetected, contactVisible, grabbingHand, grabbedBoardZone, grabTiming, grabDuration, evidenceText, confidence, antiEvidence",
     "- landingObservedFacts: landing/recovery 관찰 사실을 담은 JSON 문자열. landingVisible, landingOutcome, boardContact, edgeOnLanding, handlePosition, balanceRecovery, evidenceText, confidence, antiEvidence",
     "- inversionObservedFacts: 인버트 판단 전 관찰 사실. bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved, inversionDuration, inversionEvidenceCount, antiInversionEvidence",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
@@ -3330,12 +3359,17 @@ function buildGeminiEvidencePrompt({
     "- RotationObservedFacts에서 high confidence는 rotation axis, body axis, board path 중 독립적인 visible evidence 2개 이상이 없으면 금지하세요.",
     "- airtime, trick name, body twist만으로 rotationAxis를 확정하지 말고 antiEvidence에 근거 부족을 기록하세요.",
     "- rotationAxis=none 또는 spinDegrees=0이면 spin/invert trick high를 금지하세요.",
+    "- GrabObservedFacts에서 grabDetected=true는 contactVisible=true 또는 명확한 hand-board contact evidence가 있어야 합니다.",
+    "- GrabObservedFacts에서 hand-board contact 근거 없는 high confidence를 금지하세요.",
+    "- knee tuck, arm swing, handle movement, board poke/style, hand passing near board, occlusion/camera crop만으로 grabDetected=true를 쓰지 마세요.",
+    "- attempted_reach와 actual grab을 분리하세요. 접촉이 보이지 않으면 positive grab high를 금지하세요.",
+    "- grab name label만 있고 contactVisible 근거가 없으면 Grab confidence를 low로 쓰세요.",
     "- LandingObservedFacts에서 landingVisible=false 또는 unknown이면 confidence high를 금지하세요.",
     "- LandingObservedFacts에서 evidenceText 없는 high confidence를 금지하세요.",
     "- clean/crash/butt_check 라벨만 있고 board contact, ride-away/fall, hips/butt contact, edge dig 같은 관찰 근거가 없으면 Landing confidence를 low로 쓰세요.",
     "- camera crop, splash, video end, only aftermath visible이면 Landing confidence high를 금지하고 antiEvidence에 기록하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, rotationObservedFacts, landingObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, rotationObservedFacts, grabObservedFacts, landingObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -3599,7 +3633,8 @@ type GeminiEvidencePayload = {
   edgeLoadObservedFacts?: EdgeLoadObservedFactsPayload;
   popObservedFacts?: PopObservedFactsPayload;
   rotationObservedFacts?: RotationObservedFactsPayload;
-  landingObservedFacts?: LandingObservedFactsPayload;
+  grabObservedFacts?: GrabObservedFactsPayload | string;
+  landingObservedFacts?: LandingObservedFactsPayload | string;
   inversionObservedFacts?: InversionObservedFactsPayload;
   rotationType: {
     value: string;
@@ -3748,6 +3783,28 @@ type RotationValidationResult = {
   adjusted: boolean;
   needsReview: boolean;
   independentRotationEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
+type GrabObservedFactsPayload = {
+  grabDetected: ObservedBooleanPayload;
+  contactVisible: ObservedBooleanPayload;
+  grabbingHand: string | null;
+  grabbedBoardZone: string | null;
+  grabTiming: string | null;
+  grabDuration: string | null;
+  evidenceText: string | null;
+  confidence: "high" | "medium" | "low";
+  antiEvidence: string[];
+};
+
+type GrabValidationResult = {
+  before: GrabObservedFactsPayload;
+  after: GrabObservedFactsPayload;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentGrabEvidenceCount: number;
   rulesApplied: string[];
   rejectedHighConfidenceReasons: string[];
 };
@@ -4049,6 +4106,11 @@ function parseGeminiEvidence(outputText: string) {
       rotationObservedFacts: rawRotationObservedFacts,
     });
     const rotationObservedFacts = rotationValidation.after;
+    const rawGrabObservedFacts = normalizeGrabObservedFacts(undefined);
+    const grabValidation = validateGrabObservedFacts({
+      grabObservedFacts: rawGrabObservedFacts,
+    });
+    const grabObservedFacts = grabValidation.after;
     const rawLandingObservedFacts = normalizeLandingObservedFacts(undefined);
     const landingValidation = validateLandingObservedFacts({
       landingObservedFacts: rawLandingObservedFacts,
@@ -4086,6 +4148,8 @@ function parseGeminiEvidence(outputText: string) {
       popValidation,
       rotationObservedFacts,
       rotationValidation,
+      grabObservedFacts,
+      grabValidation,
       landingObservedFacts,
       landingValidation,
       approachObservedFactsV2,
@@ -4151,10 +4215,14 @@ function parsePartialGeminiEvidence(outputText: string) {
     outputText,
     "rotationObservedFacts",
   );
+  const grabObservedFacts = parseObjectProperty(
+    outputText,
+    "grabObservedFacts",
+  ) ?? parseStringProperty(outputText, "grabObservedFacts");
   const landingObservedFacts = parseObjectProperty(
     outputText,
     "landingObservedFacts",
-  );
+  ) ?? parseStringProperty(outputText, "landingObservedFacts");
   const inversionObservedFacts = parseObjectProperty(
     outputText,
     "inversionObservedFacts",
@@ -4180,6 +4248,8 @@ function parsePartialGeminiEvidence(outputText: string) {
       popObservedFacts as GeminiEvidencePayload["popObservedFacts"] | undefined,
     rotationObservedFacts:
       rotationObservedFacts as GeminiEvidencePayload["rotationObservedFacts"] | undefined,
+    grabObservedFacts:
+      grabObservedFacts as GeminiEvidencePayload["grabObservedFacts"] | undefined,
     landingObservedFacts:
       landingObservedFacts as GeminiEvidencePayload["landingObservedFacts"] | undefined,
     inversionObservedFacts:
@@ -4233,6 +4303,60 @@ function parseObjectProperty(outputText: string, key: string) {
   } catch {
     return undefined;
   }
+}
+
+function parseStringProperty(outputText: string, key: string) {
+  const marker = `"${key}"`;
+  const markerIndex = outputText.indexOf(marker);
+
+  if (markerIndex === -1) {
+    return undefined;
+  }
+
+  const colonIndex = outputText.indexOf(":", markerIndex + marker.length);
+
+  if (colonIndex === -1) {
+    return undefined;
+  }
+
+  const valueStart = outputText.slice(colonIndex + 1).search(/\S/);
+
+  if (valueStart === -1) {
+    return undefined;
+  }
+
+  const stringStart = colonIndex + 1 + valueStart;
+
+  if (outputText[stringStart] !== '"') {
+    return undefined;
+  }
+
+  for (let index = stringStart + 1; index < outputText.length; index += 1) {
+    if (outputText[index] !== '"') {
+      continue;
+    }
+
+    let slashCount = 0;
+    for (
+      let slashIndex = index - 1;
+      slashIndex > stringStart && outputText[slashIndex] === "\\";
+      slashIndex -= 1
+    ) {
+      slashCount += 1;
+    }
+
+    if (slashCount % 2 === 1) {
+      continue;
+    }
+
+    try {
+      return JSON.parse(outputText.slice(stringStart, index + 1)) as string;
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
 }
 
 function parseArrayProperty(outputText: string, key: string) {
@@ -4772,6 +4896,13 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     rotationObservedFacts: rawRotationObservedFacts,
   });
   const rotationObservedFacts = rotationValidation.after;
+  const rawGrabObservedFacts = normalizeGrabObservedFacts(
+    parsed.grabObservedFacts,
+  );
+  const grabValidation = validateGrabObservedFacts({
+    grabObservedFacts: rawGrabObservedFacts,
+  });
+  const grabObservedFacts = grabValidation.after;
   const rawLandingObservedFacts = normalizeLandingObservedFacts(
     parsed.landingObservedFacts,
   );
@@ -4817,6 +4948,8 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     popValidation,
     rotationObservedFacts,
     rotationValidation,
+    grabObservedFacts,
+    grabValidation,
     landingObservedFacts,
     landingValidation,
     approachObservedFactsV2,
@@ -5872,6 +6005,452 @@ function addPostValidationAntiRotationEvidence(
   if (!facts.antiEvidence.includes(reason)) {
     facts.antiEvidence.push(reason);
   }
+}
+
+function normalizeGrabObservedFacts(value: unknown): GrabObservedFactsPayload {
+  const parsedValue =
+    typeof value === "string" ? parseJsonObjectString(value) : value;
+  const facts =
+    parsedValue && typeof parsedValue === "object"
+      ? (parsedValue as Partial<GrabObservedFactsPayload>)
+      : {};
+
+  return {
+    grabDetected: normalizeObservedBoolean(facts.grabDetected),
+    contactVisible: normalizeObservedBoolean(facts.contactVisible),
+    grabbingHand: normalizeGrabHand(facts.grabbingHand),
+    grabbedBoardZone: normalizeGrabBoardZone(facts.grabbedBoardZone),
+    grabTiming: normalizeGrabTiming(facts.grabTiming),
+    grabDuration: normalizeGrabDuration(facts.grabDuration),
+    evidenceText: normalizeNullableString(facts.evidenceText),
+    confidence: asOpenAiConfidenceLevel(facts.confidence) ?? "low",
+    antiEvidence: normalizeStringArray(facts.antiEvidence, []),
+  };
+}
+
+function normalizeGrabHand(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    ["front_hand", "rear_hand", "both_hands", "unknown", "none"].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function normalizeGrabBoardZone(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    [
+      "toe_edge_between_bindings",
+      "heel_edge_between_bindings",
+      "nose",
+      "tail",
+      "frontside_edge",
+      "backside_edge",
+      "center_board",
+      "unknown_zone",
+      "none",
+    ].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown_zone" : null;
+}
+
+function normalizeGrabTiming(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    ["takeoff", "rising", "peak_air", "descent", "landing", "unknown", "none"].includes(
+      text,
+    )
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function normalizeGrabDuration(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    ["momentary", "held", "attempted_reach", "none", "unknown"].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function validateGrabObservedFacts({
+  grabObservedFacts,
+}: {
+  grabObservedFacts: GrabObservedFactsPayload;
+}): GrabValidationResult {
+  const before = cloneGrabObservedFacts(grabObservedFacts);
+  const after = cloneGrabObservedFacts(grabObservedFacts);
+  const rulesApplied: string[] = [];
+  const rejectedHighConfidenceReasons: string[] = [];
+  const reviewReasons: string[] = [];
+  const evidenceText = [
+    grabObservedFacts.grabbingHand,
+    grabObservedFacts.grabbedBoardZone,
+    grabObservedFacts.grabTiming,
+    grabObservedFacts.grabDuration,
+    grabObservedFacts.evidenceText,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const independentGrabEvidenceCount = countIndependentGrabEvidence(evidenceText);
+  const wasHigh = grabObservedFacts.confidence === "high";
+  const isPositiveGrab = grabObservedFacts.grabDetected === true;
+  const isClearNoGrab = hasClearNoGrabEvidence(grabObservedFacts, evidenceText);
+  const hasEvidenceText = Boolean(grabObservedFacts.evidenceText);
+  const labelOnlyEvidence = grabEvidenceIsLabelOnly(evidenceText);
+
+  if (isPositiveGrab && grabObservedFacts.contactVisible !== true) {
+    rejectedHighConfidenceReasons.push(
+      "Positive grab requires visible hand-to-board contact.",
+    );
+    reviewReasons.push("grabDetected was true without contactVisible=true.");
+    after.confidence = "low";
+    after.grabDetected =
+      grabObservedFacts.contactVisible === false ? false : "unknown";
+    addPostValidationAntiGrabEvidence(
+      after,
+      "post-validation: positive grab requires visible hand-board contact.",
+    );
+  }
+
+  if (!isPositiveGrab && grabObservedFacts.contactVisible === true) {
+    reviewReasons.push("contactVisible=true conflicts with grabDetected=false/unknown.");
+    addPostValidationAntiGrabEvidence(
+      after,
+      "post-validation: contactVisible conflicts with grabDetected.",
+    );
+  }
+
+  if (!hasEvidenceText && wasHigh) {
+    rejectedHighConfidenceReasons.push(
+      "Grab high confidence requires visible contact evidenceText.",
+    );
+    reviewReasons.push("grab evidenceText is missing.");
+    addPostValidationAntiGrabEvidence(
+      after,
+      "post-validation: grab evidenceText is missing.",
+    );
+  }
+
+  if (labelOnlyEvidence) {
+    rejectedHighConfidenceReasons.push(
+      "Grab evidence repeats a grab label without visible hand-board contact.",
+    );
+    reviewReasons.push("grab evidence appears label-only.");
+    after.confidence = "low";
+    addPostValidationAntiGrabEvidence(
+      after,
+      "post-validation: label-only grab claim.",
+    );
+  }
+
+  if (
+    isPositiveGrab &&
+    grabObservedFacts.grabDuration === "attempted_reach"
+  ) {
+    rejectedHighConfidenceReasons.push(
+      "Attempted reach is not an actual grab.",
+    );
+    reviewReasons.push("attempted reach was reported as a positive grab.");
+    after.grabDetected = "unknown";
+    after.confidence = "low";
+    addPostValidationAntiGrabEvidence(
+      after,
+      "post-validation: attempted reach is not visible contact.",
+    );
+  }
+
+  if (
+    grabObservedFacts.grabDuration === "held" &&
+    !hasSustainedGrabEvidence(evidenceText)
+  ) {
+    rejectedHighConfidenceReasons.push(
+      "Held grab requires sustained or multiple-frame contact evidence.",
+    );
+    reviewReasons.push("grabDuration=held lacks sustained contact evidence.");
+    after.grabDuration =
+      grabObservedFacts.contactVisible === true ? "momentary" : "unknown";
+    if (after.confidence === "high") {
+      after.confidence = "medium";
+    }
+  }
+
+  if (
+    wasHigh &&
+    grabObservedFacts.grabTiming &&
+    !["none", "unknown"].includes(grabObservedFacts.grabTiming) &&
+    !hasGrabTimingEvidence(evidenceText)
+  ) {
+    rejectedHighConfidenceReasons.push(
+      "Grab timing high confidence requires visible contact timing evidence.",
+    );
+    reviewReasons.push("grab timing was precise without visible contact timing.");
+    after.grabTiming = "unknown";
+  }
+
+  if (
+    !isPositiveGrab &&
+    ["front_hand", "rear_hand", "both_hands"].includes(
+      grabObservedFacts.grabbingHand ?? "",
+    )
+  ) {
+    reviewReasons.push("specific grabbingHand was given without a positive grab.");
+    after.grabbingHand =
+      grabObservedFacts.contactVisible === true ? "unknown" : "none";
+  }
+
+  if (
+    grabObservedFacts.contactVisible !== true &&
+    grabObservedFacts.grabbedBoardZone &&
+    !["none", "unknown_zone"].includes(grabObservedFacts.grabbedBoardZone)
+  ) {
+    reviewReasons.push("specific board zone was given without visible contact.");
+    after.grabbedBoardZone =
+      grabObservedFacts.contactVisible === false ? "none" : "unknown_zone";
+  }
+
+  if (
+    wasHigh &&
+    isPositiveGrab &&
+    independentGrabEvidenceCount < 2
+  ) {
+    rejectedHighConfidenceReasons.push(
+      "Positive grab high confidence requires at least two independent contact indicators.",
+    );
+  }
+
+  if (
+    wasHigh &&
+    rejectedHighConfidenceReasons.length > 0 &&
+    after.confidence !== "low"
+  ) {
+    after.confidence =
+      independentGrabEvidenceCount >= 1 && !labelOnlyEvidence
+        ? "medium"
+        : "low";
+    rulesApplied.push(
+      `Grab confidence downgraded from high to ${after.confidence}.`,
+    );
+  }
+
+  if (isClearNoGrab && grabObservedFacts.grabDetected === false) {
+    after.contactVisible = false;
+    after.grabbingHand = "none";
+    after.grabbedBoardZone = "none";
+    after.grabTiming = "none";
+    after.grabDuration = "none";
+  }
+
+  if (reviewReasons.length > 0) {
+    rulesApplied.push(...reviewReasons);
+  }
+
+  return {
+    before,
+    after,
+    adjusted: JSON.stringify(before) !== JSON.stringify(after),
+    needsReview: reviewReasons.length > 0,
+    independentGrabEvidenceCount,
+    rulesApplied,
+    rejectedHighConfidenceReasons,
+  };
+}
+
+function cloneGrabObservedFacts(
+  facts: GrabObservedFactsPayload,
+): GrabObservedFactsPayload {
+  return {
+    grabDetected: facts.grabDetected,
+    contactVisible: facts.contactVisible,
+    grabbingHand: facts.grabbingHand,
+    grabbedBoardZone: facts.grabbedBoardZone,
+    grabTiming: facts.grabTiming,
+    grabDuration: facts.grabDuration,
+    evidenceText: facts.evidenceText,
+    confidence: facts.confidence,
+    antiEvidence: [...facts.antiEvidence],
+  };
+}
+
+function addPostValidationAntiGrabEvidence(
+  facts: GrabObservedFactsPayload,
+  reason: string,
+) {
+  if (!facts.antiEvidence.includes(reason)) {
+    facts.antiEvidence.push(reason);
+  }
+}
+
+function countIndependentGrabEvidence(text: string) {
+  const normalized = normalizeDomainText(text);
+  const evidenceKeys = new Set<string>();
+
+  if (hasHandLeavesHandleEvidence(normalized)) {
+    evidenceKeys.add("hand_leaves_handle");
+  }
+
+  if (hasHandBoardContactEvidence(normalized)) {
+    evidenceKeys.add("hand_board_contact");
+  }
+
+  if (hasGrabBoardZoneEvidence(normalized)) {
+    evidenceKeys.add("board_zone");
+  }
+
+  if (hasGrabTimingEvidence(normalized)) {
+    evidenceKeys.add("airborne_timing");
+  }
+
+  if (hasSustainedGrabEvidence(normalized)) {
+    evidenceKeys.add("sustained_contact");
+  }
+
+  return evidenceKeys.size;
+}
+
+function hasClearNoGrabEvidence(
+  facts: GrabObservedFactsPayload,
+  evidenceText: string,
+) {
+  const normalized = normalizeDomainText(
+    [evidenceText, ...facts.antiEvidence].join(" "),
+  );
+
+  return (
+    facts.grabDetected === false &&
+    (facts.contactVisible === false || facts.contactVisible === "unknown") &&
+    includesAnyDomainTerm(normalized, [
+      "no visible hand-board contact",
+      "no hand-board contact",
+      "both hands remain on handle",
+      "both hands stayed on handle",
+      "hands remain on handle",
+      "hands stayed on handle",
+      "no grab visible",
+      "손과 보드 접촉 없음",
+      "손이 보드에 닿지",
+      "두 손이 핸들",
+      "양손이 핸들",
+      "그랩 없음",
+    ])
+  );
+}
+
+function grabEvidenceIsLabelOnly(text: string) {
+  const normalized = normalizeDomainText(text);
+
+  if (!normalized.trim()) {
+    return true;
+  }
+
+  return (
+    includesAnyDomainTerm(normalized, [
+      "indy",
+      "melon",
+      "mute",
+      "stalefish",
+      "method",
+      "tail grab",
+      "nose grab",
+      "grab trick",
+      "그랩",
+      "인디",
+      "멜론",
+      "뮤트",
+    ]) &&
+    countIndependentGrabEvidence(normalized) === 0
+  );
+}
+
+function hasHandLeavesHandleEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "hand leaves handle",
+    "released handle",
+    "one hand leaves",
+    "lets go of handle",
+    "손이 핸들에서",
+    "핸들을 놓",
+    "한 손을 떼",
+  ]);
+}
+
+function hasHandBoardContactEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "touches board",
+    "hand touches board",
+    "hand-to-board contact",
+    "grabs board",
+    "contact with board",
+    "손이 보드에 닿",
+    "보드를 잡",
+    "보드 접촉",
+    "손-보드 접촉",
+  ]);
+}
+
+function hasGrabBoardZoneEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "toe-side edge",
+    "heel-side edge",
+    "between bindings",
+    "nose",
+    "tail",
+    "board edge",
+    "토사이드 엣지",
+    "힐사이드 엣지",
+    "바인딩 사이",
+    "노즈",
+    "테일",
+    "보드 엣지",
+  ]);
+}
+
+function hasGrabTimingEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "airborne",
+    "rising",
+    "peak air",
+    "descent",
+    "before landing",
+    "공중",
+    "상승",
+    "최고점",
+    "하강",
+    "착지 전",
+  ]);
+}
+
+function hasSustainedGrabEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "held",
+    "sustained",
+    "multiple frames",
+    "more than one frame",
+    "across frames",
+    "유지",
+    "계속",
+    "여러 프레임",
+    "몇 프레임",
+  ]);
 }
 
 function normalizeLandingObservedFacts(
@@ -9079,6 +9658,7 @@ const geminiEvidenceResponseSchema = {
     edgeLoadObservedFacts: geminiEdgeLoadObservedFactsSchema,
     popObservedFacts: geminiPopObservedFactsSchema,
     rotationObservedFacts: geminiRotationObservedFactsSchema,
+    grabObservedFacts: { type: Type.STRING, nullable: true },
     landingObservedFacts: { type: Type.STRING, nullable: true },
     inversionObservedFacts: geminiInversionObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
@@ -9155,6 +9735,7 @@ const geminiEvidenceResponseSchema = {
     "edgeLoadObservedFacts",
     "popObservedFacts",
     "rotationObservedFacts",
+    "grabObservedFacts",
     "inversionObservedFacts",
     "approachType",
     "rotationType",

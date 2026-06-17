@@ -76,6 +76,8 @@ type RemoteEvidenceResponse = {
   popValidation?: unknown;
   rotationObservedFacts?: unknown;
   rotationValidation?: unknown;
+  grabObservedFacts?: unknown;
+  grabValidation?: unknown;
   landingObservedFacts?: unknown;
   landingValidation?: unknown;
   inversionObservedFacts?: unknown;
@@ -378,6 +380,8 @@ function normalizeRemoteEvidence(
     popValidation: asPopValidation(data.popValidation),
     rotationObservedFacts: asRotationObservedFacts(data.rotationObservedFacts),
     rotationValidation: asRotationValidation(data.rotationValidation),
+    grabObservedFacts: asGrabObservedFacts(data.grabObservedFacts),
+    grabValidation: asGrabValidation(data.grabValidation),
     landingObservedFacts: asLandingObservedFacts(data.landingObservedFacts),
     landingValidation: asLandingValidation(data.landingValidation),
     inversionObservedFacts: asInversionObservedFacts(data.inversionObservedFacts),
@@ -721,6 +725,57 @@ function asRotationValidation(
     needsReview: validation.needsReview === true,
     independentRotationEvidenceCount:
       asNumber(validation.independentRotationEvidenceCount) ?? 0,
+    rulesApplied: asStringArray(validation.rulesApplied),
+    rejectedHighConfidenceReasons: asStringArray(
+      validation.rejectedHighConfidenceReasons,
+    ),
+  };
+}
+
+function asGrabObservedFacts(
+  value: unknown,
+): GeminiEvidenceResult['grabObservedFacts'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+
+  return {
+    grabDetected: asObservedBoolean(facts.grabDetected),
+    contactVisible: asObservedBoolean(facts.contactVisible),
+    grabbingHand: asString(facts.grabbingHand) ?? null,
+    grabbedBoardZone: asString(facts.grabbedBoardZone) ?? null,
+    grabTiming: asString(facts.grabTiming) ?? null,
+    grabDuration: asString(facts.grabDuration) ?? null,
+    evidenceText: asString(facts.evidenceText) ?? null,
+    confidence: asConfidenceLevel(facts.confidence) ?? 'low',
+    antiEvidence: asStringArray(facts.antiEvidence),
+  };
+}
+
+function asGrabValidation(
+  value: unknown,
+): GeminiEvidenceResult['grabValidation'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const validation = value as Record<string, unknown>;
+  const before = asGrabObservedFacts(validation.before);
+  const after = asGrabObservedFacts(validation.after);
+
+  if (!before || !after) {
+    return undefined;
+  }
+
+  return {
+    before,
+    after,
+    adjusted: validation.adjusted === true,
+    needsReview: validation.needsReview === true,
+    independentGrabEvidenceCount:
+      asNumber(validation.independentGrabEvidenceCount) ?? 0,
     rulesApplied: asStringArray(validation.rulesApplied),
     rejectedHighConfidenceReasons: asStringArray(
       validation.rejectedHighConfidenceReasons,

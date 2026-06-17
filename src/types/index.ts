@@ -115,6 +115,28 @@ export type RotationValidationResult = {
   rejectedHighConfidenceReasons: string[];
 };
 
+export type GrabObservedFacts = {
+  grabDetected: ObservedBoolean;
+  contactVisible: ObservedBoolean;
+  grabbingHand: string | null;
+  grabbedBoardZone: string | null;
+  grabTiming: string | null;
+  grabDuration: string | null;
+  evidenceText: string | null;
+  confidence: EvidenceConfidence;
+  antiEvidence: string[];
+};
+
+export type GrabValidationResult = {
+  before: GrabObservedFacts;
+  after: GrabObservedFacts;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentGrabEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
 export type LandingObservedFacts = {
   landingVisible: ObservedBoolean;
   landingOutcome: string | null;
@@ -293,6 +315,8 @@ export type GeminiEvidenceResult = {
   popValidation?: PopValidationResult;
   rotationObservedFacts?: RotationObservedFacts;
   rotationValidation?: RotationValidationResult;
+  grabObservedFacts?: GrabObservedFacts;
+  grabValidation?: GrabValidationResult;
   landingObservedFacts?: LandingObservedFacts;
   landingValidation?: LandingValidationResult;
   inversionObservedFacts?: InversionObservedFacts;

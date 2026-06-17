@@ -246,6 +246,12 @@ function normalizeRemoteEvidenceResult(
     rotationValidation: asRecord(evidence.rotation_validation) as
       | GeminiEvidenceResult['rotationValidation']
       | undefined,
+    grabObservedFacts: asRecord(evidence.grab_observed_facts) as
+      | GeminiEvidenceResult['grabObservedFacts']
+      | undefined,
+    grabValidation: asRecord(evidence.grab_validation) as
+      | GeminiEvidenceResult['grabValidation']
+      | undefined,
     landingObservedFacts: asRecord(evidence.landing_observed_facts) as
       | GeminiEvidenceResult['landingObservedFacts']
       | undefined,
