@@ -2523,7 +2523,7 @@ function getMomentStatusMessage(status: MomentStatus) {
     return {
       title: '분석 대기 중',
       body:
-        'Moment가 저장됐고 evidence extraction을 시작할 준비를 하고 있습니다. 서버가 바쁘거나 요청이 제한되면 이 상태를 유지합니다.',
+        '모먼트가 저장됐고 영상 근거 추출을 시작할 준비를 하고 있습니다. 서버가 바쁘거나 요청이 제한되면 이 상태를 유지합니다.',
     };
   }
 
@@ -2537,13 +2537,13 @@ function getMomentStatusMessage(status: MomentStatus) {
   if (status === 'failed') {
     return {
       title: '분석 실패',
-      body: 'Evidence extraction이 완료되지 않았습니다. 다시 시도할 수 있습니다.',
+      body: '영상 근거 추출이 완료되지 않았습니다. 다시 시도할 수 있습니다.',
     };
   }
 
   return {
     title: '분석 완료',
-    body: 'Evidence result가 준비됐습니다.',
+    body: '영상 근거 결과가 준비됐습니다.',
   };
 }
 
@@ -3018,7 +3018,7 @@ function GeminiEvidenceView({
       </View>
       {candidateTrace?.displayLabel ? (
         <View style={styles.evidenceFactRow}>
-          <Text style={styles.evidenceFactLabel}>관찰된 가능성</Text>
+          <Text style={styles.evidenceFactLabel}>검토 후보</Text>
           <Text style={styles.evidenceFactValue}>
             {candidateTrace.displayLabel} ({candidateTrace.confidence})
           </Text>
