@@ -94,6 +94,8 @@ create table if not exists public.evidence_results (
   pop_validation jsonb,
   rotation_observed_facts jsonb,
   rotation_validation jsonb,
+  landing_observed_facts jsonb,
+  landing_validation jsonb,
   inversion_observed_facts jsonb,
   temporal_windows jsonb,
   evidence_windows jsonb,

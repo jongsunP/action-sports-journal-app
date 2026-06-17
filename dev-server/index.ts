@@ -334,6 +334,8 @@ app.get("/api/moments", async (_request, response) => {
         "pop_validation",
         "rotation_observed_facts",
         "rotation_validation",
+        "landing_observed_facts",
+        "landing_validation",
         ...evidenceResultColumnsV1.slice(14),
       ];
       let evidenceResultsQuery = await client
@@ -1643,7 +1645,9 @@ function isMissingApproachV2ColumnError(error: unknown) {
     message.includes("pop_observed_facts") ||
     message.includes("pop_validation") ||
     message.includes("rotation_observed_facts") ||
-    message.includes("rotation_validation")
+    message.includes("rotation_validation") ||
+    message.includes("landing_observed_facts") ||
+    message.includes("landing_validation")
   );
 }
 
@@ -2208,6 +2212,8 @@ async function persistEvidenceResultForLinkedMoment({
     pop_validation: evidence.popValidation,
     rotation_observed_facts: evidence.rotationObservedFacts,
     rotation_validation: evidence.rotationValidation,
+    landing_observed_facts: evidence.landingObservedFacts,
+    landing_validation: evidence.landingValidation,
     inversion_observed_facts: evidence.inversionObservedFacts,
     temporal_windows: evidence.temporalWindows,
     evidence_windows: evidence.evidenceWindows,
@@ -2233,6 +2239,8 @@ async function persistEvidenceResultForLinkedMoment({
       pop_validation,
       rotation_observed_facts,
       rotation_validation,
+      landing_observed_facts,
+      landing_validation,
       ...v1EvidenceResultValues
     } = evidenceResultValues;
 
@@ -2693,7 +2701,8 @@ async function runGeminiEvidenceExtraction({
     normalizedEvidence.primaryCandidate.confidence === "low" ||
     normalizedEvidence.edgeLoadValidation.needsReview ||
     normalizedEvidence.popValidation.needsReview ||
-    normalizedEvidence.rotationValidation.needsReview;
+    normalizedEvidence.rotationValidation.needsReview ||
+    normalizedEvidence.landingValidation.needsReview;
   recordDailyUsage(usageKey);
   console.log(
     `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
@@ -2727,6 +2736,8 @@ async function runGeminiEvidenceExtraction({
     popValidation: normalizedEvidence.popValidation,
     rotationObservedFacts: normalizedEvidence.rotationObservedFacts,
     rotationValidation: normalizedEvidence.rotationValidation,
+    landingObservedFacts: normalizedEvidence.landingObservedFacts,
+    landingValidation: normalizedEvidence.landingValidation,
     approachObservedFactsV2: normalizedEvidence.approachObservedFactsV2,
     inversionObservedFacts: normalizedEvidence.inversionObservedFacts,
     approachDecision: normalizedEvidence.approachDecision,
@@ -3055,6 +3066,8 @@ async function writeEvidenceCaptureArtifact({
         popValidation: normalizedResult.popValidation,
         rotationObservedFacts: normalizedResult.rotationObservedFacts,
         rotationValidation: normalizedResult.rotationValidation,
+        landingObservedFacts: normalizedResult.landingObservedFacts,
+        landingValidation: normalizedResult.landingValidation,
         approachObservedFactsV2: normalizedResult.approachObservedFactsV2,
         approachDecisionV2: normalizedResult.approachDecisionV2,
         approachV2Comparison: {
@@ -3211,6 +3224,20 @@ function buildGeminiEvidencePrompt({
     "evidenceText에는 body axis, board path, handle path, landing direction처럼 보이는 mechanics만 한 문장으로 쓰세요. Back Roll/Tantrum/KGB/Crow Mobe 같은 trick label은 rotation 근거가 아닙니다.",
     "confidence=high는 visible rotation axis, body axis evidence, board path evidence 중 독립적인 근거가 최소 2개 이상 있을 때만 허용하세요.",
     "antiEvidence는 적극적으로 작성하세요. no visible roll axis, no board path rotation, handle pass not visible, camera pan may create apparent rotation 같은 누락/반례를 기록하세요.",
+    "landingObservedFacts는 착지와 즉시 회복에 대한 관찰 사실만 기록하세요. 트릭명, family, 접근 방향, 회전 타입에서 착지 결과를 추론하지 마세요.",
+    "schema complexity를 줄이기 위해 landingObservedFacts는 객체가 아니라 JSON 문자열로 작성하세요.",
+    "landingObservedFacts 문자열 안에는 landingVisible, landingOutcome, boardContact, edgeOnLanding, handlePosition, balanceRecovery, evidenceText, confidence, antiEvidence를 넣으세요.",
+    "landingVisible은 true, false, unknown 중 하나로 쓰세요.",
+    "landingOutcome은 clean, butt_check, edge_catch, handle_loss, over_rotated, under_rotated, crash, rides_away, not_visible, unknown 중 하나 또는 null로 쓰세요.",
+    "boardContact는 clean_contact, tail_first, nose_first, flat, edge_contact, hard_impact, not_contacted_visible, not_visible, unknown 중 하나 또는 null로 쓰세요.",
+    "edgeOnLanding은 toe_edge, heel_edge, flat, edge_catch, not_visible, unknown 중 하나 또는 null로 쓰세요.",
+    "handlePosition은 controlled, near_lead_hip, away_from_body, high, dropped, pulled_out, two_hands_visible, one_hand_visible, not_visible, unknown 중 하나 또는 null로 쓰세요.",
+    "balanceRecovery는 rides_away, recovers, unstable, falls, butt_check_recovery, no_recovery, not_visible, unknown 중 하나 또는 null로 쓰세요.",
+    "confidence는 LandingObservedFacts 전체에 대해 하나만 쓰고, 각 필드별 confidence 객체를 만들지 마세요.",
+    "confidence=high는 board contact, rider balance/recovery, handle control, edge contact/catch, ride-away/fall outcome 중 독립적인 visible indicators가 최소 2개 이상 있을 때만 허용하세요.",
+    "landing이 out of frame, splash obscured, video ends before landing, handle not visible, only aftermath visible이면 antiEvidence에 기록하세요.",
+    "clean/crash/butt_check 같은 라벨만 쓰고 board contact, hips/butt contact, edge dig, handle loss, ride-away/fall 같은 관찰 근거가 없으면 confidence를 low로 쓰고 antiEvidence에 label-only landing claim을 기록하세요.",
+    "landingOutcome은 코칭과 outcome 판단에는 사용하되 primaryCandidate, family, approachType, rotationType을 뒤집는 근거로 사용하지 마세요.",
     "inversionObservedFacts는 접근/엣지/예상 트릭에서 추론하지 말고 공중 동작에서 보이는 사실만 기록하세요.",
     "인버트는 머리가 엉덩이보다 아래인지 하나만으로 정의하지 마세요. 1차 근거는 boardAboveHead입니다.",
     "boardAboveHead는 보드가 라이더 머리보다 위에 명확히 있는지 관찰하세요. 보드가 머리 위에 한 번도 보이지 않으면 antiInversionEvidence에 기록하세요.",
@@ -3268,6 +3295,7 @@ function buildGeminiEvidencePrompt({
     "- edgeLoadObservedFacts: 실제 toe/heel edge load 물리 근거. 라벨 추측과 분리",
     "- popObservedFacts: takeoff/pop mechanics 관찰 사실. popType, timing, intensity, evidenceText, confidence, antiEvidence",
     "- rotationObservedFacts: 공중 회전 mechanics 관찰 사실. rotationAxis, rotationDirection, inversionDetected, spinDegrees, handlePassObserved, evidenceText, confidence, antiEvidence",
+    "- landingObservedFacts: landing/recovery 관찰 사실을 담은 JSON 문자열. landingVisible, landingOutcome, boardContact, edgeOnLanding, handlePosition, balanceRecovery, evidenceText, confidence, antiEvidence",
     "- inversionObservedFacts: 인버트 판단 전 관찰 사실. bodyInverted, boardAboveHead, rollAxisObserved, flipAxisObserved, inversionDuration, inversionEvidenceCount, antiInversionEvidence",
     "- approachType: 힐사이드/토사이드/스위치/확인 필요 등 접근 방식",
     "- rotationType: 백롤/탠트럼/프론트롤/스핀/No roll axis/확인 필요 등 회전 특성",
@@ -3302,8 +3330,12 @@ function buildGeminiEvidencePrompt({
     "- RotationObservedFacts에서 high confidence는 rotation axis, body axis, board path 중 독립적인 visible evidence 2개 이상이 없으면 금지하세요.",
     "- airtime, trick name, body twist만으로 rotationAxis를 확정하지 말고 antiEvidence에 근거 부족을 기록하세요.",
     "- rotationAxis=none 또는 spinDegrees=0이면 spin/invert trick high를 금지하세요.",
+    "- LandingObservedFacts에서 landingVisible=false 또는 unknown이면 confidence high를 금지하세요.",
+    "- LandingObservedFacts에서 evidenceText 없는 high confidence를 금지하세요.",
+    "- clean/crash/butt_check 라벨만 있고 board contact, ride-away/fall, hips/butt contact, edge dig 같은 관찰 근거가 없으면 Landing confidence를 low로 쓰세요.",
+    "- camera crop, splash, video end, only aftermath visible이면 Landing confidence high를 금지하고 antiEvidence에 기록하세요.",
     "",
-    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, rotationObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
+    "중요: JSON key 순서는 반드시 primaryCandidate, family, temporalWindows, approachObservedFacts, edgeLoadObservedFacts, popObservedFacts, rotationObservedFacts, landingObservedFacts, inversionObservedFacts, approachType, rotationType, landingOutcome, confidence, evidence, alternativeCandidates, evidenceWindows, observations, uncertainty 순서로 작성하세요.",
     "출력은 JSON만 반환하세요. 코칭 플랜이나 연습법은 쓰지 마세요.",
     "출력 길이 제한:",
     "- evidenceWindows: 최대 1개. setup/initiation/airborne/outcome 중 정체성 판단에 가장 중요한 구간",
@@ -3567,6 +3599,7 @@ type GeminiEvidencePayload = {
   edgeLoadObservedFacts?: EdgeLoadObservedFactsPayload;
   popObservedFacts?: PopObservedFactsPayload;
   rotationObservedFacts?: RotationObservedFactsPayload;
+  landingObservedFacts?: LandingObservedFactsPayload;
   inversionObservedFacts?: InversionObservedFactsPayload;
   rotationType: {
     value: string;
@@ -3577,7 +3610,7 @@ type GeminiEvidencePayload = {
     value: string;
     confidence: "high" | "medium" | "low";
     evidence: string;
-  };
+  } | string;
   confidence: "high" | "medium" | "low";
   evidence: string;
   evidenceWindows: Array<{
@@ -3715,6 +3748,28 @@ type RotationValidationResult = {
   adjusted: boolean;
   needsReview: boolean;
   independentRotationEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
+type LandingObservedFactsPayload = {
+  landingVisible: ObservedBooleanPayload;
+  landingOutcome: string | null;
+  boardContact: string | null;
+  edgeOnLanding: string | null;
+  handlePosition: string | null;
+  balanceRecovery: string | null;
+  evidenceText: string | null;
+  confidence: "high" | "medium" | "low";
+  antiEvidence: string[];
+};
+
+type LandingValidationResult = {
+  before: LandingObservedFactsPayload;
+  after: LandingObservedFactsPayload;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentLandingEvidenceCount: number;
   rulesApplied: string[];
   rejectedHighConfidenceReasons: string[];
 };
@@ -3994,6 +4049,11 @@ function parseGeminiEvidence(outputText: string) {
       rotationObservedFacts: rawRotationObservedFacts,
     });
     const rotationObservedFacts = rotationValidation.after;
+    const rawLandingObservedFacts = normalizeLandingObservedFacts(undefined);
+    const landingValidation = validateLandingObservedFacts({
+      landingObservedFacts: rawLandingObservedFacts,
+    });
+    const landingObservedFacts = landingValidation.after;
     const inversionObservedFacts = normalizeInversionObservedFacts(undefined);
     const approachDecision = deriveApproachDecision(
       approachObservedFacts,
@@ -4026,6 +4086,8 @@ function parseGeminiEvidence(outputText: string) {
       popValidation,
       rotationObservedFacts,
       rotationValidation,
+      landingObservedFacts,
+      landingValidation,
       approachObservedFactsV2,
       inversionObservedFacts,
       approachDecision,
@@ -4089,6 +4151,10 @@ function parsePartialGeminiEvidence(outputText: string) {
     outputText,
     "rotationObservedFacts",
   );
+  const landingObservedFacts = parseObjectProperty(
+    outputText,
+    "landingObservedFacts",
+  );
   const inversionObservedFacts = parseObjectProperty(
     outputText,
     "inversionObservedFacts",
@@ -4114,6 +4180,8 @@ function parsePartialGeminiEvidence(outputText: string) {
       popObservedFacts as GeminiEvidencePayload["popObservedFacts"] | undefined,
     rotationObservedFacts:
       rotationObservedFacts as GeminiEvidencePayload["rotationObservedFacts"] | undefined,
+    landingObservedFacts:
+      landingObservedFacts as GeminiEvidencePayload["landingObservedFacts"] | undefined,
     inversionObservedFacts:
       inversionObservedFacts as GeminiEvidencePayload["inversionObservedFacts"] | undefined,
     approachType: approachType as GeminiEvidencePayload["approachType"] | undefined,
@@ -4704,6 +4772,13 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     rotationObservedFacts: rawRotationObservedFacts,
   });
   const rotationObservedFacts = rotationValidation.after;
+  const rawLandingObservedFacts = normalizeLandingObservedFacts(
+    parsed.landingObservedFacts,
+  );
+  const landingValidation = validateLandingObservedFacts({
+    landingObservedFacts: rawLandingObservedFacts,
+  });
+  const landingObservedFacts = landingValidation.after;
   const inversionObservedFacts = normalizeInversionObservedFacts(
     parsed.inversionObservedFacts,
   );
@@ -4742,6 +4817,8 @@ function normalizeGeminiEvidence(parsed: Partial<GeminiEvidencePayload>) {
     popValidation,
     rotationObservedFacts,
     rotationValidation,
+    landingObservedFacts,
+    landingValidation,
     approachObservedFactsV2,
     inversionObservedFacts,
     approachDecision,
@@ -5795,6 +5872,505 @@ function addPostValidationAntiRotationEvidence(
   if (!facts.antiEvidence.includes(reason)) {
     facts.antiEvidence.push(reason);
   }
+}
+
+function normalizeLandingObservedFacts(
+  value: unknown,
+): LandingObservedFactsPayload {
+  const parsedValue =
+    typeof value === "string" ? parseJsonObjectString(value) : value;
+  const facts =
+    parsedValue && typeof parsedValue === "object"
+      ? (parsedValue as Partial<LandingObservedFactsPayload>)
+      : {};
+
+  return {
+    landingVisible: normalizeObservedBoolean(facts.landingVisible),
+    landingOutcome: normalizeLandingOutcome(facts.landingOutcome),
+    boardContact: normalizeBoardContact(facts.boardContact),
+    edgeOnLanding: normalizeEdgeOnLanding(facts.edgeOnLanding),
+    handlePosition: normalizeLandingHandlePosition(facts.handlePosition),
+    balanceRecovery: normalizeBalanceRecovery(facts.balanceRecovery),
+    evidenceText: normalizeNullableString(facts.evidenceText),
+    confidence: asOpenAiConfidenceLevel(facts.confidence) ?? "low",
+    antiEvidence: normalizeStringArray(facts.antiEvidence, []),
+  };
+}
+
+function parseJsonObjectString(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeLandingOutcome(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    [
+      "clean",
+      "butt_check",
+      "edge_catch",
+      "handle_loss",
+      "over_rotated",
+      "under_rotated",
+      "crash",
+      "rides_away",
+      "not_visible",
+      "unknown",
+    ].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function normalizeBoardContact(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    [
+      "clean_contact",
+      "tail_first",
+      "nose_first",
+      "flat",
+      "edge_contact",
+      "hard_impact",
+      "not_contacted_visible",
+      "not_visible",
+      "unknown",
+    ].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function normalizeEdgeOnLanding(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    [
+      "toe_edge",
+      "heel_edge",
+      "flat",
+      "edge_catch",
+      "not_visible",
+      "unknown",
+    ].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function normalizeLandingHandlePosition(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    [
+      "controlled",
+      "near_lead_hip",
+      "away_from_body",
+      "high",
+      "dropped",
+      "pulled_out",
+      "two_hands_visible",
+      "one_hand_visible",
+      "not_visible",
+      "unknown",
+    ].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function normalizeBalanceRecovery(value: unknown) {
+  const text = normalizeNullableString(value);
+
+  if (
+    text &&
+    [
+      "rides_away",
+      "recovers",
+      "unstable",
+      "falls",
+      "butt_check_recovery",
+      "no_recovery",
+      "not_visible",
+      "unknown",
+    ].includes(text)
+  ) {
+    return text;
+  }
+
+  return text ? "unknown" : null;
+}
+
+function validateLandingObservedFacts({
+  landingObservedFacts,
+}: {
+  landingObservedFacts: LandingObservedFactsPayload;
+}): LandingValidationResult {
+  const before = cloneLandingObservedFacts(landingObservedFacts);
+  const after = cloneLandingObservedFacts(landingObservedFacts);
+  const rulesApplied: string[] = [];
+  const rejectedHighConfidenceReasons: string[] = [];
+  const reviewReasons: string[] = [];
+  const evidenceText = [
+    landingObservedFacts.landingOutcome,
+    landingObservedFacts.boardContact,
+    landingObservedFacts.edgeOnLanding,
+    landingObservedFacts.handlePosition,
+    landingObservedFacts.balanceRecovery,
+    landingObservedFacts.evidenceText,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const independentLandingEvidenceCount =
+    countIndependentLandingEvidence(evidenceText);
+  const wasHigh = landingObservedFacts.confidence === "high";
+  const landingNotVisible =
+    landingObservedFacts.landingVisible === false ||
+    landingObservedFacts.landingVisible === "unknown";
+  const hasEvidenceText = Boolean(landingObservedFacts.evidenceText);
+  const labelOnlyEvidence = landingEvidenceIsLabelOnly(evidenceText);
+  const boardContactVisible = Boolean(
+    landingObservedFacts.boardContact &&
+      !["not_visible", "unknown"].includes(landingObservedFacts.boardContact),
+  );
+  const recoveryVisible = Boolean(
+    landingObservedFacts.balanceRecovery &&
+      !["not_visible", "unknown"].includes(
+        landingObservedFacts.balanceRecovery,
+      ),
+  );
+
+  if (landingNotVisible && landingObservedFacts.confidence !== "low") {
+    rejectedHighConfidenceReasons.push(
+      "Landing confidence cannot be medium/high when landingVisible is false or unknown.",
+    );
+    reviewReasons.push("landing is not visible enough for confident outcome.");
+    after.confidence = "low";
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: landing visibility is false or unknown.",
+    );
+  }
+
+  if (landingNotVisible && hasSpecificLandingOutcome(landingObservedFacts)) {
+    reviewReasons.push("specific landing outcome was given while landing is not visible.");
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: specific landing outcome requires visible landing.",
+    );
+    if (landingObservedFacts.landingVisible === false) {
+      after.landingOutcome = "not_visible";
+    }
+  }
+
+  if (!hasEvidenceText && wasHigh) {
+    rejectedHighConfidenceReasons.push(
+      "Landing high confidence requires visible mechanics evidenceText.",
+    );
+    reviewReasons.push("landing evidenceText is missing.");
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: landing evidenceText is missing.",
+    );
+  }
+
+  if (labelOnlyEvidence) {
+    rejectedHighConfidenceReasons.push(
+      "Landing evidence repeats outcome labels without visible mechanics.",
+    );
+    reviewReasons.push("landing evidence appears label-only.");
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: landing evidence appears label-only.",
+    );
+  }
+
+  if (wasHigh && !boardContactVisible) {
+    rejectedHighConfidenceReasons.push(
+      "Landing high confidence requires visible board contact.",
+    );
+    reviewReasons.push("board contact is not visible for high confidence.");
+  }
+
+  if (wasHigh && !recoveryVisible) {
+    rejectedHighConfidenceReasons.push(
+      "Landing high confidence requires visible balance/recovery outcome.",
+    );
+    reviewReasons.push("balance recovery is not visible for high confidence.");
+  }
+
+  if (wasHigh && independentLandingEvidenceCount < 2) {
+    rejectedHighConfidenceReasons.push(
+      "Landing high confidence requires at least two independent visible landing indicators.",
+    );
+  }
+
+  if (
+    landingObservedFacts.landingOutcome === "clean" &&
+    ["falls", "no_recovery", "unstable"].includes(
+      landingObservedFacts.balanceRecovery ?? "",
+    )
+  ) {
+    reviewReasons.push("clean landing conflicts with balance recovery.");
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: clean landing conflicts with recovery evidence.",
+    );
+  }
+
+  if (
+    landingObservedFacts.landingOutcome === "crash" &&
+    landingObservedFacts.balanceRecovery === "rides_away"
+  ) {
+    reviewReasons.push("crash landing conflicts with rides_away recovery.");
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: crash landing conflicts with rides_away recovery.",
+    );
+  }
+
+  if (
+    landingObservedFacts.landingOutcome === "handle_loss" &&
+    !["dropped", "pulled_out"].includes(
+      landingObservedFacts.handlePosition ?? "",
+    ) &&
+    !hasHandleLossEvidence(evidenceText)
+  ) {
+    reviewReasons.push("handle_loss requires visible handle loss evidence.");
+    addPostValidationAntiLandingEvidence(
+      after,
+      "post-validation: handle_loss requires dropped or pulled_out handle evidence.",
+    );
+  }
+
+  if (
+    wasHigh &&
+    rejectedHighConfidenceReasons.length > 0 &&
+    after.confidence !== "low"
+  ) {
+    after.confidence =
+      independentLandingEvidenceCount >= 1 && !labelOnlyEvidence
+        ? "medium"
+        : "low";
+    rulesApplied.push(
+      `Landing confidence downgraded from high to ${after.confidence}.`,
+    );
+  }
+
+  if (reviewReasons.length > 0) {
+    rulesApplied.push(...reviewReasons);
+  }
+
+  return {
+    before,
+    after,
+    adjusted: JSON.stringify(before) !== JSON.stringify(after),
+    needsReview: reviewReasons.length > 0,
+    independentLandingEvidenceCount,
+    rulesApplied,
+    rejectedHighConfidenceReasons,
+  };
+}
+
+function cloneLandingObservedFacts(
+  facts: LandingObservedFactsPayload,
+): LandingObservedFactsPayload {
+  return {
+    landingVisible: facts.landingVisible,
+    landingOutcome: facts.landingOutcome,
+    boardContact: facts.boardContact,
+    edgeOnLanding: facts.edgeOnLanding,
+    handlePosition: facts.handlePosition,
+    balanceRecovery: facts.balanceRecovery,
+    evidenceText: facts.evidenceText,
+    confidence: facts.confidence,
+    antiEvidence: [...facts.antiEvidence],
+  };
+}
+
+function addPostValidationAntiLandingEvidence(
+  facts: LandingObservedFactsPayload,
+  reason: string,
+) {
+  if (!facts.antiEvidence.includes(reason)) {
+    facts.antiEvidence.push(reason);
+  }
+}
+
+function hasSpecificLandingOutcome(facts: LandingObservedFactsPayload) {
+  return Boolean(
+    facts.landingOutcome &&
+      !["not_visible", "unknown"].includes(facts.landingOutcome),
+  );
+}
+
+function landingEvidenceIsLabelOnly(text: string) {
+  const normalized = normalizeDomainText(text);
+
+  if (!normalized.trim()) {
+    return true;
+  }
+
+  return (
+    includesAnyDomainTerm(normalized, [
+      "clean landing",
+      "crash landing",
+      "butt check",
+      "edge catch",
+      "landed clean",
+      "fell",
+      "깨끗한 착지",
+      "클린 착지",
+      "크래시",
+      "엉덩방아",
+    ]) && countIndependentLandingEvidence(normalized) === 0
+  );
+}
+
+function countIndependentLandingEvidence(text: string) {
+  const normalized = normalizeDomainText(text);
+  const evidenceKeys = new Set<string>();
+
+  if (hasBoardContactEvidence(normalized)) {
+    evidenceKeys.add("board_contact");
+  }
+
+  if (hasBalanceRecoveryEvidence(normalized)) {
+    evidenceKeys.add("balance_recovery");
+  }
+
+  if (hasLandingHandleEvidence(normalized)) {
+    evidenceKeys.add("handle_position");
+  }
+
+  if (hasLandingEdgeEvidence(normalized)) {
+    evidenceKeys.add("edge_contact");
+  }
+
+  if (hasFallOutcomeEvidence(normalized)) {
+    evidenceKeys.add("fall_or_ride_away");
+  }
+
+  return evidenceKeys.size;
+}
+
+function hasBoardContactEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "board contacts",
+    "board contact",
+    "water contact",
+    "lands flat",
+    "flat contact",
+    "tail first",
+    "nose first",
+    "보드가 수면",
+    "보드 접촉",
+    "수면 접촉",
+    "플랫",
+    "테일",
+    "노즈",
+  ]);
+}
+
+function hasBalanceRecoveryEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "rides away",
+    "rides out",
+    "recovers",
+    "unstable",
+    "balance",
+    "continues riding",
+    "라이딩을 이어",
+    "타고 나감",
+    "회복",
+    "불안정",
+    "균형",
+  ]);
+}
+
+function hasLandingHandleEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "handle",
+    "dropped handle",
+    "handle drops",
+    "pulled out",
+    "lead hip",
+    "two hands",
+    "one hand",
+    "핸들",
+    "핸들을 놓",
+    "핸들이 빠",
+    "리드 힙",
+    "두 손",
+    "한 손",
+  ]);
+}
+
+function hasLandingEdgeEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "edge digs",
+    "edge catch",
+    "toe edge",
+    "heel edge",
+    "edge contact",
+    "abrupt stop",
+    "엣지가 박",
+    "엣지 캐치",
+    "토 엣지",
+    "힐 엣지",
+    "급정지",
+  ]);
+}
+
+function hasFallOutcomeEvidence(text: string) {
+  return includesAnyDomainTerm(text, [
+    "falls",
+    "fall",
+    "crash",
+    "butt",
+    "hips touch",
+    "rides away",
+    "no recovery",
+    "넘어",
+    "크래시",
+    "엉덩",
+    "힙",
+    "타고 나감",
+    "회복하지",
+  ]);
+}
+
+function hasHandleLossEvidence(text: string) {
+  return includesAnyDomainTerm(normalizeDomainText(text), [
+    "dropped handle",
+    "handle drops",
+    "handle loss",
+    "pulled out",
+    "핸들을 놓",
+    "핸들 놓",
+    "핸들이 빠",
+  ]);
 }
 
 function countIndependentRotationEvidence(text: string) {
@@ -7795,21 +8371,29 @@ function normalizeEvidenceFact(
         confidence?: unknown;
         evidence?: unknown;
       }
+    | string
     | undefined,
   fallbackValue: string,
 ): ApproachFactPayload {
   const label =
-    typeof value?.name === "string"
-      ? value.name
-      : typeof value?.value === "string"
-        ? value.value
-        : fallbackValue;
+    typeof value === "string"
+      ? value
+      : typeof value?.name === "string"
+        ? value.name
+        : typeof value?.value === "string"
+          ? value.value
+          : fallbackValue;
 
   return {
     value: label,
-    confidence: asOpenAiConfidenceLevel(value?.confidence) ?? "low",
+    confidence:
+      typeof value === "string"
+        ? "low"
+        : asOpenAiConfidenceLevel(value?.confidence) ?? "low",
     evidence:
-      typeof value?.evidence === "string"
+      typeof value === "string"
+        ? "Gemini returned a compact evidence string."
+        : typeof value?.evidence === "string"
         ? value.evidence
         : "영상 근거를 충분히 구조화하지 못했습니다.",
   };
@@ -8495,10 +9079,11 @@ const geminiEvidenceResponseSchema = {
     edgeLoadObservedFacts: geminiEdgeLoadObservedFactsSchema,
     popObservedFacts: geminiPopObservedFactsSchema,
     rotationObservedFacts: geminiRotationObservedFactsSchema,
+    landingObservedFacts: { type: Type.STRING, nullable: true },
     inversionObservedFacts: geminiInversionObservedFactsSchema,
     approachType: geminiEvidenceFactSchema,
     rotationType: geminiEvidenceFactSchema,
-    landingOutcome: geminiEvidenceFactSchema,
+    landingOutcome: { type: Type.STRING, nullable: true },
     confidence: {
       type: Type.STRING,
       enum: ["high", "medium", "low"],

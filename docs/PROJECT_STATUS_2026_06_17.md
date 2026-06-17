@@ -219,25 +219,116 @@ Recent rotation validation result:
 - Back Roll / Tantrum / Invert high-confidence requirements remain stricter
   and still require visible rotation or inversion mechanics.
 
+### Landing
+
+Confirmed Fact:
+
+`LandingObservedFacts` MVP has been implemented locally, but it is not fully
+operationally verified yet.
+
+Current fields:
+
+```text
+landingVisible
+landingOutcome
+boardContact
+edgeOnLanding
+handlePosition
+balanceRecovery
+evidenceText
+confidence
+antiEvidence
+```
+
+Current implementation status:
+
+- Local TypeScript types are added.
+- Server-side normalization and validation are added.
+- Gemini prompt now asks for landing/recovery observed facts.
+- Debug capture and response fields are wired.
+- Supabase persistence/restore paths are wired.
+- `supabase/phase5_landing_observed_facts.sql` exists.
+
+Important implementation detail:
+
+- Direct Gemini object schema for `landingObservedFacts` caused
+  `400 INVALID_ARGUMENT` due to structured schema complexity.
+- The MVP now asks Gemini to return `landingObservedFacts` as a compact JSON
+  string.
+- The server parses that string, normalizes it, validates it, and exposes a
+  normal object to the app/backend response.
+
+Local verification:
+
+- `npm run typecheck` passes.
+- `git diff --check` passes.
+- Local server `/health` passes.
+- Local Gemini Flash evidence extraction completed after switching
+  `landingObservedFacts` to the compact JSON-string carrier.
+- Debug artifact confirmed `landingObservedFacts` and `landingValidation`.
+
+Not yet complete:
+
+- Supabase remote migration has not been applied.
+- Render/Gemini Pro operating verification has not been run.
+- Supabase `landing_observed_facts` / `landing_validation` persistence has not
+  been verified on the remote DB.
+
+Migration prepared:
+
+```sql
+alter table public.evidence_results
+  add column if not exists landing_observed_facts jsonb,
+  add column if not exists landing_validation jsonb;
+```
+
+Verification SQL after applying migration:
+
+```sql
+select
+  column_name,
+  data_type,
+  is_nullable
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'evidence_results'
+  and column_name in (
+    'landing_observed_facts',
+    'landing_validation'
+  )
+order by column_name;
+```
+
+Rollback SQL if needed:
+
+```sql
+alter table public.evidence_results
+  drop column if exists landing_observed_facts,
+  drop column if exists landing_validation;
+```
+
 ## Remaining Observed-Facts Layers
 
 Not implemented yet:
 
-- `LandingObservedFacts`
 - `GrabObservedFacts`
 
-Recommended next layer:
+Next validation step:
 
 ```text
-LandingObservedFacts
+Apply LandingObservedFacts migration
+↓
+Deploy Render
+↓
+Run one Gemini Pro evidence extraction
+↓
+Verify landingObservedFacts response/debug/Supabase persistence
 ```
 
 Reason:
 
-- Landing quality is directly useful for coaching.
-- Landing can be observed without requiring advanced trick taxonomy.
-- It can help separate clean completion, butt check, edge catch, handle loss,
-  over-rotation, and recovery.
+- LandingObservedFacts exists locally but needs remote DB and operating
+  verification before it should be considered fully deployed.
 
 ## Known Issues
 

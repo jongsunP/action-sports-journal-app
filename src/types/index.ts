@@ -115,6 +115,28 @@ export type RotationValidationResult = {
   rejectedHighConfidenceReasons: string[];
 };
 
+export type LandingObservedFacts = {
+  landingVisible: ObservedBoolean;
+  landingOutcome: string | null;
+  boardContact: string | null;
+  edgeOnLanding: string | null;
+  handlePosition: string | null;
+  balanceRecovery: string | null;
+  evidenceText: string | null;
+  confidence: EvidenceConfidence;
+  antiEvidence: string[];
+};
+
+export type LandingValidationResult = {
+  before: LandingObservedFacts;
+  after: LandingObservedFacts;
+  adjusted: boolean;
+  needsReview: boolean;
+  independentLandingEvidenceCount: number;
+  rulesApplied: string[];
+  rejectedHighConfidenceReasons: string[];
+};
+
 export type EvidenceTemporalWindows = {
   takeoffTimestamp: {
     timestampSeconds: number | null;
@@ -271,6 +293,8 @@ export type GeminiEvidenceResult = {
   popValidation?: PopValidationResult;
   rotationObservedFacts?: RotationObservedFacts;
   rotationValidation?: RotationValidationResult;
+  landingObservedFacts?: LandingObservedFacts;
+  landingValidation?: LandingValidationResult;
   inversionObservedFacts?: InversionObservedFacts;
   approachDecision?: ApproachDecision;
   approachDecisionV2?: ApproachDecisionV2;

@@ -76,6 +76,8 @@ type RemoteEvidenceResponse = {
   popValidation?: unknown;
   rotationObservedFacts?: unknown;
   rotationValidation?: unknown;
+  landingObservedFacts?: unknown;
+  landingValidation?: unknown;
   inversionObservedFacts?: unknown;
   approachDecision?: unknown;
   approachDecisionV2?: unknown;
@@ -376,6 +378,8 @@ function normalizeRemoteEvidence(
     popValidation: asPopValidation(data.popValidation),
     rotationObservedFacts: asRotationObservedFacts(data.rotationObservedFacts),
     rotationValidation: asRotationValidation(data.rotationValidation),
+    landingObservedFacts: asLandingObservedFacts(data.landingObservedFacts),
+    landingValidation: asLandingValidation(data.landingValidation),
     inversionObservedFacts: asInversionObservedFacts(data.inversionObservedFacts),
     approachDecision: asApproachDecision(data.approachDecision),
     approachDecisionV2: asApproachDecisionV2(data.approachDecisionV2),
@@ -717,6 +721,57 @@ function asRotationValidation(
     needsReview: validation.needsReview === true,
     independentRotationEvidenceCount:
       asNumber(validation.independentRotationEvidenceCount) ?? 0,
+    rulesApplied: asStringArray(validation.rulesApplied),
+    rejectedHighConfidenceReasons: asStringArray(
+      validation.rejectedHighConfidenceReasons,
+    ),
+  };
+}
+
+function asLandingObservedFacts(
+  value: unknown,
+): GeminiEvidenceResult['landingObservedFacts'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const facts = value as Record<string, unknown>;
+
+  return {
+    landingVisible: asObservedBoolean(facts.landingVisible),
+    landingOutcome: asString(facts.landingOutcome) ?? null,
+    boardContact: asString(facts.boardContact) ?? null,
+    edgeOnLanding: asString(facts.edgeOnLanding) ?? null,
+    handlePosition: asString(facts.handlePosition) ?? null,
+    balanceRecovery: asString(facts.balanceRecovery) ?? null,
+    evidenceText: asString(facts.evidenceText) ?? null,
+    confidence: asConfidenceLevel(facts.confidence) ?? 'low',
+    antiEvidence: asStringArray(facts.antiEvidence),
+  };
+}
+
+function asLandingValidation(
+  value: unknown,
+): GeminiEvidenceResult['landingValidation'] {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const validation = value as Record<string, unknown>;
+  const before = asLandingObservedFacts(validation.before);
+  const after = asLandingObservedFacts(validation.after);
+
+  if (!before || !after) {
+    return undefined;
+  }
+
+  return {
+    before,
+    after,
+    adjusted: validation.adjusted === true,
+    needsReview: validation.needsReview === true,
+    independentLandingEvidenceCount:
+      asNumber(validation.independentLandingEvidenceCount) ?? 0,
     rulesApplied: asStringArray(validation.rulesApplied),
     rejectedHighConfidenceReasons: asStringArray(
       validation.rejectedHighConfidenceReasons,
