@@ -1,4 +1,9 @@
-import type { AnalysisResult, GeminiEvidenceResult, Session } from '../../types';
+import type {
+  AnalysisResult,
+  CoachingInsightContext,
+  GeminiEvidenceResult,
+  Session,
+} from '../../types';
 
 export type SessionVideoAsset = {
   uri: string;
@@ -14,6 +19,7 @@ export type AnalyzeSessionVideoInput = {
   video: SessionVideoAsset;
   momentId?: string;
   userConfirmedTrick?: string;
+  coachingInsightContext?: CoachingInsightContext[];
 };
 
 export type QueuedEvidenceAnalysisJob = {
@@ -148,6 +154,7 @@ export async function analyzeSessionVideo({
   activityGroupName,
   video,
   userConfirmedTrick,
+  coachingInsightContext,
 }: AnalyzeSessionVideoInput): Promise<AnalysisResult> {
   if (!analysisEndpoint) {
     throw new Error('AI 분석 서버 엔드포인트가 설정되지 않았습니다.');
@@ -159,6 +166,8 @@ export async function analyzeSessionVideo({
     activityGroupName,
     video,
     userConfirmedTrick,
+    coachingInsightContext,
+    includeCoachingInsightContext: true,
   });
 }
 
@@ -241,13 +250,21 @@ async function requestRemoteAnalysis({
   activityGroupName,
   video,
   userConfirmedTrick,
-}: AnalyzeSessionVideoInput & { endpoint: string }): Promise<AnalysisResult> {
+  coachingInsightContext,
+  includeCoachingInsightContext = false,
+}: AnalyzeSessionVideoInput & {
+  endpoint: string;
+  includeCoachingInsightContext?: boolean;
+}): Promise<AnalysisResult> {
   const data = await requestRemoteJson({
     endpoint,
     session,
     activityGroupName,
     video,
     userConfirmedTrick,
+    coachingInsightContext: includeCoachingInsightContext
+      ? coachingInsightContext
+      : undefined,
   });
 
   return normalizeRemoteAnalysis(data as RemoteAnalysisResponse, session.id);
@@ -260,6 +277,7 @@ async function requestRemoteJson({
   video,
   momentId,
   userConfirmedTrick,
+  coachingInsightContext,
 }: AnalyzeSessionVideoInput & { endpoint: string }): Promise<unknown> {
   const formData = new FormData();
 
@@ -273,6 +291,12 @@ async function requestRemoteJson({
   formData.append('occurredAt', session.occurredAt);
   if (typeof userConfirmedTrick === 'string' && userConfirmedTrick.trim()) {
     formData.append('userConfirmedTrick', userConfirmedTrick.trim());
+  }
+  if (coachingInsightContext && coachingInsightContext.length > 0) {
+    formData.append(
+      'coachingInsightContext',
+      JSON.stringify(coachingInsightContext),
+    );
   }
   formData.append('video', {
     uri: video.uri,

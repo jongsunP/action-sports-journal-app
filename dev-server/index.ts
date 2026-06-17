@@ -19,8 +19,9 @@ import multer from "multer";
 import OpenAI from "openai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { buildCoachingInsightContext } from "../src/services/knowledge/coachingInsightContext";
+import { buildCoachingInsightPromptSection } from "../src/services/knowledge/coachingPromptContext";
 import { applyWakeboardKnowledgeRules } from "../src/services/knowledge/wakeboardKnowledgeRules";
-import type { GeminiEvidenceResult } from "../src/types";
+import type { CoachingInsightContext, GeminiEvidenceResult } from "../src/types";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -626,6 +627,7 @@ app.post(
       const prompt = buildGeminiAnalysisPrompt({
         ...metadata,
         fileName: request.file.originalname,
+        coachingInsightContext: readCoachingInsightContext(request),
       });
 
       const result = await withTimeout(
@@ -643,6 +645,7 @@ app.post(
             ],
             config: {
               maxOutputTokens: geminiMaxOutputTokens,
+              thinkingConfig: { thinkingBudget: 0 },
               responseMimeType: "application/json",
               responseSchema: geminiAnalysisResponseSchema,
             },
@@ -1529,6 +1532,109 @@ function getSessionMetadata(request: express.Request): SessionMetadata {
     occurredAt: getField(request.body.occurredAt, new Date().toISOString()),
     userConfirmedTrick: getField(request.body.userConfirmedTrick, ""),
   };
+}
+
+function readCoachingInsightContext(
+  request: express.Request,
+): CoachingInsightContext[] {
+  const rawValue = request.body?.coachingInsightContext;
+
+  if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as unknown;
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map(normalizeCoachingInsightContext)
+      .filter((item): item is CoachingInsightContext => Boolean(item));
+  } catch {
+    return [];
+  }
+}
+
+function normalizeCoachingInsightContext(
+  value: unknown,
+): CoachingInsightContext | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const context = value as Record<string, unknown>;
+  const mode = readCoachingInsightMode(context.mode);
+  const confidence = readEvidenceConfidence(context.confidence);
+  const severity = readKnowledgeInsightSeverity(context.severity);
+
+  if (!mode || !confidence || !severity) {
+    return null;
+  }
+
+  return {
+    mode,
+    sourceRuleId: getField(context.sourceRuleId, "unknown-rule"),
+    category: readKnowledgeInsightCategory(context.category),
+    message: getField(context.message, ""),
+    confidence,
+    severity,
+    requiresReview: context.requiresReview === true,
+    coachingSafe: context.coachingSafe === true,
+  };
+}
+
+function readCoachingInsightMode(value: unknown) {
+  if (
+    value === "direct_cue" ||
+    value === "review_context" ||
+    value === "internal_only"
+  ) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function readKnowledgeInsightCategory(value: unknown) {
+  if (
+    value === "approach" ||
+    value === "edge_load" ||
+    value === "pop" ||
+    value === "rotation" ||
+    value === "grab" ||
+    value === "landing" ||
+    value === "completion" ||
+    value === "progression" ||
+    value === "review"
+  ) {
+    return value;
+  }
+
+  return "review";
+}
+
+function readKnowledgeInsightSeverity(value: unknown) {
+  if (
+    value === "info" ||
+    value === "low" ||
+    value === "medium" ||
+    value === "high"
+  ) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function readEvidenceConfidence(value: unknown) {
+  if (value === "high" || value === "medium" || value === "low") {
+    return value;
+  }
+
+  return undefined;
 }
 
 function getField(value: unknown, fallback: string) {
@@ -3166,9 +3272,14 @@ function buildGeminiAnalysisPrompt({
   occurredAt,
   userConfirmedTrick,
   fileName,
+  coachingInsightContext = [],
 }: SessionMetadata & {
   fileName: string;
+  coachingInsightContext?: CoachingInsightContext[];
 }) {
+  const coachingInsightPromptSection =
+    buildCoachingInsightPromptSection(coachingInsightContext);
+
   return [
     "당신은 액션스포츠 코치이자 영상 분석가입니다.",
     "업로드된 세션 영상을 보고 한국어로 짧고 실용적인 피드백을 작성하세요.",
@@ -3183,15 +3294,19 @@ function buildGeminiAnalysisPrompt({
     `사용자 확인 기술: ${userConfirmedTrick || "없음"}`,
     `발생 시각: ${occurredAt}`,
     `파일명: ${fileName}`,
+    coachingInsightPromptSection
+      ? `\n${coachingInsightPromptSection}`
+      : "",
     "",
     "출력 분량 제한:",
+    "- 전체 JSON 응답은 700자 이내로 유지하세요.",
     userConfirmedTrick
       ? "- 사용자가 확인한 기술명을 우선 기준으로 삼고, 영상 근거와 맞지 않으면 불확실성을 표시하세요."
       : "- 기술명이 불확실하면 정확한 명칭을 단정하지 마세요.",
-    "- summary: 2문장 이내",
-    "- highlights: 최대 3개",
-    "- highlightScenes: 최대 2개",
-    "- suggestions: 최대 3개",
+    "- summary: 짧은 1문장",
+    "- highlights: 최대 2개, 각 20자 이내",
+    "- highlightScenes: 최대 1개",
+    "- suggestions: 최대 2개, 각 35자 이내",
   ].join("\n");
 }
 

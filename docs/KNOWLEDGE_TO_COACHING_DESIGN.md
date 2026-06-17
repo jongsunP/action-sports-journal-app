@@ -276,6 +276,138 @@ coachingSafe=false
 `internal_only` insights may be used to instruct the coach what not to overstate,
 but they must not become direct rider advice.
 
+## Rider-Facing Wording By Mode
+
+### direct_cue
+
+Rider-facing use:
+
+```text
+Allowed.
+```
+
+Use `direct_cue` when the insight is coaching-safe and does not require review.
+This mode may become a rider-facing coaching cue, but it still must preserve
+confidence. Most `direct_cue` messages should sound like practical guidance, not
+absolute diagnosis.
+
+Allowed tone:
+
+- calm and practical,
+- evidence-grounded,
+- action-oriented,
+- "may help" or "try" language for medium confidence,
+- positive reinforcement when the insight is supportive.
+
+Forbidden tone:
+
+- "This is definitely the cause."
+- "You failed because..."
+- "Always / never" unless supported by repeated evidence.
+- trick identity claims from non-identity insights.
+
+Example rider-facing sentences:
+
+```text
+팝 타이밍은 회전이나 공중 자세를 만들기에 괜찮은 기반으로 보입니다. 다음 시도에서도 웨이크 정점에서 서는 감각은 유지해 보세요.
+```
+
+```text
+착지가 안정적으로 이어진다면, 이번 시도는 마무리 동작 자체는 꽤 신뢰할 수 있습니다. 다음에는 이 착지 안정감을 유지하면서 이륙 전 엣지 압력을 더 확인해 보세요.
+```
+
+```text
+공중에서 자세를 만들 시간은 어느 정도 확보된 것으로 보입니다. 다음 시도에서는 그 여유를 이용해 핸들을 몸 가까이에 두는 감각을 점검해 보세요.
+```
+
+### review_context
+
+Rider-facing use:
+
+```text
+Allowed only as "확인해볼 지점".
+```
+
+`review_context` is not a diagnosis. It can be shown or passed to the coach only
+as an uncertainty-preserving review point. It should not become the main cause,
+main correction, or a hard instruction.
+
+Allowed tone:
+
+- "확인 필요",
+- "가능성이 있습니다",
+- "다음 영상에서 확인해 볼 지점입니다",
+- "현재 영상만으로는 단정하지 않습니다",
+- gentle, investigative language.
+
+Forbidden tone:
+
+- "원인은 X입니다."
+- "X 때문에 실패했습니다."
+- "반드시 X를 고쳐야 합니다."
+- "AI가 확인했습니다."
+- negative rider judgment.
+
+Example rider-facing sentences:
+
+```text
+확인 필요: 엣지 로드와 팝 근거가 일부 불확실합니다. 다음 영상에서는 이륙 직전까지 엣지를 유지하는지 먼저 확인해 보세요.
+```
+
+```text
+그랩 시도처럼 보일 수 있는 움직임은 있지만, 실제 손-보드 접촉은 확정하지 않습니다. 다음 리뷰에서는 손이 보드에 닿는 순간이 보이는지 확인해 보세요.
+```
+
+```text
+일부 근거는 리뷰가 필요합니다. 지금은 확정 코칭보다, 다음 시도에서 같은 구간을 더 잘 보이게 촬영해 확인하는 편이 안전합니다.
+```
+
+### internal_only
+
+Rider-facing use:
+
+```text
+Forbidden.
+```
+
+`internal_only` is a guardrail for the coach. It can tell the coach what not to
+overstate, but it must not appear as direct rider-facing advice, diagnosis, or
+suggestion.
+
+Allowed internal use:
+
+- reduce confidence,
+- prevent overclaiming,
+- guide self-critique,
+- block unsafe direct cues.
+
+Forbidden rider-facing tone:
+
+- any direct instruction,
+- any causal diagnosis,
+- any statement that presents the insight as observed fact,
+- any "you did X" sentence.
+
+Forbidden rider-facing examples:
+
+```text
+핸들을 늦게 당겨서 회전이 흔들렸습니다.
+```
+
+```text
+이 동작의 문제는 핸들 타이밍입니다.
+```
+
+```text
+다음에는 핸들을 반드시 더 빨리 당기세요.
+```
+
+Allowed internal-only instruction to the coach:
+
+```text
+Do not present handle timing as a direct coaching cue because the source insight is internal_only.
+```
+
 ## Handling coachingSafe=false
 
 Rule:
@@ -569,6 +701,73 @@ Mitigation:
 - Choose one coaching path later.
 - Prefer the future dedicated coaching endpoint over broad changes to both
   Gemini short analysis and OpenAI benchmark at once.
+
+### Grab Attempt False Positive Propagation
+
+Risk:
+
+`grab_attempt_indicates_air_awareness.v1` can become risky if a no-grab motion,
+hand/board overlap, knee tuck, handle movement, or camera crop is interpreted as
+a grab attempt.
+
+Observed context:
+
+- The project already found a Grab false-positive risk on `ts_regular_1.mov`.
+- Later prompt/validator changes reduced positive grab false positives.
+- However, `grab_attempt_indicates_air_awareness.v1` can still produce
+  `review_context` when the model sees a possible reach.
+
+Mitigation:
+
+- Never phrase this rule as "you grabbed the board" unless `contactVisible=true`
+  and validator confidence supports it.
+- Keep this rule as `review_context` when contact is not visible.
+- Use "possible reach" or "확인해볼 지점" language only.
+- Validate against known true-grab and known no-grab samples before prompt
+  injection.
+
+## Acceptance Criteria Before Prompt Injection
+
+Do not inject `CoachingInsightContext` into a coaching prompt until all criteria
+below are satisfied.
+
+### Transform Correctness
+
+- `coachingSafe=true` and `requiresReview=false` maps to `direct_cue`.
+- `coachingSafe=true` and `requiresReview=true` maps to `review_context`.
+- `coachingSafe=false` maps to `internal_only`.
+- Fixture tests cover all three modes.
+
+### Wording Safety
+
+- `direct_cue` examples preserve confidence and avoid unsupported causality.
+- `review_context` examples use "확인 필요" or "가능성" wording.
+- `internal_only` examples are not rider-facing.
+- Low-confidence insights do not become primary training instructions.
+
+### Evidence Safety
+
+- Every coaching context item keeps its source rule id.
+- Every coaching context item keeps confidence, severity, and review flags.
+- Validator `needsReview=true` lowers wording certainty.
+- Grab attempt language is tested on both true-grab and no-grab samples.
+
+### System Boundary
+
+- No DB storage is added.
+- No UI rendering is added.
+- No Supabase migration is added.
+- No new Knowledge Rules are added during prompt injection.
+- Prompt injection is done in one coaching path first, not all paths at once.
+
+### Output Review
+
+- At least one known no-grab Basic Air sample is checked.
+- At least one known true-grab sample is checked before relying on grab attempt
+  language.
+- At least one low-confidence/review sample is checked.
+- The coach output is compared against raw `CoachingInsightContext` to verify it
+  did not overstate uncertainty.
 
 ## Recommendation
 
