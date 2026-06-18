@@ -437,6 +437,56 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
+  const homeSessionSummaries = useMemo(
+    () =>
+      visibleSessions.map((session) => {
+        const isWorking = Boolean(extractingEvidenceBySessionId[session.id]);
+        const evidence = geminiEvidenceBySessionId[session.id];
+        const momentStatus = getMomentStatus({
+          evidence,
+          isProcessing: isWorking,
+          sessionStatus: session.momentStatus,
+        });
+        const completedEvidence = getCompletedMomentEvidence({
+          evidence,
+          isProcessing: isWorking,
+          sessionStatus: session.momentStatus,
+        });
+        const card = getSessionCardPresentation({
+          session,
+          evidence: completedEvidence,
+          thumbnailUri: thumbnailsBySessionId[session.id],
+        });
+
+        return {
+          card,
+          completedEvidence,
+          evidence,
+          isWorking,
+          momentStatus,
+          session,
+        };
+      }),
+    [
+      extractingEvidenceBySessionId,
+      geminiEvidenceBySessionId,
+      thumbnailsBySessionId,
+      visibleSessions,
+    ],
+  );
+  const latestCompletedSummary = homeSessionSummaries.find(
+    (summary) => summary.completedEvidence,
+  );
+  const latestActiveSummary = homeSessionSummaries.find(
+    (summary) =>
+      summary.momentStatus === 'queued' || summary.momentStatus === 'processing',
+  );
+  const primaryInsightSummary = latestCompletedSummary ?? latestActiveSummary;
+  const latestAnalysisLabel = latestCompletedSummary
+    ? formatShortSessionDate(latestCompletedSummary.session.occurredAt)
+    : undefined;
+  const recentSessionSummaries = homeSessionSummaries.slice(0, 8);
+  const timelineSummaries = homeSessionSummaries;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
   const canCreateVideoThumbnail = hasConfiguredVideoThumbnailEndpoint();
@@ -772,8 +822,12 @@ export function HomeScreen() {
         >
           <View style={styles.header}>
             <View>
-              <Text style={styles.kicker}>Wakeboard Moments</Text>
-              <Text style={styles.title}>내 라이딩 갤러리</Text>
+              <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
+              <Text style={styles.title}>오늘의 라이딩 저널</Text>
+              <Text style={styles.headerMeta}>
+                {visibleSessions.length}개 세션
+                {latestAnalysisLabel ? ` · 최근 분석 ${latestAnalysisLabel}` : ''}
+              </Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -789,16 +843,23 @@ export function HomeScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.section}>
-            {isComposerOpen ? (
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text style={styles.sectionLabel}>새 모먼트</Text>
-                  <Text style={styles.contextText}>
-                    Wakeboard 모먼트에 추가
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.analysisHero}>
+            <Text style={styles.analysisHeroEyebrow}>AI Analysis</Text>
+            <Text style={styles.analysisHeroTitle}>새 분석 시작</Text>
+            <Text style={styles.analysisHeroText}>
+              라이딩 영상을 세션에 연결하고, 백엔드에서 동작 근거를 추출합니다.
+            </Text>
+            {!isComposerOpen ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIsComposerOpen(true)}
+                style={({ pressed }) => [
+                  styles.analysisHeroButton,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text style={styles.analysisHeroButtonText}>영상 분석 추가</Text>
+              </Pressable>
             ) : null}
 
             {isComposerOpen ? (
@@ -874,87 +935,218 @@ export function HomeScreen() {
                 <Text style={styles.helperText}>어떤 시도였는지 짧게 남겨주세요.</Text>
               </View>
             ) : null}
+          </View>
 
-            {visibleSessions.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>아직 모먼트가 없습니다</Text>
-                  <Text style={styles.emptyText}>
-                    첫 라이딩 클립을 추가해 나만의 갤러리를 시작해보세요.
+          <View style={styles.primaryInsightCard}>
+            <Text style={styles.cardEyebrow}>오늘의 인사이트</Text>
+            {primaryInsightSummary?.completedEvidence ? (
+              <>
+                <Text style={styles.primaryInsightTitle}>
+                  {getInsightTitle(primaryInsightSummary.completedEvidence)}
+                </Text>
+                <Text style={styles.primaryInsightText}>
+                  {getInsightSummary(primaryInsightSummary.completedEvidence)}
+                </Text>
+                {primaryInsightSummary.completedEvidence.candidateTrace ? (
+                  <Text style={styles.primaryInsightReview}>
+                    검토 후보:{' '}
+                    {primaryInsightSummary.completedEvidence.candidateTrace.displayLabel ??
+                      primaryInsightSummary.completedEvidence.candidateTrace
+                        .safePredictedTrick}
+                  </Text>
+                ) : null}
+                <View style={styles.primaryInsightFooter}>
+                  <Text
+                    style={[
+                      styles.momentBadge,
+                      getMomentStatusStyle(primaryInsightSummary.momentStatus),
+                    ]}
+                  >
+                    {primaryInsightSummary.momentStatus
+                      ? getMomentStatusLabel(primaryInsightSummary.momentStatus)
+                      : '분석 완료'}
+                  </Text>
+                  <Text style={styles.primaryInsightDate}>
+                    {formatShortSessionDate(primaryInsightSummary.session.occurredAt)}
                   </Text>
                 </View>
-            ) : (
-              <View style={styles.galleryGrid}>
-                {visibleSessions.map((item) => {
-                  const isWorking = extractingEvidenceBySessionId[item.id];
-                  const momentStatus = getMomentStatus({
-                    evidence: geminiEvidenceBySessionId[item.id],
-                    isProcessing: Boolean(isWorking),
-                    sessionStatus: item.momentStatus,
-                  });
-                  const completedEvidence = getCompletedMomentEvidence({
-                    evidence: geminiEvidenceBySessionId[item.id],
-                    isProcessing: Boolean(isWorking),
-                    sessionStatus: item.momentStatus,
-                  });
-                  const card = getSessionCardPresentation({
-                    session: item,
-                    evidence: completedEvidence,
-                    thumbnailUri: thumbnailsBySessionId[item.id],
-                  });
-
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      key={item.id}
-                      onPress={() => openEvidenceSheet(item)}
-                      style={({ pressed }) => [
-                        styles.galleryCard,
-                        pressed ? styles.sessionRowPressed : undefined,
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => openEvidenceSheet(primaryInsightSummary.session)}
+                  style={({ pressed }) => [
+                    styles.textLinkButton,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  <Text style={styles.textLinkButtonText}>자세히 보기</Text>
+                </Pressable>
+              </>
+            ) : primaryInsightSummary ? (
+              <>
+                <Text style={styles.primaryInsightTitle}>
+                  {primaryInsightSummary.momentStatus === 'failed'
+                    ? '분석을 다시 시도할 수 있습니다'
+                    : '최근 세션을 분석하고 있습니다'}
+                </Text>
+                <Text style={styles.primaryInsightText}>
+                  {primaryInsightSummary.momentStatus
+                    ? getMomentStatusMessage(primaryInsightSummary.momentStatus).body
+                    : '영상 근거가 준비되면 이곳에 요약이 표시됩니다.'}
+                </Text>
+                <View style={styles.primaryInsightFooter}>
+                  {primaryInsightSummary.momentStatus ? (
+                    <Text
+                      style={[
+                        styles.momentBadge,
+                        getMomentStatusStyle(primaryInsightSummary.momentStatus),
                       ]}
                     >
-                      <View style={styles.galleryFrame}>
-                        <View style={styles.galleryThumb}>
-                          {card.thumbnailUri ? (
-                            <Image
-                              source={{ uri: card.thumbnailUri }}
-                              style={styles.galleryImage}
-                            />
-                          ) : (
-                            <View style={styles.galleryFallback}>
-                              <Text style={styles.galleryFallbackPlay}>▶</Text>
-                              <Text style={styles.galleryFallbackText}>
-                                {item.videoUri ? 'CLIP' : 'NO CLIP'}
-                              </Text>
-                            </View>
-                          )}
-                          <View style={styles.galleryTopBar}>
-                            <Text style={styles.galleryDate} numberOfLines={1}>
-                              {formatShortSessionDate(item.occurredAt)}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.galleryBadge,
-                                getMomentStatusStyle(momentStatus),
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {momentStatus
-                                ? getMomentStatusLabel(momentStatus)
-                                : item.videoUri
-                                  ? '대기'
-                                  : '영상 필요'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                      <Text style={styles.galleryTitle} numberOfLines={1}>
-                        {card.momentTitle}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                      {getMomentStatusLabel(primaryInsightSummary.momentStatus)}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.primaryInsightDate}>
+                    {formatShortSessionDate(primaryInsightSummary.session.occurredAt)}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.primaryInsightTitle}>새 분석을 시작해보세요</Text>
+                <Text style={styles.primaryInsightText}>
+                  라이딩 영상을 추가하면 세션별 동작 근거와 보수적인 요약을 이곳에
+                  표시합니다.
+                </Text>
+              </>
             )}
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionLabel}>최근 세션</Text>
+              <Text style={styles.sectionHint}>RECENT</Text>
+            </View>
+            {recentSessionSummaries.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>아직 세션이 없습니다</Text>
+                <Text style={styles.emptyText}>
+                  첫 영상을 추가하면 최근 세션이 이곳에 표시됩니다.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                contentContainerStyle={styles.recentRail}
+                showsHorizontalScrollIndicator={false}
+              >
+                {recentSessionSummaries.map(({ card, momentStatus, session }) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={session.id}
+                    onPress={() => openEvidenceSheet(session)}
+                    style={({ pressed }) => [
+                      styles.recentSessionCard,
+                      pressed ? styles.sessionRowPressed : undefined,
+                    ]}
+                  >
+                    <View style={styles.recentThumb}>
+                      {card.thumbnailUri ? (
+                        <Image
+                          source={{ uri: card.thumbnailUri }}
+                          style={styles.recentThumbImage}
+                        />
+                      ) : (
+                        <View style={styles.recentThumbFallback}>
+                          <Text style={styles.recentThumbFallbackText}>
+                            {session.videoUri ? 'CLIP' : 'NOTE'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.recentDate}>
+                      {formatShortSessionDate(session.occurredAt)}
+                    </Text>
+                    <Text style={styles.recentTitle} numberOfLines={2}>
+                      {card.momentTitle}
+                    </Text>
+                    <Text style={styles.recentSummary} numberOfLines={2}>
+                      {card.reason}
+                    </Text>
+                    {momentStatus ? (
+                      <Text
+                        style={[
+                          styles.railBadge,
+                          getMomentStatusStyle(momentStatus),
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {getMomentStatusLabel(momentStatus)}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionLabel}>저널</Text>
+              <Text style={styles.sectionHint}>HISTORY</Text>
+            </View>
+            <View style={styles.timeline}>
+              {timelineSummaries.length === 0 ? (
+                <View style={styles.timelineEmpty}>
+                  <Text style={styles.emptyTitle}>기록이 비어 있습니다</Text>
+                  <Text style={styles.emptyText}>
+                    분석 결과와 세션 메모가 시간순으로 쌓입니다.
+                  </Text>
+                </View>
+              ) : (
+                timelineSummaries.map(({ card, completedEvidence, momentStatus, session }) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={session.id}
+                    onPress={() => openEvidenceSheet(session)}
+                    style={({ pressed }) => [
+                      styles.timelineRow,
+                      pressed ? styles.sessionRowPressed : undefined,
+                    ]}
+                  >
+                    <View style={styles.timelineDateBlock}>
+                      <Text style={styles.timelineMonth}>
+                        {formatTimelineMonth(session.occurredAt)}
+                      </Text>
+                      <Text style={styles.timelineDay}>
+                        {formatTimelineDay(session.occurredAt)}
+                      </Text>
+                    </View>
+                    <View style={styles.timelineBody}>
+                      <View style={styles.timelineTopRow}>
+                        <Text style={styles.timelineTitle} numberOfLines={1}>
+                          {card.momentTitle}
+                        </Text>
+                        {momentStatus ? (
+                          <Text
+                            style={[
+                              styles.timelineBadge,
+                              getMomentStatusStyle(momentStatus),
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {getMomentStatusLabel(momentStatus)}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.timelineSummary} numberOfLines={2}>
+                        {completedEvidence
+                          ? getTimelineSummary(completedEvidence)
+                          : card.reason}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))
+              )}
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1001,7 +1193,7 @@ function resolveLocalSessionIdForRemoteMoment(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0d12',
+    backgroundColor: '#f5f5f7',
   },
   keyboardView: {
     flex: 1,
@@ -1015,39 +1207,147 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 8,
   },
   kicker: {
-    color: '#03c75a',
+    color: '#6b7280',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 4,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#f8fafc',
-    fontSize: 22,
+    color: '#111827',
+    fontSize: 26,
     fontWeight: '900',
-    lineHeight: 27,
+    lineHeight: 31,
+  },
+  headerMeta: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
   },
   headerAddButton: {
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#111827',
     borderRadius: 999,
     height: 34,
     justifyContent: 'center',
     width: 34,
   },
   headerAddText: {
-    color: '#111318',
+    color: '#fff',
     fontSize: 22,
     fontWeight: '900',
     lineHeight: 24,
   },
-  section: {
+  analysisHero: {
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
+    marginHorizontal: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { height: 6, width: 0 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+  },
+  analysisHeroEyebrow: {
+    color: '#6b7280',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  analysisHeroTitle: {
+    color: '#111827',
+    fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 27,
+  },
+  analysisHeroText: {
+    color: '#4b5563',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 7,
+  },
+  analysisHeroButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#111827',
+    borderRadius: 999,
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  analysisHeroButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  primaryInsightCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    marginBottom: 16,
+    marginHorizontal: 16,
+    padding: 16,
+  },
+  cardEyebrow: {
+    color: '#9ca3af',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  primaryInsightTitle: {
+    color: '#fff',
+    fontSize: 21,
+    fontWeight: '900',
+    lineHeight: 26,
+  },
+  primaryInsightText: {
+    color: '#d1d5db',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  primaryInsightReview: {
+    color: '#fde68a',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    marginTop: 9,
+  },
+  primaryInsightFooter: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+  },
+  primaryInsightDate: {
+    color: '#9ca3af',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  textLinkButton: {
+    alignSelf: 'flex-start',
+    marginTop: 13,
+  },
+  textLinkButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '900',
+    textDecorationLine: 'underline',
+  },
+  section: {
+    marginBottom: 18,
   },
   sectionTitleRow: {
     alignItems: 'center',
@@ -1064,15 +1364,151 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionLabel: {
-    color: '#f8fafc',
+    color: '#111827',
     fontSize: 16,
     fontWeight: '900',
   },
   sectionHint: {
-    color: '#64748b',
+    color: '#9ca3af',
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  recentRail: {
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+  },
+  recentSessionCard: {
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    width: 184,
+  },
+  recentThumb: {
+    aspectRatio: 1.45,
+    backgroundColor: '#111827',
+    borderRadius: 10,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  recentThumbImage: {
+    height: '100%',
+    width: '100%',
+  },
+  recentThumbFallback: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  recentThumbFallbackText: {
+    color: '#d1d5db',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  recentDate: {
+    color: '#6b7280',
+    fontSize: 11,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  recentTitle: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 19,
+  },
+  recentSummary: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 5,
+  },
+  railBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    color: '#111827',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 9,
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  timeline: {
+    marginHorizontal: 16,
+  },
+  timelineEmpty: {
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+  },
+  timelineRow: {
+    alignItems: 'flex-start',
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 10,
+    padding: 12,
+  },
+  timelineDateBlock: {
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    minWidth: 48,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  timelineMonth: {
+    color: '#6b7280',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  timelineDay: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  timelineBody: {
+    flex: 1,
+  },
+  timelineTopRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  timelineTitle: {
+    color: '#111827',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 19,
+  },
+  timelineBadge: {
+    borderRadius: 999,
+    color: '#111827',
+    fontSize: 10,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  timelineSummary: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 5,
   },
   groupRow: {
     gap: 6,
@@ -2640,6 +3076,63 @@ function compactCardText(text: string, maxLength: number) {
   }
 
   return `${normalized.slice(0, maxLength - 1)}…`;
+}
+
+function getInsightTitle(evidence: GeminiEvidenceResult) {
+  if (evidence.candidateTrace?.displayLabel) {
+    return evidence.candidateTrace.displayLabel;
+  }
+
+  if (evidence.primaryCandidate.name !== '확인 필요') {
+    return evidence.primaryCandidate.name;
+  }
+
+  return evidence.family.value || '분석 결과 확인';
+}
+
+function getInsightSummary(evidence: GeminiEvidenceResult) {
+  if (evidence.requiresUserConfirmation || evidence.consistencyStatus === 'needs_review') {
+    return 'AI가 일부 근거를 확신하지 못했습니다. 상세 화면에서 후보와 관찰 신호를 확인해 주세요.';
+  }
+
+  return compactCardText(
+    evidence.primaryCandidate.evidence ??
+      evidence.evidence ??
+      '분석 결과가 준비됐습니다.',
+    118,
+  );
+}
+
+function getTimelineSummary(evidence: GeminiEvidenceResult) {
+  if (evidence.candidateTrace?.displayLabel) {
+    return `검토 후보: ${evidence.candidateTrace.displayLabel}`;
+  }
+
+  if (evidence.requiresUserConfirmation || evidence.consistencyStatus === 'needs_review') {
+    return '상세 확인이 필요한 분석 결과입니다.';
+  }
+
+  return compactCardText(evidence.evidence, 86);
+}
+
+function formatTimelineMonth(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return `${date.getMonth() + 1}월`;
+}
+
+function formatTimelineDay(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '--';
+  }
+
+  return String(date.getDate()).padStart(2, '0');
 }
 
 function hasCoachingResult(result: AnalysisResult | undefined) {
