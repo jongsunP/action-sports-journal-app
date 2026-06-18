@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -53,6 +54,19 @@ const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
 
+type AppTabId = 'home' | 'video' | 'flow' | 'profile';
+
+const APP_TABS: Array<{
+  id: AppTabId;
+  label: string;
+  hint: string;
+}> = [
+  { id: 'home', label: '홈', hint: '대시보드' },
+  { id: 'video', label: '영상', hint: '아카이브' },
+  { id: 'flow', label: '흐름', hint: '진행' },
+  { id: 'profile', label: '개인정보', hint: '설정' },
+];
+
 type PersistedSessionState = {
   selectedGroupId?: string;
   sessions?: Session[];
@@ -66,9 +80,12 @@ type PersistedSessionState = {
 };
 
 export function HomeScreen() {
+  const colorScheme = useColorScheme();
+  const prefersDarkMode = colorScheme === 'dark';
   const [selectedGroupId, setSelectedGroupId] = useState(
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
+  const [activeTab, setActiveTab] = useState<AppTabId>('home');
   const [sessions, setSessions] = useState<Session[]>(mockSessions);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -816,8 +833,129 @@ export function HomeScreen() {
     ]);
   };
 
+  const renderVideoTab = () => (
+    <>
+      <View style={styles.tabPageHeader}>
+        <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
+        <Text style={styles.title}>영상</Text>
+        <Text style={styles.headerMeta}>
+          {visibleSessions.length}개 세션 · 날짜별/기술별 분류 예정
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionLabel}>세션 아카이브</Text>
+          <Text style={styles.sectionHint}>VIDEO</Text>
+        </View>
+        {timelineSummaries.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>아직 영상 세션이 없습니다</Text>
+            <Text style={styles.emptyText}>
+              홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.videoArchiveList}>
+            {timelineSummaries.map(({ card, completedEvidence, momentStatus, session }) => (
+              <Pressable
+                accessibilityRole="button"
+                key={session.id}
+                onPress={() => openEvidenceSheet(session)}
+                style={({ pressed }) => [
+                  styles.videoArchiveRow,
+                  pressed ? styles.sessionRowPressed : undefined,
+                ]}
+              >
+                <View style={styles.videoArchiveThumb}>
+                  {card.thumbnailUri ? (
+                    <Image
+                      source={{ uri: card.thumbnailUri }}
+                      style={styles.recentThumbImage}
+                    />
+                  ) : (
+                    <View style={styles.recentThumbFallback}>
+                      <Text style={styles.recentThumbFallbackText}>
+                        {session.videoUri ? 'CLIP' : 'NOTE'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.videoArchiveBody}>
+                  <View style={styles.timelineTopRow}>
+                    <Text style={styles.timelineTitle} numberOfLines={1}>
+                      {card.momentTitle}
+                    </Text>
+                    {momentStatus ? (
+                      <Text
+                        style={[
+                          styles.timelineBadge,
+                          getMomentStatusStyle(momentStatus),
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {getMomentStatusLabel(momentStatus)}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.recentDate}>
+                    {formatShortSessionDate(session.occurredAt)}
+                  </Text>
+                  <Text style={styles.timelineSummary} numberOfLines={2}>
+                    {completedEvidence
+                      ? getTimelineSummary(completedEvidence)
+                      : card.reason}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+    </>
+  );
+
+  const renderFlowTab = () => (
+    <>
+      <View style={styles.tabPageHeader}>
+        <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
+        <Text style={styles.title}>흐름</Text>
+        <Text style={styles.headerMeta}>Progression / Flow 준비 중</Text>
+      </View>
+      <View style={styles.placeholderCard}>
+        <Text style={styles.placeholderTitle}>Progression Layer</Text>
+        <Text style={styles.placeholderText}>
+          반복된 세션과 분석 결과가 충분히 쌓이면 연습 흐름, 검토 후보, 다음
+          연습 포인트를 이곳에서 보여줄 예정입니다.
+        </Text>
+      </View>
+    </>
+  );
+
+  const renderProfileTab = () => (
+    <>
+      <View style={styles.tabPageHeader}>
+        <Text style={styles.kicker}>Action Sports Journal</Text>
+        <Text style={styles.title}>개인정보</Text>
+        <Text style={styles.headerMeta}>계정과 설정 진입점</Text>
+      </View>
+      <View style={styles.placeholderCard}>
+        <Text style={styles.placeholderTitle}>마이페이지</Text>
+        <Text style={styles.placeholderText}>
+          ActivityGroup, 계정, 개인정보, 앱 설정은 이후 단계에서 이 탭에
+          정리합니다. 현재는 실사용 QA를 위한 정보 구조만 준비합니다.
+        </Text>
+      </View>
+    </>
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        prefersDarkMode ? styles.containerDark : undefined,
+      ]}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
@@ -827,6 +965,8 @@ export function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {activeTab === 'home' ? (
+            <>
           <View style={styles.header}>
             <View>
               <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
@@ -1155,8 +1295,69 @@ export function HomeScreen() {
               )}
             </View>
           </View>
+            </>
+          ) : activeTab === 'video' ? (
+            renderVideoTab()
+          ) : activeTab === 'flow' ? (
+            renderFlowTab()
+          ) : (
+            renderProfileTab()
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <View
+        style={[
+          styles.bottomTabBar,
+          prefersDarkMode ? styles.bottomTabBarDark : undefined,
+        ]}
+      >
+        {APP_TABS.map((tab) => {
+          const isSelected = activeTab === tab.id;
+
+          return (
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
+              style={({ pressed }) => [
+                styles.bottomTabItem,
+                isSelected ? styles.bottomTabItemSelected : undefined,
+                isSelected && prefersDarkMode
+                  ? styles.bottomTabItemSelectedDark
+                  : undefined,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.bottomTabLabel,
+                  prefersDarkMode ? styles.bottomTabLabelDark : undefined,
+                  isSelected ? styles.bottomTabLabelSelected : undefined,
+                  isSelected && prefersDarkMode
+                    ? styles.bottomTabLabelSelectedDark
+                    : undefined,
+                ]}
+              >
+                {tab.label}
+              </Text>
+              <Text
+                style={[
+                  styles.bottomTabHint,
+                  prefersDarkMode ? styles.bottomTabHintDark : undefined,
+                  isSelected ? styles.bottomTabHintSelected : undefined,
+                  isSelected && prefersDarkMode
+                    ? styles.bottomTabHintSelectedDark
+                    : undefined,
+                ]}
+                numberOfLines={1}
+              >
+                {tab.hint}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
       <MomentDetailModal
         canRequestGeminiEvidence={canRequestGeminiEvidence}
         debugEndpoint={
@@ -1202,13 +1403,86 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f7',
   },
+  containerDark: {
+    backgroundColor: '#0b0d12',
+  },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 34,
+    paddingBottom: 102,
     paddingHorizontal: 0,
     paddingTop: 6,
+  },
+  bottomTabBar: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: '#d1d5db',
+    borderTopWidth: 1,
+    bottom: 0,
+    flexDirection: 'row',
+    gap: 4,
+    justifyContent: 'space-around',
+    left: 0,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    position: 'absolute',
+    right: 0,
+  },
+  bottomTabBarDark: {
+    backgroundColor: 'rgba(11, 13, 18, 0.96)',
+    borderColor: '#1f2937',
+  },
+  bottomTabItem: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flex: 1,
+    minHeight: 50,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 5,
+  },
+  bottomTabItemSelected: {
+    backgroundColor: 'rgba(17, 24, 39, 0.08)',
+  },
+  bottomTabItemSelectedDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  bottomTabLabel: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '900',
+    lineHeight: 16,
+  },
+  bottomTabLabelDark: {
+    color: '#9ca3af',
+  },
+  bottomTabLabelSelected: {
+    color: '#111827',
+  },
+  bottomTabLabelSelectedDark: {
+    color: '#f9fafb',
+  },
+  bottomTabHint: {
+    color: '#9ca3af',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  bottomTabHintDark: {
+    color: '#6b7280',
+  },
+  bottomTabHintSelected: {
+    color: '#4b5563',
+  },
+  bottomTabHintSelectedDark: {
+    color: '#d1d5db',
+  },
+  tabPageHeader: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   header: {
     alignItems: 'center',
@@ -1516,6 +1790,51 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 17,
     marginTop: 5,
+  },
+  videoArchiveList: {
+    gap: 10,
+    marginHorizontal: 16,
+  },
+  videoArchiveRow: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 10,
+  },
+  videoArchiveThumb: {
+    backgroundColor: '#111827',
+    borderRadius: 10,
+    height: 72,
+    overflow: 'hidden',
+    width: 96,
+  },
+  videoArchiveBody: {
+    flex: 1,
+  },
+  placeholderCard: {
+    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    padding: 16,
+  },
+  placeholderTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 23,
+  },
+  placeholderText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 8,
   },
   groupRow: {
     gap: 6,
