@@ -2411,24 +2411,40 @@ const styles = StyleSheet.create({
   },
   detailModalHeader: {
     alignItems: 'center',
+    backgroundColor: 'rgba(17, 19, 27, 0.76)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 28,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
+    left: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    position: 'absolute',
+    right: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.34,
+    shadowRadius: 28,
+    top: Platform.OS === 'ios' ? 58 : 16,
+    zIndex: 20,
   },
   detailCloseButton: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     borderRadius: 999,
+    borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   detailCloseText: {
-    color: '#0f172a',
+    color: '#f8fafc',
     fontSize: 12,
     fontWeight: '900',
   },
   detailHeaderText: {
     flex: 1,
+    minWidth: 0,
   },
   detailKicker: {
     color: '#9ca3af',
@@ -2445,7 +2461,8 @@ const styles = StyleSheet.create({
   detailHeaderActions: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 7,
+    flexShrink: 0,
+    gap: 6,
   },
   detailHeaderActionButton: {
     backgroundColor: '#1f2937',
@@ -2457,6 +2474,19 @@ const styles = StyleSheet.create({
   },
   detailHeaderActionButtonDisabled: {
     opacity: 0.45,
+  },
+  detailHeaderReviewButton: {
+    backgroundColor: 'rgba(3, 199, 90, 0.16)',
+    borderColor: 'rgba(3, 199, 90, 0.3)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  detailHeaderReviewText: {
+    color: '#86efac',
+    fontSize: 12,
+    fontWeight: '900',
   },
   detailHeaderActionText: {
     color: '#f8fafc',
@@ -2497,6 +2527,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  detailStatusBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    fontSize: 10,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  detailStatusQueued: {
+    backgroundColor: 'rgba(147, 197, 253, 0.12)',
+    borderColor: 'rgba(147, 197, 253, 0.28)',
+    color: '#bfdbfe',
+  },
+  detailStatusProcessing: {
+    backgroundColor: 'rgba(250, 204, 21, 0.12)',
+    borderColor: 'rgba(250, 204, 21, 0.28)',
+    color: '#fde68a',
+  },
+  detailStatusCompleted: {
+    backgroundColor: 'rgba(3, 199, 90, 0.12)',
+    borderColor: 'rgba(3, 199, 90, 0.28)',
+    color: '#86efac',
+  },
+  detailStatusFailed: {
+    backgroundColor: 'rgba(251, 113, 133, 0.12)',
+    borderColor: 'rgba(251, 113, 133, 0.28)',
+    color: '#fda4af',
   },
   detailStateCard: {
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
@@ -2955,61 +3014,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 16,
   },
-  candidateRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
-  },
-  candidateChip: {
-    backgroundColor: '#fff',
-    borderColor: '#99f6e4',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  candidateChipSelected: {
-    backgroundColor: '#0f766e',
-    borderColor: '#0f766e',
-  },
-  candidateChipText: {
-    color: '#0f766e',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  candidateChipTextSelected: {
-    color: '#fff',
-  },
-  confirmTrickInput: {
-    backgroundColor: '#fff',
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    borderWidth: 1,
-    color: '#0f172a',
-    fontSize: 13,
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-  },
-  confirmTrickButton: {
-    alignItems: 'center',
-    backgroundColor: '#0f766e',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  confirmTrickButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  confirmedTrickText: {
-    color: '#b7f5ce',
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 8,
-  },
   analysisCompactMeta: {
     color: '#0f766e',
     fontSize: 12,
@@ -3302,6 +3306,48 @@ function getMomentStatusStyle(status?: MomentStatus) {
   }
 
   return undefined;
+}
+
+function getDetailMomentStatusStyle(status?: MomentStatus) {
+  if (status === 'queued') {
+    return styles.detailStatusQueued;
+  }
+
+  if (status === 'processing') {
+    return styles.detailStatusProcessing;
+  }
+
+  if (status === 'completed') {
+    return styles.detailStatusCompleted;
+  }
+
+  if (status === 'failed') {
+    return styles.detailStatusFailed;
+  }
+
+  return undefined;
+}
+
+function shouldShowTrickConfirmationAction(evidence?: GeminiEvidenceResult) {
+  if (!evidence) {
+    return false;
+  }
+
+  const predictedName = evidence.primaryCandidate.name.trim().toLowerCase();
+  const predictedNeedsReview =
+    predictedName === '확인 필요' ||
+    predictedName === 'unknown' ||
+    predictedName === 'needs_review';
+
+  return Boolean(
+    predictedNeedsReview ||
+      evidence.requiresUserConfirmation ||
+      evidence.consistencyStatus === 'needs_review' ||
+      evidence.consistencyStatus === 'inconsistent' ||
+      evidence.confidence === 'low' ||
+      evidence.primaryCandidate.confidence === 'low' ||
+      evidence.candidateTrace?.displayLabel,
+  );
 }
 
 function getMomentStatusMessage(status: MomentStatus) {
@@ -3620,6 +3666,9 @@ function MomentDetailModal({
   const statusMessage = momentStatus
     ? getMomentStatusMessage(momentStatus)
     : undefined;
+  const shouldShowTrickReviewAction = shouldShowTrickConfirmationAction(
+    visibleEvidence,
+  );
 
   return (
     <Modal
@@ -3628,62 +3677,79 @@ function MomentDetailModal({
       visible={Boolean(session)}
     >
       <SafeAreaView style={styles.detailModalContainer}>
+        <View style={styles.detailModalHeader}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onClose}
+            style={({ pressed }) => [
+              styles.detailCloseButton,
+              pressed ? styles.buttonPressed : undefined,
+            ]}
+          >
+            <Text style={styles.detailCloseText}>닫기</Text>
+          </Pressable>
+          <View style={styles.detailHeaderText}>
+            <Text style={styles.detailKicker}>Moment</Text>
+            <Text style={styles.detailHeaderTitle} numberOfLines={1}>
+              {session.title}
+            </Text>
+          </View>
+          <View style={styles.detailHeaderActions}>
+            {shouldShowTrickReviewAction ? (
+              <Pressable
+                accessibilityLabel="기술명 확인"
+                accessibilityRole="button"
+                onPress={() => {
+                  Alert.alert(
+                    '기술명 확인',
+                    '검토가 필요한 분석입니다. 기술 확정은 다음 단계에서 상단 action sheet로 제공할 예정입니다.',
+                  );
+                }}
+                style={({ pressed }) => [
+                  styles.detailHeaderReviewButton,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text style={styles.detailHeaderReviewText}>확인</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canRetry}
+              onPress={onRetry}
+              style={({ pressed }) => [
+                styles.detailHeaderActionButton,
+                !canRetry ? styles.detailHeaderActionButtonDisabled : undefined,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.detailHeaderActionText,
+                  !canRetry ? styles.detailHeaderActionTextDisabled : undefined,
+                ]}
+              >
+                {isLoading ? '추출 중' : '재시도'}
+              </Text>
+            </Pressable>
+            {onDelete ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onDelete}
+                style={({ pressed }) => [
+                  styles.detailHeaderDeleteButton,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text style={styles.detailHeaderDeleteText}>삭제</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
         <ScrollView
           contentContainerStyle={styles.detailModalBody}
           showsVerticalScrollIndicator
         >
-          <View style={styles.detailModalHeader}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.detailCloseButton,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Text style={styles.detailCloseText}>닫기</Text>
-            </Pressable>
-            <View style={styles.detailHeaderText}>
-              <Text style={styles.detailKicker}>Moment</Text>
-              <Text style={styles.detailHeaderTitle} numberOfLines={1}>
-                {session.title}
-              </Text>
-            </View>
-            <View style={styles.detailHeaderActions}>
-              <Pressable
-                accessibilityRole="button"
-                disabled={!canRetry}
-                onPress={onRetry}
-                style={({ pressed }) => [
-                  styles.detailHeaderActionButton,
-                  !canRetry ? styles.detailHeaderActionButtonDisabled : undefined,
-                  pressed ? styles.buttonPressed : undefined,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.detailHeaderActionText,
-                    !canRetry ? styles.detailHeaderActionTextDisabled : undefined,
-                  ]}
-                >
-                  {isLoading ? '추출 중' : '재시도'}
-                </Text>
-              </Pressable>
-              {onDelete ? (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={onDelete}
-                  style={({ pressed }) => [
-                    styles.detailHeaderDeleteButton,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  <Text style={styles.detailHeaderDeleteText}>삭제</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-
           <View style={styles.detailVideoFrame}>
             {video ? (
               <LocalSessionVideoPlayer videoUri={video.uri} />
@@ -3706,8 +3772,8 @@ function MomentDetailModal({
               {momentStatus ? (
                 <Text
                   style={[
-                    styles.momentBadge,
-                    getMomentStatusStyle(momentStatus),
+                    styles.detailStatusBadge,
+                    getDetailMomentStatusStyle(momentStatus),
                   ]}
                 >
                   {getMomentStatusLabel(momentStatus)}
@@ -3729,11 +3795,7 @@ function MomentDetailModal({
               </View>
             ) : null}
             {visibleEvidence ? (
-              <GeminiEvidenceView
-                evidence={visibleEvidence}
-                userConfirmedTrick={undefined}
-                onConfirmTrick={() => undefined}
-              />
+              <GeminiEvidenceView evidence={visibleEvidence} />
             ) : !shouldShowStatusMessage && !isLoading && video ? (
               <View style={styles.detailStateCard}>
                 <Text style={styles.detailStateTitle}>아직 추출 결과가 없습니다</Text>
@@ -3805,22 +3867,7 @@ function AnalysisResultView({
   );
 }
 
-function GeminiEvidenceView({
-  evidence,
-  userConfirmedTrick,
-  onConfirmTrick,
-}: {
-  evidence: GeminiEvidenceResult;
-  userConfirmedTrick?: string;
-  onConfirmTrick?: (trickName: string) => void;
-}) {
-  const [draftTrickName, setDraftTrickName] = useState(
-    userConfirmedTrick ?? evidence.primaryCandidate.name,
-  );
-  const candidateNames = [
-    evidence.primaryCandidate.name,
-    ...evidence.alternativeCandidates.map((candidate) => candidate.name),
-  ].filter((name, index, names) => name && names.indexOf(name) === index);
+function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
   const shouldAskUser =
     evidence.requiresUserConfirmation ||
     evidence.qualityMode === 'degraded' ||
@@ -3875,12 +3922,12 @@ function GeminiEvidenceView({
         {shouldAskUser ? (
           <Text style={styles.evidenceWarningText}>
             {hasConsistencyIssue
-              ? 'AI 추정 결과에 내부 불일치가 있습니다. 시도한 기술을 확인해 주세요.'
+              ? 'AI 추정 결과에 내부 불일치가 있어 상세 검토가 필요합니다.'
               : evidence.qualityMode === 'degraded'
-              ? '서비스 혼잡으로 낮은 품질 fallback 결과입니다. 코칭 전에 시도한 기술을 반드시 확인해 주세요.'
+              ? '서비스 혼잡으로 낮은 품질 fallback 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
               : evidence.recoveredFromPartial
-                ? 'Gemini 응답 일부만 복구된 결과입니다. 코칭 전에 시도한 기술을 확인해 주세요.'
-              : 'AI가 기술명을 확신하지 못했습니다. 시도한 기술을 선택해 주세요.'}
+                ? 'Gemini 응답 일부만 복구된 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
+              : 'AI가 기술명을 확신하지 못했습니다. 확정 기술명이 아닌 검토 후보로 봐주세요.'}
           </Text>
         ) : null}
         {evidence.consistencyWarnings?.map((warning) => (
@@ -3937,63 +3984,6 @@ function GeminiEvidenceView({
       ) : null}
       {evidence.inversionObservedFacts ? (
         <InversionObservedFactsSummary facts={evidence.inversionObservedFacts} />
-      ) : null}
-      {onConfirmTrick ? (
-        <View style={styles.evidenceSection}>
-        <Text style={styles.evidenceSectionTitle}>기술명 확인</Text>
-        <View style={styles.candidateRow}>
-          {candidateNames.map((name) => (
-            <Pressable
-              accessibilityRole="button"
-              key={name}
-              onPress={() => {
-                setDraftTrickName(name);
-                onConfirmTrick?.(name);
-              }}
-              style={({ pressed }) => [
-                styles.candidateChip,
-                userConfirmedTrick === name ? styles.candidateChipSelected : undefined,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.candidateChipText,
-                  userConfirmedTrick === name
-                    ? styles.candidateChipTextSelected
-                    : undefined,
-                ]}
-              >
-                {name}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <TextInput
-          placeholder="직접 입력"
-          placeholderTextColor="#94a3b8"
-          style={styles.confirmTrickInput}
-          value={draftTrickName}
-          onChangeText={setDraftTrickName}
-        />
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onConfirmTrick(draftTrickName)}
-          style={({ pressed }) => [
-            styles.confirmTrickButton,
-            pressed ? styles.buttonPressed : undefined,
-          ]}
-        >
-          <Text style={styles.confirmTrickButtonText}>
-            {userConfirmedTrick ? '확정 기술 업데이트' : '이 기술로 확정'}
-          </Text>
-        </Pressable>
-        {userConfirmedTrick ? (
-          <Text style={styles.confirmedTrickText}>
-            사용자 확정 기술: {userConfirmedTrick}
-          </Text>
-        ) : null}
-        </View>
       ) : null}
       {evidence.evidenceWindows.length > 0 ? (
         <View style={styles.evidenceSection}>
