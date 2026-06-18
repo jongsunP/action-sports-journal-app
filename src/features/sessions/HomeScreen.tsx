@@ -731,6 +731,8 @@ export function HomeScreen() {
         ...current,
         [session.id]: true,
       }));
+      updateLocalMomentStatus(session.id, 'processing');
+
       const queuedJob = await queueSessionEvidenceExtractionWithGemini({
         session,
         activityGroupName: 'Wakeboard',
@@ -740,9 +742,14 @@ export function HomeScreen() {
         userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
       });
 
+      const nextMomentStatus =
+        queuedJob.momentStatus === 'queued'
+          ? 'processing'
+          : queuedJob.momentStatus;
+
       await syncMomentStatus(
         session.id,
-        queuedJob.momentStatus,
+        nextMomentStatus,
         options?.momentIdOverride,
       );
     } catch (error) {
@@ -756,7 +763,7 @@ export function HomeScreen() {
         if (error instanceof RemoteRequestError && error.status === 429) {
           Alert.alert(
             '분석 요청이 잠시 제한됐습니다',
-            'Moment는 분석 대기 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
+            'Moment는 준비 중 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
           );
         }
 
@@ -2919,19 +2926,7 @@ function getMomentStatus({
 }
 
 function getMomentStatusLabel(status: MomentStatus) {
-  if (status === 'queued') {
-    return '분석 대기';
-  }
-
-  if (status === 'processing') {
-    return '분석 중';
-  }
-
-  if (status === 'completed') {
-    return '분석 완료';
-  }
-
-  return '분석 실패';
+  return getMomentStatusPresentation(status).label;
 }
 
 function getMomentStatusStyle(status?: MomentStatus) {
@@ -2955,16 +2950,27 @@ function getMomentStatusStyle(status?: MomentStatus) {
 }
 
 function getMomentStatusMessage(status: MomentStatus) {
+  const presentation = getMomentStatusPresentation(status);
+
+  return {
+    title: presentation.title,
+    body: presentation.body,
+  };
+}
+
+function getMomentStatusPresentation(status: MomentStatus) {
   if (status === 'queued') {
     return {
-      title: '분석 대기 중',
+      label: '준비 중',
+      title: '분석 준비 중',
       body:
-        '모먼트가 저장됐고 영상 근거 추출을 시작할 준비를 하고 있습니다. 서버가 바쁘거나 요청이 제한되면 이 상태를 유지합니다.',
+        '모먼트가 저장됐고 분석을 시작할 준비를 하고 있습니다. 서버 연결이나 요청 제한이 있으면 잠시 이 상태를 유지합니다.',
     };
   }
 
   if (status === 'processing') {
     return {
+      label: '분석 중',
       title: '분석 중',
       body: '영상에서 어프로치, 인버전, 기술 계열 근거를 확인하고 있습니다.',
     };
@@ -2972,12 +2978,14 @@ function getMomentStatusMessage(status: MomentStatus) {
 
   if (status === 'failed') {
     return {
+      label: '분석 실패',
       title: '분석 실패',
       body: '영상 근거 추출이 완료되지 않았습니다. 다시 시도할 수 있습니다.',
     };
   }
 
   return {
+    label: '분석 완료',
     title: '분석 완료',
     body: '영상 근거 결과가 준비됐습니다.',
   };
