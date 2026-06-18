@@ -67,6 +67,94 @@ const APP_TABS: Array<{
   { id: 'profile', label: '개인정보', hint: '설정' },
 ];
 
+function BottomTabIcon({
+  id,
+  isSelected,
+}: {
+  id: AppTabId;
+  isSelected: boolean;
+}) {
+  if (id === 'home') {
+    return (
+      <View
+        style={[
+          styles.bottomTabIconFrame,
+          isSelected ? styles.bottomTabIconFrameSelected : undefined,
+        ]}
+      >
+        <View
+          style={[
+            styles.tabIconHome,
+            isSelected ? styles.tabIconFilled : undefined,
+          ]}
+        />
+      </View>
+    );
+  }
+
+  if (id === 'video') {
+    return (
+      <View
+        style={[
+          styles.bottomTabIconFrame,
+          isSelected ? styles.bottomTabIconFrameSelected : undefined,
+        ]}
+      >
+        <View
+          style={[
+            styles.tabIconVideo,
+            isSelected ? styles.tabIconFilled : undefined,
+          ]}
+        />
+      </View>
+    );
+  }
+
+  if (id === 'flow') {
+    return (
+      <View
+        style={[
+          styles.bottomTabIconFrame,
+          styles.tabIconFlowFrame,
+          isSelected ? styles.bottomTabIconFrameSelected : undefined,
+        ]}
+      >
+        {[0, 1, 2].map((index) => (
+          <View
+            key={`flow-${index}`}
+            style={[
+              styles.tabIconFlowDot,
+              isSelected ? styles.tabIconFilled : undefined,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.bottomTabIconFrame,
+        isSelected ? styles.bottomTabIconFrameSelected : undefined,
+      ]}
+    >
+      <View
+        style={[
+          styles.tabIconProfileHead,
+          isSelected ? styles.tabIconFilled : undefined,
+        ]}
+      />
+      <View
+        style={[
+          styles.tabIconProfileBody,
+          isSelected ? styles.tabIconFilled : undefined,
+        ]}
+      />
+    </View>
+  );
+}
+
 type PersistedSessionState = {
   selectedGroupId?: string;
   sessions?: Session[];
@@ -798,7 +886,7 @@ export function HomeScreen() {
   };
 
   const handleDeleteSession = (session: Session) => {
-    Alert.alert('모먼트를 삭제할까요?', '이 모먼트와 연결된 리뷰 결과가 함께 삭제됩니다.', [
+    Alert.alert('영상을 삭제할까요?', '이 영상과 연결된 리뷰 결과가 함께 삭제됩니다.', [
       {
         text: '취소',
         style: 'cancel',
@@ -1010,7 +1098,7 @@ export function HomeScreen() {
             {isComposerOpen ? (
               <View style={styles.composer}>
                 <TextInput
-                  placeholder="무슨 모먼트였나요?"
+                  placeholder="어떤 영상인가요?"
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                   value={title}
@@ -1314,6 +1402,7 @@ export function HomeScreen() {
 
           return (
             <Pressable
+              accessibilityLabel={tab.label}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
               key={tab.id}
@@ -1327,37 +1416,7 @@ export function HomeScreen() {
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
-              <View
-                style={[
-                  styles.bottomTabSelectedIndicator,
-                  isSelected ? styles.bottomTabSelectedIndicatorVisible : undefined,
-                ]}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  prefersDarkMode ? styles.bottomTabLabelDark : undefined,
-                  isSelected ? styles.bottomTabLabelSelected : undefined,
-                  isSelected && prefersDarkMode
-                    ? styles.bottomTabLabelSelectedDark
-                    : undefined,
-                ]}
-              >
-                {tab.label}
-              </Text>
-              <Text
-                style={[
-                  styles.bottomTabHint,
-                  prefersDarkMode ? styles.bottomTabHintDark : undefined,
-                  isSelected ? styles.bottomTabHintSelected : undefined,
-                  isSelected && prefersDarkMode
-                    ? styles.bottomTabHintSelectedDark
-                    : undefined,
-                ]}
-                numberOfLines={1}
-              >
-                {tab.hint}
-              </Text>
+              <BottomTabIcon id={tab.id} isSelected={isSelected} />
             </Pressable>
           );
         })}
@@ -1444,12 +1503,12 @@ const styles = StyleSheet.create({
   },
   bottomTabItem: {
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 18,
     flex: 1,
-    minHeight: 50,
+    minHeight: 48,
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
   },
   bottomTabItemSelected: {
     backgroundColor: 'transparent',
@@ -1457,45 +1516,64 @@ const styles = StyleSheet.create({
   bottomTabItemSelectedDark: {
     backgroundColor: 'transparent',
   },
-  bottomTabSelectedIndicator: {
-    backgroundColor: 'transparent',
+  bottomTabIconFrame: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 32,
+    justifyContent: 'center',
+    width: 42,
+  },
+  bottomTabIconFrameSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  tabIconHome: {
+    borderColor: '#f8fafc',
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 18,
+    opacity: 0.7,
+    width: 20,
+  },
+  tabIconVideo: {
+    borderColor: '#f8fafc',
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 16,
+    opacity: 0.7,
+    width: 24,
+  },
+  tabIconFlowFrame: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  tabIconFlowDot: {
+    borderColor: '#f8fafc',
     borderRadius: 999,
-    height: 3,
-    marginBottom: 5,
+    borderWidth: 2,
+    height: 7,
+    opacity: 0.7,
+    width: 7,
+  },
+  tabIconProfileHead: {
+    borderColor: '#f8fafc',
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 10,
+    marginBottom: 3,
+    opacity: 0.7,
+    width: 10,
+  },
+  tabIconProfileBody: {
+    borderColor: '#f8fafc',
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 9,
+    opacity: 0.7,
     width: 18,
   },
-  bottomTabSelectedIndicatorVisible: {
-    backgroundColor: '#f9fafb',
-  },
-  bottomTabLabel: {
-    color: '#9ca3af',
-    fontSize: 12,
-    fontWeight: '900',
-    lineHeight: 16,
-  },
-  bottomTabLabelDark: {
-    color: '#9ca3af',
-  },
-  bottomTabLabelSelected: {
-    color: '#f9fafb',
-  },
-  bottomTabLabelSelectedDark: {
-    color: '#f9fafb',
-  },
-  bottomTabHint: {
-    color: '#6b7280',
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 13,
-  },
-  bottomTabHintDark: {
-    color: '#6b7280',
-  },
-  bottomTabHintSelected: {
-    color: '#d1d5db',
-  },
-  bottomTabHintSelectedDark: {
-    color: '#d1d5db',
+  tabIconFilled: {
+    backgroundColor: '#f8fafc',
+    opacity: 1,
   },
   tabPageHeader: {
     marginBottom: 16,
@@ -2464,8 +2542,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     left: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     position: 'absolute',
     right: 12,
     shadowColor: '#000000',
@@ -2476,33 +2554,41 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   detailCloseButton: {
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderColor: 'rgba(255, 255, 255, 0.16)',
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
   },
   detailCloseText: {
     color: '#f8fafc',
-    fontSize: 12,
+    fontSize: 24,
     fontWeight: '900',
+    lineHeight: 26,
   },
   detailHeaderText: {
     flex: 1,
     minWidth: 0,
   },
-  detailKicker: {
-    color: '#9ca3af',
-    fontSize: 10,
-    fontWeight: '900',
-    marginBottom: 2,
-    textTransform: 'uppercase',
-  },
   detailHeaderTitle: {
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
+  },
+  detailHeaderMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    marginTop: 3,
+  },
+  detailHeaderMeta: {
+    color: '#9ca3af',
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '800',
   },
   detailHeaderActions: {
     alignItems: 'center',
@@ -2510,50 +2596,21 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 6,
   },
-  detailHeaderActionButton: {
-    backgroundColor: '#1f2937',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+  detailMoreButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
   },
-  detailHeaderActionButtonDisabled: {
-    opacity: 0.45,
-  },
-  detailHeaderReviewButton: {
-    backgroundColor: 'rgba(3, 199, 90, 0.16)',
-    borderColor: 'rgba(3, 199, 90, 0.3)',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  detailHeaderReviewText: {
-    color: '#86efac',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  detailHeaderActionText: {
+  detailMoreText: {
     color: '#f8fafc',
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '900',
-  },
-  detailHeaderActionTextDisabled: {
-    color: '#94a3b8',
-  },
-  detailHeaderDeleteButton: {
-    backgroundColor: 'rgba(251, 113, 133, 0.12)',
-    borderColor: 'rgba(251, 113, 133, 0.26)',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  detailHeaderDeleteText: {
-    color: '#fb7185',
-    fontSize: 12,
-    fontWeight: '900',
+    lineHeight: 17,
   },
   detailVideoFrame: {
     aspectRatio: 1,
@@ -2562,46 +2619,45 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
+  detailReviewCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(3, 199, 90, 0.1)',
+    borderColor: 'rgba(3, 199, 90, 0.22)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    marginHorizontal: 16,
+    padding: 14,
+  },
+  detailReviewTextBlock: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  detailReviewLabel: {
+    color: '#86efac',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  detailReviewTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
+  detailReviewAction: {
+    color: '#86efac',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   detailSummaryCard: {
     marginHorizontal: 16,
     paddingBottom: 16,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  detailSummaryTopRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  detailStatusBadge: {
-    borderRadius: 999,
-    borderWidth: 1,
-    fontSize: 10,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  detailStatusQueued: {
-    backgroundColor: 'rgba(147, 197, 253, 0.12)',
-    borderColor: 'rgba(147, 197, 253, 0.28)',
-    color: '#bfdbfe',
-  },
-  detailStatusProcessing: {
-    backgroundColor: 'rgba(250, 204, 21, 0.12)',
-    borderColor: 'rgba(250, 204, 21, 0.28)',
-    color: '#fde68a',
-  },
-  detailStatusCompleted: {
-    backgroundColor: 'rgba(3, 199, 90, 0.12)',
-    borderColor: 'rgba(3, 199, 90, 0.28)',
-    color: '#86efac',
-  },
-  detailStatusFailed: {
-    backgroundColor: 'rgba(251, 113, 133, 0.12)',
-    borderColor: 'rgba(251, 113, 133, 0.28)',
-    color: '#fda4af',
   },
   detailStateCard: {
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
@@ -2775,19 +2831,6 @@ const styles = StyleSheet.create({
   detailMomentSummary: {
     paddingHorizontal: 16,
     paddingTop: 14,
-  },
-  detailMomentDate: {
-    color: '#9ca3af',
-    fontSize: 11,
-    fontWeight: '900',
-    marginBottom: 5,
-    textTransform: 'uppercase',
-  },
-  detailMomentTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 23,
   },
   detailMomentReason: {
     color: '#94a3b8',
@@ -3354,26 +3397,6 @@ function getMomentStatusStyle(status?: MomentStatus) {
   return undefined;
 }
 
-function getDetailMomentStatusStyle(status?: MomentStatus) {
-  if (status === 'queued') {
-    return styles.detailStatusQueued;
-  }
-
-  if (status === 'processing') {
-    return styles.detailStatusProcessing;
-  }
-
-  if (status === 'completed') {
-    return styles.detailStatusCompleted;
-  }
-
-  if (status === 'failed') {
-    return styles.detailStatusFailed;
-  }
-
-  return undefined;
-}
-
 function getMomentStatusDotStyle(status?: MomentStatus) {
   if (status === 'queued') {
     return styles.videoStatusDotQueued;
@@ -3431,7 +3454,7 @@ function getMomentStatusPresentation(status: MomentStatus) {
       label: '준비 중',
       title: '분석 준비 중',
       body:
-        '모먼트가 저장됐고 분석을 시작할 준비를 하고 있습니다. 서버 연결이나 요청 제한이 있으면 잠시 이 상태를 유지합니다.',
+        '영상이 저장됐고 분석을 시작할 준비를 하고 있습니다. 서버 연결이나 요청 제한이 있으면 잠시 이 상태를 유지합니다.',
     };
   }
 
@@ -3510,12 +3533,12 @@ function getSessionCardPresentation({
       ? '확인 필요'
       : detectedAction ??
         inferMomentTitle(session.title) ??
-        (session.videoUri ? '라이딩 모먼트' : '클립 대기 중');
+        (session.videoUri ? '라이딩 영상' : '클립 대기 중');
   const reason = hasEvidence
     ? hook ?? '동작 근거가 준비됐습니다.'
     : session.videoUri
       ? 'Gemini 근거 추출을 시작합니다.'
-      : '클립을 추가하면 모먼트가 살아납니다.';
+      : '클립을 추가하면 영상 기록이 살아납니다.';
   const openReason = hasEvidence
     ? needsReview
       ? '검토 필요'
@@ -3739,6 +3762,46 @@ function MomentDetailModal({
   const shouldShowTrickReviewAction = shouldShowTrickConfirmationAction(
     visibleEvidence,
   );
+  const handleOpenDetailMenu = () => {
+    const menuActions: Array<{
+      onPress?: () => void;
+      style?: 'cancel' | 'destructive';
+      text: string;
+    }> = [];
+
+    if (canRetry && onRetry) {
+      menuActions.push({
+        text: '분석 다시 시도',
+        onPress: onRetry,
+      });
+    }
+
+    if (onDelete) {
+      menuActions.push({
+        text: '삭제',
+        style: 'destructive',
+        onPress: onDelete,
+      });
+    }
+
+    Alert.alert(
+      '영상 작업',
+      menuActions.length > 0 ? undefined : '현재 사용할 수 있는 작업이 없습니다.',
+      [
+        ...menuActions,
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+      ],
+    );
+  };
+  const handleOpenTrickReview = () => {
+    Alert.alert(
+      '기술명 확인',
+      '검토가 필요한 분석입니다. 기술 확정은 다음 단계에서 action sheet로 제공할 예정입니다.',
+    );
+  };
 
   return (
     <Modal
@@ -3749,6 +3812,7 @@ function MomentDetailModal({
       <SafeAreaView style={styles.detailModalContainer}>
         <View style={styles.detailModalHeader}>
           <Pressable
+            accessibilityLabel="닫기"
             accessibilityRole="button"
             onPress={onClose}
             style={({ pressed }) => [
@@ -3756,64 +3820,39 @@ function MomentDetailModal({
               pressed ? styles.buttonPressed : undefined,
             ]}
           >
-            <Text style={styles.detailCloseText}>닫기</Text>
+            <Text style={styles.detailCloseText}>×</Text>
           </Pressable>
           <View style={styles.detailHeaderText}>
-            <Text style={styles.detailKicker}>Moment</Text>
             <Text style={styles.detailHeaderTitle} numberOfLines={1}>
               {session.title}
             </Text>
+            <View style={styles.detailHeaderMetaRow}>
+              {momentStatus ? (
+                <View
+                  accessibilityLabel={getMomentStatusLabel(momentStatus)}
+                  style={[
+                    styles.videoStatusDot,
+                    getMomentStatusDotStyle(momentStatus),
+                  ]}
+                />
+              ) : null}
+              <Text style={styles.detailHeaderMeta} numberOfLines={1}>
+                {formatSessionDateTime(session.occurredAt)}
+              </Text>
+            </View>
           </View>
           <View style={styles.detailHeaderActions}>
-            {shouldShowTrickReviewAction ? (
-              <Pressable
-                accessibilityLabel="기술명 확인"
-                accessibilityRole="button"
-                onPress={() => {
-                  Alert.alert(
-                    '기술명 확인',
-                    '검토가 필요한 분석입니다. 기술 확정은 다음 단계에서 상단 action sheet로 제공할 예정입니다.',
-                  );
-                }}
-                style={({ pressed }) => [
-                  styles.detailHeaderReviewButton,
-                  pressed ? styles.buttonPressed : undefined,
-                ]}
-              >
-                <Text style={styles.detailHeaderReviewText}>확인</Text>
-              </Pressable>
-            ) : null}
             <Pressable
+              accessibilityLabel="영상 작업 더보기"
               accessibilityRole="button"
-              disabled={!canRetry}
-              onPress={onRetry}
+              onPress={handleOpenDetailMenu}
               style={({ pressed }) => [
-                styles.detailHeaderActionButton,
-                !canRetry ? styles.detailHeaderActionButtonDisabled : undefined,
+                styles.detailMoreButton,
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
-              <Text
-                style={[
-                  styles.detailHeaderActionText,
-                  !canRetry ? styles.detailHeaderActionTextDisabled : undefined,
-                ]}
-              >
-                {isLoading ? '추출 중' : '재시도'}
-              </Text>
+              <Text style={styles.detailMoreText}>•••</Text>
             </Pressable>
-            {onDelete ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={onDelete}
-                style={({ pressed }) => [
-                  styles.detailHeaderDeleteButton,
-                  pressed ? styles.buttonPressed : undefined,
-                ]}
-              >
-                <Text style={styles.detailHeaderDeleteText}>삭제</Text>
-              </Pressable>
-            ) : null}
           </View>
         </View>
         <ScrollView
@@ -3834,27 +3873,30 @@ function MomentDetailModal({
             )}
           </View>
 
-          <View style={styles.detailSummaryCard}>
-            <View style={styles.detailSummaryTopRow}>
-              <Text style={styles.detailMomentDate}>
-                {formatSessionDateTime(session.occurredAt)}
-              </Text>
-              {momentStatus ? (
-                <Text
-                  style={[
-                    styles.detailStatusBadge,
-                    getDetailMomentStatusStyle(momentStatus),
-                  ]}
-                >
-                  {getMomentStatusLabel(momentStatus)}
+          {shouldShowTrickReviewAction ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleOpenTrickReview}
+              style={({ pressed }) => [
+                styles.detailReviewCard,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <View style={styles.detailReviewTextBlock}>
+                <Text style={styles.detailReviewLabel}>기술 검토</Text>
+                <Text style={styles.detailReviewTitle}>
+                  확정 전 확인이 필요한 영상입니다
                 </Text>
-              ) : null}
-            </View>
-            <Text style={styles.detailMomentTitle}>{session.title}</Text>
-            {session.notes ? (
+              </View>
+              <Text style={styles.detailReviewAction}>확인</Text>
+            </Pressable>
+          ) : null}
+
+          {session.notes ? (
+            <View style={styles.detailSummaryCard}>
               <Text style={styles.detailMomentReason}>{session.notes}</Text>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
 
             {shouldShowStatusMessage && statusMessage ? (
               <View style={styles.detailStateCard}>
