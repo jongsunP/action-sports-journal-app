@@ -969,7 +969,7 @@ export function HomeScreen() {
             <>
           <View style={styles.header}>
             <View>
-              <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
+              <Text style={styles.kicker}>Riding Journal</Text>
               <Text style={styles.title}>오늘의 라이딩 저널</Text>
               <Text style={styles.headerMeta}>
                 {visibleSessions.length}개 세션
@@ -1492,28 +1492,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   kicker: {
     color: '#9ca3af',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 3,
     textTransform: 'uppercase',
   },
   title: {
     color: '#f9fafb',
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
-    lineHeight: 31,
+    lineHeight: 29,
   },
   headerMeta: {
     color: '#9ca3af',
     fontSize: 12,
     fontWeight: '700',
-    marginTop: 4,
+    marginTop: 3,
   },
   headerAddButton: {
     alignItems: 'center',
@@ -1530,17 +1530,17 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   analysisHero: {
-    backgroundColor: '#14161c',
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    backgroundColor: '#171b24',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
     borderRadius: 18,
     borderWidth: 1,
-    marginBottom: 14,
+    marginBottom: 20,
     marginHorizontal: 16,
-    padding: 16,
+    padding: 18,
     shadowColor: '#000',
-    shadowOffset: { height: 6, width: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.26,
+    shadowRadius: 18,
   },
   analysisHeroEyebrow: {
     color: '#9ca3af',
@@ -1551,9 +1551,9 @@ const styles = StyleSheet.create({
   },
   analysisHeroTitle: {
     color: '#f9fafb',
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: '900',
-    lineHeight: 27,
+    lineHeight: 28,
   },
   analysisHeroText: {
     color: '#cbd5e1',
@@ -1564,24 +1564,29 @@ const styles = StyleSheet.create({
   },
   analysisHeroButton: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
     backgroundColor: '#f9fafb',
-    borderRadius: 999,
-    marginTop: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: 14,
+    marginTop: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    shadowColor: '#fff',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
   },
   analysisHeroButtonText: {
     color: '#050507',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
   primaryInsightCard: {
-    backgroundColor: '#1b1e27',
-    borderRadius: 18,
-    marginBottom: 16,
+    backgroundColor: '#101218',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 20,
     marginHorizontal: 16,
-    padding: 16,
+    padding: 15,
   },
   cardEyebrow: {
     color: '#9ca3af',
@@ -1592,9 +1597,9 @@ const styles = StyleSheet.create({
   },
   primaryInsightTitle: {
     color: '#fff',
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '900',
-    lineHeight: 26,
+    lineHeight: 25,
   },
   primaryInsightText: {
     color: '#d1d5db',
