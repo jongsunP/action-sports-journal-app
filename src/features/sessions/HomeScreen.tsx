@@ -3010,26 +3010,41 @@ function getSessionCardPresentation({
   evidence?: GeminiEvidenceResult;
   thumbnailUri?: string;
 }) {
+  const needsReview =
+    evidence?.requiresUserConfirmation ||
+    evidence?.consistencyStatus === 'needs_review' ||
+    evidence?.consistencyStatus === 'inconsistent' ||
+    evidence?.confidence === 'low' ||
+    evidence?.primaryCandidate.confidence === 'low' ||
+    evidence?.primaryCandidate.name === '확인 필요';
   const detectedAction =
-    evidence?.primaryCandidate.name === '확인 필요'
+    needsReview || evidence?.primaryCandidate.name === '확인 필요'
       ? undefined
       : evidence?.primaryCandidate.name;
   const hook =
-    evidence?.evidence ??
-    evidence?.approachObservedFacts?.wakeCrossingPath.evidence ??
-    evidence?.family.evidence;
+    needsReview
+      ? evidence?.candidateTrace?.displayLabel
+        ? `검토 후보: ${evidence.candidateTrace.displayLabel}`
+        : '상세 확인이 필요한 분석 결과입니다.'
+      : evidence?.evidence ??
+        evidence?.approachObservedFacts?.wakeCrossingPath.evidence ??
+        evidence?.family.evidence;
   const hasEvidence = evidence?.status === 'completed';
   const momentTitle =
-    detectedAction ??
-    inferMomentTitle(session.title) ??
-    (session.videoUri ? '라이딩 모먼트' : '클립 대기 중');
+    needsReview
+      ? '확인 필요'
+      : detectedAction ??
+        inferMomentTitle(session.title) ??
+        (session.videoUri ? '라이딩 모먼트' : '클립 대기 중');
   const reason = hasEvidence
     ? hook ?? '동작 근거가 준비됐습니다.'
     : session.videoUri
       ? 'Gemini 근거 추출을 시작합니다.'
       : '클립을 추가하면 모먼트가 살아납니다.';
   const openReason = hasEvidence
-    ? '동작 근거 준비'
+    ? needsReview
+      ? '검토 필요'
+      : '동작 근거 준비'
     : session.videoUri
       ? '근거 추출 대기'
       : '클립 추가 필요';

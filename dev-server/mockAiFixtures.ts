@@ -10,7 +10,7 @@ type SessionMetadata = {
   userConfirmedTrick: string;
 };
 
-type MockFixtureId = "basic_air" | "back_roll";
+type MockFixtureId = "basic_air" | "back_roll" | "back_roll_review";
 
 type MockAiFixture = {
   id: MockFixtureId;
@@ -498,7 +498,190 @@ const backRollFixture: MockAiFixture = {
   },
 };
 
-const fixtures = [basicAirFixture, backRollFixture] satisfies MockAiFixture[];
+const backRollReviewFixture: MockAiFixture = {
+  ...backRollFixture,
+  id: "back_roll_review",
+  label: "Back Roll Review Candidate",
+  evidenceModel: "mock-gemini-evidence-v1/back_roll_review",
+  analysisModel: "mock-gemini-analysis-v1/back_roll_review",
+  evidencePayload: {
+    ...backRollFixture.evidencePayload,
+    primaryCandidate: {
+      name: "확인 필요",
+      confidence: confidence("low"),
+      evidence:
+        "MOCK REVIEW: do not persist Heelside Back Roll as confirmed. Heelside edge, roll-axis airtime, and boardAboveHead are visible, so Back Roll remains a review candidate only.",
+    },
+    alternativeCandidates: [
+      {
+        name: "Heelside Back Roll",
+        confidence: confidence("medium"),
+        evidence:
+          "MOCK REVIEW: Back Roll is kept as a raw review candidate from visible heelside, roll_axis, inversionDetected, and boardAboveHead signals.",
+      },
+    ],
+    family: {
+      value: "확인 필요",
+      confidence: confidence("low"),
+      evidence:
+        "MOCK REVIEW: invert evidence is visible through boardAboveHead, bodyInverted, and rollAxisObserved, but the safe top-level family remains review-only.",
+    },
+    temporalWindows: {
+      takeoffTimestamp: {
+        timestampSeconds: 2.1,
+        confidence: confidence("medium"),
+        evidence: "MOCK REVIEW: rider leaves the wake lip near this moment.",
+      },
+      finalApproachWindow: {
+        startSeconds: 0.7,
+        endSeconds: 2.1,
+        confidence: confidence("medium"),
+        reasonWindowWasChosen:
+          "MOCK REVIEW: heelside edge load is visible before takeoff, but takeoff mechanics remain incomplete.",
+      },
+      ignoredSetupWindows: [
+        {
+          startSeconds: 0,
+          endSeconds: 0.7,
+          reason: "MOCK REVIEW: initial setup is before final approach.",
+        },
+      ],
+      approachWindowConfidence: confidence("medium"),
+    },
+    approachObservedFacts: {
+      ...(backRollFixture.evidencePayload.approachObservedFacts as Record<
+        string,
+        unknown
+      >),
+      handlePosition: {
+        value: "close to body",
+        confidence: confidence("medium"),
+        evidence:
+          "MOCK REVIEW: handle stays close to the body, but this is not treated as enough to confirm the exact trick.",
+      },
+      bodyOrientation: {
+        value: "changes during airborne roll",
+        confidence: confidence("low"),
+        evidence:
+          "MOCK REVIEW: body orientation changes in the air, but this is not enough to confirm the exact trick.",
+      },
+    },
+    edgeLoadObservedFacts: {
+      ...(backRollFixture.evidencePayload.edgeLoadObservedFacts as Record<
+        string,
+        unknown
+      >),
+      riderWeightOverEdge: {
+        value: "weight over heel edge",
+        confidence: confidence("medium"),
+        evidence:
+          "MOCK REVIEW: rider weight appears stacked over heel edge before release.",
+      },
+      edgeLoadEvidenceText:
+        "MOCK REVIEW: timed finalApproachWindow includes heel-edge board tilt, spray, and rider weight over edge.",
+    },
+    popObservedFacts: {
+      popType: "wake_pop",
+      timing: "takeoff_window",
+      intensity: "medium",
+      evidenceText:
+        "MOCK REVIEW: pop is visible at the wake, but the next motion cue is incomplete.",
+      confidence: confidence("medium"),
+      antiEvidence: [
+        "MOCK REVIEW: exact takeoff mechanics are not independently confirmed.",
+      ],
+    },
+    rotationObservedFacts: {
+      rotationAxis: "roll_axis",
+      rotationDirection: "unknown",
+      inversionDetected: true,
+      spinDegrees: "unknown",
+      handlePassObserved: false,
+      evidenceText:
+        "MOCK REVIEW: airborne roll_axis and inversionDetected are visible after takeoff; exact takeoff cue is not independently confirmed.",
+      confidence: confidence("medium"),
+      antiEvidence: [
+        "MOCK REVIEW: no independent takeoff rotation-start cue is visible.",
+      ],
+    },
+    inversionObservedFacts: {
+      bodyInverted: true,
+      boardAboveHead: true,
+      rollAxisObserved: true,
+      flipAxisObserved: false,
+      inversionDuration: {
+        seconds: 0.7,
+        confidence: confidence("high"),
+        evidence:
+          "MOCK REVIEW: board rises above rider head and body is inverted during the airborne roll.",
+      },
+      inversionEvidenceCount: 3,
+      antiInversionEvidence: [],
+    },
+    rotationType: {
+      value: "확인 필요",
+      confidence: confidence("low"),
+      evidence:
+        "MOCK REVIEW: roll-axis evidence exists, but the safe top-level rotation label remains review-only.",
+    },
+    landingOutcome: {
+      value: "unknown",
+      confidence: confidence("low"),
+      evidence: "MOCK REVIEW: landing is not used to confirm this candidate.",
+    },
+    confidence: confidence("low"),
+    evidence:
+      "MOCK REVIEW: Heelside Back Roll should appear only as a review candidate because the safe top-level result is 확인 필요.",
+    evidenceWindows: [
+      {
+        startSeconds: 1.1,
+        endSeconds: 2.0,
+        label: "heelside_edge_load",
+        evidence: "MOCK REVIEW: heel edge load before takeoff.",
+        confidence: confidence("medium"),
+      },
+      {
+        startSeconds: 2.1,
+        endSeconds: 3.0,
+        label: "roll_axis_inversion",
+        evidence:
+          "MOCK REVIEW: board above head and roll-axis inversion are visible after takeoff.",
+        confidence: confidence("high"),
+      },
+    ],
+    observations: [
+      {
+        timestampLabel: "1.1s-2.0s",
+        label: "Edge load",
+        detail: "MOCK REVIEW: heel edge load appears during final approach.",
+        confidence: confidence("medium"),
+      },
+      {
+        timestampLabel: "2.1s-3.0s",
+        label: "Inversion",
+        detail: "MOCK REVIEW: boardAboveHead and rollAxisObserved are true.",
+        confidence: confidence("high"),
+      },
+    ],
+    uncertainty: {
+      level: confidence("high"),
+      reasons: [
+        "MOCK REVIEW: exact takeoff rotation-start proof is intentionally absent.",
+      ],
+    },
+  },
+  analysisPayload: {
+    ...backRollFixture.analysisPayload,
+    summary:
+      "MOCK REVIEW: 백롤 가능성은 보이지만 확정하지 않고 검토 후보로만 표시해야 하는 fixture입니다.",
+  },
+};
+
+const fixtures = [
+  basicAirFixture,
+  backRollFixture,
+  backRollReviewFixture,
+] satisfies MockAiFixture[];
 
 export function getMockAiFixture(metadata: SessionMetadata) {
   const forcedFixture = normalizeFixtureId(process.env.MOCK_AI_FIXTURE);
@@ -516,6 +699,14 @@ export function getMockAiFixture(metadata: SessionMetadata) {
     .toLowerCase();
 
   if (
+    searchText.includes("back roll review") ||
+    searchText.includes("backroll review") ||
+    searchText.includes("candidate review")
+  ) {
+    return backRollReviewFixture;
+  }
+
+  if (
     searchText.includes("back roll") ||
     searchText.includes("backroll") ||
     searchText.includes("invert")
@@ -531,7 +722,11 @@ export function stringifyMockAiPayload(payload: Record<string, unknown>) {
 }
 
 function normalizeFixtureId(value: unknown): MockFixtureId | null {
-  if (value === "basic_air" || value === "back_roll") {
+  if (
+    value === "basic_air" ||
+    value === "back_roll" ||
+    value === "back_roll_review"
+  ) {
     return value;
   }
 
