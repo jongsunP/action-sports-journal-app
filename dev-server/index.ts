@@ -26,6 +26,10 @@ import type {
   CoachingInsightContext,
   GeminiEvidenceResult,
 } from "../src/types";
+import {
+  getMockAiFixture,
+  stringifyMockAiPayload,
+} from "./mockAiFixtures";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -94,8 +98,18 @@ const modelBenchmarkArtifactDir =
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
+const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
+const mockAiAnalysisEnabled =
+  process.env.NODE_ENV !== "production" && mockAiAnalysisRequested;
+const mockAiLatencyMs = readNumberEnv("MOCK_AI_LATENCY_MS", 0);
 const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
 let supabaseServerClient: ReturnType<typeof createSupabaseClient<any>> | null | undefined;
+
+if (process.env.NODE_ENV === "production" && mockAiAnalysisRequested) {
+  throw new Error(
+    "MOCK_AI_ANALYSIS=true is not allowed when NODE_ENV=production.",
+  );
+}
 
 type SupabaseServerClient = ReturnType<typeof createSupabaseClient<any>>;
 
@@ -153,6 +167,12 @@ app.get("/health", (_request, response) => {
       environment: process.env.NODE_ENV ?? "development",
     },
     primaryProvider: "gemini",
+    mockAi: {
+      requested: mockAiAnalysisRequested,
+      enabled: mockAiAnalysisEnabled,
+      fixture: process.env.MOCK_AI_FIXTURE ?? "auto",
+      latencyMs: mockAiLatencyMs,
+    },
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     geminiModel,
     geminiFallbackModel,
@@ -405,7 +425,9 @@ app.get("/api/moments", async (_request, response) => {
         latestAnalysisJobId: moment.latest_analysis_job_id,
         latestEvidenceResult:
           typeof moment.latest_evidence_result_id === "string"
-            ? evidenceResultsById.get(moment.latest_evidence_result_id) ?? null
+            ? sanitizeEvidenceResultForMomentList(
+                evidenceResultsById.get(moment.latest_evidence_result_id),
+              )
             : null,
         createdAt: moment.created_at,
         updatedAt: moment.updated_at,
@@ -418,6 +440,34 @@ app.get("/api/moments", async (_request, response) => {
     response.status(500).json({ error: message });
   }
 });
+
+function sanitizeEvidenceResultForMomentList(
+  evidenceResult: Record<string, unknown> | undefined,
+) {
+  if (!evidenceResult) {
+    return null;
+  }
+
+  const sanitized = { ...evidenceResult };
+
+  sanitized.raw_response_text = safeRawResponseTextForMomentList(
+    evidenceResult.raw_response_text,
+  );
+
+  return sanitized;
+}
+
+function safeRawResponseTextForMomentList(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  if (/[\u0000-\u001f]/.test(value)) {
+    return null;
+  }
+
+  return value;
+}
 
 app.patch("/api/moments/:momentId/status", async (request, response) => {
   try {
@@ -589,7 +639,7 @@ app.post(
     try {
       const usageKey = todayKey("gemini");
 
-      if (isDailyUsageLimitExceeded(usageKey)) {
+      if (!mockAiAnalysisEnabled && isDailyUsageLimitExceeded(usageKey)) {
         response.status(429).json({
           error:
             "Daily analysis limit reached. This limit keeps development API spend under control.",
@@ -597,7 +647,7 @@ app.post(
         return;
       }
 
-      if (!process.env.GEMINI_API_KEY) {
+      if (!mockAiAnalysisEnabled && !process.env.GEMINI_API_KEY) {
         response.status(500).json({
           error: "GEMINI_API_KEY is not configured on the server.",
         });
@@ -617,56 +667,83 @@ app.post(
       }
 
       const metadata = getSessionMetadata(request);
-      const client = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY,
-      });
 
-      const uploadedFile = await uploadVideoForGemini({
-        client,
-        buffer: request.file.buffer,
-        mimeType: request.file.mimetype || "video/quicktime",
-        originalName: request.file.originalname,
-      });
+      let rawOutputText: string;
+      let actualModel: string;
+      let mockInfo: Record<string, unknown> | undefined;
 
-      const prompt = buildGeminiAnalysisPrompt({
-        ...metadata,
-        fileName: request.file.originalname,
-        coachingInsightContext: readCoachingInsightContext(request),
-      });
+      if (mockAiAnalysisEnabled) {
+        const fixture = getMockAiFixture(metadata);
+        await applyMockAiLatency();
+        rawOutputText = stringifyMockAiPayload(fixture.analysisPayload);
+        actualModel = fixture.analysisModel;
+        mockInfo = buildMockAiInfo(fixture.id, [
+          "gemini_files_upload",
+          "gemini_generate_content",
+        ]);
+        console.log(
+          `[Mock AI] analysis fixture=${fixture.id} model=${actualModel} externalCallsSkipped=gemini_files_upload,gemini_generate_content`,
+        );
+      } else {
+        const client = new GoogleGenAI({
+          apiKey: process.env.GEMINI_API_KEY,
+        });
 
-      const result = await withTimeout(
-        generateGeminiContentWithResilience({
+        const uploadedFile = await uploadVideoForGemini({
           client,
-          operation: "analysis",
-          params: {
-            model: geminiModel,
-            contents: [
-              createPartFromUri(
-                uploadedFile.uri ?? "",
-                uploadedFile.mimeType ?? request.file.mimetype,
-              ),
-              prompt,
-            ],
-            config: {
-              maxOutputTokens: geminiMaxOutputTokens,
-              thinkingConfig: { thinkingBudget: 0 },
-              responseMimeType: "application/json",
-              responseSchema: geminiAnalysisResponseSchema,
-            },
-          },
-        }),
-        geminiRequestTimeoutMs,
-        "Gemini analysis timed out.",
-      );
+          buffer: request.file.buffer,
+          mimeType: request.file.mimetype || "video/quicktime",
+          originalName: request.file.originalname,
+        });
 
-      const rawOutputText = result.response.text ?? "";
+        const prompt = buildGeminiAnalysisPrompt({
+          ...metadata,
+          fileName: request.file.originalname,
+          coachingInsightContext: readCoachingInsightContext(request),
+        });
+
+        const result = await withTimeout(
+          generateGeminiContentWithResilience({
+            client,
+            operation: "analysis",
+            params: {
+              model: geminiModel,
+              contents: [
+                createPartFromUri(
+                  uploadedFile.uri ?? "",
+                  uploadedFile.mimeType ?? request.file.mimetype,
+                ),
+                prompt,
+              ],
+              config: {
+                maxOutputTokens: geminiMaxOutputTokens,
+                thinkingConfig: { thinkingBudget: 0 },
+                responseMimeType: "application/json",
+                responseSchema: geminiAnalysisResponseSchema,
+              },
+            },
+          }),
+          geminiRequestTimeoutMs,
+          "Gemini analysis timed out.",
+        );
+
+        rawOutputText = result.response.text ?? "";
+        actualModel = result.model;
+      }
+
       const analysis = parseGeminiAnalysis(rawOutputText);
-      recordDailyUsage(usageKey);
+      if (!mockAiAnalysisEnabled) {
+        recordDailyUsage(usageKey);
+      }
 
       response.json({
         id: `analysis-${Date.now()}`,
         sessionId: metadata.sessionId,
         status: analysis.parseFailed ? "failed" : "completed",
+        provider: "gemini",
+        model: actualModel,
+        mock: mockAiAnalysisEnabled ? true : undefined,
+        mockInfo,
         rawResponseText: rawOutputText,
         summary: analysis.summary,
         highlights: analysis.highlights,
@@ -692,7 +769,7 @@ app.post(
   upload.single("video"),
   async (request, response) => {
     try {
-      if (!process.env.GEMINI_API_KEY) {
+      if (!mockAiAnalysisEnabled && !process.env.GEMINI_API_KEY) {
         response.status(500).json({
           error: "GEMINI_API_KEY is not configured on the server.",
         });
@@ -744,7 +821,16 @@ app.post(
         momentId: queuedJob.momentId,
         status: queuedJob.status,
         provider: "gemini",
-        model: geminiModel,
+        model: mockAiAnalysisEnabled
+          ? "mock-gemini-evidence-v1"
+          : geminiModel,
+        mock: mockAiAnalysisEnabled ? true : undefined,
+        mockInfo: mockAiAnalysisEnabled
+          ? buildMockAiInfo("auto", [
+              "gemini_files_upload",
+              "gemini_generate_content",
+            ])
+          : undefined,
         momentStatus:
           queuedJob.status === "processing" ? "processing" : "queued",
         createdAt: new Date().toISOString(),
@@ -768,6 +854,8 @@ app.post(
   async (request, response) => {
     try {
       const usageKey = todayKey("openai");
+
+      assertExternalAiAllowed("OpenAI benchmark");
 
       if (isDailyUsageLimitExceeded(usageKey)) {
         response.status(429).json({
@@ -1645,6 +1733,27 @@ function getField(value: unknown, fallback: string) {
   return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
+async function applyMockAiLatency() {
+  if (mockAiLatencyMs > 0) {
+    await sleep(mockAiLatencyMs);
+  }
+}
+
+function buildMockAiInfo(fixtureId: string, providerCallsSkipped: string[]) {
+  return {
+    enabled: true,
+    fixtureId,
+    provider: "mock",
+    providerCallsSkipped,
+  };
+}
+
+function assertExternalAiAllowed(operation: string) {
+  if (mockAiAnalysisEnabled) {
+    throw new Error(`${operation} must not call external AI in mock mode.`);
+  }
+}
+
 function getDebugToken(request: express.Request) {
   const headerValue = request.header("x-debug-token");
 
@@ -1779,6 +1888,8 @@ async function uploadVideoForGemini({
   mimeType: string;
   originalName: string;
 }) {
+  assertExternalAiAllowed("uploadVideoForGemini");
+
   const tempDir = await mkdtemp(join(tmpdir(), "asj-gemini-video-"));
   const filePath = join(
     tempDir,
@@ -1859,6 +1970,8 @@ async function generateGeminiContentWithResilience({
   operation: string;
   params: GeminiGenerateContentParams;
 }) {
+  assertExternalAiAllowed("generateGeminiContentWithResilience");
+
   const retryDelaysMs = [2_000, 5_000, 10_000];
   let lastError: unknown;
 
@@ -2752,59 +2865,81 @@ async function runGeminiEvidenceExtraction({
 }) {
   const usageKey = todayKey("gemini-evidence");
 
-  if (isDailyUsageLimitExceeded(usageKey)) {
+  if (!mockAiAnalysisEnabled && isDailyUsageLimitExceeded(usageKey)) {
     throw new Error(
       "Daily evidence extraction limit reached. This limit keeps development API spend under control.",
     );
   }
 
-  const client = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-  });
+  let rawOutputText: string;
+  let actualModel: string;
+  let finishReason = "unknown";
+  let mockInfo: Record<string, unknown> | undefined;
 
-  const uploadedFile = await uploadVideoForGemini({
-    client,
-    buffer: file.buffer,
-    mimeType: file.mimetype || "video/quicktime",
-    originalName: file.originalname,
-  });
+  if (mockAiAnalysisEnabled) {
+    const fixture = getMockAiFixture(metadata);
+    await applyMockAiLatency();
+    rawOutputText = stringifyMockAiPayload(fixture.evidencePayload);
+    actualModel = fixture.evidenceModel;
+    finishReason = "mock";
+    mockInfo = buildMockAiInfo(fixture.id, [
+      "gemini_files_upload",
+      "gemini_generate_content",
+    ]);
+    console.log(
+      `[Mock AI] evidence fixture=${fixture.id} model=${actualModel} externalCallsSkipped=gemini_files_upload,gemini_generate_content`,
+    );
+  } else {
+    const client = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
 
-  const prompt = buildGeminiEvidencePrompt({
-    ...metadata,
-    fileName: file.originalname,
-  });
-
-  const result = await withTimeout(
-    generateGeminiContentWithResilience({
+    const uploadedFile = await uploadVideoForGemini({
       client,
-      operation: "evidence extraction",
-      params: {
-        model: geminiModel,
-        contents: [
-          createPartFromUri(
-            uploadedFile.uri ?? "",
-            uploadedFile.mimeType ?? file.mimetype,
-          ),
-          prompt,
-        ],
-        config: {
-          maxOutputTokens: geminiEvidenceMaxOutputTokens,
-          responseMimeType: "application/json",
-          responseSchema: geminiEvidenceResponseSchema,
-        },
-      },
-    }),
-    geminiEvidenceRequestTimeoutMs,
-    "Gemini evidence extraction timed out.",
-  );
+      buffer: file.buffer,
+      mimeType: file.mimetype || "video/quicktime",
+      originalName: file.originalname,
+    });
 
-  const rawOutputText = result.response.text ?? "";
-  const candidate = result.response.candidates?.[0];
+    const prompt = buildGeminiEvidencePrompt({
+      ...metadata,
+      fileName: file.originalname,
+    });
+
+    const result = await withTimeout(
+      generateGeminiContentWithResilience({
+        client,
+        operation: "evidence extraction",
+        params: {
+          model: geminiModel,
+          contents: [
+            createPartFromUri(
+              uploadedFile.uri ?? "",
+              uploadedFile.mimeType ?? file.mimetype,
+            ),
+            prompt,
+          ],
+          config: {
+            maxOutputTokens: geminiEvidenceMaxOutputTokens,
+            responseMimeType: "application/json",
+            responseSchema: geminiEvidenceResponseSchema,
+          },
+        },
+      }),
+      geminiEvidenceRequestTimeoutMs,
+      "Gemini evidence extraction timed out.",
+    );
+
+    rawOutputText = result.response.text ?? "";
+    actualModel = result.model;
+    finishReason = result.response.candidates?.[0]?.finishReason ?? "unknown";
+  }
+
   console.log(
-    `[Gemini evidence raw] model=${result.model} outputChars=${rawOutputText.length} finishReason=${candidate?.finishReason ?? "unknown"}`,
+    `[Gemini evidence raw] model=${actualModel} outputChars=${rawOutputText.length} finishReason=${finishReason}`,
   );
   const evidence = parseGeminiEvidence(rawOutputText);
-  const qualityMode = geminiQualityMode(result.model);
+  const qualityMode = geminiQualityMode(actualModel);
   const qualityAdjustedEvidence =
     qualityMode === "degraded" ? markEvidenceAsDegraded(evidence) : evidence;
   const taxonomyAdjustedEvidence = applyWakeboardTaxonomyGates(
@@ -2824,7 +2959,7 @@ async function runGeminiEvidenceExtraction({
     sessionId: metadata.sessionId,
     status: normalizedEvidence.parseFailed ? "failed" : "completed",
     provider: "gemini",
-    model: result.model,
+    model: actualModel,
     qualityMode,
     recoveredFromPartial: isPartialRecoveredEvidence(normalizedEvidence),
     requiresUserConfirmation: false,
@@ -2845,9 +2980,11 @@ async function runGeminiEvidenceExtraction({
     normalizedEvidence.rotationValidation.needsReview ||
     normalizedEvidence.grabValidation.needsReview ||
     normalizedEvidence.landingValidation.needsReview;
-  recordDailyUsage(usageKey);
+  if (!mockAiAnalysisEnabled) {
+    recordDailyUsage(usageKey);
+  }
   console.log(
-    `[Gemini evidence] model=${result.model} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
+    `[Gemini evidence] model=${actualModel} qualityMode=${qualityMode} recoveredFromPartial=${recoveredFromPartial} consistencyStatus=${normalizedEvidence.consistencyStatus} requiresUserConfirmation=${requiresUserConfirmation} primaryCandidate=${normalizedEvidence.primaryCandidate.name}`,
   );
 
   const evidenceResponse = {
@@ -2855,7 +2992,9 @@ async function runGeminiEvidenceExtraction({
     sessionId: metadata.sessionId,
     status: normalizedEvidence.parseFailed ? "failed" : "completed",
     provider: "gemini",
-    model: result.model,
+    model: actualModel,
+    mock: mockAiAnalysisEnabled ? true : undefined,
+    mockInfo,
     qualityMode,
     recoveredFromPartial,
     requiresUserConfirmation,
@@ -2918,7 +3057,7 @@ async function runGeminiEvidenceExtraction({
     metadata,
     evidence: normalizedEvidence,
     rawResponseText: rawOutputText,
-    model: result.model,
+    model: actualModel,
     qualityMode,
     requiresUserConfirmation,
     analysisJobId,
@@ -2948,12 +3087,14 @@ async function runGeminiEvidenceExtraction({
       modelInfo: {
         requestedModel: geminiModel,
         fallbackModel: geminiFallbackModel,
-        actualModel: result.model,
+        actualModel,
         qualityMode,
         degraded: qualityMode === "degraded",
         recoveredFromPartial,
         requiresUserConfirmation,
-        finishReason: candidate?.finishReason ?? "unknown",
+        finishReason,
+        mock: mockAiAnalysisEnabled,
+        mockInfo,
       },
     });
   } catch (error) {
@@ -3358,6 +3499,8 @@ async function writeEvidenceCaptureArtifact({
     recoveredFromPartial: boolean;
     requiresUserConfirmation: boolean;
     finishReason: string;
+    mock?: boolean;
+    mockInfo?: Record<string, unknown>;
   };
 }) {
   if (process.env.NODE_ENV === "production") {
@@ -3382,7 +3525,7 @@ async function writeEvidenceCaptureArtifact({
     JSON.stringify(
       {
         capture: {
-          kind: "gemini-evidence",
+          kind: modelInfo.mock ? "mock-gemini-evidence" : "gemini-evidence",
           createdAt,
           nodeEnv: process.env.NODE_ENV ?? "development",
         },
