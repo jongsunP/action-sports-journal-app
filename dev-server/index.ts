@@ -98,16 +98,30 @@ const modelBenchmarkArtifactDir =
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
+const appEnv = process.env.APP_ENV ?? "development";
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
+const mockAiAllowRemote =
+  process.env.MOCK_AI_ANALYSIS_ALLOW_REMOTE === "true";
 const mockAiAnalysisEnabled =
-  process.env.NODE_ENV !== "production" && mockAiAnalysisRequested;
+  appEnv !== "production" &&
+  process.env.NODE_ENV !== "production" &&
+  mockAiAnalysisRequested;
 const mockAiLatencyMs = readNumberEnv("MOCK_AI_LATENCY_MS", 0);
 const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
 let supabaseServerClient: ReturnType<typeof createSupabaseClient<any>> | null | undefined;
 
-if (process.env.NODE_ENV === "production" && mockAiAnalysisRequested) {
+if (
+  (appEnv === "production" || process.env.NODE_ENV === "production") &&
+  mockAiAnalysisRequested
+) {
   throw new Error(
-    "MOCK_AI_ANALYSIS=true is not allowed when NODE_ENV=production.",
+    "MOCK_AI_ANALYSIS=true is not allowed when APP_ENV=production or NODE_ENV=production.",
+  );
+}
+
+if (appEnv === "preview" && mockAiAnalysisRequested && !mockAiAllowRemote) {
+  throw new Error(
+    "Remote Mock AI preview requires MOCK_AI_ANALYSIS_ALLOW_REMOTE=true.",
   );
 }
 
@@ -165,12 +179,14 @@ app.get("/health", (_request, response) => {
       host,
       port,
       environment: process.env.NODE_ENV ?? "development",
+      appEnv,
     },
     primaryProvider: "gemini",
     mockAi: {
       requested: mockAiAnalysisRequested,
       enabled: mockAiAnalysisEnabled,
       fixture: process.env.MOCK_AI_FIXTURE ?? "auto",
+      allowRemote: mockAiAllowRemote,
       latencyMs: mockAiLatencyMs,
     },
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
