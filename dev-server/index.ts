@@ -104,18 +104,24 @@ const mockAiAllowRemote =
   process.env.MOCK_AI_ANALYSIS_ALLOW_REMOTE === "true";
 const mockAiAnalysisEnabled =
   appEnv !== "production" &&
-  process.env.NODE_ENV !== "production" &&
+  (appEnv === "preview" ? mockAiAllowRemote : true) &&
   mockAiAnalysisRequested;
 const mockAiLatencyMs = readNumberEnv("MOCK_AI_LATENCY_MS", 0);
 const evidenceDebugCaptures: EvidenceDebugCapture[] = [];
 let supabaseServerClient: ReturnType<typeof createSupabaseClient<any>> | null | undefined;
 
+if (appEnv === "production" && mockAiAnalysisRequested) {
+  throw new Error(
+    "MOCK_AI_ANALYSIS=true is not allowed when APP_ENV=production.",
+  );
+}
+
 if (
-  (appEnv === "production" || process.env.NODE_ENV === "production") &&
-  mockAiAnalysisRequested
+  mockAiAnalysisRequested &&
+  !["development", "test", "preview"].includes(appEnv)
 ) {
   throw new Error(
-    "MOCK_AI_ANALYSIS=true is not allowed when APP_ENV=production or NODE_ENV=production.",
+    "MOCK_AI_ANALYSIS=true requires APP_ENV=preview, development, or test.",
   );
 }
 

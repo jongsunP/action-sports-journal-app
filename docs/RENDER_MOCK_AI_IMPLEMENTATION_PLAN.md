@@ -72,7 +72,6 @@ external AI API call
 Server-only Render preview/mock env:
 
 ```text
-NODE_ENV must not be production
 APP_ENV=preview
 MOCK_AI_ANALYSIS=true
 MOCK_AI_ANALYSIS_ALLOW_REMOTE=true
@@ -137,9 +136,11 @@ AND MOCK_AI_FIXTURE is empty
 
 Recommendation:
 
-Use `APP_ENV` for product environment, but keep `NODE_ENV` non-production for
-the Render preview/mock service. The implemented safety guard forbids Mock AI
-whenever `NODE_ENV=production` or `APP_ENV=production`.
+Use `APP_ENV` for product environment. Do not use `NODE_ENV=production` by
+itself as a mock blocker because Render Node.js services may provide
+`NODE_ENV=production` at runtime. Mock mode is forbidden for
+`APP_ENV=production`, and remote mock mode requires `APP_ENV=preview` plus
+`MOCK_AI_ANALYSIS_ALLOW_REMOTE=true`.
 
 ## Health Endpoint Design
 
@@ -588,7 +589,10 @@ Expected:
 
 Required Render preview setting:
 
-- do not set `NODE_ENV=production` on the preview/mock service.
+- set `APP_ENV=preview`.
+- set `MOCK_AI_ANALYSIS_ALLOW_REMOTE=true`.
+- `NODE_ENV=production` may be present on Render and should not block preview
+  mock mode by itself.
 
 ### Simulator QA Verification
 

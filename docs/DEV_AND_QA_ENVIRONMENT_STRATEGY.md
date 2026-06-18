@@ -191,14 +191,14 @@ Relevant docs already say:
 - the app calls `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`,
 - EAS preview should point to Render.
 
-### NODE_ENV Production Guard
+### APP_ENV Production Guard
 
 Current behavior:
 
 - `dailyUsageLimitEnabled = process.env.NODE_ENV === "production"`.
 - Some debug/benchmark routes are disabled in production.
-- There is no existing production-safe Mock AI guard because Mock AI is not yet
-  implemented.
+- Render Node.js services can run with `NODE_ENV=production`.
+- Mock AI safety must be based on `APP_ENV`, not `NODE_ENV` alone.
 
 Design requirement:
 
@@ -309,7 +309,6 @@ One mistaken env setting could make production return mock results.
 Production Render service:
 
 ```text
-NODE_ENV=production
 APP_ENV=production
 MOCK_AI_ANALYSIS must be absent or false
 MOCK_AI_ANALYSIS_ALLOW_REMOTE must be absent or false
@@ -318,15 +317,13 @@ MOCK_AI_ANALYSIS_ALLOW_REMOTE must be absent or false
 On boot, production should fail fast if:
 
 ```text
-NODE_ENV=production
-AND APP_ENV=production
+APP_ENV=production
 AND MOCK_AI_ANALYSIS=true
 ```
 
 Preview/mock Render service:
 
 ```text
-NODE_ENV must not be production
 APP_ENV=preview
 MOCK_AI_ANALYSIS=true
 MOCK_AI_ANALYSIS_ALLOW_REMOTE=true
@@ -335,11 +332,10 @@ MOCK_AI_FIXTURE=basic_air_default
 
 Important:
 
-The implemented guard intentionally forbids Mock AI whenever
-`NODE_ENV=production` or `APP_ENV=production`. Therefore a Render preview/mock
-service must not set `NODE_ENV=production`. Use `APP_ENV=preview` to identify
-the product environment, and keep `NODE_ENV` unset or non-production for the
-mock service.
+Render may provide `NODE_ENV=production` for Node.js services. This must not
+block the preview/mock service. The guard should allow mock mode when
+`APP_ENV=preview`, `MOCK_AI_ANALYSIS=true`, and
+`MOCK_AI_ANALYSIS_ALLOW_REMOTE=true`.
 
 ## Proposed Mock AI Env Contract
 
