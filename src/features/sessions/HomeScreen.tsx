@@ -2403,18 +2403,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b0d12',
   },
   detailModalContainer: {
-    backgroundColor: '#0b0d12',
+    backgroundColor: '#050507',
     flex: 1,
   },
   detailModalBody: {
-    paddingBottom: 34,
+    paddingBottom: 42,
   },
   detailModalHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   detailCloseButton: {
     backgroundColor: '#f8fafc',
@@ -2431,7 +2431,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailKicker: {
-    color: '#03c75a',
+    color: '#9ca3af',
     fontSize: 10,
     fontWeight: '900',
     marginBottom: 2,
@@ -2442,20 +2442,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
   },
+  detailHeaderActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+  },
+  detailHeaderActionButton: {
+    backgroundColor: '#1f2937',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  detailHeaderActionButtonDisabled: {
+    opacity: 0.45,
+  },
+  detailHeaderActionText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  detailHeaderActionTextDisabled: {
+    color: '#94a3b8',
+  },
+  detailHeaderDeleteButton: {
+    backgroundColor: 'rgba(251, 113, 133, 0.12)',
+    borderColor: 'rgba(251, 113, 133, 0.26)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  detailHeaderDeleteText: {
+    color: '#fb7185',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   detailVideoFrame: {
     aspectRatio: 1,
     backgroundColor: '#0f172a',
-    marginBottom: 12,
+    marginBottom: 18,
     overflow: 'hidden',
     width: '100%',
   },
   detailSummaryCard: {
-    backgroundColor: '#111318',
-    borderColor: 'rgba(248, 250, 252, 0.08)',
-    borderRadius: 16,
-    borderWidth: 1,
     marginHorizontal: 16,
-    padding: 14,
+    paddingBottom: 16,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   detailSummaryTopRow: {
     alignItems: 'center',
@@ -2464,13 +2499,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detailStateCard: {
-    backgroundColor: '#111318',
-    borderColor: 'rgba(248, 250, 252, 0.1)',
-    borderRadius: 16,
-    borderWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
     marginHorizontal: 16,
-    marginTop: 12,
-    padding: 14,
+    paddingVertical: 16,
   },
   detailStateTitle: {
     color: '#f8fafc',
@@ -2640,7 +2672,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   detailMomentDate: {
-    color: '#03c75a',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 5,
@@ -2826,28 +2858,23 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   evidencePanel: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#cbd5e1',
-    borderRadius: 16,
-    borderWidth: 1,
     marginHorizontal: 16,
-    marginTop: 12,
-    padding: 12,
+    paddingTop: 16,
   },
   evidenceTitle: {
-    color: '#0f172a',
-    fontSize: 13,
+    color: '#f8fafc',
+    fontSize: 14,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 9,
     textTransform: 'uppercase',
   },
   evidenceModelBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ecfdf5',
-    borderColor: '#99f6e4',
+    backgroundColor: 'rgba(3, 199, 90, 0.12)',
+    borderColor: 'rgba(3, 199, 90, 0.28)',
     borderRadius: 999,
     borderWidth: 1,
-    color: '#0f766e',
+    color: '#86efac',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 8,
@@ -2855,46 +2882,46 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   evidenceModelBadgeDegraded: {
-    backgroundColor: '#fff1f2',
-    borderColor: '#fecdd3',
-    color: '#be123c',
+    backgroundColor: 'rgba(251, 113, 133, 0.12)',
+    borderColor: 'rgba(251, 113, 133, 0.28)',
+    color: '#fb7185',
   },
   evidenceFactRow: {
-    borderTopColor: '#e2e8f0',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   evidenceFactLabel: {
-    color: '#64748b',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 2,
   },
   evidenceFactValue: {
-    color: '#0f766e',
+    color: '#f8fafc',
     fontSize: 14,
     fontWeight: '900',
     marginBottom: 3,
   },
   evidenceSection: {
-    borderTopColor: '#e2e8f0',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 8,
   },
   evidenceSectionTitle: {
-    color: '#0f172a',
+    color: '#f8fafc',
     fontSize: 12,
     fontWeight: '900',
     marginBottom: 4,
   },
   evidenceText: {
-    color: '#475569',
+    color: '#cbd5e1',
     fontSize: 12,
     lineHeight: 18,
     marginBottom: 4,
   },
   evidenceWarningText: {
-    color: '#be123c',
+    color: '#fbbf24',
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 18,
@@ -2907,8 +2934,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   evidenceSummaryCard: {
-    backgroundColor: '#fff',
-    borderColor: '#dbe4ee',
+    backgroundColor: '#101218',
+    borderColor: 'rgba(255, 255, 255, 0.09)',
     borderRadius: 12,
     borderWidth: 1,
     flexGrow: 1,
@@ -2916,14 +2943,14 @@ const styles = StyleSheet.create({
     padding: 9,
   },
   evidenceSummaryLabel: {
-    color: '#64748b',
+    color: '#9ca3af',
     fontSize: 10,
     fontWeight: '900',
     marginBottom: 3,
     textTransform: 'uppercase',
   },
   evidenceSummaryValue: {
-    color: '#0f172a',
+    color: '#f8fafc',
     fontSize: 12,
     fontWeight: '900',
     lineHeight: 16,
@@ -3617,10 +3644,43 @@ function MomentDetailModal({
               <Text style={styles.detailCloseText}>닫기</Text>
             </Pressable>
             <View style={styles.detailHeaderText}>
-              <Text style={styles.detailKicker}>Moment Detail</Text>
+              <Text style={styles.detailKicker}>Moment</Text>
               <Text style={styles.detailHeaderTitle} numberOfLines={1}>
                 {session.title}
               </Text>
+            </View>
+            <View style={styles.detailHeaderActions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canRetry}
+                onPress={onRetry}
+                style={({ pressed }) => [
+                  styles.detailHeaderActionButton,
+                  !canRetry ? styles.detailHeaderActionButtonDisabled : undefined,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.detailHeaderActionText,
+                    !canRetry ? styles.detailHeaderActionTextDisabled : undefined,
+                  ]}
+                >
+                  {isLoading ? '추출 중' : '재시도'}
+                </Text>
+              </Pressable>
+              {onDelete ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onDelete}
+                  style={({ pressed }) => [
+                    styles.detailHeaderDeleteButton,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  <Text style={styles.detailHeaderDeleteText}>삭제</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
 
@@ -3682,34 +3742,6 @@ function MomentDetailModal({
                 </Text>
               </View>
             ) : null}
-            <View style={styles.detailActionRow}>
-              <Pressable
-                accessibilityRole="button"
-                disabled={!canRetry}
-                onPress={onRetry}
-                style={({ pressed }) => [
-                  styles.detailRetryButton,
-                  !canRetry ? styles.detailRetryButtonDisabled : undefined,
-                  pressed ? styles.buttonPressed : undefined,
-                ]}
-              >
-                <Text style={styles.detailRetryText}>
-                  {isLoading ? '추출 중...' : '근거 추출 다시 시도'}
-                </Text>
-              </Pressable>
-              {onDelete ? (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={onDelete}
-                  style={({ pressed }) => [
-                    styles.detailDeleteButton,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  <Text style={styles.detailDeleteText}>삭제</Text>
-                </Pressable>
-              ) : null}
-            </View>
             {debugEndpoint ? (
               <View style={styles.debugBox}>
                 <Text style={styles.debugText}>
