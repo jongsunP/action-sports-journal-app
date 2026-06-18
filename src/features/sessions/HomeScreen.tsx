@@ -857,7 +857,7 @@ export function HomeScreen() {
           </View>
         ) : (
           <View style={styles.videoArchiveList}>
-            {timelineSummaries.map(({ card, completedEvidence, momentStatus, session }) => (
+            {timelineSummaries.map(({ card, momentStatus, session }) => (
               <Pressable
                 accessibilityRole="button"
                 key={session.id}
@@ -882,29 +882,27 @@ export function HomeScreen() {
                   )}
                 </View>
                 <View style={styles.videoArchiveBody}>
-                  <View style={styles.timelineTopRow}>
-                    <Text style={styles.timelineTitle} numberOfLines={1}>
-                      {card.momentTitle}
+                  <View style={styles.videoArchiveMetaRow}>
+                    <View
+                      accessibilityLabel={
+                        momentStatus
+                          ? getMomentStatusLabel(momentStatus)
+                          : '상태 없음'
+                      }
+                      style={[
+                        styles.videoStatusDot,
+                        getMomentStatusDotStyle(momentStatus),
+                      ]}
+                    />
+                    <Text style={styles.recentDate}>
+                      {formatShortSessionDate(session.occurredAt)}
                     </Text>
-                    {momentStatus ? (
-                      <Text
-                        style={[
-                          styles.timelineBadge,
-                          getMomentStatusStyle(momentStatus),
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {getMomentStatusLabel(momentStatus)}
-                      </Text>
-                    ) : null}
                   </View>
-                  <Text style={styles.recentDate}>
-                    {formatShortSessionDate(session.occurredAt)}
+                  <Text style={styles.timelineTitle} numberOfLines={1}>
+                    {session.title}
                   </Text>
-                  <Text style={styles.timelineSummary} numberOfLines={2}>
-                    {completedEvidence
-                      ? getTimelineSummary(completedEvidence)
-                      : card.reason}
+                  <Text style={styles.videoArchiveDescription} numberOfLines={2}>
+                    {session.notes ?? getVideoArchiveDescription(session)}
                   </Text>
                 </View>
               </Pressable>
@@ -1329,6 +1327,12 @@ export function HomeScreen() {
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
+              <View
+                style={[
+                  styles.bottomTabSelectedIndicator,
+                  isSelected ? styles.bottomTabSelectedIndicatorVisible : undefined,
+                ]}
+              />
               <Text
                 style={[
                   styles.bottomTabLabel,
@@ -1448,10 +1452,20 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   bottomTabItemSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'transparent',
   },
   bottomTabItemSelectedDark: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'transparent',
+  },
+  bottomTabSelectedIndicator: {
+    backgroundColor: 'transparent',
+    borderRadius: 999,
+    height: 3,
+    marginBottom: 5,
+    width: 18,
+  },
+  bottomTabSelectedIndicatorVisible: {
+    backgroundColor: '#f9fafb',
   },
   bottomTabLabel: {
     color: '#9ca3af',
@@ -1823,6 +1837,38 @@ const styles = StyleSheet.create({
   },
   videoArchiveBody: {
     flex: 1,
+  },
+  videoArchiveMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    marginBottom: 5,
+  },
+  videoArchiveDescription: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 5,
+  },
+  videoStatusDot: {
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 9,
+    width: 9,
+  },
+  videoStatusDotQueued: {
+    backgroundColor: '#93c5fd',
+  },
+  videoStatusDotProcessing: {
+    backgroundColor: '#facc15',
+  },
+  videoStatusDotCompleted: {
+    backgroundColor: '#03c75a',
+  },
+  videoStatusDotFailed: {
+    backgroundColor: '#fb7185',
   },
   placeholderCard: {
     backgroundColor: '#14161c',
@@ -3328,6 +3374,26 @@ function getDetailMomentStatusStyle(status?: MomentStatus) {
   return undefined;
 }
 
+function getMomentStatusDotStyle(status?: MomentStatus) {
+  if (status === 'queued') {
+    return styles.videoStatusDotQueued;
+  }
+
+  if (status === 'processing') {
+    return styles.videoStatusDotProcessing;
+  }
+
+  if (status === 'completed') {
+    return styles.videoStatusDotCompleted;
+  }
+
+  if (status === 'failed') {
+    return styles.videoStatusDotFailed;
+  }
+
+  return undefined;
+}
+
 function shouldShowTrickConfirmationAction(evidence?: GeminiEvidenceResult) {
   if (!evidence) {
     return false;
@@ -3500,6 +3566,10 @@ function compactCardText(text: string, maxLength: number) {
   }
 
   return `${normalized.slice(0, maxLength - 1)}…`;
+}
+
+function getVideoArchiveDescription(session: Session) {
+  return session.videoUri ? '업로드된 라이딩 영상' : '영상이 없는 세션';
 }
 
 function getInsightTitle(evidence: GeminiEvidenceResult) {
