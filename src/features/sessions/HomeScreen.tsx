@@ -67,7 +67,10 @@ import {
   type PersistedSessionState,
 } from './sessionStorage';
 import {
+  applyRemoteMomentIds,
   applyRemoteSessions,
+  applyRemoteThumbnails,
+  applyRemoteVideos,
   buildRemoteMomentSessionIdMap,
 } from './sessionSyncPatches';
 
@@ -164,37 +167,21 @@ export function HomeScreen() {
         }),
       );
 
-      setRemoteMomentIdsBySessionId((current) => {
-        const next = { ...current };
+      setRemoteMomentIdsBySessionId((current) =>
+        applyRemoteMomentIds({
+          current,
+          remoteMoments,
+          sessionIdByRemoteMomentId,
+        }),
+      );
 
-        for (const remoteMoment of remoteMoments) {
-          const sessionId =
-            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-            remoteMoment.session.id;
-
-          next[sessionId] = remoteMoment.remoteMomentId;
-        }
-
-        return next;
-      });
-
-      setVideosBySessionId((current) => {
-        const next = { ...current };
-
-        for (const remoteMoment of remoteMoments) {
-          if (!remoteMoment.video) {
-            continue;
-          }
-
-          const sessionId =
-            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-            remoteMoment.session.id;
-
-          next[sessionId] = current[sessionId] ?? remoteMoment.video;
-        }
-
-        return next;
-      });
+      setVideosBySessionId((current) =>
+        applyRemoteVideos({
+          current,
+          remoteMoments,
+          sessionIdByRemoteMomentId,
+        }),
+      );
 
       setGeminiEvidenceBySessionId((current) => {
         const next = { ...current };
@@ -217,23 +204,13 @@ export function HomeScreen() {
         return next;
       });
 
-      setThumbnailsBySessionId((current) => {
-        const next = { ...current };
-
-        for (const remoteMoment of remoteMoments) {
-          if (!remoteMoment.thumbnailUri) {
-            continue;
-          }
-
-          const sessionId =
-            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-            remoteMoment.session.id;
-
-          next[sessionId] = current[sessionId] ?? remoteMoment.thumbnailUri;
-        }
-
-        return next;
-      });
+      setThumbnailsBySessionId((current) =>
+        applyRemoteThumbnails({
+          current,
+          remoteMoments,
+          sessionIdByRemoteMomentId,
+        }),
+      );
     },
     [remoteMomentIdsBySessionId, sessions],
   );

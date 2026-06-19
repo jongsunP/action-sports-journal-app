@@ -1,4 +1,5 @@
 import type { RemoteMomentRecord } from '../../services/moments';
+import type { SessionVideoAsset } from '../../services/ai';
 import type { Session } from '../../types';
 import {
   mergeMomentStatus,
@@ -61,4 +62,78 @@ export function applyRemoteSessions({
   return Array.from(nextSessionsById.values()).sort((left, right) =>
     right.occurredAt.localeCompare(left.occurredAt),
   );
+}
+
+export function applyRemoteMomentIds({
+  current,
+  remoteMoments,
+  sessionIdByRemoteMomentId,
+}: {
+  current: Record<string, string>;
+  remoteMoments: RemoteMomentRecord[];
+  sessionIdByRemoteMomentId: Map<string, string>;
+}) {
+  const next = { ...current };
+
+  for (const remoteMoment of remoteMoments) {
+    const sessionId =
+      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      remoteMoment.session.id;
+
+    next[sessionId] = remoteMoment.remoteMomentId;
+  }
+
+  return next;
+}
+
+export function applyRemoteVideos({
+  current,
+  remoteMoments,
+  sessionIdByRemoteMomentId,
+}: {
+  current: Record<string, SessionVideoAsset>;
+  remoteMoments: RemoteMomentRecord[];
+  sessionIdByRemoteMomentId: Map<string, string>;
+}) {
+  const next = { ...current };
+
+  for (const remoteMoment of remoteMoments) {
+    if (!remoteMoment.video) {
+      continue;
+    }
+
+    const sessionId =
+      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      remoteMoment.session.id;
+
+    next[sessionId] = current[sessionId] ?? remoteMoment.video;
+  }
+
+  return next;
+}
+
+export function applyRemoteThumbnails({
+  current,
+  remoteMoments,
+  sessionIdByRemoteMomentId,
+}: {
+  current: Record<string, string>;
+  remoteMoments: RemoteMomentRecord[];
+  sessionIdByRemoteMomentId: Map<string, string>;
+}) {
+  const next = { ...current };
+
+  for (const remoteMoment of remoteMoments) {
+    if (!remoteMoment.thumbnailUri) {
+      continue;
+    }
+
+    const sessionId =
+      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      remoteMoment.session.id;
+
+    next[sessionId] = current[sessionId] ?? remoteMoment.thumbnailUri;
+  }
+
+  return next;
 }
