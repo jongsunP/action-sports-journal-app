@@ -428,8 +428,12 @@ app.get("/api/moments", async (_request, response) => {
       }
     }
 
+    const visibleMomentRows = momentRows.filter(
+      (moment) => !isIncompleteQueuedMomentListRow(moment),
+    );
+
     response.json({
-      moments: momentRows.map((moment) => ({
+      moments: visibleMomentRows.map((moment) => ({
         id: moment.id,
         sessionId: moment.session_id,
         activityGroupId: moment.activity_group_id,
@@ -3329,6 +3333,33 @@ function readMomentStatus(value: unknown, fallback?: "queued") {
   }
 
   return fallback;
+}
+
+function isIncompleteQueuedMomentListRow(moment: Record<string, unknown>) {
+  if (moment.status !== "queued") {
+    return false;
+  }
+
+  if (typeof moment.latest_evidence_result_id === "string") {
+    return false;
+  }
+
+  return (
+    !isNonEmptyString(moment.source_video_uri) &&
+    !isNonEmptyString(moment.file_name) &&
+    !isPositiveNumber(moment.file_size) &&
+    !isPositiveNumber(moment.duration_ms)
+  );
+}
+
+function isNonEmptyString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isPositiveNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) && numberValue > 0;
 }
 
 function nullableString(value: unknown) {
