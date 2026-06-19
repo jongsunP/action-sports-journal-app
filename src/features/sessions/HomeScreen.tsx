@@ -14,7 +14,6 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
@@ -62,6 +61,11 @@ import {
   getVideoArchiveDescription,
   getVideoAssetFromSession,
 } from './sessionFormatters';
+import {
+  loadPersistedSessionState,
+  savePersistedSessionState,
+  type PersistedSessionState,
+} from './sessionStorage';
 
 import type {
   AnalysisResult,
@@ -70,22 +74,9 @@ import type {
   Session,
 } from '../../types';
 
-const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
-
-type PersistedSessionState = {
-  selectedGroupId?: string;
-  sessions?: Session[];
-  videosBySessionId?: Record<string, SessionVideoAsset>;
-  analysisBySessionId?: Record<string, AnalysisResult>;
-  openAiBenchmarkBySessionId?: Record<string, AnalysisResult>;
-  geminiEvidenceBySessionId?: Record<string, GeminiEvidenceResult>;
-  userConfirmedTrickBySessionId?: Record<string, string>;
-  thumbnailsBySessionId?: Record<string, string>;
-  remoteMomentIdsBySessionId?: Record<string, string>;
-};
 
 export function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -274,13 +265,11 @@ export function HomeScreen() {
 
     async function loadPersistedSessions() {
       try {
-        const rawValue = await AsyncStorage.getItem(SESSION_STORAGE_KEY);
+        const parsed = await loadPersistedSessionState();
 
-        if (!rawValue || !isMounted) {
+        if (!parsed || !isMounted) {
           return;
         }
-
-        const parsed = JSON.parse(rawValue) as PersistedSessionState;
 
         if (Array.isArray(parsed.sessions)) {
           setSessions(parsed.sessions);
@@ -369,10 +358,7 @@ export function HomeScreen() {
       remoteMomentIdsBySessionId,
     };
 
-    AsyncStorage.setItem(
-      SESSION_STORAGE_KEY,
-      JSON.stringify(persistedState),
-    ).catch(() => {
+    savePersistedSessionState(persistedState).catch(() => {
       Alert.alert(
         '기록 저장에 실패했습니다',
         '앱을 종료하면 방금 추가한 내용이 남지 않을 수 있습니다.',
