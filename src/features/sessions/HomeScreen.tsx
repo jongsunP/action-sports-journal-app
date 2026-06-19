@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEventListener } from 'expo';
 import {
   Alert,
+  Animated,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -156,6 +157,19 @@ function BottomTabIcon({
   );
 }
 
+function MomentStatusDot({ status }: { status?: MomentStatus }) {
+  if (!status) {
+    return null;
+  }
+
+  return (
+    <View
+      accessibilityLabel={getMomentStatusLabel(status)}
+      style={[styles.videoStatusDot, getMomentStatusDotStyle(status)]}
+    />
+  );
+}
+
 type PersistedSessionState = {
   selectedGroupId?: string;
   sessions?: Session[];
@@ -179,6 +193,8 @@ export function HomeScreen() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  const uploadTitleInputRef = useRef<TextInput>(null);
+  const uploadSheetTranslateY = useRef(new Animated.Value(1)).current;
   const [selectedVideo, setSelectedVideo] = useState<SessionVideoAsset | null>(
     null,
   );
@@ -211,6 +227,26 @@ export function HomeScreen() {
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] =
     useState(false);
+
+  useEffect(() => {
+    if (!isComposerOpen) {
+      uploadSheetTranslateY.setValue(1);
+      return;
+    }
+
+    uploadSheetTranslateY.setValue(1);
+    Animated.timing(uploadSheetTranslateY, {
+      duration: 260,
+      toValue: 0,
+      useNativeDriver: true,
+    }).start();
+
+    const focusTimer = setTimeout(() => {
+      uploadTitleInputRef.current?.focus();
+    }, 320);
+
+    return () => clearTimeout(focusTimer);
+  }, [isComposerOpen, uploadSheetTranslateY]);
 
   const syncRemoteMoments = useCallback(
     (remoteMoments: RemoteMomentRecord[]) => {
@@ -614,7 +650,15 @@ export function HomeScreen() {
         sessionStatus: selectedSession.momentStatus,
       })
     : undefined;
-  const canSaveSession = title.trim().length > 0;
+  const canUploadSession = title.trim().length > 0 && Boolean(selectedVideo);
+
+  const closeUploadSheet = () => {
+    Keyboard.dismiss();
+    setIsComposerOpen(false);
+    setSelectedVideo(null);
+    setTitle('');
+    setNotes('');
+  };
 
   const updateLocalMomentStatus = (
     sessionId: string,
@@ -782,7 +826,7 @@ export function HomeScreen() {
         '사진 접근 권한이 필요합니다',
         '라이딩 영상을 선택하려면 사진 보관함 접근을 허용해주세요.',
       );
-      return;
+      return false;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -792,14 +836,14 @@ export function HomeScreen() {
     });
 
     if (result.canceled) {
-      return;
+      return false;
     }
 
     const asset = result.assets[0];
 
     if (!asset || asset.type !== 'video') {
       Alert.alert('영상이 필요합니다', '분석할 영상을 선택해주세요.');
-      return;
+      return false;
     }
 
     setSelectedVideo({
@@ -809,6 +853,16 @@ export function HomeScreen() {
       mimeType: asset.mimeType,
       duration: asset.duration,
     });
+
+    return true;
+  };
+
+  const handleOpenUploadSheet = async () => {
+    const didPickVideo = await handlePickVideo();
+
+    if (didPickVideo) {
+      setIsComposerOpen(true);
+    }
   };
 
   const handleExtractEvidence = async (
@@ -978,20 +1032,12 @@ export function HomeScreen() {
                       </Text>
                     </View>
                   )}
+                  <View style={styles.mediaStatusDotOverlay}>
+                    <MomentStatusDot status={momentStatus} />
+                  </View>
                 </View>
                 <View style={styles.videoArchiveBody}>
                   <View style={styles.videoArchiveMetaRow}>
-                    <View
-                      accessibilityLabel={
-                        momentStatus
-                          ? getMomentStatusLabel(momentStatus)
-                          : '상태 없음'
-                      }
-                      style={[
-                        styles.videoStatusDot,
-                        getMomentStatusDotStyle(momentStatus),
-                      ]}
-                    />
                     <Text style={styles.recentDate}>
                       {formatShortSessionDate(session.occurredAt)}
                     </Text>
@@ -1074,110 +1120,14 @@ export function HomeScreen() {
             </View>
             <Pressable
               accessibilityRole="button"
-              onPress={() => setIsComposerOpen((current) => !current)}
+              onPress={handleOpenUploadSheet}
               style={({ pressed }) => [
                 styles.headerAddButton,
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
-              <Text style={styles.headerAddText}>
-                {isComposerOpen ? '닫기' : '+'}
-              </Text>
+              <Text style={styles.headerAddText}>↑</Text>
             </Pressable>
-          </View>
-
-          <View style={styles.analysisHero}>
-            <Text style={styles.analysisHeroEyebrow}>AI Analysis</Text>
-            <Text style={styles.analysisHeroTitle}>새 분석 시작</Text>
-            <Text style={styles.analysisHeroText}>
-              라이딩 영상을 세션에 연결하고, 백엔드에서 동작 근거를 추출합니다.
-            </Text>
-            {!isComposerOpen ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setIsComposerOpen(true)}
-                style={({ pressed }) => [
-                  styles.analysisHeroButton,
-                  pressed ? styles.buttonPressed : undefined,
-                ]}
-              >
-                <Text style={styles.analysisHeroButtonText}>영상 분석 추가</Text>
-              </Pressable>
-            ) : null}
-
-            {isComposerOpen ? (
-              <View style={styles.composer}>
-                <TextInput
-                  placeholder="어떤 영상인가요?"
-                  placeholderTextColor="#94a3b8"
-                  style={styles.input}
-                  value={title}
-                  onChangeText={setTitle}
-                />
-                <TextInput
-                  multiline
-                  placeholder="짧은 느낌 남기기"
-                  placeholderTextColor="#94a3b8"
-                  style={[styles.input, styles.textArea]}
-                  value={notes}
-                  onChangeText={setNotes}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={handlePickVideo}
-                  style={({ pressed }) => [
-                    styles.videoButton,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  <Text style={styles.videoButtonText}>
-                    {selectedVideo ? '영상 바꾸기' : '영상 선택'}
-                  </Text>
-                </Pressable>
-                {selectedVideo ? (
-                  <Text style={styles.videoMeta}>
-                    {selectedVideo.fileName ?? '선택한 영상'} ·{' '}
-                    {formatVideoMeta(selectedVideo)}
-                  </Text>
-                ) : (
-                  <Text style={styles.helperText}>
-                    영상을 선택하면 저장 후 Gemini 근거 추출이 자동으로 시작됩니다.
-                  </Text>
-                )}
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => Keyboard.dismiss()}
-                  style={({ pressed }) => [
-                    styles.tertiaryButton,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  <Text style={styles.tertiaryButtonText}>키보드 내리기</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={!canSaveSession}
-                  onPress={handleAddSession}
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    !canSaveSession ? styles.primaryButtonDisabled : undefined,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.primaryButtonText,
-                      !canSaveSession
-                        ? styles.primaryButtonTextDisabled
-                        : undefined,
-                    ]}
-                  >
-                    갤러리에 추가
-                  </Text>
-                </Pressable>
-                <Text style={styles.helperText}>어떤 시도였는지 짧게 남겨주세요.</Text>
-              </View>
-            ) : null}
           </View>
 
           <View style={styles.primaryInsightCard}>
@@ -1199,16 +1149,9 @@ export function HomeScreen() {
                   </Text>
                 ) : null}
                 <View style={styles.primaryInsightFooter}>
-                  <Text
-                    style={[
-                      styles.momentBadge,
-                      getMomentStatusStyle(primaryInsightSummary.momentStatus),
-                    ]}
-                  >
-                    {primaryInsightSummary.momentStatus
-                      ? getMomentStatusLabel(primaryInsightSummary.momentStatus)
-                      : '완료'}
-                  </Text>
+                  <MomentStatusDot
+                    status={primaryInsightSummary.momentStatus ?? 'completed'}
+                  />
                   <Text style={styles.primaryInsightDate}>
                     {formatShortSessionDate(primaryInsightSummary.session.occurredAt)}
                   </Text>
@@ -1237,16 +1180,7 @@ export function HomeScreen() {
                     : '영상 근거가 준비되면 이곳에 요약이 표시됩니다.'}
                 </Text>
                 <View style={styles.primaryInsightFooter}>
-                  {primaryInsightSummary.momentStatus ? (
-                    <Text
-                      style={[
-                        styles.momentBadge,
-                        getMomentStatusStyle(primaryInsightSummary.momentStatus),
-                      ]}
-                    >
-                      {getMomentStatusLabel(primaryInsightSummary.momentStatus)}
-                    </Text>
-                  ) : null}
+                  <MomentStatusDot status={primaryInsightSummary.momentStatus} />
                   <Text style={styles.primaryInsightDate}>
                     {formatShortSessionDate(primaryInsightSummary.session.occurredAt)}
                   </Text>
@@ -1254,10 +1188,12 @@ export function HomeScreen() {
               </>
             ) : (
               <>
-                <Text style={styles.primaryInsightTitle}>새 분석을 시작해보세요</Text>
+                <Text style={styles.primaryInsightTitle}>
+                  분석 결과가 여기에 표시됩니다
+                </Text>
                 <Text style={styles.primaryInsightText}>
-                  라이딩 영상을 추가하면 세션별 동작 근거와 보수적인 요약을 이곳에
-                  표시합니다.
+                  상단 업로드 버튼으로 라이딩 영상을 추가하면 세션별 동작 근거와
+                  보수적인 요약을 이곳에 표시합니다.
                 </Text>
               </>
             )}
@@ -1291,7 +1227,7 @@ export function HomeScreen() {
                       pressed ? styles.sessionRowPressed : undefined,
                     ]}
                   >
-                    <View style={styles.recentThumb}>
+                    <View style={styles.recentPreview}>
                       {card.thumbnailUri ? (
                         <Image
                           source={{ uri: card.thumbnailUri }}
@@ -1304,25 +1240,21 @@ export function HomeScreen() {
                           </Text>
                         </View>
                       )}
+                      <View style={styles.mediaStatusDotOverlay}>
+                        <MomentStatusDot status={momentStatus} />
+                      </View>
                     </View>
-                    <Text style={styles.recentDate}>
-                      {formatShortSessionDate(session.occurredAt)}
+                    <View style={styles.recentFloatingMetaRow}>
+                      <Text style={styles.recentDate}>
+                        {formatShortSessionDate(session.occurredAt)}
+                      </Text>
+                    </View>
+                    <Text style={styles.recentTitle} numberOfLines={1}>
+                      {session.title}
                     </Text>
-                    <Text style={styles.recentTitle} numberOfLines={2}>
-                      {card.momentTitle}
-                    </Text>
-                    <Text style={styles.recentSummary} numberOfLines={2}>
-                      {card.reason}
-                    </Text>
-                    {momentStatus ? (
-                      <Text
-                        style={[
-                          styles.railBadge,
-                          getMomentStatusStyle(momentStatus),
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {getMomentStatusLabel(momentStatus)}
+                    {session.notes ? (
+                      <Text style={styles.recentSummary} numberOfLines={2}>
+                        {session.notes}
                       </Text>
                     ) : null}
                   </Pressable>
@@ -1368,17 +1300,7 @@ export function HomeScreen() {
                         <Text style={styles.timelineTitle} numberOfLines={1}>
                           {card.momentTitle}
                         </Text>
-                        {momentStatus ? (
-                          <Text
-                            style={[
-                              styles.timelineBadge,
-                              getMomentStatusStyle(momentStatus),
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {getMomentStatusLabel(momentStatus)}
-                          </Text>
-                        ) : null}
+                        <MomentStatusDot status={momentStatus} />
                       </View>
                       <Text style={styles.timelineSummary} numberOfLines={2}>
                         {completedEvidence
@@ -1456,6 +1378,150 @@ export function HomeScreen() {
         session={selectedSession}
         video={selectedSessionVideo}
       />
+      <Modal
+        animationType="fade"
+        onRequestClose={closeUploadSheet}
+        transparent
+        visible={isComposerOpen}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.uploadSheetKeyboardView}
+        >
+          <Pressable
+            accessibilityRole="button"
+            onPress={closeUploadSheet}
+            style={styles.uploadSheetBackdrop}
+          >
+            <Animated.View
+              style={[
+                styles.uploadSheet,
+                {
+                  transform: [
+                    {
+                      translateY: uploadSheetTranslateY.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 520],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Pressable
+                accessibilityRole="none"
+                onPress={(event) => event.stopPropagation()}
+                style={styles.uploadSheetContent}
+              >
+                <View style={styles.uploadSheetPaddedSection}>
+                  <View style={styles.uploadSheetHandle} />
+                  <View style={styles.uploadSheetHeader}>
+                    <View style={styles.uploadSheetTitleBlock}>
+                      <Text style={styles.uploadSheetTitle}>영상 업로드</Text>
+                      <Text style={styles.uploadSheetDescription}>
+                        라이딩 영상을 AI로 분석합니다.
+                      </Text>
+                    </View>
+                    <View style={styles.uploadSheetActions}>
+                      <Pressable
+                        accessibilityLabel="영상 다시 선택"
+                        accessibilityRole="button"
+                        onPress={handlePickVideo}
+                        style={({ pressed }) => [
+                          styles.uploadSheetActionButton,
+                          styles.uploadSheetReselectButton,
+                          pressed ? styles.buttonPressed : undefined,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.uploadSheetActionText,
+                            styles.uploadSheetReselectText,
+                          ]}
+                        >
+                          ↻
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel="업로드 실행"
+                        accessibilityRole="button"
+                        disabled={!canUploadSession}
+                        onPress={handleAddSession}
+                        style={({ pressed }) => [
+                          styles.uploadSheetActionButton,
+                          styles.uploadSheetSubmitButton,
+                          !canUploadSession
+                            ? styles.uploadSheetSubmitButtonDisabled
+                            : undefined,
+                          pressed ? styles.buttonPressed : undefined,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.uploadSheetActionText,
+                            !canUploadSession
+                              ? styles.uploadSheetSubmitTextDisabled
+                              : undefined,
+                          ]}
+                        >
+                          ↑
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+                {selectedVideo ? (
+                  <>
+                    <LocalUploadVideoPreview
+                      key={selectedVideo.uri}
+                      videoUri={selectedVideo.uri}
+                    />
+                    <View
+                      style={[
+                        styles.uploadSheetPaddedSection,
+                        styles.selectedVideoInfo,
+                      ]}
+                    >
+                      <Text style={styles.selectedVideoLabel}>선택된 영상</Text>
+                      <Text style={styles.selectedVideoTitle} numberOfLines={1}>
+                        {selectedVideo.fileName ?? '선택한 영상'}
+                      </Text>
+                      <Text style={styles.selectedVideoMeta}>
+                        {formatVideoMeta(selectedVideo)}
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+                <View
+                  style={[
+                    styles.uploadSheetPaddedSection,
+                    styles.uploadFormFields,
+                  ]}
+                >
+                  <TextInput
+                    onBlur={() => Keyboard.dismiss()}
+                    placeholder="어떤 영상인가요?"
+                    placeholderTextColor="#94a3b8"
+                    ref={uploadTitleInputRef}
+                    style={styles.input}
+                    value={title}
+                    onChangeText={setTitle}
+                  />
+                  <TextInput
+                    multiline
+                    onBlur={() => Keyboard.dismiss()}
+                    placeholder="짧은 느낌 남기기"
+                    placeholderTextColor="#94a3b8"
+                    style={[styles.input, styles.textArea, styles.uploadNotesInput]}
+                    value={notes}
+                    onChangeText={setNotes}
+                  />
+                </View>
+              </Pressable>
+            </Animated.View>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1671,56 +1737,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 24,
   },
-  analysisHero: {
-    backgroundColor: '#171b24',
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    borderRadius: 18,
-    borderWidth: 1,
-    marginBottom: 20,
-    marginHorizontal: 16,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.26,
-    shadowRadius: 18,
-  },
-  analysisHeroEyebrow: {
-    color: '#9ca3af',
-    fontSize: 11,
-    fontWeight: '900',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  analysisHeroTitle: {
-    color: '#f9fafb',
-    fontSize: 23,
-    fontWeight: '900',
-    lineHeight: 28,
-  },
-  analysisHeroText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    marginTop: 7,
-  },
-  analysisHeroButton: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 14,
-    marginTop: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    shadowColor: '#fff',
-    shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-  },
-  analysisHeroButtonText: {
-    color: '#050507',
-    fontSize: 14,
-    fontWeight: '900',
-  },
   primaryInsightCard: {
     backgroundColor: '#101218',
     borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -1812,18 +1828,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   recentSessionCard: {
-    backgroundColor: '#14161c',
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    borderRadius: 14,
+    backgroundColor: 'rgba(20, 22, 28, 0.86)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 10,
-    width: 184,
+    overflow: 'hidden',
+    paddingBottom: 13,
+    width: 236,
   },
-  recentThumb: {
-    aspectRatio: 1.45,
+  recentPreview: {
+    alignSelf: 'stretch',
+    aspectRatio: 1.62,
     backgroundColor: '#0b0d12',
-    borderRadius: 10,
-    marginBottom: 10,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   recentThumbImage: {
@@ -1844,31 +1861,28 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 11,
     fontWeight: '800',
-    marginBottom: 4,
+  },
+  recentFloatingMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    paddingHorizontal: 14,
+    marginBottom: 7,
   },
   recentTitle: {
     color: '#f9fafb',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
-    lineHeight: 19,
+    lineHeight: 20,
+    paddingHorizontal: 14,
   },
   recentSummary: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 17,
-    marginTop: 5,
-  },
-  railBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    color: '#111827',
-    fontSize: 10,
-    fontWeight: '900',
-    marginTop: 9,
-    overflow: 'hidden',
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    marginTop: 7,
+    paddingHorizontal: 14,
   },
   timeline: {
     marginHorizontal: 16,
@@ -1914,7 +1928,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineTopRow: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'space-between',
@@ -1925,15 +1939,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     lineHeight: 19,
-  },
-  timelineBadge: {
-    borderRadius: 999,
-    color: '#111827',
-    fontSize: 10,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 7,
-    paddingVertical: 4,
   },
   timelineSummary: {
     color: '#cbd5e1',
@@ -1947,24 +1952,31 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   videoArchiveRow: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: '#14161c',
     borderColor: 'rgba(255, 255, 255, 0.09)',
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    padding: 10,
+    height: 92,
+    overflow: 'hidden',
   },
   videoArchiveThumb: {
+    alignSelf: 'stretch',
     backgroundColor: '#0b0d12',
-    borderRadius: 10,
-    height: 72,
     overflow: 'hidden',
-    width: 96,
+    width: 108,
+  },
+  mediaStatusDotOverlay: {
+    left: 8,
+    position: 'absolute',
+    top: 8,
   },
   videoArchiveBody: {
     flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   videoArchiveMetaRow: {
     alignItems: 'center',
@@ -2058,14 +2070,139 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 3,
   },
-  composer: {
+  uploadSheetBackdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.58)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  uploadSheetKeyboardView: {
+    flex: 1,
+  },
+  uploadSheet: {
+    alignSelf: 'stretch',
     backgroundColor: '#101218',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 14,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderWidth: 1,
+    height: '68%',
+    minHeight: '66%',
+    paddingBottom: 28,
+    paddingHorizontal: 0,
+    paddingTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { height: -10, width: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    width: '100%',
+  },
+  uploadSheetContent: {
+    flex: 1,
+    width: '100%',
+  },
+  uploadSheetPaddedSection: {
+    paddingHorizontal: 18,
+  },
+  uploadSheetHandle: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    borderRadius: 999,
+    height: 4,
     marginBottom: 16,
-    marginHorizontal: 16,
-    padding: 12,
+    width: 42,
+  },
+  uploadSheetHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  uploadSheetTitleBlock: {
+    flex: 1,
+    paddingRight: 14,
+  },
+  uploadSheetTitle: {
+    color: '#f9fafb',
+    fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 27,
+  },
+  uploadSheetDescription: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  uploadSheetActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  uploadSheetActionButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  uploadSheetReselectButton: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: 'rgba(125, 211, 252, 0.34)',
+    borderWidth: 1,
+  },
+  uploadSheetSubmitButton: {
+    backgroundColor: '#f9fafb',
+  },
+  uploadSheetSubmitButtonDisabled: {
+    backgroundColor: '#2a303b',
+  },
+  uploadSheetActionText: {
+    color: '#050507',
+    fontSize: 21,
+    fontWeight: '900',
+    lineHeight: 24,
+  },
+  uploadSheetReselectText: {
+    color: '#7dd3fc',
+  },
+  uploadSheetSubmitTextDisabled: {
+    color: '#64748b',
+  },
+  selectedVideoInfo: {
+    marginBottom: 12,
+  },
+  uploadVideoPreviewFrame: {
+    alignSelf: 'stretch',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#050507',
+    borderRadius: 0,
+    marginBottom: 12,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  uploadVideoPreview: {
+    height: '100%',
+    width: '100%',
+  },
+  selectedVideoLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+  },
+  selectedVideoTitle: {
+    color: '#f9fafb',
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 19,
+  },
+  selectedVideoMeta: {
+    color: '#bae6fd',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 4,
   },
   input: {
     backgroundColor: '#1b1e27',
@@ -2082,66 +2219,13 @@ const styles = StyleSheet.create({
     minHeight: 72,
     textAlignVertical: 'top',
   },
-  videoButton: {
-    alignItems: 'center',
-    backgroundColor: '#18212b',
-    borderColor: '#334155',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 8,
-    paddingVertical: 12,
+  uploadNotesInput: {
+    flex: 1,
+    marginBottom: 0,
+    minHeight: 120,
   },
-  videoButtonText: {
-    color: '#e0f2fe',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  videoMeta: {
-    color: '#bae6fd',
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 14,
-    paddingVertical: 13,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: '#334155',
-  },
-  primaryButtonText: {
-    color: '#050507',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  primaryButtonTextDisabled: {
-    color: '#94a3b8',
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    backgroundColor: '#03c75a',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  secondaryButtonText: {
-    color: '#07110a',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  tertiaryButton: {
-    alignItems: 'center',
-    backgroundColor: '#1b1e27',
-    borderRadius: 14,
-    marginBottom: 10,
-    paddingVertical: 11,
-  },
-  tertiaryButtonText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+  uploadFormFields: {
+    flex: 1,
   },
   buttonPressed: {
     opacity: 0.85,
@@ -2164,11 +2248,6 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
     lineHeight: 18,
-  },
-  helperText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginTop: 8,
   },
   galleryGrid: {
     flexDirection: 'row',
@@ -2308,24 +2387,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     top: 14,
-  },
-  momentBadge: {
-    backgroundColor: '#03c75a',
-    color: '#07110a',
-    fontSize: 10,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  momentStatusProcessing: {
-    backgroundColor: '#facc15',
-  },
-  momentStatusCompleted: {
-    backgroundColor: '#03c75a',
-  },
-  momentStatusFailed: {
-    backgroundColor: '#fb7185',
   },
   momentDate: {
     backgroundColor: 'rgba(15, 23, 42, 0.72)',
@@ -3437,24 +3498,6 @@ function getMomentStatusLabel(status: MomentStatus) {
   return getMomentStatusPresentation(status).label;
 }
 
-function getMomentStatusStyle(status?: MomentStatus) {
-  const visibleStatus = getVisibleMomentStatus(status);
-
-  if (visibleStatus === 'running') {
-    return styles.momentStatusProcessing;
-  }
-
-  if (visibleStatus === 'completed') {
-    return styles.momentStatusCompleted;
-  }
-
-  if (visibleStatus === 'failed') {
-    return styles.momentStatusFailed;
-  }
-
-  return undefined;
-}
-
 function getMomentStatusDotStyle(status?: MomentStatus) {
   const visibleStatus = getVisibleMomentStatus(status);
 
@@ -3736,6 +3779,32 @@ function SignalDot({ active, label }: { active: boolean; label: string }) {
   );
 }
 
+function LocalUploadVideoPreview({ videoUri }: { videoUri: string }) {
+  const [hasPlaybackError, setHasPlaybackError] = useState(false);
+  const player = useVideoPlayer(videoUri);
+
+  useEventListener(player, 'statusChange', ({ status, error }) => {
+    if (status === 'error' || error) {
+      setHasPlaybackError(true);
+    }
+  });
+
+  if (hasPlaybackError) {
+    return null;
+  }
+
+  return (
+    <View style={styles.uploadVideoPreviewFrame}>
+      <VideoView
+        contentFit="cover"
+        nativeControls
+        player={player}
+        style={styles.uploadVideoPreview}
+      />
+    </View>
+  );
+}
+
 function LocalSessionVideoPlayer({ videoUri }: { videoUri: string }) {
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const player = useVideoPlayer(videoUri, (videoPlayer) => {
@@ -3876,15 +3945,7 @@ function MomentDetailModal({
               {session.title}
             </Text>
             <View style={styles.detailHeaderMetaRow}>
-              {momentStatus ? (
-                <View
-                  accessibilityLabel={getMomentStatusLabel(momentStatus)}
-                  style={[
-                    styles.videoStatusDot,
-                    getMomentStatusDotStyle(momentStatus),
-                  ]}
-                />
-              ) : null}
+              <MomentStatusDot status={momentStatus} />
               <Text style={styles.detailHeaderMeta} numberOfLines={1}>
                 {formatSessionDateTime(session.occurredAt)}
               </Text>
