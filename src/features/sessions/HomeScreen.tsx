@@ -54,9 +54,14 @@ const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
+const STALE_RETRY_THRESHOLD_MS = 10 * 60 * 1000;
 
 type AppTabId = 'home' | 'video' | 'flow' | 'profile';
 type VisibleMomentStatus = 'running' | 'completed' | 'failed';
+type RetryEligibility = {
+  canRetry: boolean;
+  reason: string;
+};
 
 const APP_TABS: Array<{
   id: AppTabId;
@@ -3450,6 +3455,104 @@ function isEvidenceQueueRequestRetryable(error: unknown) {
   );
 }
 
+function getRetryEligibility({
+  canRequestGeminiEvidence,
+  evidence,
+  isLoading,
+  momentStatus,
+  session,
+  video,
+}: {
+  canRequestGeminiEvidence: boolean;
+  evidence?: GeminiEvidenceResult;
+  isLoading: boolean;
+  momentStatus?: MomentStatus;
+  session: Session;
+  video?: SessionVideoAsset | null;
+}): RetryEligibility {
+  if (!canRequestGeminiEvidence) {
+    return {
+      canRetry: false,
+      reason: '분석 endpoint가 설정되어 있지 않습니다.',
+    };
+  }
+
+  if (!video) {
+    return {
+      canRetry: false,
+      reason: '재시도하려면 영상 파일이 필요합니다.',
+    };
+  }
+
+  if (isLoading) {
+    return {
+      canRetry: false,
+      reason: '이미 분석 요청을 진행하고 있습니다.',
+    };
+  }
+
+  if (momentStatus === 'failed' || evidence?.status === 'failed') {
+    return {
+      canRetry: true,
+      reason: '이전 분석이 실패했습니다.',
+    };
+  }
+
+  if (isStaleRunningMoment(session, momentStatus)) {
+    return {
+      canRetry: true,
+      reason: '분석 진행 상태가 오래 갱신되지 않았습니다.',
+    };
+  }
+
+  if (!evidence) {
+    if (momentStatus === 'processing' || momentStatus === 'queued') {
+      return {
+        canRetry: false,
+        reason: '현재 분석이 진행 중입니다.',
+      };
+    }
+
+    return {
+      canRetry: true,
+      reason: '저장된 분석 근거가 없습니다.',
+    };
+  }
+
+  if (evidence.status !== 'completed') {
+    return {
+      canRetry: true,
+      reason: '분석 근거가 완료 상태가 아닙니다.',
+    };
+  }
+
+  if (momentStatus === 'processing' || momentStatus === 'queued') {
+    return {
+      canRetry: false,
+      reason: '현재 분석이 진행 중입니다.',
+    };
+  }
+
+  return {
+    canRetry: false,
+    reason: '이미 정상 완료된 분석입니다.',
+  };
+}
+
+function isStaleRunningMoment(session: Session, status?: MomentStatus) {
+  if (status !== 'processing' && status !== 'queued') {
+    return false;
+  }
+
+  const updatedAtMs = new Date(session.updatedAt).getTime();
+
+  if (Number.isNaN(updatedAtMs)) {
+    return false;
+  }
+
+  return Date.now() - updatedAtMs >= STALE_RETRY_THRESHOLD_MS;
+}
+
 function getMomentStatus({
   evidence,
   isProcessing,
@@ -3866,7 +3969,14 @@ function MomentDetailModal({
     return null;
   }
 
-  const canRetry = Boolean(video && canRequestGeminiEvidence && !isLoading);
+  const retryEligibility = getRetryEligibility({
+    canRequestGeminiEvidence,
+    evidence,
+    isLoading,
+    momentStatus,
+    session,
+    video,
+  });
   const visibleEvidence =
     evidence && (!momentStatus || momentStatus === 'completed')
       ? evidence
@@ -3887,10 +3997,16 @@ function MomentDetailModal({
       text: string;
     }> = [];
 
-    if (canRetry && onRetry) {
+    if (onRetry) {
       menuActions.push({
-        text: '분석 다시 시도',
-        onPress: onRetry,
+        text: retryEligibility.canRetry
+          ? '분석 다시 시도'
+          : '분석 다시 시도 (불가)',
+        onPress: retryEligibility.canRetry
+          ? onRetry
+          : () => {
+              Alert.alert('분석 다시 시도 불가', retryEligibility.reason);
+            },
       });
     }
 
