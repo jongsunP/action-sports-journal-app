@@ -688,14 +688,24 @@ export function HomeScreen() {
     video?: SessionVideoAsset | null,
   ) => {
     if (!hasConfiguredSupabaseMoments()) {
-      return undefined;
+      return {
+        failed: false,
+        remoteMomentId: undefined,
+      };
     }
 
     try {
       const remoteMomentId = await insertMoment(session, video);
 
       if (!remoteMomentId) {
-        return undefined;
+        updateLocalMomentStatus(session.id, 'failed');
+
+        console.warn('Supabase moment persistence failed: missing moment id');
+
+        return {
+          failed: true,
+          remoteMomentId: undefined,
+        };
       }
 
       setRemoteMomentIdsBySessionId((current) => ({
@@ -703,7 +713,10 @@ export function HomeScreen() {
         [session.id]: remoteMomentId,
       }));
 
-      return remoteMomentId;
+      return {
+        failed: false,
+        remoteMomentId,
+      };
     } catch (error) {
       updateLocalMomentStatus(session.id, 'failed');
 
@@ -712,7 +725,10 @@ export function HomeScreen() {
         error instanceof Error ? error.message : 'Unknown error',
       );
 
-      return undefined;
+      return {
+        failed: true,
+        remoteMomentId: undefined,
+      };
     }
   };
 
@@ -779,10 +795,6 @@ export function HomeScreen() {
     };
 
     setSessions((current) => [nextSession, ...current]);
-    const remoteMomentId = await persistMomentToSupabase(
-      nextSession,
-      selectedVideo,
-    );
 
     if (selectedVideo) {
       setVideosBySessionId((current) => ({
@@ -791,6 +803,25 @@ export function HomeScreen() {
       }));
       createThumbnailForSession(nextSession.id, selectedVideo);
       setSelectedSessionId(nextSession.id);
+    }
+
+    const { failed: failedToPersistMoment, remoteMomentId } =
+      await persistMomentToSupabase(nextSession, selectedVideo);
+
+    if (failedToPersistMoment) {
+      Alert.alert(
+        '영상 저장에 실패했습니다',
+        '서버에 영상 기록을 만들지 못해 분석을 시작하지 않았습니다. 네트워크를 확인한 뒤 다시 시도해주세요.',
+      );
+      setTitle('');
+      setNotes('');
+      setSelectedVideo(null);
+      setIsComposerOpen(false);
+      Keyboard.dismiss();
+      return;
+    }
+
+    if (selectedVideo) {
       void handleExtractEvidence(nextSession, {
         openSheet: false,
         videoOverride: selectedVideo,
@@ -940,6 +971,11 @@ export function HomeScreen() {
             '분석 요청이 잠시 제한됐습니다',
             '영상은 진행중 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
           );
+        } else {
+          Alert.alert(
+            '분석 요청이 지연됐습니다',
+            '네트워크나 서버 응답이 불안정해 영상은 진행중 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
+          );
         }
 
         console.warn('Evidence queue request delayed:', message);
@@ -947,6 +983,10 @@ export function HomeScreen() {
       }
 
       await syncMomentStatus(session.id, 'failed', options?.momentIdOverride);
+      Alert.alert(
+        '분석 시작에 실패했습니다',
+        '영상 상태를 실패로 표시했습니다. 더보기 메뉴에서 다시 시도할 수 있습니다.',
+      );
     } finally {
       setExtractingEvidenceBySessionId((current) => ({
         ...current,
