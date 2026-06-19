@@ -27,6 +27,19 @@ import type { GeminiEvidenceResult, MomentStatus, Session } from '../../types';
 
 type HomeScreenStyles = Record<string, object>;
 
+export type AppTabId = 'home' | 'video' | 'flow' | 'profile';
+
+export const APP_TABS: Array<{
+  id: AppTabId;
+  label: string;
+  hint: string;
+}> = [
+  { id: 'home', label: '홈', hint: '대시보드' },
+  { id: 'video', label: '영상', hint: '아카이브' },
+  { id: 'flow', label: '흐름', hint: '진행' },
+  { id: 'profile', label: '개인정보', hint: '설정' },
+];
+
 type SessionSummary = {
   card: {
     momentTitle: string;
@@ -48,6 +61,185 @@ export function MomentStatusDot({ status }: { status?: MomentStatus }) {
       accessibilityLabel={getMomentStatusLabel(status)}
       style={[statusDotStyles.dot, getMomentStatusDotStyle(status)]}
     />
+  );
+}
+
+export function BottomNavigation({
+  activeTab,
+  isDarkMode,
+  onChangeTab,
+  styles,
+}: {
+  activeTab: AppTabId;
+  isDarkMode: boolean;
+  onChangeTab: (tab: AppTabId) => void;
+  styles: HomeScreenStyles;
+}) {
+  return (
+    <View
+      style={[
+        styles.bottomTabBar,
+        isDarkMode ? styles.bottomTabBarDark : undefined,
+      ]}
+    >
+      {APP_TABS.map((tab) => {
+        const isSelected = activeTab === tab.id;
+
+        return (
+          <Pressable
+            accessibilityLabel={tab.label}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isSelected }}
+            key={tab.id}
+            onPress={() => onChangeTab(tab.id)}
+            style={({ pressed }) => [
+              styles.bottomTabItem,
+              isSelected ? styles.bottomTabItemSelected : undefined,
+              isSelected && isDarkMode
+                ? styles.bottomTabItemSelectedDark
+                : undefined,
+              pressed ? styles.buttonPressed : undefined,
+            ]}
+          >
+            <BottomTabIcon id={tab.id} isSelected={isSelected} styles={styles} />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function BottomTabIcon({
+  id,
+  isSelected,
+  styles,
+}: {
+  id: AppTabId;
+  isSelected: boolean;
+  styles: HomeScreenStyles;
+}) {
+  if (id === 'home') {
+    return (
+      <View
+        style={[
+          styles.bottomTabIconFrame,
+          isSelected ? styles.bottomTabIconFrameSelected : undefined,
+        ]}
+      >
+        <View
+          style={[
+            styles.tabIconHome,
+            isSelected ? styles.tabIconFilled : undefined,
+          ]}
+        />
+      </View>
+    );
+  }
+
+  if (id === 'video') {
+    return (
+      <View
+        style={[
+          styles.bottomTabIconFrame,
+          isSelected ? styles.bottomTabIconFrameSelected : undefined,
+        ]}
+      >
+        <View
+          style={[
+            styles.tabIconVideo,
+            isSelected ? styles.tabIconFilled : undefined,
+          ]}
+        />
+      </View>
+    );
+  }
+
+  if (id === 'flow') {
+    return (
+      <View
+        style={[
+          styles.bottomTabIconFrame,
+          styles.tabIconFlowFrame,
+          isSelected ? styles.bottomTabIconFrameSelected : undefined,
+        ]}
+      >
+        {[0, 1, 2].map((index) => (
+          <View
+            key={`flow-${index}`}
+            style={[
+              styles.tabIconFlowDot,
+              isSelected ? styles.tabIconFilled : undefined,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.bottomTabIconFrame,
+        isSelected ? styles.bottomTabIconFrameSelected : undefined,
+      ]}
+    >
+      <View
+        style={[
+          styles.tabIconProfileHead,
+          isSelected ? styles.tabIconFilled : undefined,
+        ]}
+      />
+      <View
+        style={[
+          styles.tabIconProfileBody,
+          isSelected ? styles.tabIconFilled : undefined,
+        ]}
+      />
+    </View>
+  );
+}
+
+export function FlowPlaceholderTab({
+  kicker,
+  styles,
+}: {
+  kicker: string;
+  styles: HomeScreenStyles;
+}) {
+  return (
+    <>
+      <View style={styles.tabPageHeader}>
+        <Text style={styles.kicker}>{kicker}</Text>
+        <Text style={styles.title}>흐름</Text>
+        <Text style={styles.headerMeta}>Progression / Flow 준비 중</Text>
+      </View>
+      <View style={styles.placeholderCard}>
+        <Text style={styles.placeholderTitle}>Progression Layer</Text>
+        <Text style={styles.placeholderText}>
+          반복된 세션과 분석 결과가 충분히 쌓이면 연습 흐름, 검토 후보, 다음
+          연습 포인트를 이곳에서 보여줄 예정입니다.
+        </Text>
+      </View>
+    </>
+  );
+}
+
+export function ProfilePlaceholderTab({ styles }: { styles: HomeScreenStyles }) {
+  return (
+    <>
+      <View style={styles.tabPageHeader}>
+        <Text style={styles.kicker}>Action Sports Journal</Text>
+        <Text style={styles.title}>개인정보</Text>
+        <Text style={styles.headerMeta}>계정과 설정 진입점</Text>
+      </View>
+      <View style={styles.placeholderCard}>
+        <Text style={styles.placeholderTitle}>마이페이지</Text>
+        <Text style={styles.placeholderText}>
+          ActivityGroup, 계정, 개인정보, 앱 설정은 이후 단계에서 이 탭에
+          정리합니다. 현재는 실사용 QA를 위한 정보 구조만 준비합니다.
+        </Text>
+      </View>
+    </>
   );
 }
 
