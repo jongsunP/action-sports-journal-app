@@ -52,10 +52,6 @@ import {
 } from './sessionComponents';
 import { MomentDetailModal } from './MomentDetailModal';
 import {
-  mergeMomentStatus,
-  resolveLocalSessionIdForRemoteMoment,
-} from './sessionMerge';
-import {
   formatShortSessionDate,
   formatTimelineDay,
   formatTimelineMonth,
@@ -70,6 +66,10 @@ import {
   savePersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
+import {
+  applyRemoteSessions,
+  buildRemoteMomentSessionIdMap,
+} from './sessionSyncPatches';
 
 import type {
   AnalysisResult,
@@ -150,45 +150,19 @@ export function HomeScreen() {
 
   const syncRemoteMoments = useCallback(
     (remoteMoments: RemoteMomentRecord[]) => {
-      const sessionIdByRemoteMomentId = new Map(
-        remoteMoments.map((moment) => [
-          moment.remoteMomentId,
-          resolveLocalSessionIdForRemoteMoment(
-            moment,
-            remoteMomentIdsBySessionId,
-            sessions,
-          ),
-        ]),
-      );
-
-      setSessions((current) => {
-        const nextSessionsById = new Map(
-          current.map((session) => [session.id, session]),
-        );
-
-        for (const remoteMoment of remoteMoments) {
-          const sessionId =
-            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-            remoteMoment.session.id;
-          const existingSession = nextSessionsById.get(sessionId);
-
-          nextSessionsById.set(sessionId, {
-            ...existingSession,
-            ...remoteMoment.session,
-            id: sessionId,
-            momentStatus: mergeMomentStatus(
-              existingSession?.momentStatus,
-              remoteMoment.session.momentStatus,
-            ),
-            videoUri: existingSession?.videoUri ?? remoteMoment.session.videoUri,
-            shareResultIds: existingSession?.shareResultIds ?? [],
-          });
-        }
-
-        return Array.from(nextSessionsById.values()).sort((left, right) =>
-          right.occurredAt.localeCompare(left.occurredAt),
-        );
+      const sessionIdByRemoteMomentId = buildRemoteMomentSessionIdMap({
+        remoteMomentIdsBySessionId,
+        remoteMoments,
+        sessions,
       });
+
+      setSessions((current) =>
+        applyRemoteSessions({
+          current,
+          remoteMoments,
+          sessionIdByRemoteMomentId,
+        }),
+      );
 
       setRemoteMomentIdsBySessionId((current) => {
         const next = { ...current };
