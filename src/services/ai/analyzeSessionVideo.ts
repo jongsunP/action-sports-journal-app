@@ -287,7 +287,7 @@ async function requestRemoteJson({
     formData.append('momentId', momentId);
   }
   formData.append('activityGroupName', activityGroupName);
-  formData.append('title', session.title);
+  formData.append('title', session.title?.trim() || '라이딩 영상');
   formData.append('notes', session.notes ?? '');
   formData.append('occurredAt', session.occurredAt);
   if (typeof userConfirmedTrick === 'string' && userConfirmedTrick.trim()) {

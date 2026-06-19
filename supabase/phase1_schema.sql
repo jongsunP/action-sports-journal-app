@@ -19,7 +19,7 @@ create table if not exists public.moments (
   user_id uuid not null references public.users(id) on delete cascade,
   session_id uuid,
   activity_group_id text not null default 'wakeboard',
-  title text not null,
+  title text,
   notes text,
   status text not null default 'draft',
   source text not null default 'user_selected_video',

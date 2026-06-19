@@ -55,7 +55,7 @@ export async function insertMoment(session: Session, video?: SessionVideoAsset |
     body: JSON.stringify({
       sessionId: session.id,
       activityGroupId: session.activityGroupId,
-      title: session.title,
+      title: session.title ?? null,
       notes: session.notes ?? null,
       occurredAt: session.occurredAt,
       sourceVideoUri: session.videoUri ?? video?.uri ?? null,
@@ -180,7 +180,7 @@ function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
   const session: Session = {
     id: sessionId,
     activityGroupId: normalizeActivityGroupId(asString(moment.activityGroupId)),
-    title: asString(moment.title) ?? 'Untitled moment',
+    title: asString(moment.title),
     notes: asString(moment.notes),
     occurredAt,
     videoUri: sourceVideoUri,

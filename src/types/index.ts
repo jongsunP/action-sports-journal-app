@@ -14,7 +14,7 @@ export type MomentStatus = 'queued' | 'processing' | 'completed' | 'failed';
 export type Session = {
   id: ID;
   activityGroupId: ID;
-  title: string;
+  title?: string | null;
   notes?: string;
   occurredAt: ISODateString;
   videoUri?: string;

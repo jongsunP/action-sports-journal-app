@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Animated,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   useColorScheme,
   View,
 } from 'react-native';
@@ -43,9 +40,7 @@ import {
   type AppTabId,
   BottomNavigation,
   FlowPlaceholderTab,
-  JournalTimeline,
   PrimaryInsightCard,
-  ProfilePlaceholderTab,
   RecentSessionsRail,
   UploadSheet,
   VideoArchiveList,
@@ -53,8 +48,6 @@ import {
 import { MomentDetailModal } from './MomentDetailModal';
 import {
   formatShortSessionDate,
-  formatTimelineDay,
-  formatTimelineMonth,
   formatVideoMeta,
   getCompletedMomentEvidence,
   getSessionCardPresentation,
@@ -94,13 +87,20 @@ export function HomeScreen() {
   const [activeTab, setActiveTab] = useState<AppTabId>('home');
   const [sessions, setSessions] = useState<Session[]>(mockSessions);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const uploadTitleInputRef = useRef<TextInput>(null);
-  const uploadSheetTranslateY = useRef(new Animated.Value(1)).current;
+  const [isUploadingSession, setIsUploadingSession] = useState(false);
+  const isUploadingSessionRef = useRef(false);
+  const uploadThumbnailRequestIdRef = useRef(0);
+  const selectedVideoThumbnailUriRef = useRef<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<SessionVideoAsset | null>(
     null,
   );
+  const [selectedVideoThumbnailUri, setSelectedVideoThumbnailUri] = useState<
+    string | null
+  >(null);
+  const [
+    isPreparingSelectedVideoThumbnail,
+    setIsPreparingSelectedVideoThumbnail,
+  ] = useState(false);
   const [videosBySessionId, setVideosBySessionId] = useState<
     Record<string, SessionVideoAsset>
   >({});
@@ -130,26 +130,6 @@ export function HomeScreen() {
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] =
     useState(false);
-
-  useEffect(() => {
-    if (!isComposerOpen) {
-      uploadSheetTranslateY.setValue(1);
-      return;
-    }
-
-    uploadSheetTranslateY.setValue(1);
-    Animated.timing(uploadSheetTranslateY, {
-      duration: 260,
-      toValue: 0,
-      useNativeDriver: true,
-    }).start();
-
-    const focusTimer = setTimeout(() => {
-      uploadTitleInputRef.current?.focus();
-    }, 320);
-
-    return () => clearTimeout(focusTimer);
-  }, [isComposerOpen, uploadSheetTranslateY]);
 
   const syncRemoteMoments = useCallback(
     (remoteMoments: RemoteMomentRecord[]) => {
@@ -479,7 +459,6 @@ export function HomeScreen() {
     ? formatShortSessionDate(latestCompletedSummary.session.occurredAt)
     : undefined;
   const recentSessionSummaries = homeSessionSummaries.slice(0, 8);
-  const timelineSummaries = homeSessionSummaries;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
   const canCreateVideoThumbnail = hasConfiguredVideoThumbnailEndpoint();
@@ -496,14 +475,21 @@ export function HomeScreen() {
         sessionStatus: selectedSession.momentStatus,
       })
     : undefined;
-  const canUploadSession = title.trim().length > 0 && Boolean(selectedVideo);
+  const canUploadSession =
+    Boolean(selectedVideo) &&
+    !isUploadingSession &&
+    !isPreparingSelectedVideoThumbnail;
 
   const closeUploadSheet = () => {
-    Keyboard.dismiss();
+    if (isUploadingSession) {
+      return;
+    }
+
     setIsComposerOpen(false);
     setSelectedVideo(null);
-    setTitle('');
-    setNotes('');
+    selectedVideoThumbnailUriRef.current = null;
+    setSelectedVideoThumbnailUri(null);
+    setIsPreparingSelectedVideoThumbnail(false);
   };
 
   const updateLocalMomentStatus = (
@@ -615,19 +601,27 @@ export function HomeScreen() {
     }
   };
 
-  const handleAddSession = async () => {
-    if (!selectedGroup || !title.trim()) {
+  const handleAddSession = () => {
+    if (
+      !selectedGroup ||
+      !selectedVideo ||
+      isUploadingSession ||
+      isPreparingSelectedVideoThumbnail ||
+      isUploadingSessionRef.current
+    ) {
       return;
     }
 
+    isUploadingSessionRef.current = true;
+    setIsUploadingSession(true);
+
+    const videoForUpload = selectedVideo;
     const now = new Date().toISOString();
     const nextSession: Session = {
       id: `session-${Date.now()}`,
       activityGroupId: selectedGroup.id,
-      title: title.trim(),
-      notes: notes.trim() || undefined,
       occurredAt: now,
-      videoUri: selectedVideo?.uri,
+      videoUri: videoForUpload.uri,
       momentStatus: 'queued',
       shareResultIds: [],
       createdAt: now,
@@ -636,43 +630,47 @@ export function HomeScreen() {
 
     setSessions((current) => [nextSession, ...current]);
 
-    if (selectedVideo) {
-      setVideosBySessionId((current) => ({
+    setVideosBySessionId((current) => ({
+      ...current,
+      [nextSession.id]: videoForUpload,
+    }));
+    const preparedThumbnailUri =
+      selectedVideoThumbnailUriRef.current ?? selectedVideoThumbnailUri;
+
+    if (preparedThumbnailUri) {
+      setThumbnailsBySessionId((current) => ({
         ...current,
-        [nextSession.id]: selectedVideo,
+        [nextSession.id]: preparedThumbnailUri,
       }));
-      createThumbnailForSession(nextSession.id, selectedVideo);
-      setSelectedSessionId(nextSession.id);
+    } else {
+      createThumbnailForSession(nextSession.id, videoForUpload);
     }
+    setActiveTab('video');
+    setSelectedVideo(null);
+    selectedVideoThumbnailUriRef.current = null;
+    setSelectedVideoThumbnailUri(null);
+    setIsComposerOpen(false);
+    isUploadingSessionRef.current = false;
+    setIsUploadingSession(false);
 
-    const { failed: failedToPersistMoment, remoteMomentId } =
-      await persistMomentToSupabase(nextSession, selectedVideo);
+    void (async () => {
+      const { failed: failedToPersistMoment, remoteMomentId } =
+        await persistMomentToSupabase(nextSession, videoForUpload);
 
-    if (failedToPersistMoment) {
-      Alert.alert(
-        '영상 저장에 실패했습니다',
-        '서버에 영상 기록을 만들지 못해 분석을 시작하지 않았습니다. 네트워크를 확인한 뒤 다시 시도해주세요.',
-      );
-      setTitle('');
-      setNotes('');
-      setSelectedVideo(null);
-      setIsComposerOpen(false);
-      Keyboard.dismiss();
-      return;
-    }
+      if (failedToPersistMoment) {
+        Alert.alert(
+          '영상 저장에 실패했습니다',
+          '서버에 영상 기록을 만들지 못해 분석을 시작하지 않았습니다. 네트워크를 확인한 뒤 다시 시도해주세요.',
+        );
+        return;
+      }
 
-    if (selectedVideo) {
       void handleExtractEvidence(nextSession, {
         openSheet: false,
-        videoOverride: selectedVideo,
+        videoOverride: videoForUpload,
         momentIdOverride: remoteMomentId,
       });
-    }
-    setTitle('');
-    setNotes('');
-    setSelectedVideo(null);
-    setIsComposerOpen(false);
-    Keyboard.dismiss();
+    })();
   };
 
   const createThumbnailForSession = async (
@@ -692,6 +690,43 @@ export function HomeScreen() {
       }));
     } catch {
       // Thumbnail generation is best-effort. The feed keeps its visual fallback.
+    }
+  };
+
+  const prepareSelectedVideoThumbnail = async (video: SessionVideoAsset) => {
+    const requestId = uploadThumbnailRequestIdRef.current + 1;
+    uploadThumbnailRequestIdRef.current = requestId;
+    selectedVideoThumbnailUriRef.current = null;
+    setSelectedVideoThumbnailUri(null);
+    setIsPreparingSelectedVideoThumbnail(true);
+
+    try {
+      const imageUri = await createSessionVideoThumbnail(video, {
+        allowRemoteFallback: false,
+        timeoutMs: 1800,
+      });
+
+      if (uploadThumbnailRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      selectedVideoThumbnailUriRef.current = imageUri;
+      setSelectedVideoThumbnailUri(imageUri);
+    } catch (error) {
+      if (uploadThumbnailRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      console.warn(
+        'Selected video thumbnail preparation failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+      selectedVideoThumbnailUriRef.current = null;
+      setSelectedVideoThumbnailUri(null);
+    } finally {
+      if (uploadThumbnailRequestIdRef.current === requestId) {
+        setIsPreparingSelectedVideoThumbnail(false);
+      }
     }
   };
 
@@ -723,23 +758,37 @@ export function HomeScreen() {
       return false;
     }
 
-    setSelectedVideo({
+    const nextVideo = {
       uri: asset.uri,
       fileName: asset.fileName,
       fileSize: asset.fileSize,
       mimeType: asset.mimeType,
       duration: asset.duration,
-    });
+    };
+
+    setSelectedVideo(nextVideo);
+    void prepareSelectedVideoThumbnail(nextVideo);
 
     return true;
   };
 
   const handleOpenUploadSheet = async () => {
+    if (isUploadingSession) {
+      return;
+    }
+
     const didPickVideo = await handlePickVideo();
 
     if (didPickVideo) {
       setIsComposerOpen(true);
     }
+  };
+
+  const handleOpenProfile = () => {
+    Alert.alert(
+      '마이페이지',
+      '계정과 설정 화면은 이후 단계에서 연결할 예정입니다.',
+    );
   };
 
   const handleExtractEvidence = async (
@@ -890,7 +939,7 @@ export function HomeScreen() {
           formatShortSessionDate={formatShortSessionDate}
           getVideoArchiveDescription={getVideoArchiveDescription}
           onOpenSession={openEvidenceSheet}
-          sessions={timelineSummaries}
+          sessions={homeSessionSummaries}
           styles={styles}
         />
       </View>
@@ -902,10 +951,6 @@ export function HomeScreen() {
       kicker={selectedGroup?.name ?? 'Wakeboard'}
       styles={styles}
     />
-  );
-
-  const renderProfileTab = () => (
-    <ProfilePlaceholderTab styles={styles} />
   );
 
   return (
@@ -927,7 +972,18 @@ export function HomeScreen() {
           {activeTab === 'home' ? (
             <>
           <View style={styles.header}>
-            <View>
+            <Pressable
+              accessibilityLabel="영상 업로드"
+              accessibilityRole="button"
+              onPress={handleOpenUploadSheet}
+              style={({ pressed }) => [
+                styles.headerAddButton,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text style={styles.headerAddText}>＋</Text>
+            </Pressable>
+            <View style={styles.headerTitleBlock}>
               <Text style={styles.kicker}>Riding Journal</Text>
               <Text style={styles.title}>오늘의 라이딩 저널</Text>
               <Text style={styles.headerMeta}>
@@ -936,14 +992,15 @@ export function HomeScreen() {
               </Text>
             </View>
             <Pressable
+              accessibilityLabel="마이페이지 열기"
               accessibilityRole="button"
-              onPress={handleOpenUploadSheet}
+              onPress={handleOpenProfile}
               style={({ pressed }) => [
-                styles.headerAddButton,
+                styles.headerMenuButton,
                 pressed ? styles.buttonPressed : undefined,
               ]}
             >
-              <Text style={styles.headerAddText}>↑</Text>
+              <Text style={styles.headerMenuText}>☰</Text>
             </Pressable>
           </View>
 
@@ -967,26 +1024,11 @@ export function HomeScreen() {
             />
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionLabel}>저널</Text>
-              <Text style={styles.sectionHint}>HISTORY</Text>
-            </View>
-            <JournalTimeline
-              formatTimelineDay={formatTimelineDay}
-              formatTimelineMonth={formatTimelineMonth}
-              onOpenSession={openEvidenceSheet}
-              sessions={timelineSummaries}
-              styles={styles}
-            />
-          </View>
             </>
           ) : activeTab === 'video' ? (
             renderVideoTab()
-          ) : activeTab === 'flow' ? (
-            renderFlowTab()
           ) : (
-            renderProfileTab()
+            renderFlowTab()
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1026,17 +1068,13 @@ export function HomeScreen() {
         canUploadSession={canUploadSession}
         formatVideoMeta={formatVideoMeta}
         isOpen={isComposerOpen}
-        notes={notes}
+        isPreparingThumbnail={isPreparingSelectedVideoThumbnail}
+        isSubmitting={isUploadingSession}
         onClose={closeUploadSheet}
         onPickVideo={handlePickVideo}
         onSubmit={handleAddSession}
         selectedVideo={selectedVideo}
-        setNotes={setNotes}
-        setTitle={setTitle}
         styles={styles}
-        title={title}
-        titleInputRef={uploadTitleInputRef}
-        translateY={uploadSheetTranslateY}
       />
     </SafeAreaView>
   );
@@ -1169,6 +1207,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
   },
+  headerTitleBlock: {
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 10,
+  },
+  headerMenuButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(248, 250, 252, 0.08)',
+    borderColor: 'rgba(248, 250, 252, 0.14)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  headerMenuText: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
   kicker: {
     color: '#9ca3af',
     fontSize: 10,
@@ -1192,13 +1251,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderRadius: 999,
-    height: 34,
+    height: 38,
     justifyContent: 'center',
-    width: 34,
+    width: 38,
   },
   headerAddText: {
     color: '#050507',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
     lineHeight: 24,
   },
@@ -1302,13 +1361,17 @@ const styles = StyleSheet.create({
     width: 236,
   },
   recentPreview: {
+    alignItems: 'center',
     alignSelf: 'stretch',
     aspectRatio: 1.62,
     backgroundColor: '#0b0d12',
+    justifyContent: 'center',
     marginBottom: 12,
     overflow: 'hidden',
+    width: '100%',
   },
   recentThumbImage: {
+    ...StyleSheet.absoluteFillObject,
     height: '100%',
     width: '100%',
   },
@@ -1349,68 +1412,12 @@ const styles = StyleSheet.create({
     marginTop: 7,
     paddingHorizontal: 14,
   },
-  timeline: {
-    marginHorizontal: 16,
-  },
-  timelineEmpty: {
-    backgroundColor: '#14161c',
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-  },
-  timelineRow: {
-    alignItems: 'flex-start',
-    backgroundColor: '#14161c',
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 10,
-    padding: 12,
-  },
-  timelineDateBlock: {
-    alignItems: 'center',
-    backgroundColor: '#20232d',
-    borderRadius: 10,
-    minWidth: 48,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  timelineMonth: {
-    color: '#9ca3af',
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  timelineDay: {
-    color: '#f9fafb',
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 22,
-  },
-  timelineBody: {
-    flex: 1,
-  },
-  timelineTopRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
-  },
   timelineTitle: {
     color: '#f9fafb',
     flex: 1,
     fontSize: 15,
     fontWeight: '900',
     lineHeight: 19,
-  },
-  timelineSummary: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-    marginTop: 5,
   },
   videoArchiveList: {
     gap: 10,
@@ -1427,8 +1434,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   videoArchiveThumb: {
+    alignItems: 'center',
     alignSelf: 'stretch',
     backgroundColor: '#0b0d12',
+    justifyContent: 'center',
     overflow: 'hidden',
     width: 108,
   },
@@ -1520,55 +1529,31 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   uploadSheetBackdrop: {
-    backgroundColor: 'rgba(0, 0, 0, 0.58)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  uploadSheetKeyboardView: {
+    backgroundColor: '#050507',
     flex: 1,
   },
   uploadSheet: {
     alignSelf: 'stretch',
-    backgroundColor: '#101218',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    height: '68%',
-    minHeight: '66%',
-    paddingBottom: 28,
-    paddingHorizontal: 0,
-    paddingTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { height: -10, width: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    width: '100%',
-  },
-  uploadSheetContent: {
+    backgroundColor: '#050507',
     flex: 1,
+    paddingBottom: 12,
+    paddingHorizontal: 0,
+    paddingTop: 18,
     width: '100%',
   },
   uploadSheetPaddedSection: {
     paddingHorizontal: 18,
   },
-  uploadSheetHandle: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
-    borderRadius: 999,
-    height: 4,
-    marginBottom: 16,
-    width: 42,
-  },
   uploadSheetHeader: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    justifyContent: 'flex-start',
+    marginBottom: 14,
   },
   uploadSheetTitleBlock: {
+    alignItems: 'center',
     flex: 1,
-    paddingRight: 14,
+    paddingHorizontal: 12,
   },
   uploadSheetTitle: {
     color: '#f9fafb',
@@ -1582,37 +1567,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 20,
     marginTop: 4,
-  },
-  uploadSheetActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  uploadSheetActionButton: {
-    alignItems: 'center',
-    borderRadius: 999,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  uploadSheetReselectButton: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderColor: 'rgba(125, 211, 252, 0.34)',
-    borderWidth: 1,
-  },
-  uploadSheetSubmitButton: {
-    backgroundColor: '#f9fafb',
+    textAlign: 'center',
   },
   uploadSheetSubmitButtonDisabled: {
     backgroundColor: '#2a303b',
-  },
-  uploadSheetActionText: {
-    color: '#050507',
-    fontSize: 21,
-    fontWeight: '900',
-    lineHeight: 24,
-  },
-  uploadSheetReselectText: {
-    color: '#7dd3fc',
   },
   uploadSheetSubmitTextDisabled: {
     color: '#64748b',
@@ -1624,10 +1582,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     aspectRatio: 16 / 9,
     backgroundColor: '#050507',
-    borderRadius: 0,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 12,
+    marginHorizontal: 16,
     overflow: 'hidden',
-    width: '100%',
   },
   uploadVideoPreview: {
     height: '100%',
@@ -1653,28 +1613,65 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 4,
   },
-  input: {
-    backgroundColor: '#1b1e27',
+  uploadPageBody: {
+    flexGrow: 1,
+    paddingTop: 2,
+    paddingBottom: 20,
+  },
+  uploadPageFooter: {
+    backgroundColor: '#101218',
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    marginHorizontal: 16,
+    padding: 12,
+  },
+  uploadPageFooterActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  uploadAiNotice: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    textAlign: 'center',
+  },
+  uploadPageSecondaryButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: 'rgba(125, 211, 252, 0.34)',
     borderRadius: 14,
     borderWidth: 1,
-    color: '#f9fafb',
-    fontSize: 15,
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  textArea: {
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  uploadNotesInput: {
     flex: 1,
-    marginBottom: 0,
-    minHeight: 120,
+    justifyContent: 'center',
+    minHeight: 48,
   },
-  uploadFormFields: {
+  uploadPageSecondaryText: {
+    color: '#7dd3fc',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  uploadPagePrimaryButton: {
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 14,
     flex: 1,
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  uploadPagePrimaryText: {
+    color: '#050507',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  uploadSubmittingHint: {
+    color: '#bae6fd',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    textAlign: 'center',
   },
   buttonPressed: {
     opacity: 0.85,
@@ -2089,39 +2086,45 @@ const styles = StyleSheet.create({
   },
   detailModalHeader: {
     alignItems: 'center',
-    backgroundColor: 'rgba(17, 19, 27, 0.76)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    borderRadius: 28,
-    borderWidth: 1,
+    backgroundColor: '#050507',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 10,
-    left: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    position: 'absolute',
-    right: 12,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.34,
-    shadowRadius: 28,
-    top: Platform.OS === 'ios' ? 58 : 16,
-    zIndex: 20,
+    paddingVertical: 10,
   },
   detailCloseButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    borderRadius: 999,
-    borderWidth: 1,
+    backgroundColor: 'transparent',
     height: 34,
     justifyContent: 'center',
     width: 34,
   },
-  detailCloseText: {
-    color: '#f8fafc',
-    fontSize: 24,
-    fontWeight: '900',
-    lineHeight: 26,
+  detailBackIcon: {
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  detailBackIconStrokeTop: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 999,
+    height: 2.5,
+    left: 4,
+    position: 'absolute',
+    top: 5,
+    transform: [{ rotate: '-45deg' }],
+    width: 12,
+  },
+  detailBackIconStrokeBottom: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 999,
+    height: 2.5,
+    left: 4,
+    position: 'absolute',
+    top: 13,
+    transform: [{ rotate: '45deg' }],
+    width: 12,
   },
   detailHeaderText: {
     flex: 1,
@@ -2150,21 +2153,34 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 6,
   },
-  detailMoreButton: {
+  detailHeaderDeleteButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    borderRadius: 999,
-    borderWidth: 1,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
     height: 34,
     justifyContent: 'center',
     width: 34,
   },
-  detailMoreText: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 17,
+  detailTrashIcon: {
+    alignItems: 'center',
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  detailTrashLid: {
+    backgroundColor: '#fca5a5',
+    borderRadius: 999,
+    height: 2,
+    marginBottom: 2,
+    width: 13,
+  },
+  detailTrashCan: {
+    borderColor: '#fca5a5',
+    borderRadius: 2,
+    borderTopWidth: 0,
+    borderWidth: 2,
+    height: 12,
+    width: 11,
   },
   detailVideoFrame: {
     aspectRatio: 1,
@@ -2172,6 +2188,25 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     overflow: 'hidden',
     width: '100%',
+  },
+  detailInlineRetry: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  detailInlineRetryTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  detailInlineRetryText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+    textAlign: 'center',
   },
   detailReviewCard: {
     alignItems: 'center',
@@ -2212,6 +2247,11 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  detailSectionHeading: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
   },
   detailStateCard: {
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',

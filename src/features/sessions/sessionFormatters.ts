@@ -72,11 +72,9 @@ export function getSessionCardPresentation({
         evidence?.family.evidence;
   const hasEvidence = evidence?.status === 'completed';
   const momentTitle =
-    needsReview
-      ? '확인 필요'
-      : detectedAction ??
-        inferMomentTitle(session.title) ??
-        (session.videoUri ? '라이딩 영상' : '클립 대기 중');
+    normalizeOptionalText(session.title) ??
+    getSessionDisplayTitle(session, evidence) ??
+    (session.videoUri ? '라이딩 영상' : '클립 대기 중');
   const reason = hasEvidence
     ? hook ?? '동작 근거가 준비됐습니다.'
     : session.videoUri
@@ -100,35 +98,45 @@ export function getSessionCardPresentation({
   };
 }
 
+export function getSessionDisplayTitle(
+  session: Session,
+  _evidence?: GeminiEvidenceResult,
+) {
+  const userTitle = normalizeOptionalText(session.title);
+
+  if (userTitle) {
+    return inferMomentTitle(userTitle) ?? userTitle;
+  }
+
+  const dateLabel = formatShortSessionDate(session.occurredAt);
+
+  return dateLabel || '라이딩 영상';
+}
+
 export function getVideoArchiveDescription(session: Session) {
   return session.videoUri ? '업로드된 라이딩 영상' : '영상이 없는 세션';
 }
 
-export function formatTimelineMonth(value: string) {
+export function formatShortSessionDate(value: string) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
     return '';
   }
 
-  return `${date.getMonth() + 1}월`;
-}
-
-export function formatTimelineDay(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '--';
-  }
-
-  return String(date.getDate()).padStart(2, '0');
-}
-
-export function formatShortSessionDate(value: string) {
-  return new Date(value).toLocaleDateString('ko-KR', {
+  const datePart = date.toLocaleDateString('ko-KR', {
     month: 'numeric',
     day: 'numeric',
   });
+  const timePart = date
+    .toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      hour12: true,
+      minute: '2-digit',
+    })
+    .replace(' ', ' ');
+
+  return `${datePart} ${timePart}`;
 }
 
 function inferMomentTitle(title: string) {
@@ -153,6 +161,12 @@ function inferMomentTitle(title: string) {
   }
 
   return normalized;
+}
+
+function normalizeOptionalText(value?: string | null) {
+  const normalized = value?.replace(/\s+/g, ' ').trim();
+
+  return normalized ? normalized : undefined;
 }
 
 function compactCardText(text: string, maxLength: number) {

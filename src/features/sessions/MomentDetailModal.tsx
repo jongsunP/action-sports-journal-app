@@ -15,6 +15,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { DebugResultViewer } from './DebugResultViewer';
 import { getMomentStatusMessage, getRetryEligibility } from './momentStatus';
 import { MomentStatusDot } from './sessionComponents';
+import { getSessionDisplayTitle } from './sessionFormatters';
 
 import type { SessionVideoAsset } from '../../services/ai';
 import type { AnalysisResult, GeminiEvidenceResult, MomentStatus, Session } from '../../types';
@@ -132,52 +133,14 @@ export function MomentDetailModal({
   const shouldShowTrickReviewAction = shouldShowTrickConfirmationAction(
     visibleEvidence,
   );
-  const handleOpenDetailMenu = () => {
-    const menuActions: Array<{
-      onPress?: () => void;
-      style?: 'cancel' | 'destructive';
-      text: string;
-    }> = [];
-
-    if (onRetry) {
-      menuActions.push({
-        text: retryEligibility.canRetry
-          ? '분석 다시 시도'
-          : '분석 다시 시도 (불가)',
-        onPress: retryEligibility.canRetry
-          ? onRetry
-          : () => {
-              Alert.alert('분석 다시 시도 불가', retryEligibility.reason);
-            },
-      });
-    }
-
-    if (onDelete) {
-      menuActions.push({
-        text: '삭제',
-        style: 'destructive',
-        onPress: onDelete,
-      });
-    }
-
-    Alert.alert(
-      '영상 작업',
-      menuActions.length > 0 ? undefined : '현재 사용할 수 있는 작업이 없습니다.',
-      [
-        ...menuActions,
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-      ],
-    );
-  };
   const handleOpenTrickReview = () => {
     Alert.alert(
       '기술명 확인',
       '검토가 필요한 분석입니다. 기술 확정은 다음 단계에서 action sheet로 제공할 예정입니다.',
     );
   };
+  const shouldShowInlineRetry =
+    retryEligibility.canRetry && momentStatus === 'failed' && Boolean(onRetry);
 
   return (
     <Modal
@@ -196,11 +159,14 @@ export function MomentDetailModal({
               pressed ? styles.buttonPressed : undefined,
             ]}
           >
-            <Text style={styles.detailCloseText}>×</Text>
+            <View style={styles.detailBackIcon}>
+              <View style={styles.detailBackIconStrokeTop} />
+              <View style={styles.detailBackIconStrokeBottom} />
+            </View>
           </Pressable>
           <View style={styles.detailHeaderText}>
             <Text style={styles.detailHeaderTitle} numberOfLines={1}>
-              {session.title}
+              {getSessionDisplayTitle(session, visibleEvidence)}
             </Text>
             <View style={styles.detailHeaderMetaRow}>
               <MomentStatusDot status={momentStatus} />
@@ -210,17 +176,22 @@ export function MomentDetailModal({
             </View>
           </View>
           <View style={styles.detailHeaderActions}>
-            <Pressable
-              accessibilityLabel="영상 작업 더보기"
-              accessibilityRole="button"
-              onPress={handleOpenDetailMenu}
-              style={({ pressed }) => [
-                styles.detailMoreButton,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Text style={styles.detailMoreText}>•••</Text>
-            </Pressable>
+            {onDelete ? (
+              <Pressable
+                accessibilityLabel="영상 삭제"
+                accessibilityRole="button"
+                onPress={onDelete}
+                style={({ pressed }) => [
+                  styles.detailHeaderDeleteButton,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <View style={styles.detailTrashIcon}>
+                  <View style={styles.detailTrashLid} />
+                  <View style={styles.detailTrashCan} />
+                </View>
+              </Pressable>
+            ) : null}
           </View>
         </View>
         <ScrollView
@@ -228,7 +199,21 @@ export function MomentDetailModal({
           showsVerticalScrollIndicator
         >
           <View style={styles.detailVideoFrame}>
-            {video ? (
+            {shouldShowInlineRetry ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onRetry}
+                style={({ pressed }) => [
+                  styles.detailInlineRetry,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text style={styles.detailInlineRetryTitle}>분석 다시 시도</Text>
+                <Text style={styles.detailInlineRetryText}>
+                  분석에 실패했습니다. 다시 요청할 수 있습니다.
+                </Text>
+              </Pressable>
+            ) : video ? (
               <LocalSessionVideoPlayer videoUri={video.uri} />
             ) : (
               <View style={styles.videoMissingFallback}>
@@ -260,11 +245,12 @@ export function MomentDetailModal({
             </Pressable>
           ) : null}
 
-          {session.notes ? (
-            <View style={styles.detailSummaryCard}>
+          <View style={styles.detailSummaryCard}>
+            <Text style={styles.detailSectionHeading}>메모</Text>
+            {session.notes ? (
               <Text style={styles.detailMomentReason}>{session.notes}</Text>
-            </View>
-          ) : null}
+            ) : null}
+          </View>
 
             {shouldShowStatusMessage && statusMessage ? (
               <View style={styles.detailStateCard}>
@@ -890,12 +876,23 @@ function ObservationSection({
 }
 
 function formatSessionDateTime(value: string) {
-  return new Date(value).toLocaleString('ko-KR', {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const datePart = date.toLocaleDateString('ko-KR', {
     month: 'numeric',
     day: 'numeric',
+  });
+  const timePart = date.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
   });
+
+  return `${datePart} ${timePart}`;
 }
 
 

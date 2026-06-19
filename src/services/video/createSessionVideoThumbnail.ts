@@ -1,3 +1,5 @@
+import * as VideoThumbnails from 'expo-video-thumbnails';
+
 import type { SessionVideoAsset } from '../ai';
 
 type ThumbnailResponse = {
@@ -15,10 +17,76 @@ const thumbnailEndpoint = analysisEndpoint?.replace(
 );
 
 export function hasConfiguredVideoThumbnailEndpoint() {
-  return Boolean(thumbnailEndpoint);
+  return true;
 }
 
-export async function createSessionVideoThumbnail(video: SessionVideoAsset) {
+export async function createSessionVideoThumbnail(
+  video: SessionVideoAsset,
+  options?: {
+    allowRemoteFallback?: boolean;
+    timeoutMs?: number;
+  },
+) {
+  const allowRemoteFallback = options?.allowRemoteFallback ?? true;
+
+  try {
+    return await withTimeout(
+      createLocalSessionVideoThumbnail(video),
+      options?.timeoutMs,
+    );
+  } catch (error) {
+    console.warn(
+      'Local video thumbnail creation failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+  }
+
+  if (!allowRemoteFallback) {
+    throw new Error('로컬 영상 썸네일 생성에 실패했습니다.');
+  }
+
+  return createRemoteSessionVideoThumbnail(video);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs?: number) {
+  if (!timeoutMs || timeoutMs <= 0) {
+    return promise;
+  }
+
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Local thumbnail timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    }),
+  ]);
+}
+
+async function createLocalSessionVideoThumbnail(video: SessionVideoAsset) {
+  const durationMs =
+    typeof video.duration === 'number' && Number.isFinite(video.duration)
+      ? video.duration
+      : undefined;
+  const time = Math.round(
+    durationMs
+      ? Math.min(Math.max(durationMs * 0.2, 500), Math.max(durationMs - 250, 0))
+      : 1000,
+  );
+
+  const thumbnail = await VideoThumbnails.getThumbnailAsync(video.uri, {
+    quality: 0.72,
+    time,
+  });
+
+  if (!thumbnail.uri) {
+    throw new Error('로컬 영상 썸네일 응답에 이미지가 없습니다.');
+  }
+
+  return thumbnail.uri;
+}
+
+async function createRemoteSessionVideoThumbnail(video: SessionVideoAsset) {
   if (!thumbnailEndpoint) {
     throw new Error('영상 썸네일 엔드포인트가 설정되지 않았습니다.');
   }

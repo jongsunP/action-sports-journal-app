@@ -262,7 +262,7 @@ app.post("/api/moments", async (request, response) => {
         user_id: userId,
         session_id: isUuid(sessionId) ? sessionId : null,
         activity_group_id: getField(request.body?.activityGroupId, "wakeboard"),
-        title: getField(request.body?.title, "Untitled moment"),
+        title: nullableString(request.body?.title),
         notes: nullableString(request.body?.notes),
         status,
         source: "standalone_app",

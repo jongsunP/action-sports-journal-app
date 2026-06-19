@@ -1,17 +1,13 @@
-import { useState, type RefObject } from 'react';
+import { useState } from 'react';
 import { useEventListener } from 'expo';
 import {
-  Animated,
   Image,
-  Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -27,7 +23,7 @@ import type { GeminiEvidenceResult, MomentStatus, Session } from '../../types';
 
 type HomeScreenStyles = Record<string, object>;
 
-export type AppTabId = 'home' | 'video' | 'flow' | 'profile';
+export type AppTabId = 'home' | 'video' | 'flow';
 
 export const APP_TABS: Array<{
   id: AppTabId;
@@ -36,8 +32,7 @@ export const APP_TABS: Array<{
 }> = [
   { id: 'home', label: '홈', hint: '대시보드' },
   { id: 'video', label: '영상', hint: '아카이브' },
-  { id: 'flow', label: '흐름', hint: '진행' },
-  { id: 'profile', label: '개인정보', hint: '설정' },
+  { id: 'flow', label: '성장', hint: '진행' },
 ];
 
 type SessionSummary = {
@@ -176,27 +171,7 @@ function BottomTabIcon({
     );
   }
 
-  return (
-    <View
-      style={[
-        styles.bottomTabIconFrame,
-        isSelected ? styles.bottomTabIconFrameSelected : undefined,
-      ]}
-    >
-      <View
-        style={[
-          styles.tabIconProfileHead,
-          isSelected ? styles.tabIconFilled : undefined,
-        ]}
-      />
-      <View
-        style={[
-          styles.tabIconProfileBody,
-          isSelected ? styles.tabIconFilled : undefined,
-        ]}
-      />
-    </View>
-  );
+  return null;
 }
 
 export function FlowPlaceholderTab({
@@ -210,13 +185,13 @@ export function FlowPlaceholderTab({
     <>
       <View style={styles.tabPageHeader}>
         <Text style={styles.kicker}>{kicker}</Text>
-        <Text style={styles.title}>흐름</Text>
-        <Text style={styles.headerMeta}>Progression / Flow 준비 중</Text>
+        <Text style={styles.title}>성장</Text>
+        <Text style={styles.headerMeta}>Progression 준비 중</Text>
       </View>
       <View style={styles.placeholderCard}>
         <Text style={styles.placeholderTitle}>Progression Layer</Text>
         <Text style={styles.placeholderText}>
-          반복된 세션과 분석 결과가 충분히 쌓이면 연습 흐름, 검토 후보, 다음
+          반복된 세션과 분석 결과가 충분히 쌓이면 성장 추이, 검토 후보, 다음
           연습 포인트를 이곳에서 보여줄 예정입니다.
         </Text>
       </View>
@@ -284,6 +259,7 @@ export function RecentSessionsRail({
           <View style={styles.recentPreview}>
             {card.thumbnailUri ? (
               <Image
+                resizeMode="cover"
                 source={{ uri: card.thumbnailUri }}
                 style={styles.recentThumbImage}
               />
@@ -299,12 +275,12 @@ export function RecentSessionsRail({
             </View>
           </View>
           <View style={styles.recentFloatingMetaRow}>
-            <Text style={styles.recentDate}>
+            <Text style={styles.recentDate} numberOfLines={1}>
               {formatShortSessionDate(session.occurredAt)}
             </Text>
           </View>
           <Text style={styles.recentTitle} numberOfLines={1}>
-            {session.title}
+            {card.momentTitle}
           </Text>
           {session.notes ? (
             <Text style={styles.recentSummary} numberOfLines={2}>
@@ -397,67 +373,6 @@ export function PrimaryInsightCard({
   );
 }
 
-export function JournalTimeline({
-  formatTimelineDay,
-  formatTimelineMonth,
-  onOpenSession,
-  sessions,
-  styles,
-}: {
-  formatTimelineDay: (value: string) => string;
-  formatTimelineMonth: (value: string) => string;
-  onOpenSession: (session: Session) => void;
-  sessions: SessionSummary[];
-  styles: HomeScreenStyles;
-}) {
-  return (
-    <View style={styles.timeline}>
-      {sessions.length === 0 ? (
-        <View style={styles.timelineEmpty}>
-          <Text style={styles.emptyTitle}>기록이 비어 있습니다</Text>
-          <Text style={styles.emptyText}>
-            분석 결과와 세션 메모가 시간순으로 쌓입니다.
-          </Text>
-        </View>
-      ) : (
-        sessions.map(({ card, completedEvidence, momentStatus, session }) => (
-          <Pressable
-            accessibilityRole="button"
-            key={session.id}
-            onPress={() => onOpenSession(session)}
-            style={({ pressed }) => [
-              styles.timelineRow,
-              pressed ? styles.sessionRowPressed : undefined,
-            ]}
-          >
-            <View style={styles.timelineDateBlock}>
-              <Text style={styles.timelineMonth}>
-                {formatTimelineMonth(session.occurredAt)}
-              </Text>
-              <Text style={styles.timelineDay}>
-                {formatTimelineDay(session.occurredAt)}
-              </Text>
-            </View>
-            <View style={styles.timelineBody}>
-              <View style={styles.timelineTopRow}>
-                <Text style={styles.timelineTitle} numberOfLines={1}>
-                  {card.momentTitle}
-                </Text>
-                <MomentStatusDot status={momentStatus} />
-              </View>
-              <Text style={styles.timelineSummary} numberOfLines={2}>
-                {completedEvidence
-                  ? getTimelineSummary(completedEvidence)
-                  : card.reason}
-              </Text>
-            </View>
-          </Pressable>
-        ))
-      )}
-    </View>
-  );
-}
-
 export function VideoArchiveList({
   formatShortSessionDate,
   getVideoArchiveDescription,
@@ -497,6 +412,7 @@ export function VideoArchiveList({
           <View style={styles.videoArchiveThumb}>
             {card.thumbnailUri ? (
               <Image
+                resizeMode="cover"
                 source={{ uri: card.thumbnailUri }}
                 style={styles.recentThumbImage}
               />
@@ -513,12 +429,12 @@ export function VideoArchiveList({
           </View>
           <View style={styles.videoArchiveBody}>
             <View style={styles.videoArchiveMetaRow}>
-              <Text style={styles.recentDate}>
+              <Text style={styles.recentDate} numberOfLines={1}>
                 {formatShortSessionDate(session.occurredAt)}
               </Text>
             </View>
             <Text style={styles.timelineTitle} numberOfLines={1}>
-              {session.title}
+              {card.momentTitle}
             </Text>
             <Text style={styles.videoArchiveDescription} numberOfLines={2}>
               {session.notes ?? getVideoArchiveDescription(session)}
@@ -534,178 +450,144 @@ export function UploadSheet({
   canUploadSession,
   formatVideoMeta,
   isOpen,
-  notes,
+  isPreparingThumbnail,
+  isSubmitting,
   onClose,
   onPickVideo,
   onSubmit,
   selectedVideo,
-  setNotes,
-  setTitle,
   styles,
-  title,
-  titleInputRef,
-  translateY,
 }: {
   canUploadSession: boolean;
   formatVideoMeta: (video: SessionVideoAsset) => string;
   isOpen: boolean;
-  notes: string;
+  isPreparingThumbnail: boolean;
+  isSubmitting: boolean;
   onClose: () => void;
   onPickVideo: () => void;
   onSubmit: () => void;
   selectedVideo: SessionVideoAsset | null;
-  setNotes: (value: string) => void;
-  setTitle: (value: string) => void;
   styles: HomeScreenStyles;
-  title: string;
-  titleInputRef: RefObject<TextInput | null>;
-  translateY: Animated.Value;
 }) {
   return (
     <Modal
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
-      transparent
       visible={isOpen}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.uploadSheetKeyboardView}
-      >
-        <Pressable
-          accessibilityRole="button"
-          onPress={onClose}
-          style={styles.uploadSheetBackdrop}
-        >
-          <Animated.View
-            style={[
-              styles.uploadSheet,
-              {
-                transform: [
-                  {
-                    translateY: translateY.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 520],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Pressable
-              accessibilityRole="none"
-              onPress={(event) => event.stopPropagation()}
-              style={styles.uploadSheetContent}
-            >
-              <View style={styles.uploadSheetPaddedSection}>
-                <View style={styles.uploadSheetHandle} />
-                <View style={styles.uploadSheetHeader}>
-                  <View style={styles.uploadSheetTitleBlock}>
-                    <Text style={styles.uploadSheetTitle}>영상 업로드</Text>
-                    <Text style={styles.uploadSheetDescription}>
-                      라이딩 영상을 AI로 분석합니다.
-                    </Text>
-                  </View>
-                  <View style={styles.uploadSheetActions}>
-                    <Pressable
-                      accessibilityLabel="영상 다시 선택"
-                      accessibilityRole="button"
-                      onPress={onPickVideo}
-                      style={({ pressed }) => [
-                        styles.uploadSheetActionButton,
-                        styles.uploadSheetReselectButton,
-                        pressed ? styles.buttonPressed : undefined,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.uploadSheetActionText,
-                          styles.uploadSheetReselectText,
-                        ]}
-                      >
-                        ↻
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      accessibilityLabel="업로드 실행"
-                      accessibilityRole="button"
-                      disabled={!canUploadSession}
-                      onPress={onSubmit}
-                      style={({ pressed }) => [
-                        styles.uploadSheetActionButton,
-                        styles.uploadSheetSubmitButton,
-                        !canUploadSession
-                          ? styles.uploadSheetSubmitButtonDisabled
-                          : undefined,
-                        pressed ? styles.buttonPressed : undefined,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.uploadSheetActionText,
-                          !canUploadSession
-                            ? styles.uploadSheetSubmitTextDisabled
-                            : undefined,
-                        ]}
-                      >
-                        ↑
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-              {selectedVideo ? (
-                <>
-                  <LocalUploadVideoPreview
-                    key={selectedVideo.uri}
-                    styles={styles}
-                    videoUri={selectedVideo.uri}
-                  />
-                  <View
-                    style={[
-                      styles.uploadSheetPaddedSection,
-                      styles.selectedVideoInfo,
-                    ]}
-                  >
-                    <Text style={styles.selectedVideoLabel}>선택된 영상</Text>
-                    <Text style={styles.selectedVideoTitle} numberOfLines={1}>
-                      {selectedVideo.fileName ?? '선택한 영상'}
-                    </Text>
-                    <Text style={styles.selectedVideoMeta}>
-                      {formatVideoMeta(selectedVideo)}
-                    </Text>
-                  </View>
-                </>
-              ) : null}
-              <View
-                style={[
-                  styles.uploadSheetPaddedSection,
-                  styles.uploadFormFields,
+      <SafeAreaView style={styles.uploadSheetBackdrop}>
+        <View style={styles.uploadSheet}>
+          <View style={styles.uploadSheetPaddedSection}>
+            <View style={styles.uploadSheetHeader}>
+              <Pressable
+                accessibilityLabel="업로드 화면 닫기"
+                accessibilityRole="button"
+                disabled={isSubmitting}
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.headerMenuButton,
+                  isSubmitting ? styles.uploadSheetSubmitButtonDisabled : undefined,
+                  pressed ? styles.buttonPressed : undefined,
                 ]}
               >
-                <TextInput
-                  onBlur={() => Keyboard.dismiss()}
-                  placeholder="어떤 영상인가요?"
-                  placeholderTextColor="#94a3b8"
-                  ref={titleInputRef}
-                  style={styles.input}
-                  value={title}
-                  onChangeText={setTitle}
+                <Text style={styles.headerMenuText}>×</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.uploadPageBody}
+            showsVerticalScrollIndicator={false}
+          >
+            {selectedVideo ? (
+              <>
+                <LocalUploadVideoPreview
+                  key={selectedVideo.uri}
+                  styles={styles}
+                  videoUri={selectedVideo.uri}
                 />
-                <TextInput
-                  multiline
-                  onBlur={() => Keyboard.dismiss()}
-                  placeholder="짧은 느낌 남기기"
-                  placeholderTextColor="#94a3b8"
-                  style={[styles.input, styles.textArea, styles.uploadNotesInput]}
-                  value={notes}
-                  onChangeText={setNotes}
-                />
+                <View
+                  style={[
+                    styles.uploadSheetPaddedSection,
+                    styles.selectedVideoInfo,
+                  ]}
+                >
+                  <Text style={styles.selectedVideoLabel}>선택된 영상</Text>
+                  <Text style={styles.selectedVideoTitle} numberOfLines={1}>
+                    {selectedVideo.fileName ?? '선택한 영상'}
+                  </Text>
+                  <Text style={styles.selectedVideoMeta}>
+                    {formatVideoMeta(selectedVideo)}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>선택된 영상이 없습니다</Text>
+                <Text style={styles.emptyText}>영상을 다시 선택해주세요.</Text>
               </View>
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </KeyboardAvoidingView>
+            )}
+          </ScrollView>
+
+          <View style={styles.uploadPageFooter}>
+            <Text style={styles.uploadAiNotice}>
+              업로드하면 AI 분석을 시작합니다. 결과가 준비되기까지 시간이 걸릴 수 있습니다.
+            </Text>
+            {isSubmitting ? (
+              <Text style={styles.uploadSubmittingHint}>
+                업로드를 시작했습니다. 잠시만 기다려주세요.
+              </Text>
+            ) : isPreparingThumbnail ? (
+              <Text style={styles.uploadSubmittingHint}>
+                썸네일을 준비하고 있습니다.
+              </Text>
+            ) : null}
+            <View style={styles.uploadPageFooterActions}>
+              <Pressable
+                accessibilityLabel="영상 바꾸기"
+                accessibilityRole="button"
+                disabled={isSubmitting}
+                onPress={onPickVideo}
+                style={({ pressed }) => [
+                  styles.uploadPageSecondaryButton,
+                  isSubmitting ? styles.uploadSheetSubmitButtonDisabled : undefined,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text style={styles.uploadPageSecondaryText}>영상 바꾸기</Text>
+              </Pressable>
+              <Pressable
+                accessibilityLabel="업로드 실행"
+                accessibilityRole="button"
+                disabled={!canUploadSession || isSubmitting || isPreparingThumbnail}
+                onPress={onSubmit}
+                style={({ pressed }) => [
+                  styles.uploadPagePrimaryButton,
+                  !canUploadSession || isSubmitting || isPreparingThumbnail
+                    ? styles.uploadSheetSubmitButtonDisabled
+                    : undefined,
+                  pressed ? styles.buttonPressed : undefined,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.uploadPagePrimaryText,
+                    !canUploadSession || isSubmitting || isPreparingThumbnail
+                      ? styles.uploadSheetSubmitTextDisabled
+                      : undefined,
+                  ]}
+                >
+                  {isSubmitting
+                    ? '업로드 중...'
+                    : isPreparingThumbnail
+                      ? '준비 중...'
+                      : '업로드'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
