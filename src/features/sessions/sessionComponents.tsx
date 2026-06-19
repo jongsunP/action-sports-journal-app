@@ -16,7 +16,11 @@ import {
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
-import { getMomentStatusLabel, getVisibleMomentStatus } from './momentStatus';
+import {
+  getMomentStatusLabel,
+  getMomentStatusMessage,
+  getVisibleMomentStatus,
+} from './momentStatus';
 
 import type { SessionVideoAsset } from '../../services/ai';
 import type { GeminiEvidenceResult, MomentStatus, Session } from '../../types';
@@ -118,6 +122,147 @@ export function RecentSessionsRail({
         </Pressable>
       ))}
     </ScrollView>
+  );
+}
+
+export function PrimaryInsightCard({
+  formatShortSessionDate,
+  onOpenSession,
+  summary,
+  styles,
+}: {
+  formatShortSessionDate: (value: string) => string;
+  onOpenSession: (session: Session) => void;
+  summary?: SessionSummary;
+  styles: HomeScreenStyles;
+}) {
+  return (
+    <View style={styles.primaryInsightCard}>
+      <Text style={styles.cardEyebrow}>오늘의 인사이트</Text>
+      {summary?.completedEvidence ? (
+        <>
+          <Text style={styles.primaryInsightTitle}>
+            {getInsightTitle(summary.completedEvidence)}
+          </Text>
+          <Text style={styles.primaryInsightText}>
+            {getInsightSummary(summary.completedEvidence)}
+          </Text>
+          {summary.completedEvidence.candidateTrace ? (
+            <Text style={styles.primaryInsightReview}>
+              검토 후보:{' '}
+              {summary.completedEvidence.candidateTrace.displayLabel ??
+                summary.completedEvidence.candidateTrace.safePredictedTrick}
+            </Text>
+          ) : null}
+          <View style={styles.primaryInsightFooter}>
+            <MomentStatusDot status={summary.momentStatus ?? 'completed'} />
+            <Text style={styles.primaryInsightDate}>
+              {formatShortSessionDate(summary.session.occurredAt)}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => onOpenSession(summary.session)}
+            style={({ pressed }) => [
+              styles.textLinkButton,
+              pressed ? styles.buttonPressed : undefined,
+            ]}
+          >
+            <Text style={styles.textLinkButtonText}>자세히 보기</Text>
+          </Pressable>
+        </>
+      ) : summary ? (
+        <>
+          <Text style={styles.primaryInsightTitle}>
+            {summary.momentStatus === 'failed'
+              ? '분석을 다시 시도할 수 있습니다'
+              : '최근 세션을 분석하고 있습니다'}
+          </Text>
+          <Text style={styles.primaryInsightText}>
+            {summary.momentStatus
+              ? getMomentStatusMessage(summary.momentStatus).body
+              : '영상 근거가 준비되면 이곳에 요약이 표시됩니다.'}
+          </Text>
+          <View style={styles.primaryInsightFooter}>
+            <MomentStatusDot status={summary.momentStatus} />
+            <Text style={styles.primaryInsightDate}>
+              {formatShortSessionDate(summary.session.occurredAt)}
+            </Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={styles.primaryInsightTitle}>
+            분석 결과가 여기에 표시됩니다
+          </Text>
+          <Text style={styles.primaryInsightText}>
+            상단 업로드 버튼으로 라이딩 영상을 추가하면 세션별 동작 근거와
+            보수적인 요약을 이곳에 표시합니다.
+          </Text>
+        </>
+      )}
+    </View>
+  );
+}
+
+export function JournalTimeline({
+  formatTimelineDay,
+  formatTimelineMonth,
+  onOpenSession,
+  sessions,
+  styles,
+}: {
+  formatTimelineDay: (value: string) => string;
+  formatTimelineMonth: (value: string) => string;
+  onOpenSession: (session: Session) => void;
+  sessions: SessionSummary[];
+  styles: HomeScreenStyles;
+}) {
+  return (
+    <View style={styles.timeline}>
+      {sessions.length === 0 ? (
+        <View style={styles.timelineEmpty}>
+          <Text style={styles.emptyTitle}>기록이 비어 있습니다</Text>
+          <Text style={styles.emptyText}>
+            분석 결과와 세션 메모가 시간순으로 쌓입니다.
+          </Text>
+        </View>
+      ) : (
+        sessions.map(({ card, completedEvidence, momentStatus, session }) => (
+          <Pressable
+            accessibilityRole="button"
+            key={session.id}
+            onPress={() => onOpenSession(session)}
+            style={({ pressed }) => [
+              styles.timelineRow,
+              pressed ? styles.sessionRowPressed : undefined,
+            ]}
+          >
+            <View style={styles.timelineDateBlock}>
+              <Text style={styles.timelineMonth}>
+                {formatTimelineMonth(session.occurredAt)}
+              </Text>
+              <Text style={styles.timelineDay}>
+                {formatTimelineDay(session.occurredAt)}
+              </Text>
+            </View>
+            <View style={styles.timelineBody}>
+              <View style={styles.timelineTopRow}>
+                <Text style={styles.timelineTitle} numberOfLines={1}>
+                  {card.momentTitle}
+                </Text>
+                <MomentStatusDot status={momentStatus} />
+              </View>
+              <Text style={styles.timelineSummary} numberOfLines={2}>
+                {completedEvidence
+                  ? getTimelineSummary(completedEvidence)
+                  : card.reason}
+              </Text>
+            </View>
+          </Pressable>
+        ))
+      )}
+    </View>
   );
 }
 
@@ -421,6 +566,53 @@ function getMomentStatusDotStyle(status?: MomentStatus) {
   }
 
   return undefined;
+}
+
+function getInsightTitle(evidence: GeminiEvidenceResult) {
+  if (evidence.candidateTrace?.displayLabel) {
+    return evidence.candidateTrace.displayLabel;
+  }
+
+  if (evidence.primaryCandidate.name !== '확인 필요') {
+    return evidence.primaryCandidate.name;
+  }
+
+  return evidence.family.value || '분석 결과 확인';
+}
+
+function getInsightSummary(evidence: GeminiEvidenceResult) {
+  if (evidence.requiresUserConfirmation || evidence.consistencyStatus === 'needs_review') {
+    return 'AI가 일부 근거를 확신하지 못했습니다. 상세 화면에서 후보와 관찰 신호를 확인해 주세요.';
+  }
+
+  return compactCardText(
+    evidence.primaryCandidate.evidence ??
+      evidence.evidence ??
+      '분석 결과가 준비됐습니다.',
+    118,
+  );
+}
+
+function getTimelineSummary(evidence: GeminiEvidenceResult) {
+  if (evidence.candidateTrace?.displayLabel) {
+    return `검토 후보: ${evidence.candidateTrace.displayLabel}`;
+  }
+
+  if (evidence.requiresUserConfirmation || evidence.consistencyStatus === 'needs_review') {
+    return '상세 확인이 필요한 분석 결과입니다.';
+  }
+
+  return compactCardText(evidence.evidence, 86);
+}
+
+function compactCardText(text: string, maxLength: number) {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 1)}…`;
 }
 
 const statusDotStyles = StyleSheet.create({
