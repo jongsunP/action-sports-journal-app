@@ -55,6 +55,7 @@ const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
 
 type AppTabId = 'home' | 'video' | 'flow' | 'profile';
+type VisibleMomentStatus = 'running' | 'completed' | 'failed';
 
 const APP_TABS: Array<{
   id: AppTabId;
@@ -219,6 +220,7 @@ export function HomeScreen() {
           resolveLocalSessionIdForRemoteMoment(
             moment,
             remoteMomentIdsBySessionId,
+            sessions,
           ),
         ]),
       );
@@ -238,6 +240,10 @@ export function HomeScreen() {
             ...existingSession,
             ...remoteMoment.session,
             id: sessionId,
+            momentStatus: mergeMomentStatus(
+              existingSession?.momentStatus,
+              remoteMoment.session.momentStatus,
+            ),
             videoUri: existingSession?.videoUri ?? remoteMoment.session.videoUri,
             shareResultIds: existingSession?.shareResultIds ?? [],
           });
@@ -319,7 +325,7 @@ export function HomeScreen() {
         return next;
       });
     },
-    [remoteMomentIdsBySessionId],
+    [remoteMomentIdsBySessionId, sessions],
   );
 
   useEffect(() => {
@@ -679,7 +685,11 @@ export function HomeScreen() {
     }
 
     try {
-      await updateMomentStatus(remoteMomentId, momentStatus);
+      const remoteStatus = await updateMomentStatus(remoteMomentId, momentStatus);
+
+      if (remoteStatus && remoteStatus !== momentStatus) {
+        updateLocalMomentStatus(sessionId, remoteStatus);
+      }
     } catch (error) {
       console.warn(
         'Supabase moment status update failed:',
@@ -868,7 +878,7 @@ export function HomeScreen() {
         if (error instanceof RemoteRequestError && error.status === 429) {
           Alert.alert(
             '분석 요청이 잠시 제한됐습니다',
-            'Moment는 준비 중 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
+            '영상은 진행중 상태로 유지됩니다. 잠시 후 다시 시도해주세요.',
           );
         }
 
@@ -1197,7 +1207,7 @@ export function HomeScreen() {
                   >
                     {primaryInsightSummary.momentStatus
                       ? getMomentStatusLabel(primaryInsightSummary.momentStatus)
-                      : '분석 완료'}
+                      : '완료'}
                   </Text>
                   <Text style={styles.primaryInsightDate}>
                     {formatShortSessionDate(primaryInsightSummary.session.occurredAt)}
@@ -1453,12 +1463,52 @@ export function HomeScreen() {
 function resolveLocalSessionIdForRemoteMoment(
   remoteMoment: RemoteMomentRecord,
   remoteMomentIdsBySessionId: Record<string, string>,
+  sessions: Session[],
 ) {
   const existingLocalSessionId = Object.entries(remoteMomentIdsBySessionId).find(
     ([, remoteMomentId]) => remoteMomentId === remoteMoment.remoteMomentId,
   )?.[0];
 
-  return existingLocalSessionId ?? remoteMoment.session.id;
+  if (existingLocalSessionId) {
+    return existingLocalSessionId;
+  }
+
+  const exactSessionId = sessions.find(
+    (session) => session.id === remoteMoment.session.id,
+  )?.id;
+
+  if (exactSessionId) {
+    return exactSessionId;
+  }
+
+  const videoMatchedSessionId = sessions.find(
+    (session) =>
+      remoteMoment.session.videoUri &&
+      session.videoUri === remoteMoment.session.videoUri,
+  )?.id;
+
+  if (videoMatchedSessionId) {
+    return videoMatchedSessionId;
+  }
+
+  const createdMomentSessionId = sessions.find(
+    (session) =>
+      session.title === remoteMoment.session.title &&
+      session.occurredAt === remoteMoment.session.occurredAt,
+  )?.id;
+
+  return createdMomentSessionId ?? remoteMoment.session.id;
+}
+
+function mergeMomentStatus(
+  localStatus?: MomentStatus,
+  remoteStatus?: MomentStatus,
+): MomentStatus | undefined {
+  if (remoteStatus === 'completed' || localStatus === 'completed') {
+    return 'completed';
+  }
+
+  return remoteStatus ?? localStatus;
 }
 
 const styles = StyleSheet.create({
@@ -1936,9 +1986,6 @@ const styles = StyleSheet.create({
     height: 9,
     width: 9,
   },
-  videoStatusDotQueued: {
-    backgroundColor: '#93c5fd',
-  },
   videoStatusDotProcessing: {
     backgroundColor: '#facc15',
   },
@@ -2270,9 +2317,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 8,
     paddingVertical: 5,
-  },
-  momentStatusQueued: {
-    backgroundColor: '#93c5fd',
   },
   momentStatusProcessing: {
     backgroundColor: '#facc15',
@@ -3373,24 +3417,38 @@ function getMomentStatus({
   return evidence ? undefined : sessionStatus;
 }
 
+function getVisibleMomentStatus(status?: MomentStatus): VisibleMomentStatus | undefined {
+  if (!status) {
+    return undefined;
+  }
+
+  if (status === 'failed') {
+    return 'failed';
+  }
+
+  if (status === 'completed') {
+    return 'completed';
+  }
+
+  return 'running';
+}
+
 function getMomentStatusLabel(status: MomentStatus) {
   return getMomentStatusPresentation(status).label;
 }
 
 function getMomentStatusStyle(status?: MomentStatus) {
-  if (status === 'queued') {
-    return styles.momentStatusQueued;
-  }
+  const visibleStatus = getVisibleMomentStatus(status);
 
-  if (status === 'processing') {
+  if (visibleStatus === 'running') {
     return styles.momentStatusProcessing;
   }
 
-  if (status === 'completed') {
+  if (visibleStatus === 'completed') {
     return styles.momentStatusCompleted;
   }
 
-  if (status === 'failed') {
+  if (visibleStatus === 'failed') {
     return styles.momentStatusFailed;
   }
 
@@ -3398,19 +3456,17 @@ function getMomentStatusStyle(status?: MomentStatus) {
 }
 
 function getMomentStatusDotStyle(status?: MomentStatus) {
-  if (status === 'queued') {
-    return styles.videoStatusDotQueued;
-  }
+  const visibleStatus = getVisibleMomentStatus(status);
 
-  if (status === 'processing') {
+  if (visibleStatus === 'running') {
     return styles.videoStatusDotProcessing;
   }
 
-  if (status === 'completed') {
+  if (visibleStatus === 'completed') {
     return styles.videoStatusDotCompleted;
   }
 
-  if (status === 'failed') {
+  if (visibleStatus === 'failed') {
     return styles.videoStatusDotFailed;
   }
 
@@ -3449,34 +3505,27 @@ function getMomentStatusMessage(status: MomentStatus) {
 }
 
 function getMomentStatusPresentation(status: MomentStatus) {
-  if (status === 'queued') {
+  const visibleStatus = getVisibleMomentStatus(status);
+
+  if (visibleStatus === 'running') {
     return {
-      label: '준비 중',
-      title: '분석 준비 중',
-      body:
-        '영상이 저장됐고 분석을 시작할 준비를 하고 있습니다. 서버 연결이나 요청 제한이 있으면 잠시 이 상태를 유지합니다.',
+      label: '진행중',
+      title: '진행중',
+      body: '영상 분석을 진행하고 있습니다. 완료되면 결과가 이 화면에 표시됩니다.',
     };
   }
 
-  if (status === 'processing') {
+  if (visibleStatus === 'failed') {
     return {
-      label: '분석 중',
-      title: '분석 중',
-      body: '영상에서 어프로치, 인버전, 기술 계열 근거를 확인하고 있습니다.',
-    };
-  }
-
-  if (status === 'failed') {
-    return {
-      label: '분석 실패',
-      title: '분석 실패',
+      label: '실패',
+      title: '실패',
       body: '영상 근거 추출이 완료되지 않았습니다. 다시 시도할 수 있습니다.',
     };
   }
 
   return {
-    label: '분석 완료',
-    title: '분석 완료',
+    label: '완료',
+    title: '완료',
     body: '영상 근거 결과가 준비됐습니다.',
   };
 }

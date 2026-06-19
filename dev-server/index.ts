@@ -516,6 +516,49 @@ app.patch("/api/moments/:momentId/status", async (request, response) => {
       return;
     }
 
+    const { data: existingMoment, error: existingMomentError } = await client
+      .from("moments")
+      .select("id,status,latest_evidence_result_id")
+      .eq("id", momentId)
+      .single();
+
+    if (existingMomentError) {
+      throw new Error(
+        `Failed to read moment status: ${existingMomentError.message}`,
+      );
+    }
+
+    const isDowngradeRequest = status === "queued" || status === "processing";
+    const hasCompletedEvidence =
+      typeof existingMoment.latest_evidence_result_id === "string";
+
+    if (
+      isDowngradeRequest &&
+      (existingMoment.status === "completed" || hasCompletedEvidence)
+    ) {
+      if (existingMoment.status !== "completed") {
+        const { error: completedUpdateError } = await client
+          .from("moments")
+          .update({
+            status: "completed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", momentId);
+
+        if (completedUpdateError) {
+          throw new Error(
+            `Failed to preserve completed moment status: ${completedUpdateError.message}`,
+          );
+        }
+      }
+
+      response.json({
+        momentId,
+        status: "completed",
+      });
+      return;
+    }
+
     const { data, error } = await client
       .from("moments")
       .update({

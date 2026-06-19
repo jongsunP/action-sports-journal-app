@@ -12,6 +12,10 @@ type CreateMomentResponse = {
   status?: unknown;
 };
 
+type UpdateMomentStatusResponse = {
+  status?: unknown;
+};
+
 export type RemoteMomentRecord = {
   remoteMomentId: string;
   session: Session;
@@ -82,7 +86,7 @@ export async function updateMomentStatus(
   status: MomentStatus,
 ) {
   if (!momentsEndpoint) {
-    return;
+    return undefined;
   }
 
   const response = await fetch(`${momentsEndpoint}/${momentId}/status`, {
@@ -98,6 +102,10 @@ export async function updateMomentStatus(
 
     throw new Error(message ?? `Moment status update failed with ${response.status}`);
   }
+
+  const data = (await response.json()) as UpdateMomentStatusResponse;
+
+  return asMomentStatus(data.status);
 }
 
 export async function listMoments() {
