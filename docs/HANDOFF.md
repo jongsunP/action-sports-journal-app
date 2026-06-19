@@ -159,6 +159,56 @@ Local path:
 
 ## Today's Conclusions
 
+## 2026-06-20 Empty Baseline iPhone QA Save Point
+
+Confirmed facts:
+
+- Supabase test Moment data was cleared for a clean personal QA baseline.
+- Bundled seeded mock sessions were removed from the app.
+- When Supabase has no Moments, the app now starts from empty-state UI instead
+  of showing placeholder sessions such as "저녁 케이블 파크 세션" or
+  "아침 도크 스타트".
+- The latest EAS preview/internal iOS build includes the empty baseline.
+
+Latest commits:
+
+```text
+7cbe640 chore: bump iOS preview build number
+b7eeb64 chore: remove seeded mock sessions
+```
+
+Latest build:
+
+```text
+Version: 1.0.0
+iOS Build Number: 6
+Build ID: aa0b7383-dadd-41a6-bb0b-bd39da229927
+Build URL: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aa0b7383-dadd-41a6-bb0b-bd39da229927
+```
+
+Current EAS preview endpoint:
+
+```text
+https://action-sports-journal-api.onrender.com/api/analyze-session-video
+```
+
+Current Render mode:
+
+```text
+mockAi.enabled=false
+geminiEvidence.model=gemini-2.5-pro
+```
+
+Next starting point:
+
+```text
+Install build 6 on iPhone.
+Confirm empty baseline.
+Upload one real wakeboard video.
+Verify thumbnail, Moment creation, Supabase restore, async analysis, and real
+Gemini result wording.
+```
+
 ## 2026-06-16 Gallery UX and Model Benchmark Wrap-Up
 
 Latest confirmed checkpoint:

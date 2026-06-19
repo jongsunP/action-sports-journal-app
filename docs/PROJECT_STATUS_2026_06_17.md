@@ -555,3 +555,57 @@ Current uncertainty:
 - Upload-stage timeout recovery remains an infrastructure issue.
 - Coaching wording has only limited sample coverage.
 - Gemini Pro can be temporarily busy/congested.
+
+## 2026-06-20 iPhone QA Baseline Reset
+
+Confirmed Fact:
+
+The project was reset to a clean personal QA baseline for the next standalone
+iPhone test cycle.
+
+Completed:
+
+- Supabase test Moment data was cleared while preserving the project/user
+  environment.
+- Hardcoded seeded sessions were removed from `mockSessions`, including:
+  - evening cable park session,
+  - morning dock start,
+  - other bundled placeholder session data.
+- The app now starts from an empty state when Supabase has no Moments.
+- Empty-state UI exists for:
+  - Home insight card,
+  - recent sessions,
+  - video archive.
+- EAS preview/internal iOS build was created from the empty-baseline app.
+
+Latest build:
+
+```text
+Version: 1.0.0
+iOS Build Number: 6
+Build ID: aa0b7383-dadd-41a6-bb0b-bd39da229927
+Build URL: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aa0b7383-dadd-41a6-bb0b-bd39da229927
+```
+
+Latest commits at this save point:
+
+```text
+7cbe640 chore: bump iOS preview build number
+b7eeb64 chore: remove seeded mock sessions
+```
+
+Current backend mode:
+
+```text
+Render endpoint: https://action-sports-journal-api.onrender.com/api/analyze-session-video
+mockAi.enabled: false
+Gemini evidence model: gemini-2.5-pro
+```
+
+Next starting point:
+
+- Install iOS build number 6.
+- Confirm the app opens with no seeded sessions.
+- Upload one real wakeboard video.
+- Verify local thumbnail, Moment creation, Supabase persistence, async
+  analysis, and Gemini result copy on the actual iPhone.

@@ -104,6 +104,41 @@ At the time this checkpoint was updated, local `master` was pushed to
 
 ## Today's Conclusions
 
+## 2026-06-20 Empty Baseline QA Checkpoint
+
+Confirmed facts:
+
+- The app is now prepared for a clean iPhone QA cycle with no seeded sample
+  sessions.
+- Supabase test Moment data was cleared.
+- Hardcoded app seed sessions were removed.
+- Latest `origin/master` includes:
+
+```text
+7cbe640 chore: bump iOS preview build number
+b7eeb64 chore: remove seeded mock sessions
+```
+
+- EAS preview/internal iOS build number `6` succeeded:
+
+```text
+https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aa0b7383-dadd-41a6-bb0b-bd39da229927
+```
+
+Current assumptions to validate on device:
+
+- The installed build opens with empty-state UI when Supabase has no Moments.
+- Uploading a first video creates the only visible Moment.
+- Local thumbnail, Supabase restore, async status, and Gemini result copy still
+  work after the baseline reset.
+
+Next starting point:
+
+```text
+Install iOS build 6 and run one real wakeboard upload from a clean app/database
+state.
+```
+
 ## 2026-06-16 Async Analysis MVP Save Point
 
 Confirmed facts:

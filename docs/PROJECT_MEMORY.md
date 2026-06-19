@@ -58,6 +58,9 @@ Confirmed deployment state:
 - Async Analysis MVP is validated for personal iPhone usage.
 - No login, cloud video storage, external queue, push, CDN, TestFlight, or App
   Store path exists yet.
+- As of 2026-06-20, the latest iPhone QA baseline is a clean empty-state build:
+  Supabase test Moments were cleared, bundled seeded sessions were removed, and
+  EAS preview build number `6` was created for fresh real-video testing.
 
 Detailed status documents:
 

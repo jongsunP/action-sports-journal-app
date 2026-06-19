@@ -14,6 +14,28 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Update on 2026-06-20:
+
+The current standalone iPhone QA baseline is an empty app state backed by
+Supabase and Render.
+
+- Supabase test Moment data was cleared.
+- Bundled mock session seed data was removed from the app.
+- The app should no longer show seeded placeholder sessions when the database
+  is empty.
+- EAS preview/internal iOS build number `6` was created from this baseline:
+
+```text
+https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aa0b7383-dadd-41a6-bb0b-bd39da229927
+```
+
+Current next task:
+
+```text
+Install build 6 on the iPhone, confirm the empty baseline, then upload one real
+wakeboard video and verify the full Render + Supabase + Gemini Pro flow.
+```
+
 The project has a new Expo React Native TypeScript app, initial docs, initial
 domain folders, minimal domain types, an Expo SDK 54 setup, a Stage 1 review,
 a working local Stage 2 prototype, and a successful standalone iPhone
