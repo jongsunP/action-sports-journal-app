@@ -16,6 +16,33 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 Update on 2026-06-20, Analysis-first Product Strategy:
 
+Current refactor backlog:
+
+```text
+docs/TECH_DEBT_AND_REFACTOR_TODO.md
+```
+
+Current architecture cleanup priority:
+
+```text
+source video reaches temporary durable Storage
+-> Moment is created
+-> AnalysisJob is created
+-> server starts Gemini analysis
+```
+
+This replaces the earlier problematic shape where a Moment could exist before
+the source video upload completed. The app-facing state model must keep upload
+and analysis separate:
+
+```text
+uploading / upload_failed
+queued / processing / completed / failed
+```
+
+Next QA should validate that interrupted uploads do not create remote Moments
+that look like stuck analysis jobs.
+
 Problem:
 
 The product vision includes AI Coach, but making coaching the next immediate

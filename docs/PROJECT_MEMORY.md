@@ -109,6 +109,34 @@ Detailed status documents:
 - `docs/HANDOFF.md`
 - `docs/CONTINUITY_CHECKPOINT.md`
 - `docs/DEPLOYMENT_READINESS_ROADMAP.md`
+- `docs/TECH_DEBT_AND_REFACTOR_TODO.md`
+
+## Current Refactor and Technical Debt Backlog
+
+Current product direction remains Analysis First. The active technical debt
+backlog is now recorded in `docs/TECH_DEBT_AND_REFACTOR_TODO.md`.
+
+The most important architectural decision is that a remote Moment should not be
+treated as analysis-ready until the source video has reached durable temporary
+Storage. Upload state and analysis state must remain separate:
+
+```text
+uploading / upload_failed
+queued / processing / completed / failed
+```
+
+Immediate focus:
+
+- keep the source-video-first upload path as the preferred path
+- ensure incomplete uploads do not leave analysis-looking remote Moments
+- keep legacy/fallback endpoints only while the new path is validated
+
+Later work is grouped by stage:
+
+- UX polish: Moment Detail structure and Push deep link
+- Calibration: timing/quality observation data and sample-based AI calibration
+- Stabilization: legacy endpoint cleanup and thumbnail storage policy
+- Product scale: auth/user ownership and background upload
 
 ## Roles
 

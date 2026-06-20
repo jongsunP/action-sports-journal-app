@@ -43,6 +43,25 @@ continuity as well as technical continuity:
 
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 
+Current refactor/TODO source of truth:
+
+```text
+docs/TECH_DEBT_AND_REFACTOR_TODO.md
+```
+
+The key current architectural cleanup is upload-before-Moment creation. The
+product should not show a remote Moment as analysis-ready until the source video
+has reached durable temporary Storage and the server can own the AnalysisJob.
+Upload state and analysis state are separate concepts:
+
+```text
+uploading / upload_failed
+queued / processing / completed / failed
+```
+
+Do not treat legacy/fallback endpoints as final architecture. Keep them only
+while the source-video-first path is being validated.
+
 On 2026-06-12, the priority changed from Expo Go validation to installing and
 running Action Sports Journal as a standalone iPhone app through an EAS
 preview/internal distribution build.

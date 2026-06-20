@@ -39,6 +39,27 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
+Current refactor/TODO backlog:
+
+```text
+docs/TECH_DEBT_AND_REFACTOR_TODO.md
+```
+
+Current architectural priority:
+
+The durable analysis path should create/confirm a remote Moment only after the
+source video is safely in temporary durable Storage. Uploading and analysis are
+separate product states, not one generic "analysis in progress" state:
+
+```text
+uploading / upload_failed
+queued / processing / completed / failed
+```
+
+Interrupted uploads should not leave remote Moments that look like stuck
+analysis jobs. Legacy/fallback endpoints remain compatibility paths until the
+source-video-first flow is validated through device QA.
+
 The latest known project checkpoint is:
 
 ```text
