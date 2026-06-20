@@ -474,6 +474,22 @@ export function HomeScreen() {
     !isUploadingSession &&
     !isPreparingSelectedVideoThumbnail;
 
+  const removeSessionLocally = useCallback((sessionId: string) => {
+    setSessions((current) => current.filter((item) => item.id !== sessionId));
+    setVideosBySessionId((current) => removeRecordKey(current, sessionId));
+    setAnalysisBySessionId((current) => removeRecordKey(current, sessionId));
+    setGeminiEvidenceBySessionId((current) => removeRecordKey(current, sessionId));
+    setUserConfirmedTrickBySessionId((current) => removeRecordKey(current, sessionId));
+    setOpenAiBenchmarkBySessionId((current) => removeRecordKey(current, sessionId));
+    setThumbnailsBySessionId((current) => removeRecordKey(current, sessionId));
+    setRemoteMomentIdsBySessionId((current) => removeRecordKey(current, sessionId));
+
+    if (selectedSessionId === sessionId) {
+      setSelectedSessionId(null);
+      setPlayingVideoSessionId(null);
+    }
+  }, [selectedSessionId]);
+
   if (isLoadingInitialMoments) {
     return (
       <SafeAreaView
@@ -941,22 +957,6 @@ export function HomeScreen() {
       }));
     }
   };
-
-  const removeSessionLocally = useCallback((sessionId: string) => {
-    setSessions((current) => current.filter((item) => item.id !== sessionId));
-    setVideosBySessionId((current) => removeRecordKey(current, sessionId));
-    setAnalysisBySessionId((current) => removeRecordKey(current, sessionId));
-    setGeminiEvidenceBySessionId((current) => removeRecordKey(current, sessionId));
-    setUserConfirmedTrickBySessionId((current) => removeRecordKey(current, sessionId));
-    setOpenAiBenchmarkBySessionId((current) => removeRecordKey(current, sessionId));
-    setThumbnailsBySessionId((current) => removeRecordKey(current, sessionId));
-    setRemoteMomentIdsBySessionId((current) => removeRecordKey(current, sessionId));
-
-    if (selectedSessionId === sessionId) {
-      setSelectedSessionId(null);
-      setPlayingVideoSessionId(null);
-    }
-  }, [selectedSessionId]);
 
   const handleDeleteSession = (session: Session) => {
     Alert.alert('영상을 삭제할까요?', '이 영상과 연결된 리뷰 결과가 함께 삭제됩니다.', [
