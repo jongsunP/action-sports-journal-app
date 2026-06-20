@@ -113,6 +113,9 @@ export function HomeScreen() {
   const [geminiEvidenceBySessionId, setGeminiEvidenceBySessionId] = useState<
     Record<string, GeminiEvidenceResult>
   >({});
+  const [deletingSessionIds, setDeletingSessionIds] = useState<
+    Record<string, boolean>
+  >({});
   const [userConfirmedTrickBySessionId, setUserConfirmedTrickBySessionId] =
     useState<Record<string, string>>({});
   const [thumbnailsBySessionId, setThumbnailsBySessionId] = useState<
@@ -959,6 +962,10 @@ export function HomeScreen() {
   };
 
   const handleDeleteSession = (session: Session) => {
+    if (deletingSessionIds[session.id]) {
+      return;
+    }
+
     Alert.alert('영상을 삭제할까요?', '이 영상과 연결된 리뷰 결과가 함께 삭제됩니다.', [
       {
         text: '취소',
@@ -970,8 +977,18 @@ export function HomeScreen() {
         onPress: () => {
           const remoteMomentId = remoteMomentIdsBySessionId[session.id];
 
+          setDeletingSessionIds((current) => ({
+            ...current,
+            [session.id]: true,
+          }));
+
           if (!remoteMomentId) {
             removeSessionLocally(session.id);
+            setDeletingSessionIds((current) => {
+              const next = { ...current };
+              delete next[session.id];
+              return next;
+            });
             return;
           }
 
@@ -988,6 +1005,13 @@ export function HomeScreen() {
                 '삭제에 실패했습니다',
                 '서버 기록을 삭제하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
               );
+            })
+            .finally(() => {
+              setDeletingSessionIds((current) => {
+                const next = { ...current };
+                delete next[session.id];
+                return next;
+              });
             });
         },
       },
@@ -1121,6 +1145,9 @@ export function HomeScreen() {
           __DEV__ ? configuredAiEndpoints.geminiEvidenceEndpoint : undefined
         }
         evidence={selectedSession ? geminiEvidenceBySessionId[selectedSession.id] : undefined}
+        isDeleting={
+          selectedSession ? Boolean(deletingSessionIds[selectedSession.id]) : false
+        }
         isLoading={
           selectedSession ? Boolean(extractingEvidenceBySessionId[selectedSession.id]) : false
         }
@@ -2254,7 +2281,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: 34,
     justifyContent: 'center',
-    width: 34,
+    minWidth: 34,
+    paddingHorizontal: 6,
+  },
+  detailHeaderDeleteButtonDisabled: {
+    backgroundColor: 'rgba(252, 165, 165, 0.12)',
+    opacity: 0.7,
+  },
+  detailHeaderDeleteText: {
+    color: '#fca5a5',
+    fontSize: 11,
+    fontWeight: '900',
   },
   detailTrashIcon: {
     alignItems: 'center',
