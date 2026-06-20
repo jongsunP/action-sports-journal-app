@@ -412,12 +412,26 @@ app.post(
           size: request.file.size,
         },
       });
+      const queuedJob = await getOrCreateStoredEvidenceAnalysisJob(momentId);
+
+      if (queuedJob?.status === "queued") {
+        setImmediate(() => {
+          void processQueuedEvidenceAnalysisJobFromStorage({
+            analysisJobId: queuedJob.id,
+            metadata: queuedJob.metadata,
+            storedVideo: queuedJob.storedVideo,
+          });
+        });
+      }
 
       response.json({
         momentId,
         storageProvider: storedVideo.provider,
         storageBucket: storedVideo.bucket,
         storagePath: storedVideo.path,
+        analysisJobId: queuedJob?.id,
+        analysisJobStatus: queuedJob?.status,
+        analysisStarted: queuedJob?.status === "queued",
         uploadedAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -3070,6 +3084,13 @@ async function getOrCreateStoredEvidenceAnalysisJob(momentId: string) {
       [
         "id",
         "user_id",
+        "session_id",
+        "activity_group_id",
+        "title",
+        "notes",
+        "occurred_at",
+        "file_name",
+        "user_confirmed_trick",
         "source_video_storage_provider",
         "source_video_storage_bucket",
         "source_video_storage_path",
@@ -3083,9 +3104,14 @@ async function getOrCreateStoredEvidenceAnalysisJob(momentId: string) {
   }
 
   const storedMoment = moment as Record<string, unknown> | null;
-  const momentUserId = nullableString(storedMoment?.user_id);
 
-  if (!nullableString(storedMoment?.id) || !momentUserId) {
+  if (!storedMoment) {
+    return null;
+  }
+
+  const momentUserId = nullableString(storedMoment.user_id);
+
+  if (!nullableString(storedMoment.id) || !momentUserId) {
     return null;
   }
 
@@ -3125,6 +3151,10 @@ async function getOrCreateStoredEvidenceAnalysisJob(momentId: string) {
       id: existingJob.id as string,
       status: existingJob.status as "queued" | "processing",
       storedVideo,
+      metadata: buildStoredMomentSessionMetadata({
+        moment: storedMoment,
+        momentId,
+      }),
     };
   }
 
@@ -3147,6 +3177,32 @@ async function getOrCreateStoredEvidenceAnalysisJob(momentId: string) {
     id: queuedJob.id,
     status: queuedJob.status,
     storedVideo,
+    metadata: buildStoredMomentSessionMetadata({
+      moment: storedMoment,
+      momentId,
+    }),
+  };
+}
+
+function buildStoredMomentSessionMetadata({
+  moment,
+  momentId,
+}: {
+  moment: Record<string, unknown>;
+  momentId: string;
+}): SessionMetadata {
+  return {
+    sessionId: nullableString(moment.session_id) ?? momentId,
+    momentId,
+    activityGroupName:
+      nullableString(moment.activity_group_id) ?? "wakeboard",
+    title:
+      nullableString(moment.title) ??
+      nullableString(moment.file_name) ??
+      "라이딩 영상",
+    notes: nullableString(moment.notes) ?? "",
+    occurredAt: nullableString(moment.occurred_at) ?? new Date().toISOString(),
+    userConfirmedTrick: nullableString(moment.user_confirmed_trick) ?? "",
   };
 }
 
