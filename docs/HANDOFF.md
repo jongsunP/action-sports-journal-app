@@ -220,9 +220,16 @@ Result:
 - Durable Analysis Pipeline Phase 8 MVP is implemented. Supabase Storage now
   provides temporary durable analysis input for new evidence jobs. The verified
   path is: source video upload -> `moment-videos` object -> `moments`
-  storage columns -> `analysis_jobs` input storage columns -> stored-video
-  analysis endpoint -> Render Storage download -> Gemini Evidence Extraction ->
-  `evidence_results` persistence -> completed restore.
+  storage columns -> `analysis_jobs` input storage columns -> server-side
+  automatic job start from `/source-video` -> Render Storage download -> Gemini
+  Evidence Extraction -> `evidence_results` persistence -> completed restore.
+- Build 14 QA exposed a durability gap: storage upload succeeded, but analysis
+  start still depended on the app's second `/analyze-stored-video` request.
+  `cf71b58 feat: start analysis automatically after storage upload` removed
+  that dependency. `/analyze-stored-video` remains as legacy/fallback only.
+- Real Render + Gemini Pro E2E after `cf71b58` verified `queued -> processing ->
+  completed`, `analysis_jobs.started_at`, `evidence_results` creation, and
+  `source_video_storage_status=deleted`.
 - Supabase Storage must be treated as temporary durable analysis-input storage,
   not permanent video archive storage. The app should play local video when a
   local URI exists. If the local video is gone, the Moment can still be valid

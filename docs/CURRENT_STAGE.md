@@ -73,7 +73,16 @@ Result:
   use Supabase Storage as temporary durable analysis input: upload source video
   to `moment-videos`, store paths on `moments` and `analysis_jobs`, let Render
   download the stored object, run Gemini Evidence Extraction, and restore the
-  completed EvidenceResult. Local E2E succeeded.
+  completed EvidenceResult.
+- Build 14 QA found that storage upload could succeed while the job remained
+  queued because analysis start still depended on the app calling
+  `/analyze-stored-video` after upload. The durable pipeline now starts
+  analysis server-side immediately after `/source-video` succeeds. The
+  `/analyze-stored-video` endpoint remains as legacy/fallback.
+- Real Render + Gemini Pro E2E succeeded after the change: the job recorded
+  `started_at`, moved through processing to completed, created an
+  EvidenceResult, and cleaned up the source object with
+  `source_video_storage_status=deleted`.
 - Storage policy is explicit: Supabase Storage is temporary durable
   analysis-input storage, not permanent video archive storage. Local video URI
   remains the playback source when available. If local video is unavailable,

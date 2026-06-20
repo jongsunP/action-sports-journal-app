@@ -26,6 +26,7 @@ Phase 8 MVP is implemented and pushed in:
 a397584 feat: clean up analyzed source videos
 9bad25f fix: handle stale analysis jobs
 f7488a8 refine: improve analysis progress messaging
+cf71b58 feat: start analysis automatically after storage upload
 ```
 
 Verified local E2E path:
@@ -36,7 +37,7 @@ POST /api/moments
 -> Supabase Storage moment-videos object created
 -> moments.source_video_storage_* updated
 -> analysis_jobs.input_video_storage_* updated
--> POST /api/moments/:momentId/analyze-stored-video
+-> server starts queued AnalysisJob immediately after source-video upload
 -> Render downloads video from Storage
 -> Gemini Evidence Extraction
 -> evidence_results insert
@@ -44,7 +45,13 @@ POST /api/moments
 -> app restore can read completed result
 ```
 
-The direct multipart `/api/extract-session-evidence` path remains as fallback.
+Build 14 QA exposed a critical durability gap in the first implementation:
+source-video upload could succeed, but the AnalysisJob could remain queued if
+the app failed to make the second `/analyze-stored-video` request. The durable
+path now starts analysis from the server as part of successful `/source-video`
+handling. `/api/moments/:momentId/analyze-stored-video` remains as
+legacy/fallback, and the direct multipart `/api/extract-session-evidence` path
+also remains as fallback/debug.
 
 Not implemented yet:
 
@@ -647,7 +654,7 @@ select video
 -> local thumbnail
 -> create Moment
 -> upload source video through Render to Storage
--> queue stored-video analysis
+-> server automatically starts stored-video analysis
 ```
 
 ### Completed: Worker Reads Storage
@@ -656,10 +663,15 @@ Implemented analysis processing:
 
 ```text
 queued job
+-> source-video upload success triggers server-side worker start
 -> download storage object
 -> Gemini Evidence Extraction
 -> EvidenceResult
 ```
+
+The app no longer needs a second analysis-start request for the normal durable
+path. `POST /api/moments/:momentId/analyze-stored-video` remains available only
+for legacy/fallback recovery.
 
 ### Completed: Source Object Cleanup
 
@@ -706,6 +718,24 @@ Update UI copy/status after backend durability exists:
 - failed/retryable.
 
 Do not over-design this before storage-backed jobs work.
+
+### Completed: Automatic Analysis Start QA
+
+Render + Gemini Pro E2E verified the current durable path after `cf71b58`:
+
+```text
+POST /api/moments
+-> POST /api/moments/:momentId/source-video
+-> response includes analysisStarted=true
+-> analysis_jobs.started_at recorded
+-> moments.status processing
+-> evidence_results row created
+-> moments.status completed
+-> source_video_storage_status=deleted
+```
+
+This is the desired MVP behavior: the user taps upload once, and the server
+owns the analysis transition after durable input upload succeeds.
 
 ## Recommended MVP Decision
 

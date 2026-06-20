@@ -318,10 +318,19 @@ Implementation status:
 Storage-backed evidence analysis path is implemented and pushed in
 `306b3ca feat: add storage-backed evidence analysis path`. Local E2E verified:
 source video upload to `moment-videos`, `moments.source_video_storage_*`
-update, `analysis_jobs.input_video_storage_*` update, stored-video analysis
-endpoint, Storage download by Render, Gemini Evidence Extraction,
-`evidence_results` persistence, and completed Moment restore. The direct
-multipart upload path remains as fallback.
+update, `analysis_jobs.input_video_storage_*` update, Storage download by
+Render, Gemini Evidence Extraction, `evidence_results` persistence, and
+completed Moment restore. Build 14 QA exposed that the first storage-backed
+implementation still depended on the app making a second
+`/analyze-stored-video` request after source upload. That was not durable
+enough: the source object could be uploaded while the job stayed queued if the
+second request failed. `cf71b58 feat: start analysis automatically after
+storage upload` fixed this by making successful `/source-video` upload start
+the queued job server-side. `/analyze-stored-video` remains only as
+legacy/fallback. Real Render + Gemini Pro E2E verified `queued -> processing ->
+completed`, `evidence_results` creation, and
+`source_video_storage_status=deleted`. The direct multipart upload path remains
+as fallback.
 
 Durable Analysis / Analysis Progress completion:
 
