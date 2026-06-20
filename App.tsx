@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 
 import { HomeScreen } from './src/features/sessions/HomeScreen';
-import { registerForAnalysisPushNotifications } from './src/services/notifications/registerAnalysisPushNotifications';
 
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
@@ -14,12 +13,16 @@ export default function App() {
       return;
     }
 
-    registerForAnalysisPushNotifications().catch((error) => {
-      console.warn(
-        'Push notification registration failed:',
-        error instanceof Error ? error.message : 'Unknown error',
-      );
-    });
+    import('./src/services/notifications/registerAnalysisPushNotifications')
+      .then(({ registerForAnalysisPushNotifications }) =>
+        registerForAnalysisPushNotifications(),
+      )
+      .catch((error) => {
+        console.warn(
+          'Push notification registration failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      });
   }, []);
 
   return (
