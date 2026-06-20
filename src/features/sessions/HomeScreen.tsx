@@ -69,6 +69,7 @@ import type {
   AnalysisResult,
   GeminiEvidenceResult,
   MomentStatus,
+  PersistedMomentStatus,
   Session,
 } from '../../types';
 
@@ -76,6 +77,12 @@ const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
 const REMOTE_MOMENT_SYNC_TIMEOUT_MS = 8000;
+const PERSISTED_MOMENT_STATUSES: ReadonlySet<MomentStatus> = new Set([
+  'queued',
+  'processing',
+  'completed',
+  'failed',
+]);
 
 export function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -313,6 +320,7 @@ export function HomeScreen() {
 
     const hasActiveMoment = sessions.some(
       (session) =>
+        session.momentStatus === 'uploading' ||
         session.momentStatus === 'queued' ||
         session.momentStatus === 'processing',
     );
@@ -449,7 +457,10 @@ export function HomeScreen() {
   );
   const latestActiveSummary = homeSessionSummaries.find(
     (summary) =>
-      summary.momentStatus === 'queued' || summary.momentStatus === 'processing',
+      summary.momentStatus === 'uploading' ||
+      summary.momentStatus === 'queued' ||
+      summary.momentStatus === 'processing' ||
+      summary.momentStatus === 'upload_failed',
   );
   const primaryInsightSummary = latestCompletedSummary ?? latestActiveSummary;
   const latestAnalysisLabel = latestCompletedSummary
@@ -605,6 +616,10 @@ export function HomeScreen() {
       return;
     }
 
+    if (!isPersistedMomentStatus(momentStatus)) {
+      return;
+    }
+
     try {
       const remoteStatus = await updateMomentStatus(remoteMomentId, momentStatus);
 
@@ -651,7 +666,7 @@ export function HomeScreen() {
       activityGroupId: selectedGroup.id,
       occurredAt: now,
       videoUri: videoForUpload.uri,
-      momentStatus: 'queued',
+      momentStatus: 'uploading',
       shareResultIds: [],
       createdAt: now,
       updatedAt: now,
@@ -679,26 +694,29 @@ export function HomeScreen() {
     selectedVideoThumbnailUriRef.current = null;
     setSelectedVideoThumbnailUri(null);
     setIsComposerOpen(false);
-    isUploadingSessionRef.current = false;
-    setIsUploadingSession(false);
 
     void (async () => {
-      const { failed: failedToPersistMoment, remoteMomentId } =
-        await persistMomentToSupabase(nextSession, videoForUpload);
+      try {
+        const { failed: failedToPersistMoment, remoteMomentId } =
+          await persistMomentToSupabase(nextSession, videoForUpload);
 
-      if (failedToPersistMoment) {
-        Alert.alert(
-          '영상 저장에 실패했습니다',
-          '서버에 영상 기록을 만들지 못해 분석을 시작하지 않았습니다. 네트워크를 확인한 뒤 다시 시도해주세요.',
-        );
-        return;
+        if (failedToPersistMoment) {
+          Alert.alert(
+            '영상 저장에 실패했습니다',
+            '서버에 영상 기록을 만들지 못해 분석을 시작하지 않았습니다. 네트워크를 확인한 뒤 다시 시도해주세요.',
+          );
+          return;
+        }
+
+        await handleExtractEvidence(nextSession, {
+          openSheet: false,
+          videoOverride: videoForUpload,
+          momentIdOverride: remoteMomentId,
+        });
+      } finally {
+        isUploadingSessionRef.current = false;
+        setIsUploadingSession(false);
       }
-
-      void handleExtractEvidence(nextSession, {
-        openSheet: false,
-        videoOverride: videoForUpload,
-        momentIdOverride: remoteMomentId,
-      });
     })();
   };
 
@@ -855,8 +873,6 @@ export function HomeScreen() {
         ...current,
         [session.id]: true,
       }));
-      updateLocalMomentStatus(session.id, 'processing');
-
       const momentId =
         options?.momentIdOverride ?? remoteMomentIdsBySessionId[session.id];
       const syncQueuedEvidenceStatus = async (queuedJob: {
@@ -872,6 +888,7 @@ export function HomeScreen() {
 
       if (momentId) {
         try {
+          updateLocalMomentStatus(session.id, 'uploading');
           const uploadedSourceVideo = await uploadMomentSourceVideo(momentId, video);
 
           if (
@@ -903,10 +920,10 @@ export function HomeScreen() {
               ? storageError.message
               : 'Storage-backed evidence queue failed.';
           console.warn(
-            'Source video upload failed; marking analysis failed:',
+            'Source video upload failed; marking upload failed:',
             storageMessage,
           );
-          await syncMomentStatus(session.id, 'failed', momentId);
+          await syncMomentStatus(session.id, 'upload_failed', momentId);
           Alert.alert(
             '영상 업로드에 실패했습니다',
             '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
@@ -914,6 +931,8 @@ export function HomeScreen() {
           return;
         }
       }
+
+      updateLocalMomentStatus(session.id, 'processing');
 
       const queuedJob = await queueSessionEvidenceExtractionWithGemini({
         session,
@@ -1185,6 +1204,12 @@ export function HomeScreen() {
       />
     </SafeAreaView>
   );
+}
+
+function isPersistedMomentStatus(
+  status: MomentStatus,
+): status is PersistedMomentStatus {
+  return PERSISTED_MOMENT_STATUSES.has(status);
 }
 
 const styles = StyleSheet.create({

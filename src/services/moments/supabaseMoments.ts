@@ -3,6 +3,7 @@ import type {
   EvidenceConfidence,
   GeminiEvidenceResult,
   MomentStatus,
+  PersistedMomentStatus,
   Session,
 } from '../../types';
 import type { SessionVideoAsset } from '../ai';
@@ -156,7 +157,7 @@ export async function uploadMomentSourceVideo(
 
 export async function updateMomentStatus(
   momentId: string,
-  status: MomentStatus,
+  status: PersistedMomentStatus,
 ) {
   if (!momentsEndpoint) {
     return undefined;
@@ -254,10 +255,20 @@ function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
   const occurredAt = asString(moment.occurredAt) ?? now;
   const sourceVideoUri = asString(moment.sourceVideoUri);
   const durationMs = asNumber(moment.durationMs);
-  const status = asMomentStatus(moment.status);
+  const rawStatus = asPersistedMomentStatus(moment.status);
   const fileName = asString(moment.fileName);
   const fileSize = asNumber(moment.fileSize);
   const latestEvidenceResult = asRecord(moment.latestEvidenceResult);
+  const latestAnalysisJobId = asString(moment.latestAnalysisJobId);
+  const sourceVideoStorageStatus = asString(moment.sourceVideoStorageStatus);
+  const sourceVideoStoragePath = asString(moment.sourceVideoStoragePath);
+  const status = deriveRemoteMomentStatus({
+    latestAnalysisJobId,
+    latestEvidenceResult,
+    rawStatus,
+    sourceVideoStoragePath,
+    sourceVideoStorageStatus,
+  });
 
   if (
     isIncompleteQueuedMoment({
@@ -567,11 +578,45 @@ function isIncompleteQueuedMoment({
   );
 }
 
+function deriveRemoteMomentStatus({
+  latestAnalysisJobId,
+  latestEvidenceResult,
+  rawStatus,
+  sourceVideoStoragePath,
+  sourceVideoStorageStatus,
+}: {
+  latestAnalysisJobId?: string;
+  latestEvidenceResult?: Record<string, unknown>;
+  rawStatus?: PersistedMomentStatus;
+  sourceVideoStoragePath?: string;
+  sourceVideoStorageStatus?: string;
+}): MomentStatus | undefined {
+  if (
+    rawStatus === 'queued' &&
+    !latestEvidenceResult &&
+    !latestAnalysisJobId &&
+    !sourceVideoStoragePath &&
+    (sourceVideoStorageStatus === 'pending_upload' || !sourceVideoStorageStatus)
+  ) {
+    return 'upload_failed';
+  }
+
+  return rawStatus;
+}
+
 function isPositiveNumber(value?: number) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 function asMomentStatus(value: unknown): MomentStatus | undefined {
+  if (value === 'uploading' || value === 'upload_failed') {
+    return value;
+  }
+
+  return asPersistedMomentStatus(value);
+}
+
+function asPersistedMomentStatus(value: unknown): PersistedMomentStatus | undefined {
   if (
     value === 'queued' ||
     value === 'processing' ||

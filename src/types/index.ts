@@ -9,7 +9,15 @@ export type ActivityGroup = {
   updatedAt: ISODateString;
 };
 
-export type MomentStatus = 'queued' | 'processing' | 'completed' | 'failed';
+export type PersistedMomentStatus =
+  | 'queued'
+  | 'processing'
+  | 'completed'
+  | 'failed';
+export type MomentStatus =
+  | PersistedMomentStatus
+  | 'uploading'
+  | 'upload_failed';
 
 export type Session = {
   id: ID;

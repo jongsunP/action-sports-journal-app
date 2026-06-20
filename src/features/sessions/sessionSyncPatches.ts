@@ -121,7 +121,11 @@ function shouldKeepLocalSessionAfterRemoteSync({
     return false;
   }
 
-  return session.momentStatus === 'queued' || session.momentStatus === 'processing';
+  return (
+    session.momentStatus === 'uploading' ||
+    session.momentStatus === 'queued' ||
+    session.momentStatus === 'processing'
+  );
 }
 
 export function applyRemoteVideos({

@@ -45,5 +45,17 @@ export function mergeMomentStatus(
   localStatus?: MomentStatus,
   remoteStatus?: MomentStatus,
 ): MomentStatus | undefined {
+  if (remoteStatus === 'completed') {
+    return 'completed';
+  }
+
+  if (remoteStatus === 'processing' || remoteStatus === 'queued') {
+    return remoteStatus;
+  }
+
+  if (localStatus === 'uploading' && remoteStatus === 'upload_failed') {
+    return 'uploading';
+  }
+
   return remoteStatus ?? localStatus;
 }
