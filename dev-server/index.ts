@@ -97,6 +97,8 @@ const modelBenchmarkArtifactDir =
   "dev-artifacts/model-benchmarks";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const sourceVideoStorageProvider = "supabase";
+const sourceVideoStorageBucket = "moment-videos";
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const appEnv = process.env.APP_ENV ?? "development";
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
@@ -138,6 +140,12 @@ type LinkedMoment = {
   user_id: string;
   status?: string | null;
   latest_evidence_result_id?: string | null;
+};
+
+type StoredVideoInput = {
+  bucket: string;
+  path: string;
+  provider: string;
 };
 
 const allowedVideoMimeTypes = new Set([
@@ -298,6 +306,146 @@ app.post("/api/moments", async (request, response) => {
     response.status(500).json({ error: message });
   }
 });
+
+app.post(
+  "/api/moments/:momentId/source-video",
+  analysisRateLimit,
+  upload.single("video"),
+  async (request, response) => {
+    try {
+      const client = getSupabaseServerClient();
+
+      if (!client) {
+        response.status(503).json({
+          error: "Supabase service role env is not configured.",
+        });
+        return;
+      }
+
+      const momentId = getField(request.params.momentId, "");
+
+      if (!isUuid(momentId)) {
+        response.status(400).json({ error: "Invalid moment id." });
+        return;
+      }
+
+      if (!request.file) {
+        response.status(400).json({ error: "video file is required." });
+        return;
+      }
+
+      if (request.file.size > geminiMaxVideoBytes) {
+        response.status(413).json({
+          error: `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
+        });
+        return;
+      }
+
+      const storedVideo = await storeMomentSourceVideo({
+        client,
+        momentId,
+        file: {
+          buffer: Buffer.from(request.file.buffer),
+          mimetype: request.file.mimetype,
+          originalname: request.file.originalname,
+          size: request.file.size,
+        },
+      });
+
+      response.json({
+        momentId,
+        storageProvider: storedVideo.provider,
+        storageBucket: storedVideo.bucket,
+        storagePath: storedVideo.path,
+        uploadedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Source video upload failed.";
+      console.error("Source video upload failed:", message);
+      response.status(500).json({ error: message });
+    }
+  },
+);
+
+app.post(
+  "/api/moments/:momentId/analyze-stored-video",
+  analysisRateLimit,
+  async (request, response) => {
+    try {
+      if (!mockAiAnalysisEnabled && !process.env.GEMINI_API_KEY) {
+        response.status(500).json({
+          error: "GEMINI_API_KEY is not configured on the server.",
+        });
+        return;
+      }
+
+      const momentId = getField(request.params.momentId, "");
+
+      if (!isUuid(momentId)) {
+        response.status(400).json({ error: "Invalid moment id." });
+        return;
+      }
+
+      const queuedJob = await getOrCreateStoredEvidenceAnalysisJob(momentId);
+
+      if (!queuedJob) {
+        response.status(400).json({
+          error: "A stored source video is required to queue evidence extraction.",
+        });
+        return;
+      }
+
+      const metadata: SessionMetadata = {
+        sessionId: getField(request.body?.sessionId, momentId),
+        momentId,
+        activityGroupName: getField(
+          request.body?.activityGroupName,
+          "웨이크보드",
+        ),
+        title: getField(request.body?.title, "웨이크보드 세션"),
+        notes: getField(request.body?.notes, ""),
+        occurredAt: getField(
+          request.body?.occurredAt,
+          new Date().toISOString(),
+        ),
+        userConfirmedTrick: getField(request.body?.userConfirmedTrick, ""),
+      };
+
+      if (queuedJob.status === "queued") {
+        setImmediate(() => {
+          void processQueuedEvidenceAnalysisJobFromStorage({
+            analysisJobId: queuedJob.id,
+            metadata,
+            storedVideo: queuedJob.storedVideo,
+          });
+        });
+      }
+
+      response.status(202).json({
+        id: queuedJob.id,
+        sessionId: metadata.sessionId,
+        momentId,
+        status: queuedJob.status,
+        provider: "gemini",
+        model: mockAiAnalysisEnabled ? "mock-gemini-evidence-v1" : geminiModel,
+        momentStatus:
+          queuedJob.status === "processing" ? "processing" : "queued",
+        storageProvider: queuedJob.storedVideo.provider,
+        storageBucket: queuedJob.storedVideo.bucket,
+        storagePath: queuedJob.storedVideo.path,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Stored evidence extraction failed.";
+      console.error("Stored evidence extraction failed:", message);
+      response.status(500).json({ error: message });
+    }
+  },
+);
 
 app.get("/api/moments", async (_request, response) => {
   try {
@@ -2366,6 +2514,45 @@ function extensionForMimeType(mimeType: string) {
   return ".mov";
 }
 
+function extensionForFileName(fileName: string) {
+  const extension = fileName.toLowerCase().match(/\.(mp4|mov|m4v)$/)?.[0];
+
+  return extension ?? undefined;
+}
+
+function mimeTypeForStoredVideoPath(path: string) {
+  const normalizedPath = path.toLowerCase();
+
+  if (normalizedPath.endsWith(".mp4")) {
+    return "video/mp4";
+  }
+
+  if (normalizedPath.endsWith(".m4v")) {
+    return "video/x-m4v";
+  }
+
+  return "video/quicktime";
+}
+
+function normalizeStoredVideoInput(value: {
+  bucket?: unknown;
+  path?: unknown;
+  provider?: unknown;
+}): StoredVideoInput | null {
+  const bucket = nullableString(value.bucket);
+  const path = nullableString(value.path);
+
+  if (!bucket || !path) {
+    return null;
+  }
+
+  return {
+    bucket,
+    path,
+    provider: nullableString(value.provider) ?? sourceVideoStorageProvider,
+  };
+}
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -2727,6 +2914,202 @@ async function createQueuedEvidenceAnalysisJob({
   };
 }
 
+async function storeMomentSourceVideo({
+  client,
+  momentId,
+  file,
+}: {
+  client: SupabaseServerClient;
+  momentId: string;
+  file: EvidenceJobVideoFile;
+}): Promise<StoredVideoInput> {
+  const { data: moment, error: momentError } = await client
+    .from("moments")
+    .select("id,user_id,latest_analysis_job_id")
+    .eq("id", momentId)
+    .maybeSingle();
+
+  if (momentError) {
+    throw new Error(`Failed to find Moment for source video upload: ${momentError.message}`);
+  }
+
+  if (!moment?.id || !moment.user_id) {
+    throw new Error("Moment not found for source video upload.");
+  }
+
+  const extension = extensionForFileName(file.originalname) ?? extensionForMimeType(file.mimetype);
+  const storagePath = `users/${moment.user_id}/moments/${momentId}/source${extension}`;
+  const uploadedAt = new Date().toISOString();
+  const uploadResult = await client.storage
+    .from(sourceVideoStorageBucket)
+    .upload(storagePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: true,
+    });
+
+  if (uploadResult.error) {
+    throw new Error(`Failed to upload source video to Storage: ${uploadResult.error.message}`);
+  }
+
+  const { error: momentUpdateError } = await client
+    .from("moments")
+    .update({
+      source_video_storage_provider: sourceVideoStorageProvider,
+      source_video_storage_bucket: sourceVideoStorageBucket,
+      source_video_storage_path: storagePath,
+      source_video_storage_uploaded_at: uploadedAt,
+      source_video_storage_status: "uploaded",
+      file_name: file.originalname,
+      mime_type: file.mimetype,
+      file_size: file.size,
+      updated_at: uploadedAt,
+    })
+    .eq("id", momentId);
+
+  if (momentUpdateError) {
+    throw new Error(`Failed to update Moment storage path: ${momentUpdateError.message}`);
+  }
+
+  if (moment.latest_analysis_job_id) {
+    const { error: jobUpdateError } = await client
+      .from("analysis_jobs")
+      .update({
+        input_video_storage_provider: sourceVideoStorageProvider,
+        input_video_storage_bucket: sourceVideoStorageBucket,
+        input_video_storage_path: storagePath,
+        updated_at: uploadedAt,
+      })
+      .eq("id", moment.latest_analysis_job_id);
+
+    if (jobUpdateError) {
+      throw new Error(`Failed to update AnalysisJob storage path: ${jobUpdateError.message}`);
+    }
+  }
+
+  return {
+    provider: sourceVideoStorageProvider,
+    bucket: sourceVideoStorageBucket,
+    path: storagePath,
+  };
+}
+
+async function getOrCreateStoredEvidenceAnalysisJob(momentId: string) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const { data: moment, error: momentError } = await client
+    .from("moments")
+    .select(
+      [
+        "id",
+        "user_id",
+        "source_video_storage_provider",
+        "source_video_storage_bucket",
+        "source_video_storage_path",
+      ].join(","),
+    )
+    .eq("id", momentId)
+    .maybeSingle();
+
+  if (momentError) {
+    throw new Error(`Failed to find stored Moment: ${momentError.message}`);
+  }
+
+  const storedMoment = moment as Record<string, unknown> | null;
+  const momentUserId = nullableString(storedMoment?.user_id);
+
+  if (!nullableString(storedMoment?.id) || !momentUserId) {
+    return null;
+  }
+
+  const storedVideo = normalizeStoredVideoInput({
+    provider: storedMoment?.source_video_storage_provider,
+    bucket: storedMoment?.source_video_storage_bucket,
+    path: storedMoment?.source_video_storage_path,
+  });
+
+  if (!storedVideo) {
+    return null;
+  }
+
+  const { data: existingJobs, error: existingJobError } = await client
+    .from("analysis_jobs")
+    .select("id,status")
+    .eq("moment_id", momentId)
+    .eq("kind", "evidence_extraction")
+    .in("status", ["queued", "processing"])
+    .order("queued_at", { ascending: false })
+    .limit(1);
+
+  if (existingJobError) {
+    throw new Error(`Failed to find stored analysis job: ${existingJobError.message}`);
+  }
+
+  const existingJob = existingJobs?.[0];
+
+  if (existingJob?.id && existingJob.status) {
+    await updateAnalysisJobStoredVideoInput({
+      client,
+      analysisJobId: existingJob.id as string,
+      storedVideo,
+    });
+
+    return {
+      id: existingJob.id as string,
+      status: existingJob.status as "queued" | "processing",
+      storedVideo,
+    };
+  }
+
+  const queuedJob = await createQueuedEvidenceAnalysisJob({
+    userId: momentUserId,
+    momentId,
+  });
+
+  if (!queuedJob) {
+    return null;
+  }
+
+  await updateAnalysisJobStoredVideoInput({
+    client,
+    analysisJobId: queuedJob.id,
+    storedVideo,
+  });
+
+  return {
+    id: queuedJob.id,
+    status: queuedJob.status,
+    storedVideo,
+  };
+}
+
+async function updateAnalysisJobStoredVideoInput({
+  client,
+  analysisJobId,
+  storedVideo,
+}: {
+  client: SupabaseServerClient;
+  analysisJobId: string;
+  storedVideo: StoredVideoInput;
+}) {
+  const { error } = await client
+    .from("analysis_jobs")
+    .update({
+      input_video_storage_provider: storedVideo.provider,
+      input_video_storage_bucket: storedVideo.bucket,
+      input_video_storage_path: storedVideo.path,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", analysisJobId);
+
+  if (error) {
+    throw new Error(`Failed to update AnalysisJob storage input: ${error.message}`);
+  }
+}
+
 async function getOrCreateQueuedEvidenceAnalysisJob(metadata: SessionMetadata) {
   const client = getSupabaseServerClient();
 
@@ -2812,6 +3195,75 @@ async function processQueuedEvidenceAnalysisJob({
       errorMessage: message,
     });
   }
+}
+
+async function processQueuedEvidenceAnalysisJobFromStorage({
+  analysisJobId,
+  metadata,
+  storedVideo,
+}: {
+  analysisJobId: string;
+  metadata: SessionMetadata;
+  storedVideo: StoredVideoInput;
+}) {
+  const claimedJob = await markEvidenceAnalysisJobProcessing(analysisJobId);
+
+  if (!claimedJob) {
+    return;
+  }
+
+  try {
+    const file = await downloadStoredVideoForEvidence(storedVideo);
+
+    await runGeminiEvidenceExtraction({
+      analysisJobId,
+      metadata,
+      file,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Stored evidence extraction failed.";
+    console.error("Stored Gemini evidence extraction failed:", message);
+    await markEvidenceAnalysisJobFailed({
+      analysisJobId,
+      momentId: claimedJob.momentId,
+      errorMessage: message,
+    });
+  }
+}
+
+async function downloadStoredVideoForEvidence(
+  storedVideo: StoredVideoInput,
+): Promise<EvidenceJobVideoFile> {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const { data, error } = await client.storage
+    .from(storedVideo.bucket)
+    .download(storedVideo.path);
+
+  if (error) {
+    throw new Error(`Failed to download source video from Storage: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("Storage download returned no video data.");
+  }
+
+  const arrayBuffer = await data.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const originalname = basename(storedVideo.path);
+  const mimetype = mimeTypeForStoredVideoPath(storedVideo.path);
+
+  return {
+    buffer,
+    mimetype,
+    originalname,
+    size: buffer.length,
+  };
 }
 
 async function markEvidenceAnalysisJobProcessing(analysisJobId: string) {

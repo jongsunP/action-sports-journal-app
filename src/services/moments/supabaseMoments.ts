@@ -16,6 +16,20 @@ type UpdateMomentStatusResponse = {
   status?: unknown;
 };
 
+type UploadMomentSourceVideoResponse = {
+  storageProvider?: unknown;
+  storageBucket?: unknown;
+  storagePath?: unknown;
+  uploadedAt?: unknown;
+};
+
+export type UploadedMomentSourceVideo = {
+  storageProvider: string;
+  storageBucket: string;
+  storagePath: string;
+  uploadedAt?: string;
+};
+
 export type RemoteMomentRecord = {
   remoteMomentId: string;
   session: Session;
@@ -79,6 +93,51 @@ export async function insertMoment(session: Session, video?: SessionVideoAsset |
   const data = (await response.json()) as CreateMomentResponse;
 
   return typeof data.momentId === 'string' ? data.momentId : undefined;
+}
+
+export async function uploadMomentSourceVideo(
+  momentId: string,
+  video: SessionVideoAsset,
+): Promise<UploadedMomentSourceVideo | undefined> {
+  if (!momentsEndpoint) {
+    return undefined;
+  }
+
+  const formData = new FormData();
+  formData.append('video', {
+    uri: video.uri,
+    name: video.fileName ?? `${momentId}.mov`,
+    type: video.mimeType ?? 'video/quicktime',
+  } as unknown as Blob);
+
+  const response = await fetch(`${momentsEndpoint}/${momentId}/source-video`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(
+      message ?? `Moment source video upload failed with ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as UploadMomentSourceVideoResponse;
+  const storageProvider = asString(data.storageProvider);
+  const storageBucket = asString(data.storageBucket);
+  const storagePath = asString(data.storagePath);
+
+  if (!storageProvider || !storageBucket || !storagePath) {
+    throw new Error('Moment source video upload returned invalid storage data.');
+  }
+
+  return {
+    storageProvider,
+    storageBucket,
+    storagePath,
+    uploadedAt: asString(data.uploadedAt),
+  };
 }
 
 export async function updateMomentStatus(

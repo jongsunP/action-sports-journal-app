@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   getConfiguredAiEndpoints,
   hasConfiguredGeminiEvidenceEndpoint,
+  queueStoredSessionEvidenceExtractionWithGemini,
   queueSessionEvidenceExtractionWithGemini,
   RemoteRequestError,
   type SessionVideoAsset,
@@ -31,6 +32,7 @@ import {
   insertMoment,
   listMoments,
   updateMomentStatus,
+  uploadMomentSourceVideo,
 } from '../../services/moments';
 import {
   getMomentStatus,
@@ -767,25 +769,53 @@ export function HomeScreen() {
       }));
       updateLocalMomentStatus(session.id, 'processing');
 
+      const momentId =
+        options?.momentIdOverride ?? remoteMomentIdsBySessionId[session.id];
+      const syncQueuedEvidenceStatus = async (queuedJob: {
+        momentStatus: 'queued' | 'processing';
+      }) => {
+        const nextMomentStatus =
+          queuedJob.momentStatus === 'queued'
+            ? 'processing'
+            : queuedJob.momentStatus;
+
+        await syncMomentStatus(session.id, nextMomentStatus, momentId);
+      };
+
+      if (momentId) {
+        try {
+          await uploadMomentSourceVideo(momentId, video);
+
+          const queuedJob = await queueStoredSessionEvidenceExtractionWithGemini({
+            session,
+            activityGroupName: 'Wakeboard',
+            momentId,
+            userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
+          });
+
+          await syncQueuedEvidenceStatus(queuedJob);
+          return;
+        } catch (storageError) {
+          const storageMessage =
+            storageError instanceof Error
+              ? storageError.message
+              : 'Storage-backed evidence queue failed.';
+          console.warn(
+            'Storage-backed evidence queue failed; falling back to direct upload:',
+            storageMessage,
+          );
+        }
+      }
+
       const queuedJob = await queueSessionEvidenceExtractionWithGemini({
         session,
         activityGroupName: 'Wakeboard',
         video,
-        momentId:
-          options?.momentIdOverride ?? remoteMomentIdsBySessionId[session.id],
+        momentId,
         userConfirmedTrick: userConfirmedTrickBySessionId[session.id],
       });
 
-      const nextMomentStatus =
-        queuedJob.momentStatus === 'queued'
-          ? 'processing'
-          : queuedJob.momentStatus;
-
-      await syncMomentStatus(
-        session.id,
-        nextMomentStatus,
-        options?.momentIdOverride,
-      );
+      await syncQueuedEvidenceStatus(queuedJob);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '근거 추출 요청에 실패했습니다.';

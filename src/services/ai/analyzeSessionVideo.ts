@@ -125,6 +125,10 @@ const geminiEvidenceEndpoint = analysisEndpoint?.replace(
   /\/api\/analyze-session-video$/,
   '/api/extract-session-evidence',
 );
+const momentsEndpoint = analysisEndpoint?.replace(
+  /\/api\/analyze-session-video$/,
+  '/api/moments',
+);
 const openAiBenchmarkEndpoint = analysisEndpoint?.replace(
   /\/api\/analyze-session-video$/,
   '/api/benchmarks/openai-wakeboard-video',
@@ -134,6 +138,7 @@ if (__DEV__) {
   console.log('[Action Sports Journal] AI endpoints', {
     analysisEndpoint,
     geminiEvidenceEndpoint,
+    momentsEndpoint,
     openAiBenchmarkEndpoint,
   });
 }
@@ -218,6 +223,50 @@ export async function queueSessionEvidenceExtractionWithGemini({
     momentId,
     userConfirmedTrick,
   });
+
+  return normalizeQueuedEvidenceAnalysisJob(data, session.id);
+}
+
+export async function queueStoredSessionEvidenceExtractionWithGemini({
+  session,
+  activityGroupName,
+  momentId,
+  userConfirmedTrick,
+}: Omit<AnalyzeSessionVideoInput, 'video'> & {
+  momentId: string;
+}): Promise<QueuedEvidenceAnalysisJob> {
+  if (!momentsEndpoint) {
+    throw new Error('저장된 영상 분석 엔드포인트가 설정되지 않았습니다.');
+  }
+
+  const response = await fetch(`${momentsEndpoint}/${momentId}/analyze-stored-video`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sessionId: session.id,
+      activityGroupName,
+      title: session.title?.trim() || '라이딩 영상',
+      notes: session.notes ?? '',
+      occurredAt: session.occurredAt,
+      userConfirmedTrick:
+        typeof userConfirmedTrick === 'string' && userConfirmedTrick.trim()
+          ? userConfirmedTrick.trim()
+          : undefined,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new RemoteRequestError(
+      message ?? `Stored analysis request failed with ${response.status}`,
+      response.status,
+    );
+  }
+
+  const data = await response.json();
 
   return normalizeQueuedEvidenceAnalysisJob(data, session.id);
 }
