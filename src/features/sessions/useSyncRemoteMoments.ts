@@ -46,6 +46,7 @@ export function useSyncRemoteMoments({
       setSessions((current) =>
         applyRemoteSessions({
           current,
+          remoteMomentIdsBySessionId,
           remoteMoments,
           sessionIdByRemoteMomentId,
         }),

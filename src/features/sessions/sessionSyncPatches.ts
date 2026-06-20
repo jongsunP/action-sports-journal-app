@@ -29,15 +29,26 @@ export function buildRemoteMomentSessionIdMap({
 
 export function applyRemoteSessions({
   current,
+  remoteMomentIdsBySessionId,
   remoteMoments,
   sessionIdByRemoteMomentId,
 }: {
   current: Session[];
+  remoteMomentIdsBySessionId: Record<string, string>;
   remoteMoments: RemoteMomentRecord[];
   sessionIdByRemoteMomentId: Map<string, string>;
 }) {
+  const remoteBackedSessionIds = new Set(sessionIdByRemoteMomentId.values());
   const nextSessionsById = new Map(
-    current.map((session) => [session.id, session]),
+    current
+      .filter((session) =>
+        shouldKeepLocalSessionAfterRemoteSync({
+          remoteBackedSessionIds,
+          remoteMomentIdsBySessionId,
+          session,
+        }),
+      )
+      .map((session) => [session.id, session]),
   );
 
   for (const remoteMoment of remoteMoments) {
@@ -73,7 +84,14 @@ export function applyRemoteMomentIds({
   remoteMoments: RemoteMomentRecord[];
   sessionIdByRemoteMomentId: Map<string, string>;
 }) {
-  const next = { ...current };
+  const remoteMomentIds = new Set(
+    remoteMoments.map((remoteMoment) => remoteMoment.remoteMomentId),
+  );
+  const next = Object.fromEntries(
+    Object.entries(current).filter(([, remoteMomentId]) =>
+      remoteMomentIds.has(remoteMomentId),
+    ),
+  );
 
   for (const remoteMoment of remoteMoments) {
     const sessionId =
@@ -84,6 +102,26 @@ export function applyRemoteMomentIds({
   }
 
   return next;
+}
+
+function shouldKeepLocalSessionAfterRemoteSync({
+  remoteBackedSessionIds,
+  remoteMomentIdsBySessionId,
+  session,
+}: {
+  remoteBackedSessionIds: Set<string>;
+  remoteMomentIdsBySessionId: Record<string, string>;
+  session: Session;
+}) {
+  if (remoteBackedSessionIds.has(session.id)) {
+    return true;
+  }
+
+  if (remoteMomentIdsBySessionId[session.id]) {
+    return false;
+  }
+
+  return session.momentStatus === 'queued' || session.momentStatus === 'processing';
 }
 
 export function applyRemoteVideos({

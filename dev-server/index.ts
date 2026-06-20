@@ -320,7 +320,6 @@ app.post("/api/moments", async (request, response) => {
     }
 
     const now = new Date().toISOString();
-    const status = readMomentStatus(request.body?.status, "queued");
     const userId = await getOrCreateDefaultSupabaseUser();
     const sessionId = getField(request.body?.sessionId, "");
     const fileSize = Number(request.body?.fileSize);
@@ -333,7 +332,7 @@ app.post("/api/moments", async (request, response) => {
         activity_group_id: getField(request.body?.activityGroupId, "wakeboard"),
         title: nullableString(request.body?.title),
         notes: nullableString(request.body?.notes),
-        status,
+        status: "failed",
         source: "standalone_app",
         occurred_at: getField(request.body?.occurredAt, now),
         source_video_uri: nullableString(request.body?.sourceVideoUri),
@@ -341,6 +340,7 @@ app.post("/api/moments", async (request, response) => {
         mime_type: nullableString(request.body?.mimeType),
         file_size: Number.isFinite(fileSize) ? fileSize : null,
         duration_ms: Number.isFinite(durationMs) ? durationMs : null,
+        source_video_storage_status: "pending_upload",
       })
       .select("id,status")
       .single();
@@ -349,16 +349,9 @@ app.post("/api/moments", async (request, response) => {
       throw new Error(`Failed to insert moment: ${error.message}`);
     }
 
-    const analysisJob = await createQueuedEvidenceAnalysisJob({
-      userId,
-      momentId: data.id,
-    });
-
     response.json({
       momentId: data.id,
       status: data.status,
-      analysisJobId: analysisJob?.id,
-      analysisJobStatus: analysisJob?.status,
     });
   } catch (error) {
     const message =

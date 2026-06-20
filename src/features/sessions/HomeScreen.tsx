@@ -269,7 +269,7 @@ export function HomeScreen() {
       try {
         const remoteMoments = await listMoments();
 
-        if (!isMounted || remoteMoments.length === 0) {
+        if (!isMounted) {
           return;
         }
 
@@ -354,9 +354,7 @@ export function HomeScreen() {
   );
   const isLoadingInitialMoments =
     !isStorageLoaded ||
-    (hasConfiguredSupabaseMoments() &&
-      !isRemoteMomentSyncLoaded &&
-      visibleSessions.length === 0);
+    (hasConfiguredSupabaseMoments() && !isRemoteMomentSyncLoaded);
   const homeSessionSummaries = useMemo(
     () =>
       visibleSessions.map((session) => {

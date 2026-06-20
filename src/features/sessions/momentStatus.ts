@@ -192,7 +192,7 @@ function getMomentStatusPresentation(status: MomentStatus) {
     return {
       label: '실패',
       title: '분석을 완료하지 못했습니다',
-      body: '요청이 중단됐거나 시간이 지나 완료되지 않았습니다. 원본 영상이 남아 있으면 다시 시도할 수 있습니다.',
+      body: '영상 업로드나 분석 요청이 중단됐습니다. 원본 영상이 남아 있으면 다시 시도할 수 있습니다.',
     };
   }
 
