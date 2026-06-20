@@ -50,6 +50,7 @@ that look like stuck analysis jobs.
 - Normal upload creates durable Storage input before Moment/AnalysisJob creation.
 - Verified order: `source_video_storage_uploaded_at -> moment.created_at -> analysis_jobs.queued_at`.
 - The Upload screen now remains visible until upload completion and includes the explicit "do not close the app" warning.
+- If an immediate force-close test still completes, treat it as likely upload completion before termination or iOS briefly finishing the network request. The key distinction is upload-before-completion can fail; upload-after-completion should continue server-side.
 - Simulator upload is not part of default QA. Physical iPhone QA should verify the same flow after the next preview/internal build.
 - DB auto-initialization is disabled; build reports should include counts only.
 

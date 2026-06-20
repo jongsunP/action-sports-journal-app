@@ -62,7 +62,7 @@ queued / processing / completed / failed
 The default upload endpoint is `POST /api/moments/from-source-video`. Do not treat legacy/fallback endpoints as final architecture. Keep them only
 while the source-video-first path is being validated.
 
-2026-06-21 validation update: the upload-first path has been verified on operating Render + Supabase. Fileless `POST /api/moments/from-source-video` returns 400 without creating `moments`, `analysis_jobs`, or `evidence_results`. A normal source upload created the Storage object first, then created the Moment, then created the AnalysisJob, then completed Gemini analysis and cleaned up the source video. The Upload screen now stays open until upload completion and tells the user not to close the app during that phase.
+2026-06-21 validation update: the upload-first path has been verified on operating Render + Supabase. Fileless `POST /api/moments/from-source-video` returns 400 without creating `moments`, `analysis_jobs`, or `evidence_results`. A normal source upload created the Storage object first, then created the Moment, then created the AnalysisJob, then completed Gemini analysis and cleaned up the source video. The Upload screen now stays open until upload completion and tells the user not to close the app during that phase. If a force-close test still succeeds, interpret it carefully: the upload may already have completed, or iOS may have briefly finished the request. This is not automatically a bug.
 
 On 2026-06-12, the priority changed from Expo Go validation to installing and
 running Action Sports Journal as a standalone iPhone app through an EAS

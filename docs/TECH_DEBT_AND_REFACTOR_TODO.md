@@ -384,3 +384,49 @@ QA policy reminder:
 - Report DB counts only unless the Founder explicitly requests reset/deletion.
 - Simulator upload is not part of default QA. Use simulator for UI/sync/delete
   checks; use physical iPhone for real upload, Push, quality, and calibration.
+
+## 2026-06-21 Upload Close/Kill Interpretation
+
+Observation:
+
+The user force-closed the app immediately after starting an upload, but the
+analysis still completed successfully.
+
+Interpretation:
+
+Do not classify this as a bug by itself. Two explanations are possible:
+
+1. The source video upload had already completed before the app was terminated.
+2. iOS briefly allowed the in-flight network request to finish after the user
+   perceived the app as closed.
+
+Product rule:
+
+- If the app closes before source upload completion, analysis may not start.
+- If source upload completes first, server-side analysis should continue even if
+  the app closes.
+
+Copy improvement candidate:
+
+Current copy:
+
+```text
+이 단계에서는 앱을 닫지 마세요.
+```
+
+More precise copy candidates:
+
+```text
+업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.
+업로드가 완료되면 분석은 서버에서 계속됩니다.
+```
+
+Follow-up TODO:
+
+- Test app termination before and after source upload completion more deliberately.
+- Refine upload-state copy so it communicates risk rather than absolute failure.
+- Continue collecting analysis timing data.
+- Continue AI Calibration only from repeated sample patterns.
+- Revisit Moment Detail structure in a later UX phase.
+- Add Push deep link later.
+- Consider OS-level background upload as a long-term stability option.

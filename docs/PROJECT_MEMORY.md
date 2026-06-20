@@ -140,6 +140,7 @@ Immediate focus:
 - Normal upload validation confirmed `source_video_storage_uploaded_at -> moment.created_at -> analysis_jobs.queued_at` ordering.
 - QA policy remains: do not auto-reset DB after builds; report counts only unless the Founder explicitly requests deletion.
 - Simulator upload remains disallowed by default; real upload QA belongs on the physical iPhone.
+- If the user force-closes the app immediately after tapping upload and analysis still succeeds, do not assume a bug. The file may have already reached the server, or iOS may have briefly allowed the network request to finish. The product rule is: closing before upload completion can fail; closing after upload completion should allow server-side analysis to continue.
 
 Later work is grouped by stage:
 

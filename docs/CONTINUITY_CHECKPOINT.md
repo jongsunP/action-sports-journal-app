@@ -60,7 +60,7 @@ Interrupted uploads should not leave remote Moments that look like stuck
 analysis jobs. Legacy/fallback endpoints remain compatibility paths until the
 source-video-first flow is validated through device QA.
 
-2026-06-21 validation update: operating Render + Supabase verified the upload-first path. Fileless `POST /api/moments/from-source-video` returned 400 without DB row creation. Normal upload created Storage input first, then Moment, then AnalysisJob, then completed EvidenceResult and source cleanup. Upload UI now blocks on the upload phase and explicitly tells the user not to close the app before upload completion.
+2026-06-21 validation update: operating Render + Supabase verified the upload-first path. Fileless `POST /api/moments/from-source-video` returned 400 without DB row creation. Normal upload created Storage input first, then Moment, then AnalysisJob, then completed EvidenceResult and source cleanup. Upload UI now blocks on the upload phase and explicitly tells the user not to close the app before upload completion. A force-close immediately after tapping upload can still succeed if upload already reached the server or iOS briefly completed the request; that is not automatically a regression.
 
 The latest known project checkpoint is:
 
