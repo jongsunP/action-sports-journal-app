@@ -298,9 +298,52 @@ Notes:
 
 Avoid adding more cards unless they clarify scan behavior.
 
+### 8. Detail Dismiss Gesture Polish
+
+Problem:
+
+Moment Detail currently closes through the explicit top-left close button only.
+This works functionally, but it can feel less natural on iPhone because many
+full-screen detail surfaces also support gesture-based dismissal.
+
+Candidate directions:
+
+- iOS-style edge swipe dismiss from the left edge
+- Modal swipe-down dismiss if the Detail surface keeps behaving like a modal
+- Keep the visible close/back button as a reliable fallback
+
+Goal:
+
+Let users leave Detail more naturally without hunting for the close button.
+
+Priority:
+
+UX Polish after core feature stability. Do not implement before upload,
+analysis, restore, deletion, and push/foreground behavior are stable enough for
+QA.
+
+Impact:
+
+Medium. This affects perceived native feel, but does not block the current
+analysis flow.
+
+Difficulty:
+
+Medium.
+
+Dependencies:
+
+- Confirm whether Detail should remain a modal or become a navigation screen
+- Avoid gesture conflicts with video controls and vertical scrolling
+- Keep deletion confirmation and debug sections unaffected
+
+Notes:
+
+This is a backlog item only. Do not implement until the UX Polish phase.
+
 ## P3
 
-### 8. Analysis Complete Notification
+### 9. Analysis Complete Notification
 
 Problem:
 
