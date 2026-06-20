@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useEventListener } from 'expo';
 import {
   Alert,
+  type GestureResponderEvent,
   Image,
   Modal,
   Pressable,
@@ -26,6 +27,10 @@ import type { AnalysisResult, GeminiEvidenceResult, MomentStatus, Session } from
 
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
+const DETAIL_EDGE_SWIPE_START_X = 28;
+const DETAIL_EDGE_SWIPE_DISMISS_DX = 72;
+const DETAIL_EDGE_SWIPE_ACTIVATE_DX = 18;
+const DETAIL_EDGE_SWIPE_MAX_VERTICAL_DRIFT = 28;
 
 type HomeScreenStyles = Record<string, any>;
 let styles: HomeScreenStyles;
@@ -112,6 +117,43 @@ export function MomentDetailModal({
   video?: SessionVideoAsset | null;
 }) {
   styles = nextStyles;
+  const dismissGestureRef = useRef<{
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const handleDetailTouchStart = (event: GestureResponderEvent) => {
+    const { pageX, pageY } = event.nativeEvent;
+
+    dismissGestureRef.current =
+      pageX <= DETAIL_EDGE_SWIPE_START_X
+        ? {
+            startX: pageX,
+            startY: pageY,
+          }
+        : null;
+  };
+  const handleDetailTouchEnd = (event: GestureResponderEvent) => {
+    const gesture = dismissGestureRef.current;
+    dismissGestureRef.current = null;
+
+    if (!gesture) {
+      return;
+    }
+
+    const endX = event.nativeEvent.pageX;
+    const endY = event.nativeEvent.pageY;
+    const deltaX = endX - gesture.startX;
+    const deltaY = endY - gesture.startY;
+
+    if (
+      deltaX >= DETAIL_EDGE_SWIPE_DISMISS_DX &&
+      deltaX >= DETAIL_EDGE_SWIPE_ACTIVATE_DX &&
+      Math.abs(deltaY) <= DETAIL_EDGE_SWIPE_MAX_VERTICAL_DRIFT
+    ) {
+      onClose();
+    }
+  };
+
   if (!session) {
     return null;
   }
@@ -152,7 +194,14 @@ export function MomentDetailModal({
       onRequestClose={onClose}
       visible={Boolean(session)}
     >
-      <SafeAreaView style={styles.detailModalContainer}>
+      <SafeAreaView
+        onTouchCancel={() => {
+          dismissGestureRef.current = null;
+        }}
+        onTouchEnd={handleDetailTouchEnd}
+        onTouchStart={handleDetailTouchStart}
+        style={styles.detailModalContainer}
+      >
         <View style={styles.detailModalHeader}>
           <Pressable
             accessibilityLabel="닫기"
