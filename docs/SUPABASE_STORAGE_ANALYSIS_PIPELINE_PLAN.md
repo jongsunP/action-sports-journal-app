@@ -23,6 +23,9 @@ Phase 8 MVP is implemented and pushed in:
 
 ```text
 306b3ca feat: add storage-backed evidence analysis path
+a397584 feat: clean up analyzed source videos
+9bad25f fix: handle stale analysis jobs
+f7488a8 refine: improve analysis progress messaging
 ```
 
 Verified local E2E path:
@@ -58,6 +61,10 @@ Implemented cleanup policy:
   `delete_failed`,
 - EvidenceResult, Rider-facing Summary, thumbnail, and local video URI remain
   valid after source deletion.
+- stale queued/processing jobs that cannot reasonably complete are marked
+  failed during `/api/moments` restore,
+- app-facing progress messaging separates 대기, 분석중, 완료, and 실패 without
+  exposing technical stale-job language.
 
 ## Problem
 

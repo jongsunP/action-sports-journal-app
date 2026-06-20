@@ -80,8 +80,15 @@ Result:
   the app should still present thumbnail and analysis results rather than
   trying to replay the Storage source object. Source objects should be deleted
   after successful analysis or after a short QA/retry retention window.
-- Direct multipart upload remains as fallback. Storage object deletion after
-  completed analysis is still not implemented.
+- Source object cleanup after successful stored-video analysis is implemented
+  as best-effort cleanup. Success records `source_video_storage_status=deleted`;
+  failure records `delete_failed` without failing completed analysis.
+- Stale queued/processing cleanup is implemented during `/api/moments` restore.
+  Old jobs that cannot reasonably complete become failed, while completed
+  evidence remains protected.
+- App-facing progress language now separates `대기`, `분석중`, `완료`, and
+  `실패`.
+- Direct multipart upload remains as fallback.
 
 Next stage:
 

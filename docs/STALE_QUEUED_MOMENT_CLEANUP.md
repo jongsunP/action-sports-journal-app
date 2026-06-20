@@ -185,6 +185,19 @@ Implemented as lightweight best-effort cleanup during `GET /api/moments`.
 This is intentionally conservative. It reduces user-visible stale analysis
 states without adding a scheduler, queue system, new schema, or admin UI.
 
+User-facing behavior:
+
+Stale cleanup results are surfaced as ordinary failed analysis states. The app
+does not expose internal terms such as "stale job", "queued_at", or
+"processing timeout" to riders. Current progress language separates:
+
+```text
+대기
+분석중
+완료
+실패
+```
+
 Current cleanup rules:
 
 ```text

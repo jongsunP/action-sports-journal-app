@@ -319,8 +319,23 @@ source video upload to `moment-videos`, `moments.source_video_storage_*`
 update, `analysis_jobs.input_video_storage_*` update, stored-video analysis
 endpoint, Storage download by Render, Gemini Evidence Extraction,
 `evidence_results` persistence, and completed Moment restore. The direct
-multipart upload path remains as fallback. Storage object deletion after
-analysis is not implemented yet.
+multipart upload path remains as fallback.
+
+Durable Analysis / Analysis Progress completion:
+
+- `a397584 feat: clean up analyzed source videos` deletes analyzed source
+  videos on a best-effort basis after successful stored-video analysis.
+- `source_video_storage_status` becomes `deleted` on cleanup success and
+  `delete_failed` on cleanup failure.
+- Cleanup failure is warning-only and does not turn completed analysis into
+  failed analysis.
+- `9bad25f fix: handle stale analysis jobs` marks old queued/processing jobs
+  failed when they cannot reasonably complete.
+- `f7488a8 refine: improve analysis progress messaging` improves app-facing
+  status language: 대기, 분석중, 완료, 실패.
+
+The current product objective is stable completion for one real uploaded video:
+upload -> temporary durable input -> stored analysis -> completed restore.
 
 Future UX priority:
 

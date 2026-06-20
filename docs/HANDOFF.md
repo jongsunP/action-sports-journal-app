@@ -231,7 +231,16 @@ Result:
   QA/retry retention window. Reanalysis may require reuploading the original
   video.
 - The direct multipart evidence upload path remains as fallback/debug path.
-  Storage object deletion after completed analysis is not implemented yet.
+- Source video cleanup after successful stored-video analysis is implemented as
+  best-effort cleanup. Success sets `source_video_storage_status=deleted`;
+  failure sets `delete_failed` and logs a warning without failing the completed
+  analysis.
+- Stale queued/processing cleanup is implemented during `/api/moments` restore.
+  Old jobs that cannot reasonably complete are marked failed while completed
+  evidence remains protected.
+- App-facing progress language was updated to separate `대기`, `분석중`,
+  `완료`, and `실패`. Stale cleanup failures are shown as normal failed
+  analysis without exposing technical job terms.
 - Push Notification is classified as an important future async-analysis UX
   feature:
 
