@@ -318,6 +318,20 @@ This keeps paths stable and easy to reason about.
 
 Migration is likely required.
 
+Phase 8 migration draft:
+
+```text
+supabase/phase8_storage_backed_analysis.sql
+```
+
+This migration is intentionally additive:
+
+- nullable columns only,
+- no enum type,
+- no `not null`,
+- no public Moment status expansion,
+- legacy Moments and AnalysisJobs remain valid.
+
 Recommended new `moments` columns:
 
 ```sql
@@ -425,15 +439,87 @@ Do not:
 - use client-generated arbitrary paths without server validation,
 - rely on local iPhone URI as a server-readable media reference.
 
+## Phase 8 MVP Scope
+
+The first implementation should be the smallest storage-backed analysis path
+that proves durable input works.
+
+Included in Phase 8 MVP:
+
+- private `moment-videos` bucket,
+- storage reference columns on `moments`,
+- input storage reference columns on `analysis_jobs`,
+- server-issued upload target/path,
+- app uploads source video to Storage before analysis is queued,
+- Render worker downloads video from Storage,
+- current polling/restore flow remains,
+- current local thumbnail flow remains.
+
+Excluded from Phase 8 MVP:
+
+- AI Coach,
+- second AI API call,
+- push notification,
+- auth UI,
+- public video playback,
+- CDN delivery,
+- permanent video archive product,
+- thumbnail storage migration,
+- S3/R2 migration,
+- separate external queue.
+
+## Bucket Creation
+
+Supabase Storage buckets can be created through the Dashboard, client
+libraries, or SQL. The Phase 8 migration draft includes an idempotent
+`storage.buckets` insert for:
+
+```text
+bucket: moment-videos
+public: false
+file size limit: 20 MiB
+allowed MIME types: video/mp4, video/quicktime, video/mov, video/x-m4v
+```
+
+Manual Dashboard creation is still acceptable if the team wants to avoid
+executing bucket setup through SQL during the first rollout. If created
+manually, match the same bucket name and keep it private.
+
+Source:
+
+```text
+https://supabase.com/docs/guides/storage/buckets/creating-buckets
+```
+
+## Legacy Compatibility
+
+Existing Moments and AnalysisJobs do not have storage paths.
+
+The app and backend must support both generations:
+
+```text
+legacy row:
+  no storage path
+  may still depend on direct multipart evidence upload or completed evidence
+
+phase8 row:
+  storage path exists
+  backend can retry from durable video input
+```
+
+During migration, do not assume every queued job is retryable. A queued job is
+retryable only when it has an input storage path or the app can still upload
+the local video.
+
 ## Minimum Implementation Path
 
 ### Phase 1: Schema Design
 
-Create a migration draft only:
+Use the Phase 8 migration draft:
 
-- add storage fields to `moments`,
-- add input storage fields to `analysis_jobs`,
-- add indexes for queued jobs with storage path if needed.
+```text
+supabase/phase8_storage_backed_analysis.sql
+```
 
 Do not apply until reviewed.
 
