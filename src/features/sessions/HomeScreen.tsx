@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  AppState,
+  type AppStateStatus,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -84,6 +86,7 @@ export function HomeScreen() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isUploadingSession, setIsUploadingSession] = useState(false);
   const isUploadingSessionRef = useRef(false);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const uploadThumbnailRequestIdRef = useRef(0);
   const selectedVideoThumbnailUriRef = useRef<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<SessionVideoAsset | null>(
@@ -340,6 +343,50 @@ export function HomeScreen() {
     sessions,
     syncRemoteMoments,
   ]);
+
+  useEffect(() => {
+    if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
+      return;
+    }
+
+    let isRefreshing = false;
+
+    const refreshRemoteMoments = async () => {
+      if (isRefreshing) {
+        return;
+      }
+
+      isRefreshing = true;
+
+      try {
+        const remoteMoments = await listMoments();
+        syncRemoteMoments(remoteMoments);
+      } catch (error) {
+        console.warn(
+          'Supabase moment foreground refresh failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      } finally {
+        isRefreshing = false;
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const previousAppState = appStateRef.current;
+      appStateRef.current = nextAppState;
+
+      if (
+        nextAppState === 'active' &&
+        (previousAppState === 'background' || previousAppState === 'inactive')
+      ) {
+        void refreshRemoteMoments();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isRemoteMomentSyncLoaded, isStorageLoaded, syncRemoteMoments]);
 
   const selectedGroup =
     mockActivityGroups.find((group) => group.id === ACTIVE_WAKEBOARD_GROUP_ID) ??
