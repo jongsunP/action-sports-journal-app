@@ -64,6 +64,13 @@ while the source-video-first path is being validated.
 
 2026-06-21 validation update: the upload-first path has been verified on operating Render + Supabase. Fileless `POST /api/moments/from-source-video` returns 400 without creating `moments`, `analysis_jobs`, or `evidence_results`. A normal source upload created the Storage object first, then created the Moment, then created the AnalysisJob, then completed Gemini analysis and cleaned up the source video. The Upload screen now stays open until upload completion and tells the user not to close the app during that phase. If a force-close test still succeeds, interpret it carefully: the upload may already have completed, or iOS may have briefly finished the request. This is not automatically a bug.
 
+Upload close/kill interpretation:
+
+- Closing before source upload completion can fail because the server does not yet have durable input.
+- Closing after source upload completion should allow server-side analysis to continue.
+- Improve the upload copy later from "이 단계에서는 앱을 닫지 마세요." toward "업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다." and "업로드가 완료되면 분석은 서버에서 계속됩니다."
+- Follow-up TODOs: test before/after-upload app termination deliberately, refine upload-state copy, collect analysis timing data, continue sample-based AI Calibration, revisit Detail structure, add Push deep link later, and consider background upload as a long-term option.
+
 On 2026-06-12, the priority changed from Expo Go validation to installing and
 running Action Sports Journal as a standalone iPhone app through an EAS
 preview/internal distribution build.

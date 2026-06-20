@@ -51,6 +51,8 @@ that look like stuck analysis jobs.
 - Verified order: `source_video_storage_uploaded_at -> moment.created_at -> analysis_jobs.queued_at`.
 - The Upload screen now remains visible until upload completion and includes the explicit "do not close the app" warning.
 - If an immediate force-close test still completes, treat it as likely upload completion before termination or iOS briefly finishing the network request. The key distinction is upload-before-completion can fail; upload-after-completion should continue server-side.
+- Upload copy should later be refined toward "업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다." and "업로드가 완료되면 분석은 서버에서 계속됩니다."
+- Follow-up TODOs: verify app termination before/after upload completion, polish upload-state copy, collect timing data, continue AI Calibration from repeated sample patterns, revisit Detail structure, add Push deep link later, and consider background upload long-term.
 - Simulator upload is not part of default QA. Physical iPhone QA should verify the same flow after the next preview/internal build.
 - DB auto-initialization is disabled; build reports should include counts only.
 

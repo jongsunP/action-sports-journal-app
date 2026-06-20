@@ -62,6 +62,13 @@ source-video-first flow is validated through device QA.
 
 2026-06-21 validation update: operating Render + Supabase verified the upload-first path. Fileless `POST /api/moments/from-source-video` returned 400 without DB row creation. Normal upload created Storage input first, then Moment, then AnalysisJob, then completed EvidenceResult and source cleanup. Upload UI now blocks on the upload phase and explicitly tells the user not to close the app before upload completion. A force-close immediately after tapping upload can still succeed if upload already reached the server or iOS briefly completed the request; that is not automatically a regression.
 
+Upload close/kill interpretation:
+
+- If the app closes before source upload completion, analysis may not start.
+- If source upload completes first, server-side analysis should continue.
+- Later copy should communicate risk more precisely: "업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다." and "업로드가 완료되면 분석은 서버에서 계속됩니다."
+- Follow-up TODOs: test before/after-upload termination, polish upload-state copy, collect analysis timing data, continue sample-based AI Calibration, revisit Detail structure, add Push deep link, and consider background upload as a long-term option.
+
 The latest known project checkpoint is:
 
 ```text

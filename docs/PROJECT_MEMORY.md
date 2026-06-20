@@ -141,6 +141,8 @@ Immediate focus:
 - QA policy remains: do not auto-reset DB after builds; report counts only unless the Founder explicitly requests deletion.
 - Simulator upload remains disallowed by default; real upload QA belongs on the physical iPhone.
 - If the user force-closes the app immediately after tapping upload and analysis still succeeds, do not assume a bug. The file may have already reached the server, or iOS may have briefly allowed the network request to finish. The product rule is: closing before upload completion can fail; closing after upload completion should allow server-side analysis to continue.
+- Upload-state copy should later move from an absolute warning toward risk-aware wording: "업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다." and "업로드가 완료되면 분석은 서버에서 계속됩니다."
+- Follow-up TODOs: deliberately test app termination before/after upload completion, refine upload-state copy, collect analysis timing data, continue sample-based AI Calibration, revisit Detail structure, add Push deep link later, and consider OS-level background upload as a long-term stability option.
 
 Later work is grouped by stage:
 
