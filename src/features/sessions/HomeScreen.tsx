@@ -644,7 +644,6 @@ export function HomeScreen() {
     setSelectedVideo(null);
     selectedVideoThumbnailUriRef.current = null;
     setSelectedVideoThumbnailUri(null);
-    setIsComposerOpen(false);
 
     void (async () => {
       try {
@@ -682,8 +681,10 @@ export function HomeScreen() {
             : 'queued';
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
+        setIsComposerOpen(false);
       } catch (error) {
         updateLocalMomentStatus(nextSession.id, 'upload_failed');
+        setIsComposerOpen(false);
         console.warn(
           'Stored Moment source upload failed:',
           error instanceof Error ? error.message : 'Unknown error',
@@ -1811,6 +1812,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 17,
+    textAlign: 'center',
+  },
+  uploadSubmittingPanel: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    borderColor: 'rgba(125, 211, 252, 0.3)',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  uploadSubmittingTitle: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 17,
+    marginBottom: 4,
     textAlign: 'center',
   },
   buttonPressed: {
