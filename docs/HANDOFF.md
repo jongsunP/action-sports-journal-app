@@ -159,6 +159,67 @@ Local path:
 
 ## Today's Conclusions
 
+## 2026-06-20 Rider-facing Analysis Checkpoint
+
+Problem:
+
+The app could already extract rich Gemini evidence, but the Detail screen still
+felt too close to raw model output and infrastructure/debug language. That made
+the result harder for a rider to understand and risked making review-level
+signals sound like final coaching.
+
+Why it mattered:
+
+Action Sports Journal is not trying to become a generic AI video analyzer. The
+product needs to first tell the rider what appears to be happening in the clip,
+with clear uncertainty, before offering coaching. If the analysis layer is not
+trustworthy and readable, a later AI Coach layer will amplify weak assumptions.
+
+Decision:
+
+Keep the current normal analysis cost profile at one Gemini Pro call per
+uploaded Moment. Treat that call as Evidence Extraction, not full coaching.
+Improve post-processing and rider-facing wording first. Defer the real AI Coach
+to a separate future layer and likely a separate AI call.
+
+Implementation:
+
+- Added a Rider-facing Analysis Summary layer over the existing EvidenceResult.
+- Tightened confidence labels from strong-sounding labels to:
+  - `근거 충분`
+  - `가능성 있음`
+  - `확인 필요`
+- Kept raw Gemini/Evidence details available below the summary.
+- Removed user-facing internal storage wording from restored evidence fallback
+  text.
+- Continued refactoring HomeScreen sync code without changing UI behavior.
+
+Result:
+
+- Latest checkpoint: `0c216eb`.
+- The current stage is Evidence Extraction + Rider-facing Analysis Summary.
+- Real AI Coach is not implemented yet.
+- Normal upload still uses one Gemini Pro request per Moment unless the user
+  retries analysis.
+- OpenAI benchmark and future coach paths are not part of the default upload
+  flow.
+
+Next stage boundary:
+
+```text
+Current:
+Video -> Gemini Evidence Extraction -> Validators/Knowledge -> Rider-facing Summary
+
+Future:
+Stable Analysis Summary -> AI Coach layer -> personalized coaching/progression
+```
+
+Recommended next step:
+
+Run a few real videos through the current post-processing and calibrate the
+rider-facing language. Do not add a second coaching API call until the analysis
+summary is consistently understandable and conservative.
+
 ## 2026-06-20 Empty Baseline iPhone QA Save Point
 
 Confirmed facts:

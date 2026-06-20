@@ -104,6 +104,47 @@ At the time this checkpoint was updated, local `master` was pushed to
 
 ## Today's Conclusions
 
+## 2026-06-20 Evidence Analysis Boundary Checkpoint
+
+Problem:
+
+The app reached a point where real Gemini Pro evidence was available, but the
+product still needed a clear boundary between analysis and coaching. Without
+that boundary, the UI could imply a finished AI Coach even though the system is
+still primarily identifying and validating what appears in the video.
+
+Why it mattered:
+
+The project is building toward an AI Coach, but coaching should not be layered
+on top of weak or confusing analysis. A rider should first understand what the
+system thinks happened in the clip, what is confirmed, and what still needs
+review.
+
+Decision:
+
+- Keep the default upload flow at one Gemini Pro call per Moment.
+- Use that call for Evidence Extraction.
+- Keep validators, taxonomy gates, knowledge rules, candidate trace, and
+  rider-facing summary as post-processing.
+- Do not treat the current summary as the final AI Coach.
+- Defer a separate AI Coach layer and likely separate AI call until the analysis
+  stage is stable.
+
+Implementation result:
+
+- Rider-facing Analysis Summary exists and sits above detailed Gemini evidence.
+- Evidence post-processing wording is more conservative.
+- User-facing fallback text no longer exposes internal storage names.
+- Latest checkpoint: `0c216eb`.
+
+Next starting point:
+
+```text
+Run real videos through the current analysis summary and calibrate wording.
+Only after that, design the AI Coach layer and decide whether it should use a
+second AI call.
+```
+
 ## 2026-06-20 Empty Baseline QA Checkpoint
 
 Confirmed facts:

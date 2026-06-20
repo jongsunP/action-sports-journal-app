@@ -14,6 +14,45 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Update on 2026-06-20, Rider-facing Analysis:
+
+The current AI stage is not "AI Coach" yet.
+
+Problem:
+
+The system can extract detailed Gemini evidence, but raw evidence and internal
+pipeline labels are not the same as rider-facing product value.
+
+Decision:
+
+Treat the current production path as a one-call Evidence Extraction flow:
+
+```text
+one uploaded Moment
+-> one Gemini Pro Evidence Extraction call
+-> local/server post-processing
+-> Rider-facing Analysis Summary
+```
+
+The real AI Coach layer is deferred. It should be designed later as a separate
+layer after the analysis summary is readable, conservative, and reliable.
+
+Current result:
+
+- Evidence post-processing has been improved.
+- Rider-facing summary wording is more conservative.
+- Internal storage wording is no longer exposed in restored evidence fallback
+  copy.
+- Latest checkpoint: `0c216eb`.
+
+Next stage:
+
+```text
+Calibrate Evidence post-processing with real videos.
+Then design AI Coach as a separate layer.
+Do not add a second AI call just to make coaching sound finished.
+```
+
 Update on 2026-06-20:
 
 The current standalone iPhone QA baseline is an empty app state backed by

@@ -62,6 +62,18 @@ Confirmed deployment state:
   Supabase test Moments were cleared, bundled seeded sessions were removed, and
   EAS preview build number `6` was created for fresh real-video testing.
 
+Current AI product boundary:
+
+- Normal upload uses one Gemini Pro call per Moment for Evidence Extraction.
+- The app is currently in the Evidence Extraction + Rider-facing Analysis
+  Summary stage.
+- The real AI Coach experience is not implemented yet.
+- Current work is focused on identifying what the video is, validating that
+  evidence, and turning it into rider-readable analysis.
+- A future AI Coach layer should be designed separately after the analysis
+  layer is trustworthy enough.
+- Latest checkpoint for this boundary: `0c216eb`.
+
 Detailed status documents:
 
 - `docs/CURRENT_STAGE.md`
@@ -545,11 +557,10 @@ resume point and keep changes scoped.
 Current resume instruction:
 
 ```text
-Start from the validated Async Analysis MVP.
-Decide whether the next step is durable video storage / retry-safe jobs, or
-Detail Screen and Moment result UX QA.
-If returning to AI classification, resume InversionObservedFacts validation
-before changing trick classification again.
+Start from the validated Evidence Extraction + Rider-facing Analysis Summary
+stage. Do not add a second AI Coach call yet. First decide whether the next
+step is more evidence post-processing calibration with real videos, durable
+video storage / retry-safe jobs, or a dedicated AI Coach design document.
 ```
 
 ## Save Point Procedure
