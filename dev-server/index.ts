@@ -332,7 +332,7 @@ app.post("/api/moments", async (request, response) => {
         activity_group_id: getField(request.body?.activityGroupId, "wakeboard"),
         title: nullableString(request.body?.title),
         notes: nullableString(request.body?.notes),
-        status: "failed",
+        status: "queued",
         source: "standalone_app",
         occurred_at: getField(request.body?.occurredAt, now),
         source_video_uri: nullableString(request.body?.sourceVideoUri),

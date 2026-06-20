@@ -45,9 +45,5 @@ export function mergeMomentStatus(
   localStatus?: MomentStatus,
   remoteStatus?: MomentStatus,
 ): MomentStatus | undefined {
-  if (remoteStatus === 'completed' || localStatus === 'completed') {
-    return 'completed';
-  }
-
   return remoteStatus ?? localStatus;
 }

@@ -626,7 +626,7 @@ export function HomeScreen() {
     const videoForUpload = selectedVideo;
     const now = new Date().toISOString();
     const nextSession: Session = {
-      id: `session-${Date.now()}`,
+      id: createLocalSessionId(),
       activityGroupId: selectedGroup.id,
       occurredAt: now,
       videoUri: videoForUpload.uri,
@@ -3038,6 +3038,27 @@ function removeRecordKey<T>(record: Record<string, T>, key: string) {
   const { [key]: _removed, ...remaining } = record;
 
   return remaining;
+}
+
+function createLocalSessionId() {
+  const randomUuid = globalThis.crypto?.randomUUID?.();
+
+  if (randomUuid) {
+    return randomUuid;
+  }
+
+  const randomHex = () =>
+    Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .slice(1);
+
+  return [
+    `${randomHex()}${randomHex()}`,
+    randomHex(),
+    `4${randomHex().slice(1)}`,
+    `${(8 + Math.floor(Math.random() * 4)).toString(16)}${randomHex().slice(1)}`,
+    `${randomHex()}${randomHex()}${randomHex()}`,
+  ].join('-');
 }
 
 function isEvidenceQueueRequestRetryable(error: unknown) {
