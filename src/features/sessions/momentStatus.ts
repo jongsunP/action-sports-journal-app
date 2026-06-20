@@ -172,27 +172,41 @@ function isStaleRunningMoment(session: Session, status?: MomentStatus) {
 }
 
 function getMomentStatusPresentation(status: MomentStatus) {
-  const visibleStatus = getVisibleMomentStatus(status);
-
-  if (visibleStatus === 'running') {
+  if (status === 'queued') {
     return {
-      label: '진행중',
-      title: '진행중',
-      body: '영상 분석을 진행하고 있습니다. 완료되면 결과가 이 화면에 표시됩니다.',
+      label: '대기',
+      title: '분석 대기 중',
+      body: '영상은 접수됐고 분석 순서를 기다리고 있습니다. 앱을 닫아도 결과는 다시 불러옵니다.',
     };
   }
 
-  if (visibleStatus === 'failed') {
+  if (status === 'processing') {
+    return {
+      label: '분석중',
+      title: '분석 중',
+      body: 'AI가 영상을 확인하고 있습니다. 완료되면 결과가 이 화면에 표시됩니다.',
+    };
+  }
+
+  if (status === 'failed') {
     return {
       label: '실패',
-      title: '실패',
-      body: '영상 근거 추출이 완료되지 않았습니다. 다시 시도할 수 있습니다.',
+      title: '분석을 완료하지 못했습니다',
+      body: '요청이 중단됐거나 시간이 지나 완료되지 않았습니다. 원본 영상이 남아 있으면 다시 시도할 수 있습니다.',
+    };
+  }
+
+  if (status === 'completed') {
+    return {
+      label: '완료',
+      title: '분석 완료',
+      body: '영상 분석 결과가 준비됐습니다.',
     };
   }
 
   return {
-    label: '완료',
-    title: '완료',
-    body: '영상 근거 결과가 준비됐습니다.',
+    label: '상태 확인',
+    title: '상태를 확인하고 있습니다',
+    body: '잠시 후 다시 확인해 주세요.',
   };
 }
