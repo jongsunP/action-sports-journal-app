@@ -30,9 +30,9 @@ import {
   hasConfiguredVideoThumbnailEndpoint,
 } from '../../services/video/createSessionVideoThumbnail';
 import {
+  createMomentFromSourceVideo,
   deleteMoment,
   hasConfiguredSupabaseMoments,
-  insertMoment,
   listMoments,
   updateMomentStatus,
   uploadMomentSourceVideo,
@@ -164,7 +164,7 @@ export function HomeScreen() {
         }
 
         if (Array.isArray(parsed.sessions)) {
-          setSessions(parsed.sessions);
+          setSessions(parsed.sessions.map(normalizeRestoredSession));
         }
 
         setSelectedGroupId(ACTIVE_WAKEBOARD_GROUP_ID);
@@ -549,55 +549,6 @@ export function HomeScreen() {
     );
   };
 
-  const persistMomentToSupabase = async (
-    session: Session,
-    video?: SessionVideoAsset | null,
-  ) => {
-    if (!hasConfiguredSupabaseMoments()) {
-      return {
-        failed: false,
-        remoteMomentId: undefined,
-      };
-    }
-
-    try {
-      const remoteMomentId = await insertMoment(session, video);
-
-      if (!remoteMomentId) {
-        updateLocalMomentStatus(session.id, 'failed');
-
-        console.warn('Supabase moment persistence failed: missing moment id');
-
-        return {
-          failed: true,
-          remoteMomentId: undefined,
-        };
-      }
-
-      setRemoteMomentIdsBySessionId((current) => ({
-        ...current,
-        [session.id]: remoteMomentId,
-      }));
-
-      return {
-        failed: false,
-        remoteMomentId,
-      };
-    } catch (error) {
-      updateLocalMomentStatus(session.id, 'failed');
-
-      console.warn(
-        'Supabase moment persistence failed:',
-        error instanceof Error ? error.message : 'Unknown error',
-      );
-
-      return {
-        failed: true,
-        remoteMomentId: undefined,
-      };
-    }
-  };
-
   const syncMomentStatus = async (
     sessionId: string,
     momentStatus: Session['momentStatus'],
@@ -697,22 +648,50 @@ export function HomeScreen() {
 
     void (async () => {
       try {
-        const { failed: failedToPersistMoment, remoteMomentId } =
-          await persistMomentToSupabase(nextSession, videoForUpload);
+        if (!hasConfiguredSupabaseMoments()) {
+          await handleExtractEvidence(nextSession, {
+            openSheet: false,
+            videoOverride: videoForUpload,
+          });
+          return;
+        }
 
-        if (failedToPersistMoment) {
+        const storedMoment = await createMomentFromSourceVideo(
+          nextSession,
+          videoForUpload,
+        );
+
+        if (!storedMoment) {
+          updateLocalMomentStatus(nextSession.id, 'upload_failed');
           Alert.alert(
-            '영상 저장에 실패했습니다',
-            '서버에 영상 기록을 만들지 못해 분석을 시작하지 않았습니다. 네트워크를 확인한 뒤 다시 시도해주세요.',
+            '영상 업로드에 실패했습니다',
+            '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
           );
           return;
         }
 
-        await handleExtractEvidence(nextSession, {
-          openSheet: false,
-          videoOverride: videoForUpload,
-          momentIdOverride: remoteMomentId,
-        });
+        setRemoteMomentIdsBySessionId((current) => ({
+          ...current,
+          [nextSession.id]: storedMoment.momentId,
+        }));
+
+        const nextMomentStatus =
+          storedMoment.analysisJobStatus === 'processing' ||
+          storedMoment.analysisStarted
+            ? 'processing'
+            : 'queued';
+
+        updateLocalMomentStatus(nextSession.id, nextMomentStatus);
+      } catch (error) {
+        updateLocalMomentStatus(nextSession.id, 'upload_failed');
+        console.warn(
+          'Stored Moment source upload failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+        Alert.alert(
+          '영상 업로드에 실패했습니다',
+          '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+        );
       } finally {
         isUploadingSessionRef.current = false;
         setIsUploadingSession(false);
@@ -1210,6 +1189,17 @@ function isPersistedMomentStatus(
   status: MomentStatus,
 ): status is PersistedMomentStatus {
   return PERSISTED_MOMENT_STATUSES.has(status);
+}
+
+function normalizeRestoredSession(session: Session): Session {
+  if (session.momentStatus !== 'uploading') {
+    return session;
+  }
+
+  return {
+    ...session,
+    momentStatus: 'upload_failed',
+  };
 }
 
 const styles = StyleSheet.create({

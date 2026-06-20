@@ -155,6 +155,74 @@ export async function uploadMomentSourceVideo(
   };
 }
 
+export async function createMomentFromSourceVideo(
+  session: Session,
+  video: SessionVideoAsset,
+): Promise<UploadedMomentSourceVideo & { momentId: string } | undefined> {
+  if (!momentsEndpoint) {
+    return undefined;
+  }
+
+  const formData = new FormData();
+  formData.append('sessionId', session.id);
+  formData.append('activityGroupId', session.activityGroupId);
+  formData.append('occurredAt', session.occurredAt);
+  formData.append('sourceVideoUri', session.videoUri ?? video.uri);
+
+  if (session.title) {
+    formData.append('title', session.title);
+  }
+
+  if (session.notes) {
+    formData.append('notes', session.notes);
+  }
+
+  if (typeof video.duration === 'number' && Number.isFinite(video.duration)) {
+    formData.append('durationMs', String(Math.round(video.duration)));
+  }
+
+  formData.append('video', {
+    uri: video.uri,
+    name: video.fileName ?? `${session.id}.mov`,
+    type: video.mimeType ?? 'video/quicktime',
+  } as unknown as Blob);
+
+  const response = await fetch(`${momentsEndpoint}/from-source-video`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(
+      message ?? `Stored Moment source video upload failed with ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as UploadMomentSourceVideoResponse &
+    CreateMomentResponse;
+  const momentId = asString(data.momentId);
+  const storageProvider = asString(data.storageProvider);
+  const storageBucket = asString(data.storageBucket);
+  const storagePath = asString(data.storagePath);
+
+  if (!momentId || !storageProvider || !storageBucket || !storagePath) {
+    throw new Error('Stored Moment source upload returned invalid data.');
+  }
+
+  return {
+    momentId,
+    storageProvider,
+    storageBucket,
+    storagePath,
+    analysisJobId: asString(data.analysisJobId),
+    analysisJobStatus: asQueuedAnalysisJobStatus(data.analysisJobStatus),
+    analysisStarted: data.analysisStarted === true,
+    uploadedAt: asString(data.uploadedAt),
+  };
+}
+
 export async function updateMomentStatus(
   momentId: string,
   status: PersistedMomentStatus,
