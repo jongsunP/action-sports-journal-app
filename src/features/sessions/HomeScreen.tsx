@@ -790,7 +790,21 @@ export function HomeScreen() {
 
       if (momentId) {
         try {
-          await uploadMomentSourceVideo(momentId, video);
+          const uploadedSourceVideo = await uploadMomentSourceVideo(momentId, video);
+
+          if (
+            uploadedSourceVideo?.analysisStarted ||
+            uploadedSourceVideo?.analysisJobStatus
+          ) {
+            const nextMomentStatus =
+              uploadedSourceVideo.analysisJobStatus === 'processing' ||
+              uploadedSourceVideo.analysisStarted
+                ? 'processing'
+                : 'queued';
+
+            await syncMomentStatus(session.id, nextMomentStatus, momentId);
+            return;
+          }
 
           const queuedJob = await queueStoredSessionEvidenceExtractionWithGemini({
             session,
@@ -807,9 +821,15 @@ export function HomeScreen() {
               ? storageError.message
               : 'Storage-backed evidence queue failed.';
           console.warn(
-            'Storage-backed evidence queue failed; falling back to direct upload:',
+            'Source video upload failed; marking analysis failed:',
             storageMessage,
           );
+          await syncMomentStatus(session.id, 'failed', momentId);
+          Alert.alert(
+            '영상 업로드에 실패했습니다',
+            '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+          );
+          return;
         }
       }
 

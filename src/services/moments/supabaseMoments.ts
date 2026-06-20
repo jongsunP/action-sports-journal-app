@@ -20,6 +20,9 @@ type UploadMomentSourceVideoResponse = {
   storageProvider?: unknown;
   storageBucket?: unknown;
   storagePath?: unknown;
+  analysisJobId?: unknown;
+  analysisJobStatus?: unknown;
+  analysisStarted?: unknown;
   uploadedAt?: unknown;
 };
 
@@ -27,6 +30,9 @@ export type UploadedMomentSourceVideo = {
   storageProvider: string;
   storageBucket: string;
   storagePath: string;
+  analysisJobId?: string;
+  analysisJobStatus?: 'queued' | 'processing';
+  analysisStarted: boolean;
   uploadedAt?: string;
 };
 
@@ -136,6 +142,9 @@ export async function uploadMomentSourceVideo(
     storageProvider,
     storageBucket,
     storagePath,
+    analysisJobId: asString(data.analysisJobId),
+    analysisJobStatus: asQueuedAnalysisJobStatus(data.analysisJobStatus),
+    analysisStarted: data.analysisStarted === true,
     uploadedAt: asString(data.uploadedAt),
   };
 }
@@ -541,6 +550,14 @@ function asMomentStatus(value: unknown): MomentStatus | undefined {
     value === 'completed' ||
     value === 'failed'
   ) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function asQueuedAnalysisJobStatus(value: unknown): 'queued' | 'processing' | undefined {
+  if (value === 'queued' || value === 'processing') {
     return value;
   }
 
