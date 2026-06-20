@@ -291,13 +291,13 @@ function normalizeRemoteEvidenceResult(
     primaryCandidate: {
       name: predictedTrick,
       confidence,
-      evidence: errorMessage ?? 'Supabase에 저장된 최신 evidence result입니다.',
+      evidence: errorMessage ?? '저장된 분석 결과를 불러왔습니다.',
     },
     alternativeCandidates: [],
     family: {
       value: family,
       confidence,
-      evidence: 'Supabase에 저장된 최신 family result입니다.',
+      evidence: '저장된 계열 분석 결과입니다.',
     },
     temporalWindows: asRecord(evidence.temporal_windows) as
       | GeminiEvidenceResult['temporalWindows']
@@ -331,7 +331,7 @@ function normalizeRemoteEvidenceResult(
       evidence: '저장된 landingOutcome 요약은 아직 별도 컬럼으로 보관하지 않습니다.',
     },
     confidence,
-    evidence: errorMessage ?? 'Supabase에서 복원한 최신 evidence result입니다.',
+    evidence: errorMessage ?? '저장된 분석 결과를 불러왔습니다.',
     evidenceWindows: asArray(evidence.evidence_windows) as
       GeminiEvidenceResult['evidenceWindows'],
     observations: asArray(evidence.observations) as GeminiEvidenceResult['observations'],
