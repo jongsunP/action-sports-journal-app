@@ -1,6 +1,9 @@
 import type { GeminiEvidenceResult } from '../../types';
 
-export type RiderFacingConfidenceLabel = '확실' | '가능성 높음' | '확인 필요';
+export type RiderFacingConfidenceLabel =
+  | '근거 충분'
+  | '가능성 있음'
+  | '확인 필요';
 
 export type RiderFacingAnalysis = {
   title: string;
@@ -59,6 +62,7 @@ function getNeedsReview(evidence: GeminiEvidenceResult) {
       evidence.qualityMode === 'degraded' ||
       evidence.consistencyStatus === 'needs_review' ||
       evidence.consistencyStatus === 'inconsistent' ||
+      evidence.uncertainty.level === 'high' ||
       evidence.confidence === 'low' ||
       evidence.primaryCandidate.confidence === 'low' ||
       evidence.primaryCandidate.name.trim() === '확인 필요' ||
@@ -76,12 +80,16 @@ function getConfidenceLabel(
 
   if (
     evidence.confidence === 'high' &&
-    evidence.primaryCandidate.confidence === 'high'
+    evidence.primaryCandidate.confidence === 'high' &&
+    evidence.family.confidence === 'high' &&
+    evidence.approachType.confidence !== 'low' &&
+    evidence.rotationType.confidence !== 'low' &&
+    evidence.uncertainty.level === 'low'
   ) {
-    return '확실';
+    return '근거 충분';
   }
 
-  return '가능성 높음';
+  return '가능성 있음';
 }
 
 function getCandidateLabel(
@@ -99,12 +107,12 @@ function getCandidateLabel(
     return '분석 결과를 확인해 주세요';
   }
 
-  if (confidenceLabel === '확실') {
-    return `${candidate}로 보입니다`;
+  if (confidenceLabel === '근거 충분') {
+    return `${candidate}로 볼 근거가 충분합니다`;
   }
 
-  if (confidenceLabel === '가능성 높음') {
-    return `${candidate} 가능성이 높습니다`;
+  if (confidenceLabel === '가능성 있음') {
+    return `${candidate} 가능성이 있습니다`;
   }
 
   return `${candidate} 검토가 필요합니다`;
@@ -118,14 +126,14 @@ function getSummary(
   const approach = getApproachValue(evidence);
 
   if (confidenceLabel === '확인 필요') {
-    return 'AI가 일부 근거를 확신하지 못했습니다. 아래 요약은 확정 판정이 아니라 확인할 지점입니다.';
+    return '일부 근거가 충분하지 않습니다. 아래 내용은 확정 판정이 아니라 확인할 지점입니다.';
   }
 
   if (approach && isUsableName(family)) {
-    return `${approach} 접근과 ${family} 계열 신호를 중심으로 분석한 결과입니다.`;
+    return `${approach} 접근과 ${toReadableFamily(family)} 신호를 중심으로 정리했습니다.`;
   }
 
-  return '영상에서 보이는 접근, 팝, 회전, 착지 신호를 바탕으로 정리한 요약입니다.';
+  return '영상에서 보이는 접근, 팝, 회전, 착지 신호를 바탕으로 보수적으로 정리했습니다.';
 }
 
 function getApproachSignal(evidence: GeminiEvidenceResult) {
@@ -142,7 +150,7 @@ function getApproachSignal(evidence: GeminiEvidenceResult) {
     return `${approach} 접근 가능성이 있지만 추가 확인이 필요합니다.`;
   }
 
-  return `접근 방향은 ${approach}로 보입니다.`;
+  return `접근 방향은 ${approach} 쪽으로 보입니다.`;
 }
 
 function getRotationSignal(evidence: GeminiEvidenceResult) {
@@ -162,12 +170,12 @@ function getRotationSignal(evidence: GeminiEvidenceResult) {
       rotation.rotationAxis === 'roll_axis' ||
       rotation.rotationAxis === 'flip_axis'
     ) {
-      return '회전 또는 인버트 계열로 볼 수 있는 신호가 관찰됐습니다.';
+      return '회전 또는 인버트로 검토할 만한 신호가 있습니다.';
     }
   }
 
   if (isUsableName(evidence.rotationType.value)) {
-    return `회전 판단은 ${evidence.rotationType.value} 기준으로 검토됐습니다.`;
+    return `회전 판단은 ${toReadableRotation(evidence.rotationType.value)} 기준으로 검토됐습니다.`;
   }
 
   return undefined;
@@ -181,7 +189,7 @@ function getLandingSignal(evidence: GeminiEvidenceResult) {
   }
 
   if (landing?.landingOutcome === 'rides_away') {
-    return '착지는 이어진 것으로 보입니다.';
+    return '착지는 이어간 것으로 보입니다.';
   }
 
   if (landing?.landingOutcome === 'butt_check') {
@@ -189,11 +197,11 @@ function getLandingSignal(evidence: GeminiEvidenceResult) {
   }
 
   if (landing?.landingOutcome === 'fall' || landing?.landingOutcome === 'crash') {
-    return '착지 또는 회복 과정에서 실패 신호가 보입니다.';
+    return '착지 또는 회복 과정에서 무너지는 신호가 보입니다.';
   }
 
   if (isUsableName(evidence.landingOutcome.value)) {
-    return `착지는 ${evidence.landingOutcome.value}로 기록됐습니다.`;
+    return `착지는 ${toReadableLanding(evidence.landingOutcome.value)}로 기록됐습니다.`;
   }
 
   return undefined;
@@ -211,7 +219,7 @@ function getGrabSignal(evidence: GeminiEvidenceResult) {
   }
 
   if (grab.grabDetected === true && grab.contactVisible === true) {
-    return '손과 보드 접촉 가능성이 보여 그랩 여부를 확인할 수 있습니다.';
+    return '손과 보드 접촉 가능성이 있어 그랩 여부를 확인해볼 수 있습니다.';
   }
 
   if (grab.grabDetected === 'unknown' || grab.contactVisible === 'unknown') {
@@ -237,7 +245,7 @@ function getPopSignal(evidence: GeminiEvidenceResult) {
         : undefined;
 
   if (timing && intensity) {
-    return `${timing} ${intensity}이 관찰됐습니다.`;
+    return `${timing} ${intensity}이 보입니다.`;
   }
 
   if (pop.confidence === 'low') {
@@ -260,6 +268,10 @@ function getReviewNotes(evidence: GeminiEvidenceResult, needsReview: boolean) {
     );
   }
 
+  if (evidence.candidateTrace?.downgradedBy.length) {
+    notes.push('일부 안전 기준을 통과하지 못해 기술명을 낮춰 표시했습니다.');
+  }
+
   if (
     evidence.consistencyStatus === 'needs_review' ||
     evidence.consistencyStatus === 'inconsistent'
@@ -269,6 +281,10 @@ function getReviewNotes(evidence: GeminiEvidenceResult, needsReview: boolean) {
 
   if (evidence.confidence === 'low' || evidence.primaryCandidate.confidence === 'low') {
     notes.push('기술명 확신도가 낮아 단정하지 않는 것이 안전합니다.');
+  }
+
+  if (evidence.uncertainty.level === 'high') {
+    notes.push('영상 근거의 불확실성이 높아 결과를 확인용으로 보는 것이 좋습니다.');
   }
 
   if (evidence.qualityMode === 'degraded' || evidence.recoveredFromPartial) {
@@ -299,7 +315,7 @@ function getEdgePracticeCue(evidence: GeminiEvidenceResult) {
   }
 
   if (edge.edgeLoadConfidence === 'high') {
-    return '좋은 엣지 흐름이 보이면 같은 진입 속도와 라인 텐션을 반복해보세요.';
+    return '엣지가 잘 유지된 장면을 기준으로 같은 진입 속도와 라인 텐션을 반복해보세요.';
   }
 
   return undefined;
@@ -313,11 +329,11 @@ function getPopPracticeCue(evidence: GeminiEvidenceResult) {
   }
 
   if (pop.timing === 'early_release' || pop.intensity === 'weak') {
-    return '팝 전에 서두르지 말고 웨이크 정점까지 기다리는지 확인해보세요.';
+    return '팝 전에 서두르지 말고 보드가 웨이크 정점까지 올라가는지 확인해보세요.';
   }
 
   if (pop.popType === 'progressive_pop' && pop.timing === 'on_wake') {
-    return '웨이크 위에서 만들어진 팝 타이밍을 다음 시도에서도 반복해보세요.';
+    return '웨이크 위에서 뜨는 타이밍을 다음 시도에서도 같은 리듬으로 반복해보세요.';
   }
 
   return undefined;
@@ -331,7 +347,7 @@ function getLandingPracticeCue(evidence: GeminiEvidenceResult) {
   }
 
   if (landing.landingOutcome === 'rides_away') {
-    return '착지 후 핸들과 시선이 안정적으로 유지되는지 이어서 확인해보세요.';
+    return '착지 후 핸들을 몸 가까이에 두고 시선이 흔들리지 않는지 확인해보세요.';
   }
 
   if (
@@ -339,7 +355,7 @@ function getLandingPracticeCue(evidence: GeminiEvidenceResult) {
     landing.landingOutcome === 'fall' ||
     landing.landingOutcome === 'crash'
   ) {
-    return '착지에서는 보드가 먼저 닿은 뒤 핸들을 몸 가까이에 두는지 확인해보세요.';
+    return '착지에서는 보드가 먼저 닿은 뒤 핸들이 몸에서 멀어지지 않는지 확인해보세요.';
   }
 
   return undefined;
@@ -380,6 +396,76 @@ function isUsableName(value?: string | null) {
       normalized !== '확인 필요' &&
       normalized !== 'needs_review',
   );
+}
+
+function toReadableFamily(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    normalized.includes('basic') ||
+    normalized.includes('straight') ||
+    normalized.includes('air')
+  ) {
+    return '기본 에어';
+  }
+
+  if (normalized.includes('invert')) {
+    return '인버트 계열';
+  }
+
+  if (normalized.includes('spin')) {
+    return '스핀 계열';
+  }
+
+  if (normalized.includes('grab')) {
+    return '그랩 계열';
+  }
+
+  return value;
+}
+
+function toReadableRotation(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === 'none' || normalized.includes('no rotation')) {
+    return '회전 없음';
+  }
+
+  if (normalized.includes('back roll')) {
+    return '백롤';
+  }
+
+  if (normalized.includes('tantrum')) {
+    return '탠트럼';
+  }
+
+  if (normalized.includes('roll')) {
+    return '롤 축';
+  }
+
+  if (normalized.includes('spin')) {
+    return '스핀';
+  }
+
+  return value;
+}
+
+function toReadableLanding(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === 'rides_away' || normalized === 'clean') {
+    return '이어간 착지';
+  }
+
+  if (normalized === 'butt_check') {
+    return '균형 회복이 필요한 착지';
+  }
+
+  if (normalized === 'fall' || normalized === 'crash') {
+    return '무너진 착지';
+  }
+
+  return value;
 }
 
 function normalizeSentence(value: string) {
