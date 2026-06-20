@@ -3220,6 +3220,11 @@ async function processQueuedEvidenceAnalysisJobFromStorage({
       metadata,
       file,
     });
+
+    await cleanupStoredVideoAfterCompletedAnalysis({
+      analysisJobId,
+      storedVideo,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Stored evidence extraction failed.";
@@ -3230,6 +3235,74 @@ async function processQueuedEvidenceAnalysisJobFromStorage({
       errorMessage: message,
     });
   }
+}
+
+async function cleanupStoredVideoAfterCompletedAnalysis({
+  analysisJobId,
+  storedVideo,
+}: {
+  analysisJobId: string;
+  storedVideo: StoredVideoInput;
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    console.warn("Skipping source video cleanup: Supabase is not configured.");
+    return;
+  }
+
+  const { data: job, error: jobError } = await client
+    .from("analysis_jobs")
+    .select("moment_id,status")
+    .eq("id", analysisJobId)
+    .maybeSingle();
+
+  if (jobError) {
+    console.warn(
+      "Skipping source video cleanup: failed to inspect analysis job:",
+      jobError.message,
+    );
+    return;
+  }
+
+  const momentId = nullableString(job?.moment_id);
+
+  if (job?.status !== "completed" || !momentId) {
+    return;
+  }
+
+  const { error: removeError } = await client.storage
+    .from(storedVideo.bucket)
+    .remove([storedVideo.path]);
+
+  const nextStatus = removeError ? "delete_failed" : "deleted";
+
+  const { error: momentUpdateError } = await client
+    .from("moments")
+    .update({
+      source_video_storage_status: nextStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", momentId);
+
+  if (momentUpdateError) {
+    console.warn(
+      "Source video cleanup status update failed:",
+      momentUpdateError.message,
+    );
+  }
+
+  if (removeError) {
+    console.warn(
+      "Source video cleanup failed after completed analysis:",
+      removeError.message,
+    );
+    return;
+  }
+
+  console.log(
+    `Deleted analyzed source video from Storage: ${storedVideo.bucket}/${storedVideo.path}`,
+  );
 }
 
 async function downloadStoredVideoForEvidence(

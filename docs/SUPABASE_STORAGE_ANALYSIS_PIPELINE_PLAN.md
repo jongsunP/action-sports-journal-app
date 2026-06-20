@@ -45,10 +45,19 @@ The direct multipart `/api/extract-session-evidence` path remains as fallback.
 
 Not implemented yet:
 
-- automatic source object deletion after completed analysis,
 - retention window enforcement,
 - retry/lifecycle cleanup for deleted or missing source objects,
 - remote playback from Storage.
+
+Implemented cleanup policy:
+
+- after stored-video analysis completes and `analysis_jobs.status` is
+  `completed`, Render attempts best-effort deletion of the source object,
+- deletion failure never turns completed analysis into failed analysis,
+- `moments.source_video_storage_status` is updated to `deleted` or
+  `delete_failed`,
+- EvidenceResult, Rider-facing Summary, thumbnail, and local video URI remain
+  valid after source deletion.
 
 ## Problem
 
@@ -414,6 +423,7 @@ pending
 uploaded
 missing
 deleted
+delete_failed
 ```
 
 Recommended new `analysis_jobs` columns:
@@ -644,15 +654,17 @@ queued job
 -> EvidenceResult
 ```
 
-### Remaining: Source Object Lifecycle
+### Completed: Source Object Cleanup
 
-Add lifecycle/delete policy:
+Implemented minimal lifecycle/delete policy:
 
-- completed analysis -> delete source object immediately or after short
-  QA/retry retention window,
-- mark `source_video_storage_status` as `deleted`,
+- completed stored-video analysis -> best-effort delete source object,
+- mark `source_video_storage_status` as `deleted` or `delete_failed`,
 - keep EvidenceResult/Rider-facing Summary intact,
 - if reanalysis is needed after deletion, require reupload.
+
+This is intentionally not a retention scheduler yet. It only handles the common
+successful analysis path.
 
 ### Remaining: Stale Job Rules
 
