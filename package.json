@@ -48,5 +48,12 @@
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-notifications"
+      ]
+    }
+  },
   "private": true
 }
