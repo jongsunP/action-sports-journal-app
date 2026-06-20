@@ -168,9 +168,8 @@ Result:
 - A second API call is not introduced.
 - Coaching should later depend on previous session comparison, rider history,
   progression, and priority selection.
-- Cold Start Loading UX is a known observation. The app can currently show
-  Empty State before Supabase restore completes, then show real data. This is
-  not a data bug, but it can feel like one to the user.
+- Cold Start Loading is implemented. The app separates Loading State from Empty
+  State and shows "기록을 불러오는 중입니다" while remote Moments are being restored.
 - Durable Analysis Pipeline Phase 8 MVP is implemented. New evidence jobs can
   use Supabase Storage as temporary durable analysis input. Verified flow:
   source upload to `moment-videos`, path persistence on `moments` and
@@ -193,13 +192,22 @@ Result:
 - App-facing progress language now separates `대기`, `분석중`, `완료`, and
   `실패`. Stale cleanup failures are not shown with technical job language.
 - Direct multipart evidence upload remains as fallback.
-- Push Notification is an important future UX feature for async analysis but is
-  deferred until after AI Analysis Product Completion.
+- Push Notification MVP is implemented for analysis completion. App startup
+  requests permission and registers an Expo push token; Render stores the token
+  through `/api/push-tokens`; successful EvidenceResult persistence sends a
+  best-effort Expo push. Push failures are warning-only.
+- `supabase/phase9_device_push_tokens.sql` adds `device_push_tokens` and is
+  assumed applied remotely for this checkpoint.
+- Notification tap opens the app. Detail deep link navigation is still
+  unimplemented.
+- `expo-notifications` is a native plugin, so a fresh EAS iOS preview/internal
+  build is required.
 
 Next starting point:
 
-Continue real-video calibration and analysis UX QA before changing Coach,
-prompt/schema, or validator behavior.
+Create and install the notification-enabled iOS preview/internal build. Verify
+permission/token registration, one real upload, completion push delivery, Cold
+Start Loading, and completed restore.
 
 Durable pipeline reference:
 
@@ -437,12 +445,13 @@ What changed today:
 - Node standard is Node 22 LTS.
 - Async analysis transition plan exists.
 
-What remains intentionally not done:
+What remained intentionally not done at that Phase 1 checkpoint:
 
 - No Auth UI.
-- No Storage connection.
+- No Storage connection at that time.
 - No Job Queue.
-- No push notification.
+- No push notification at that time. Current status: analysis completion Push
+  Notification MVP is implemented.
 - No scoring.
 - No coaching expansion.
 - No mobile UX switch to async analysis yet.

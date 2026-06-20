@@ -63,12 +63,12 @@ Result:
 - Current work stays focused on Evidence Extraction, ObservedFacts,
   Validators, CandidateTrace, KnowledgeRules, Rider-facing Summary, and
   Calibration.
-- Push Notification is recognized as an important future async-analysis UX
-  feature, but it is not the current priority.
-- Cold Start Loading UX is a newly observed analysis-product issue: the app can
-  briefly show Empty State before Supabase restore finishes. This is technically
-  normal but can feel like a bug because Loading State and Empty State are not
-  clearly separated yet.
+- Push Notification MVP is implemented for analysis completion. The app
+  registers an Expo push token, Render stores it through `/api/push-tokens`,
+  and completed EvidenceResult persistence triggers a best-effort Expo Push API
+  notification. Push failure is warning-only.
+- Cold Start Loading is implemented. The app now separates Loading State from
+  Empty State and shows "기록을 불러오는 중입니다" while remote Moments are loading.
 - Durable Analysis Pipeline Phase 8 MVP is implemented. New evidence jobs can
   use Supabase Storage as temporary durable analysis input: upload source video
   to `moment-videos`, store paths on `moments` and `analysis_jobs`, let Render
@@ -89,12 +89,19 @@ Result:
 - App-facing progress language now separates `대기`, `분석중`, `완료`, and
   `실패`.
 - Direct multipart upload remains as fallback.
+- `supabase/phase9_device_push_tokens.sql` is the DB migration for push token
+  storage and is assumed applied remotely for this checkpoint.
+- Notification tap currently opens the app only. Detail deep link navigation is
+  not implemented yet.
+- Because `expo-notifications` adds a native plugin, the next iOS
+  preview/internal build is required before device QA.
 
 Next stage:
 
 ```text
-Verify the analysis product loop with real videos.
-Then decide which repeated trust or UX issue deserves the next implementation.
+Build and install the notification-enabled iOS preview/internal build, then
+verify one real upload through completion push, Cold Start Loading, and
+completed restore.
 ```
 
 Durable analysis reference:
@@ -103,7 +110,7 @@ Durable analysis reference:
 docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md
 ```
 
-Cold Start direction:
+Cold Start behavior:
 
 ```text
 app starts
@@ -113,8 +120,7 @@ app starts
 -> no data: show Empty State
 ```
 
-This should be tracked alongside Analysis Progress UX and Push Notification,
-but it is not an immediate fix before calibration QA.
+This is now implemented as part of the async analysis UX baseline.
 
 Update on 2026-06-20, Evidence Calibration Checkpoint:
 

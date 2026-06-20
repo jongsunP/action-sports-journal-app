@@ -247,7 +247,7 @@ Known Analysis Product UX observations:
 
 Cold Start Loading UX:
 
-The current app startup can follow this path:
+The previous app startup could follow this path:
 
 ```text
 app starts
@@ -257,8 +257,9 @@ app starts
 -> real data appears
 ```
 
-This is technically functioning, but the user can perceive it as a bug because
-the app first says "there is no data" and then data appears a moment later.
+This was technically functioning, but the user could perceive it as a bug
+because the app first said "there is no data" and then data appeared a moment
+later.
 
 The principle is:
 
@@ -266,7 +267,7 @@ The principle is:
 Loading State and Empty State must be separate.
 ```
 
-Expected future direction:
+Implemented direction:
 
 ```text
 app starts
@@ -276,9 +277,10 @@ app starts
 -> if no data exists: show Empty State
 ```
 
-This is not an immediate bug fix. It should be handled in the AI Analysis
-Product Completion UX phase after calibration QA clarifies the next highest
-impact issue.
+`a8caf86 feat: add analysis completion notifications and cold start loading`
+implements this separation. Startup now shows "기록을 불러오는 중입니다" while
+remote Moments are loading, and only shows the Empty State after the first
+remote query completes with no data.
 
 Durable Analysis Pipeline observation:
 
@@ -337,9 +339,10 @@ Durable Analysis / Analysis Progress completion:
 The current product objective is stable completion for one real uploaded video:
 upload -> temporary durable input -> stored analysis -> completed restore.
 
-Future UX priority:
+Push Notification MVP:
 
-Push Notification is an important future capability for the analysis product:
+Push Notification is now implemented as a first MVP capability for the async
+analysis product:
 
 ```text
 upload
@@ -349,8 +352,21 @@ upload
 -> open result
 ```
 
-This is a core UX feature for an async AI analysis product, but it is not the
-current priority. It should be evaluated after AI Analysis Product Completion.
+`a8caf86 feat: add analysis completion notifications and cold start loading`
+adds Expo notification registration in the app, `/api/push-tokens` on the
+Render backend, and best-effort Expo Push API delivery after successful
+EvidenceResult persistence. The notification text is:
+
+```text
+분석이 완료되었습니다
+결과를 확인해보세요
+```
+
+`supabase/phase9_device_push_tokens.sql` defines `device_push_tokens`. The
+phase9 migration is assumed applied on the remote Supabase project for this
+checkpoint. Notification tapping opens the app; Detail deep link navigation is
+not implemented yet. Because `expo-notifications` adds a native plugin, a new
+EAS iOS preview/internal build is required before device QA.
 
 Validated product decisions:
 
@@ -628,22 +644,22 @@ Why key decisions were made:
 Current active problem:
 
 ```text
-Async MVP hardening decision
+Preview build and device QA for notification-enabled analysis UX
 ```
 
 Next starting point:
 
-- Decide whether to harden the validated Async MVP with durable video storage
-  before broader usage.
-- Recommended technical next step: Supabase Storage video object ->
-  AnalysisJob references storage path -> worker can retry after process restart.
-- If infrastructure hardening is paused, continue Detail Screen QA and Moment
-  result UX.
+- Install the new iOS preview/internal build that includes
+  `expo-notifications`.
+- Confirm notification permission, Expo push token registration, and completion
+  push delivery after a real analysis.
+- Confirm Cold Start Loading no longer flashes Empty State before remote restore.
+- Detail deep link from notification remains a later enhancement.
 
 Goal:
 
-- Preserve the working standalone iPhone flow while removing the remaining
-  in-process background task fragility.
+- Preserve the durable standalone iPhone analysis flow while making async
+  waiting feel intentional rather than broken.
 
 Secondary priorities:
 
@@ -678,10 +694,13 @@ Architecture:
 - Supabase Moment persistence and latest Evidence restore are wired for the
   Async MVP.
 - No login yet.
-- No cloud video storage yet.
-- No durable queue or retry-safe worker yet.
+- Supabase Storage is used as temporary durable analysis input, not a permanent
+  video archive.
+- Source-video cleanup is best-effort after successful stored-video analysis.
+- Stale queued/processing cleanup is implemented during remote restore.
 - No CDN yet.
 - No production App Store/TestFlight path yet.
+- Detail deep link for push notifications is not implemented yet.
 - AI keys must remain only in Render environment variables and local ignored env
   files.
 

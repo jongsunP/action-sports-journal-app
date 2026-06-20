@@ -214,9 +214,9 @@ Result:
 - A second API call remains out of scope.
 - Prompt/schema/validator changes should wait until real-video calibration
   shows repeated patterns.
-- Cold Start Loading UX is a known observation: startup can briefly show Empty
-  State before Supabase restore finishes. This is technically normal but can
-  look like "data disappeared" to the user.
+- Cold Start Loading is implemented. Startup now separates Loading State from
+  Empty State and shows "기록을 불러오는 중입니다" while remote Moments are being
+  restored.
 - Durable Analysis Pipeline Phase 8 MVP is implemented. Supabase Storage now
   provides temporary durable analysis input for new evidence jobs. The verified
   path is: source video upload -> `moment-videos` object -> `moments`
@@ -241,8 +241,7 @@ Result:
 - App-facing progress language was updated to separate `대기`, `분석중`,
   `완료`, and `실패`. Stale cleanup failures are shown as normal failed
   analysis without exposing technical job terms.
-- Push Notification is classified as an important future async-analysis UX
-  feature:
+- Push Notification MVP is implemented:
 
 ```text
 upload
@@ -252,27 +251,24 @@ upload
 -> open result
 ```
 
-Push is not today's priority. It belongs after the core AI Analysis Product
-Completion loop is trustworthy.
+Implementation notes:
 
-Cold Start Loading UX direction:
-
-```text
-app starts
--> Loading State
--> Supabase query
--> data exists: show real data
--> no data: show Empty State
-```
-
-Do not treat the current behavior as a data bug. Treat it as a Loading State vs
-Empty State separation issue to revisit in the AI Analysis Product Completion
-UX pass.
+- App startup requests notification permission and registers an Expo push token.
+- Render exposes `/api/push-tokens` and sends a best-effort Expo push after
+  successful EvidenceResult persistence.
+- Push failure is warning-only and must not fail analysis.
+- `supabase/phase9_device_push_tokens.sql` adds the `device_push_tokens` table.
+  For this checkpoint, the remote Supabase phase9 migration is assumed applied.
+- Notification tapping opens the app. Detail deep link navigation is not
+  implemented yet.
+- `expo-notifications` is now a native plugin, so a new EAS iOS
+  preview/internal build is required for device QA.
 
 Next stage:
 
-Run real wakeboard clips through the current build and use the calibration
-matrix to decide which analysis UX or trust issue should be fixed next.
+Build and install the notification-enabled iOS preview/internal build. Then run
+one real upload to verify token registration, completion push delivery, Cold
+Start Loading, and durable completed restore.
 
 Durable analysis design:
 
