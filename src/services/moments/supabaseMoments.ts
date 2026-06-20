@@ -26,6 +26,11 @@ type UploadMomentSourceVideoResponse = {
   uploadedAt?: unknown;
 };
 
+type DeleteMomentResponse = {
+  ok?: unknown;
+  storageCleanupFailed?: unknown;
+};
+
 export type UploadedMomentSourceVideo = {
   storageProvider: string;
   storageBucket: string;
@@ -174,6 +179,29 @@ export async function updateMomentStatus(
   const data = (await response.json()) as UpdateMomentStatusResponse;
 
   return asMomentStatus(data.status);
+}
+
+export async function deleteMoment(momentId: string) {
+  if (!momentsEndpoint) {
+    return undefined;
+  }
+
+  const response = await fetch(`${momentsEndpoint}/${momentId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(message ?? `Moment delete failed with ${response.status}`);
+  }
+
+  const data = (await response.json()) as DeleteMomentResponse;
+
+  return {
+    ok: data.ok === true,
+    storageCleanupFailed: data.storageCleanupFailed === true,
+  };
 }
 
 export async function listMoments() {

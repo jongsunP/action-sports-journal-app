@@ -685,6 +685,159 @@ app.get("/api/moments", async (_request, response) => {
   }
 });
 
+app.delete("/api/moments/:momentId", async (request, response) => {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const momentId = getField(request.params.momentId, "");
+
+    if (!isUuid(momentId)) {
+      response.status(400).json({ error: "Invalid moment id." });
+      return;
+    }
+
+    const userId = await getOrCreateDefaultSupabaseUser();
+    const { data: moment, error: momentError } = await client
+      .from("moments")
+      .select(
+        [
+          "id",
+          "user_id",
+          "source_video_storage_bucket",
+          "source_video_storage_path",
+        ].join(","),
+      )
+      .eq("id", momentId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (momentError) {
+      throw new Error(`Failed to read moment before delete: ${momentError.message}`);
+    }
+
+    if (!moment) {
+      response.status(404).json({ error: "Moment not found." });
+      return;
+    }
+
+    const momentRow = moment as unknown as Record<string, unknown>;
+    const { data: analysisJobs, error: analysisJobsError } = await client
+      .from("analysis_jobs")
+      .select("id,input_video_storage_bucket,input_video_storage_path")
+      .eq("moment_id", momentId);
+
+    if (analysisJobsError) {
+      throw new Error(
+        `Failed to read analysis jobs before delete: ${analysisJobsError.message}`,
+      );
+    }
+
+    const storagePathsByBucket = new Map<string, Set<string>>();
+    addMomentStoragePathForDelete(storagePathsByBucket, {
+      bucket: momentRow.source_video_storage_bucket,
+      path: momentRow.source_video_storage_path,
+    });
+
+    for (const analysisJob of analysisJobs ?? []) {
+      addMomentStoragePathForDelete(storagePathsByBucket, {
+        bucket: analysisJob.input_video_storage_bucket,
+        path: analysisJob.input_video_storage_path,
+      });
+    }
+
+    let storageRemovedCount = 0;
+    let storageCleanupFailed = false;
+
+    for (const [bucket, paths] of storagePathsByBucket) {
+      const pathList = Array.from(paths);
+
+      if (pathList.length === 0) {
+        continue;
+      }
+
+      const { error: removeError } = await client.storage
+        .from(bucket)
+        .remove(pathList);
+
+      if (removeError) {
+        storageCleanupFailed = true;
+        console.warn(
+          `Moment source video cleanup failed while deleting ${momentId}:`,
+          removeError.message,
+        );
+      } else {
+        storageRemovedCount += pathList.length;
+      }
+    }
+
+    const now = new Date().toISOString();
+    const { error: clearMomentReferencesError } = await client
+      .from("moments")
+      .update({
+        latest_analysis_job_id: null,
+        latest_evidence_result_id: null,
+        updated_at: now,
+      })
+      .eq("id", momentId)
+      .eq("user_id", userId);
+
+    if (clearMomentReferencesError) {
+      throw new Error(
+        `Failed to clear moment references before delete: ${clearMomentReferencesError.message}`,
+      );
+    }
+
+    const { error: evidenceDeleteError } = await client
+      .from("evidence_results")
+      .delete()
+      .eq("moment_id", momentId);
+
+    if (evidenceDeleteError) {
+      throw new Error(
+        `Failed to delete evidence results: ${evidenceDeleteError.message}`,
+      );
+    }
+
+    const { error: jobsDeleteError } = await client
+      .from("analysis_jobs")
+      .delete()
+      .eq("moment_id", momentId);
+
+    if (jobsDeleteError) {
+      throw new Error(`Failed to delete analysis jobs: ${jobsDeleteError.message}`);
+    }
+
+    const { error: momentDeleteError } = await client
+      .from("moments")
+      .delete()
+      .eq("id", momentId)
+      .eq("user_id", userId);
+
+    if (momentDeleteError) {
+      throw new Error(`Failed to delete moment: ${momentDeleteError.message}`);
+    }
+
+    response.json({
+      ok: true,
+      momentId,
+      storageCleanupFailed,
+      storageRemovedCount,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Moment delete failed.";
+    console.error("Moment delete failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
 function sanitizeEvidenceResultForMomentList(
   evidenceResult: Record<string, unknown> | undefined,
 ) {
@@ -4291,6 +4444,30 @@ function isPositiveNumber(value: unknown) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) && numberValue > 0;
+}
+
+function addMomentStoragePathForDelete(
+  pathsByBucket: Map<string, Set<string>>,
+  input: {
+    bucket: unknown;
+    path: unknown;
+  },
+) {
+  const bucket = nullableString(input.bucket);
+  const path = nullableString(input.path);
+
+  if (!bucket || !path) {
+    return;
+  }
+
+  const existingPaths = pathsByBucket.get(bucket);
+
+  if (existingPaths) {
+    existingPaths.add(path);
+    return;
+  }
+
+  pathsByBucket.set(bucket, new Set([path]));
 }
 
 function nullableString(value: unknown) {

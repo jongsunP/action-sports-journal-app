@@ -30,6 +30,7 @@ import {
   hasConfiguredVideoThumbnailEndpoint,
 } from '../../services/video/createSessionVideoThumbnail';
 import {
+  deleteMoment,
   hasConfiguredSupabaseMoments,
   insertMoment,
   listMoments,
@@ -74,6 +75,7 @@ import type {
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
+const REMOTE_MOMENT_SYNC_TIMEOUT_MS = 8000;
 
 export function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -270,7 +272,7 @@ export function HomeScreen() {
 
     async function loadRemoteMoments() {
       try {
-        const remoteMoments = await listMoments();
+        const remoteMoments = await listMomentsWithTimeout();
 
         if (!isMounted) {
           return;
@@ -319,7 +321,7 @@ export function HomeScreen() {
     let isMounted = true;
 
     const intervalId = setInterval(() => {
-      listMoments()
+      listMomentsWithTimeout()
         .then((remoteMoments) => {
           if (isMounted) {
             syncRemoteMoments(remoteMoments);
@@ -359,7 +361,7 @@ export function HomeScreen() {
       isRefreshing = true;
 
       try {
-        const remoteMoments = await listMoments();
+        const remoteMoments = await listMomentsWithTimeout();
         syncRemoteMoments(remoteMoments);
       } catch (error) {
         console.warn(
@@ -940,6 +942,22 @@ export function HomeScreen() {
     }
   };
 
+  const removeSessionLocally = useCallback((sessionId: string) => {
+    setSessions((current) => current.filter((item) => item.id !== sessionId));
+    setVideosBySessionId((current) => removeRecordKey(current, sessionId));
+    setAnalysisBySessionId((current) => removeRecordKey(current, sessionId));
+    setGeminiEvidenceBySessionId((current) => removeRecordKey(current, sessionId));
+    setUserConfirmedTrickBySessionId((current) => removeRecordKey(current, sessionId));
+    setOpenAiBenchmarkBySessionId((current) => removeRecordKey(current, sessionId));
+    setThumbnailsBySessionId((current) => removeRecordKey(current, sessionId));
+    setRemoteMomentIdsBySessionId((current) => removeRecordKey(current, sessionId));
+
+    if (selectedSessionId === sessionId) {
+      setSelectedSessionId(null);
+      setPlayingVideoSessionId(null);
+    }
+  }, [selectedSessionId]);
+
   const handleDeleteSession = (session: Session) => {
     Alert.alert('영상을 삭제할까요?', '이 영상과 연결된 리뷰 결과가 함께 삭제됩니다.', [
       {
@@ -950,27 +968,27 @@ export function HomeScreen() {
         text: '삭제',
         style: 'destructive',
         onPress: () => {
-          setSessions((current) => current.filter((item) => item.id !== session.id));
-          setVideosBySessionId((current) => removeRecordKey(current, session.id));
-          setAnalysisBySessionId((current) => removeRecordKey(current, session.id));
-          setGeminiEvidenceBySessionId((current) =>
-            removeRecordKey(current, session.id),
-          );
-          setUserConfirmedTrickBySessionId((current) =>
-            removeRecordKey(current, session.id),
-          );
-          setOpenAiBenchmarkBySessionId((current) =>
-            removeRecordKey(current, session.id),
-          );
-          setThumbnailsBySessionId((current) => removeRecordKey(current, session.id));
-          setRemoteMomentIdsBySessionId((current) =>
-            removeRecordKey(current, session.id),
-          );
+          const remoteMomentId = remoteMomentIdsBySessionId[session.id];
 
-          if (selectedSessionId === session.id) {
-            setSelectedSessionId(null);
-            setPlayingVideoSessionId(null);
+          if (!remoteMomentId) {
+            removeSessionLocally(session.id);
+            return;
           }
+
+          deleteMoment(remoteMomentId)
+            .then(() => {
+              removeSessionLocally(session.id);
+            })
+            .catch((error) => {
+              console.warn(
+                'Remote moment delete failed:',
+                error instanceof Error ? error.message : 'Unknown error',
+              );
+              Alert.alert(
+                '삭제에 실패했습니다',
+                '서버 기록을 삭제하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+              );
+            });
         },
       },
     ]);
@@ -3038,6 +3056,25 @@ function removeRecordKey<T>(record: Record<string, T>, key: string) {
   const { [key]: _removed, ...remaining } = record;
 
   return remaining;
+}
+
+async function listMomentsWithTimeout() {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      listMoments(),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Remote moment sync timed out.'));
+        }, REMOTE_MOMENT_SYNC_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 function createLocalSessionId() {
