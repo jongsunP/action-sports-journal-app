@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.jongsunp.actionsportsjournal",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
