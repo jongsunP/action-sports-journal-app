@@ -171,6 +171,10 @@ Result:
 - Cold Start Loading UX is a known observation. The app can currently show
   Empty State before Supabase restore completes, then show real data. This is
   not a data bug, but it can feel like one to the user.
+- Durable Analysis Pipeline is a known architecture gap. Current Supabase jobs
+  are durable, but the video input is not durable unless the app successfully
+  uploads it to Render. The documented recommendation is Supabase Storage for
+  the MVP storage-backed worker path.
 - Push Notification is an important future UX feature for async analysis but is
   deferred until after AI Analysis Product Completion.
 
@@ -178,6 +182,12 @@ Next starting point:
 
 Continue real-video calibration and analysis UX QA before changing Coach,
 prompt/schema, or validator behavior.
+
+Durable pipeline reference:
+
+```text
+docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md
+```
 
 Cold Start Loading UX should be handled by separating:
 

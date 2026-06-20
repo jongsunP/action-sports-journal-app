@@ -217,6 +217,10 @@ Result:
 - Cold Start Loading UX is a known observation: startup can briefly show Empty
   State before Supabase restore finishes. This is technically normal but can
   look like "data disappeared" to the user.
+- Durable Analysis Pipeline is a known architecture gap. Supabase stores the
+  Moment and AnalysisJob, but the backend cannot retry later unless it has a
+  durable video input. Supabase Storage is the recommended MVP storage candidate
+  if stuck queued jobs remain a repeated QA issue.
 - Push Notification is classified as an important future async-analysis UX
   feature:
 
@@ -249,6 +253,12 @@ Next stage:
 
 Run real wakeboard clips through the current build and use the calibration
 matrix to decide which analysis UX or trust issue should be fixed next.
+
+Durable analysis design:
+
+```text
+docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md
+```
 
 ## 2026-06-20 Evidence Calibration Save Point
 

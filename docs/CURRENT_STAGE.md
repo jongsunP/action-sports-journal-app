@@ -69,12 +69,22 @@ Result:
   briefly show Empty State before Supabase restore finishes. This is technically
   normal but can feel like a bug because Loading State and Empty State are not
   clearly separated yet.
+- Durable Analysis Pipeline is now a known architecture question. Current
+  queued jobs are durable in Supabase, but the video payload is not durable
+  unless the app successfully sends it to Render. Supabase Storage is the
+  recommended MVP candidate when this becomes the next implementation priority.
 
 Next stage:
 
 ```text
 Verify the analysis product loop with real videos.
 Then decide which repeated trust or UX issue deserves the next implementation.
+```
+
+Durable analysis reference:
+
+```text
+docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md
 ```
 
 Cold Start direction:

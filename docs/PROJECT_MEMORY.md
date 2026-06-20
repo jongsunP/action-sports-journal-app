@@ -243,6 +243,7 @@ Known Analysis Product UX observations:
 1. Analysis Progress UX
 2. Cold Start Loading UX
 3. Push Notification
+4. Durable Analysis Pipeline / video storage
 
 Cold Start Loading UX:
 
@@ -278,6 +279,25 @@ app starts
 This is not an immediate bug fix. It should be handled in the AI Analysis
 Product Completion UX phase after calibration QA clarifies the next highest
 impact issue.
+
+Durable Analysis Pipeline observation:
+
+Build 8 confirmed that Gemini Pro analysis works, but it also exposed the
+current async limitation. The app can create a durable Moment and queued
+AnalysisJob before the backend has a durable copy of the video. If the app is
+closed, the network fails, or the multipart evidence request does not complete,
+the job can remain queued even though the backend has no video payload to
+process later.
+
+Current conclusion:
+
+```text
+Durable job record without durable video input is not true durable async.
+```
+
+The likely MVP infrastructure path is Supabase Storage, because the project
+already uses Supabase for Moment, AnalysisJob, and EvidenceResult state. See
+`docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md`.
 
 Future UX priority:
 
