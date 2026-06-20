@@ -104,6 +104,50 @@ At the time this checkpoint was updated, local `master` was pushed to
 
 ## Today's Conclusions
 
+## 2026-06-20 Evidence Calibration Checkpoint
+
+Problem:
+
+The current app can already produce and display a rider-facing analysis, but
+the team needs a disciplined way to decide what to tune next. Without that, the
+project could overfit prompt/schema/validator changes to whichever clip was
+tested most recently.
+
+Why it mattered:
+
+The current product stage is not AI Coach. It is still the foundation layer:
+identify what happened, validate the evidence, preserve uncertainty, and make
+the result readable. That foundation should be calibrated with multiple real
+videos before adding coaching or a second AI call.
+
+Decision:
+
+- Keep the normal path at one Gemini Pro Evidence Extraction call per Moment.
+- Treat Rider-facing Analysis Summary as post-processing, not final coaching.
+- Keep AI Coach and second API call out of scope for now.
+- Use the evidence calibration matrix as the next QA loop.
+- Do not change prompt/schema/validators until repeated real-video patterns
+  justify it.
+
+Implementation result:
+
+- Rider-facing Analysis Summary exists and uses conservative labels:
+  `근거 충분`, `가능성 있음`, `확인 필요`.
+- User-facing fallback copy no longer exposes internal storage names such as
+  Supabase.
+- Session sync restore work has been split into helpers and
+  `useSyncRemoteMoments`.
+- `docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md` exists as the next QA
+  artifact.
+- Latest checkpoint: `cc01177`.
+
+Next starting point:
+
+```text
+Run 5 to 10 real wakeboard clips through the current app, record the output in
+the calibration matrix, and only then choose targeted post-processing changes.
+```
+
 ## 2026-06-20 Evidence Analysis Boundary Checkpoint
 
 Problem:

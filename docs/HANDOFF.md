@@ -159,6 +159,59 @@ Local path:
 
 ## Today's Conclusions
 
+## 2026-06-20 Evidence Calibration Save Point
+
+Problem:
+
+The product reached a useful analysis stage: one Gemini Pro call can create
+EvidenceResult data, validators can downgrade risky interpretations, and the
+Detail screen can show a rider-facing summary. The remaining risk is that
+future changes could be driven by a single clip instead of a repeated pattern.
+
+Why it mattered:
+
+Action Sports Journal is trying to become a trustworthy wakeboard knowledge
+system, not a demo that sounds confident. If prompt/schema/validator changes
+are made from one isolated result, the analysis may improve for that one video
+while regressing for other real riding clips.
+
+Decision:
+
+Keep the default upload path inside the Gemini one-call Evidence Extraction
+boundary. Do not implement AI Coach and do not add a second API call yet. Use
+real-video calibration as the next product loop.
+
+Implementation:
+
+- Rider-facing Analysis Summary is implemented above detailed evidence.
+- Confidence wording is conservative:
+  - `근거 충분`
+  - `가능성 있음`
+  - `확인 필요`
+- User-facing fallback text no longer exposes internal storage names such as
+  Supabase.
+- Session restore/sync code is separated into focused patch helpers and
+  `useSyncRemoteMoments`.
+- `docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md` now defines the QA table
+  for real-video analysis calibration.
+
+Result:
+
+- Latest checkpoint: `cc01177`.
+- Current stage: Evidence Extraction -> post-processing -> Rider-facing
+  Analysis Summary.
+- AI Coach is still not implemented.
+- A second API call is still not part of the default upload flow.
+
+Next stage:
+
+```text
+Upload 5 to 10 real wakeboard videos.
+Record raw candidate, ObservedFacts, Validator result, CandidateTrace, and
+Rider-facing Summary in the calibration matrix.
+Only improve prompt/schema/validators after repeated patterns appear.
+```
+
 ## 2026-06-20 Rider-facing Analysis Checkpoint
 
 Problem:

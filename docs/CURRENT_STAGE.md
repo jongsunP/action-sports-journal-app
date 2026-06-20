@@ -14,6 +14,52 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Update on 2026-06-20, Evidence Calibration Checkpoint:
+
+Problem:
+
+The app now shows a rider-facing analysis summary, but the product should not
+keep tuning prompts, schemas, or validators from a single surprising result.
+One-off fixes can make the system look better on one clip while making the
+overall wakeboard analysis less trustworthy.
+
+Decision:
+
+Treat the current product as a Gemini one-call Evidence Extraction system with
+post-processing:
+
+```text
+one uploaded Moment
+-> one Gemini Pro Evidence Extraction call
+-> ObservedFacts
+-> Validators / Taxonomy / CandidateTrace / KnowledgeRules
+-> Rider-facing Analysis Summary
+```
+
+Do not implement AI Coach yet. Do not introduce a second API call yet. Gather
+real-video calibration evidence first.
+
+Current result:
+
+- Rider-facing Analysis Summary is implemented.
+- Confidence wording has been made more conservative:
+  `근거 충분`, `가능성 있음`, `확인 필요`.
+- User-facing fallback text no longer exposes internal storage names such as
+  Supabase.
+- Session sync restore logic has been split into focused patch helpers and
+  `useSyncRemoteMoments`.
+- Evidence calibration matrix exists at
+  `docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md`.
+- Latest checkpoint: `cc01177`.
+
+Next stage:
+
+```text
+Upload and analyze 5 to 10 real wakeboard videos.
+Record the results in the calibration matrix.
+Only then decide whether wording, validators, prompt, or schema need changes.
+```
+
 Update on 2026-06-20, Rider-facing Analysis:
 
 The current AI stage is not "AI Coach" yet.

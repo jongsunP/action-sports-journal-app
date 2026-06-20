@@ -72,7 +72,16 @@ Current AI product boundary:
   evidence, and turning it into rider-readable analysis.
 - A future AI Coach layer should be designed separately after the analysis
   layer is trustworthy enough.
-- Latest checkpoint for this boundary: `0c216eb`.
+- The current confidence wording avoids the stronger "확실" label and uses
+  `근거 충분`, `가능성 있음`, and `확인 필요`.
+- User-facing fallback copy no longer exposes internal storage names such as
+  Supabase.
+- Session sync responsibilities have been split into focused patch helpers and
+  `useSyncRemoteMoments` so the Home screen is less responsible for remote
+  restore mechanics.
+- The next validation loop is real-video calibration using
+  `docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md`.
+- Latest checkpoint for this boundary: `cc01177`.
 
 Detailed status documents:
 
@@ -557,10 +566,11 @@ resume point and keep changes scoped.
 Current resume instruction:
 
 ```text
-Start from the validated Evidence Extraction + Rider-facing Analysis Summary
-stage. Do not add a second AI Coach call yet. First decide whether the next
-step is more evidence post-processing calibration with real videos, durable
-video storage / retry-safe jobs, or a dedicated AI Coach design document.
+Start from the validated Gemini one-call Evidence Extraction + Rider-facing
+Analysis Summary stage. Do not implement AI Coach or add a second API call yet.
+Upload and review 5 to 10 real wakeboard videos, record each result in
+docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md, and only change
+prompt/schema/validators after repeated patterns appear.
 ```
 
 ## Save Point Procedure
