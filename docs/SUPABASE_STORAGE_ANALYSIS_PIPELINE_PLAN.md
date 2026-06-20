@@ -17,6 +17,39 @@ alive.
 It does not implement code, run migrations, create buckets, change
 infrastructure, or modify environment variables.
 
+## Current Implementation Status
+
+Phase 8 MVP is implemented and pushed in:
+
+```text
+306b3ca feat: add storage-backed evidence analysis path
+```
+
+Verified local E2E path:
+
+```text
+POST /api/moments
+-> POST /api/moments/:momentId/source-video
+-> Supabase Storage moment-videos object created
+-> moments.source_video_storage_* updated
+-> analysis_jobs.input_video_storage_* updated
+-> POST /api/moments/:momentId/analyze-stored-video
+-> Render downloads video from Storage
+-> Gemini Evidence Extraction
+-> evidence_results insert
+-> moments.status completed
+-> app restore can read completed result
+```
+
+The direct multipart `/api/extract-session-evidence` path remains as fallback.
+
+Not implemented yet:
+
+- automatic source object deletion after completed analysis,
+- retention window enforcement,
+- retry/lifecycle cleanup for deleted or missing source objects,
+- remote playback from Storage.
+
 ## Problem
 
 Build 8 confirmed that real Gemini Pro analysis works, but it also showed the
@@ -543,9 +576,27 @@ During migration, do not assume every queued job is retryable. A queued job is
 retryable only when it has an input storage path or the app can still upload
 the local video.
 
-## Minimum Implementation Path
+## Implemented Phase 8 Path
 
-### Phase 1: Schema Design
+Current implemented path:
+
+```text
+select video
+-> create Moment
+-> upload video through Render to Supabase Storage
+-> mark Moment and AnalysisJob with storage path
+-> queue stored-video analysis
+-> Render downloads storage object
+-> existing Gemini Evidence Extraction path runs
+-> EvidenceResult persists
+-> app polling/restore reads completed result
+```
+
+Direct multipart upload is still available as fallback during migration.
+
+## Remaining Implementation Path
+
+### Completed: Schema Design
 
 Use the Phase 8 migration draft:
 
@@ -553,44 +604,38 @@ Use the Phase 8 migration draft:
 supabase/phase8_storage_backed_analysis.sql
 ```
 
-Do not apply until reviewed.
+This migration has been applied in the remote Supabase DB.
 
-### Phase 2: Bucket Setup Plan
+### Completed: Bucket Setup
 
-Prepare a manual setup checklist:
+The private `moment-videos` bucket exists and was verified private.
 
-- create private `moment-videos` bucket,
-- confirm upload limit,
-- confirm signed URL behavior,
-- confirm service-role download path,
-- document retention policy.
+### Completed: Upload Endpoint
 
-### Phase 3: Upload Target Endpoint
-
-Add Render endpoint:
+Implemented Render endpoint:
 
 ```text
-POST /api/video-upload-targets
+POST /api/moments/:momentId/source-video
 ```
 
-It should return a signed upload target and storage path.
+The endpoint receives the source video, uploads it to Storage using the server
+service-role path, and stores the resulting path on the Moment and AnalysisJob.
 
-### Phase 4: App Upload Step
+### Completed: App Upload Step
 
-Update app upload flow:
+Implemented app flow:
 
 ```text
 select video
 -> local thumbnail
--> create Moment or upload target
--> upload video to Storage
--> mark storage uploaded
--> queue analysis
+-> create Moment
+-> upload source video through Render to Storage
+-> queue stored-video analysis
 ```
 
-### Phase 5: Worker Reads Storage
+### Completed: Worker Reads Storage
 
-Change analysis processing:
+Implemented analysis processing:
 
 ```text
 queued job
@@ -599,15 +644,27 @@ queued job
 -> EvidenceResult
 ```
 
-### Phase 6: Stale Job Rules
+### Remaining: Source Object Lifecycle
+
+Add lifecycle/delete policy:
+
+- completed analysis -> delete source object immediately or after short
+  QA/retry retention window,
+- mark `source_video_storage_status` as `deleted`,
+- keep EvidenceResult/Rider-facing Summary intact,
+- if reanalysis is needed after deletion, require reupload.
+
+### Remaining: Stale Job Rules
 
 Add cleanup policy:
 
 - queued with no storage path after grace period -> failed/abandoned,
 - queued with storage path -> retryable,
+- queued/processing with missing/deleted source object -> failed or reupload
+  required,
 - processing past timeout -> retryable or failed based on attempts.
 
-### Phase 7: UX Alignment
+### Remaining: UX Alignment
 
 Update UI copy/status after backend durability exists:
 

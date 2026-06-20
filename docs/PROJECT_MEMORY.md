@@ -295,9 +295,10 @@ Current conclusion:
 Durable job record without durable video input is not true durable async.
 ```
 
-The likely MVP infrastructure path is Supabase Storage, because the project
-already uses Supabase for Moment, AnalysisJob, and EvidenceResult state. See
-`docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md`.
+The Phase 8 MVP path now uses Supabase Storage because the project already
+uses Supabase for Moment, AnalysisJob, and EvidenceResult state. See
+`docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md` and
+`docs/SUPABASE_STORAGE_ANALYSIS_PIPELINE_PLAN.md`.
 
 Storage policy decision:
 
@@ -309,6 +310,17 @@ the thumbnail, EvidenceResult, and Rider-facing Summary. After analysis
 completes, the Storage source object should be eligible for deletion
 immediately or after a short QA/retry retention window. Reanalysis after source
 deletion may require the rider to reupload the original video.
+
+Implementation status:
+
+Storage-backed evidence analysis path is implemented and pushed in
+`306b3ca feat: add storage-backed evidence analysis path`. Local E2E verified:
+source video upload to `moment-videos`, `moments.source_video_storage_*`
+update, `analysis_jobs.input_video_storage_*` update, stored-video analysis
+endpoint, Storage download by Render, Gemini Evidence Extraction,
+`evidence_results` persistence, and completed Moment restore. The direct
+multipart upload path remains as fallback. Storage object deletion after
+analysis is not implemented yet.
 
 Future UX priority:
 

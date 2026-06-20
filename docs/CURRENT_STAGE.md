@@ -69,16 +69,19 @@ Result:
   briefly show Empty State before Supabase restore finishes. This is technically
   normal but can feel like a bug because Loading State and Empty State are not
   clearly separated yet.
-- Durable Analysis Pipeline is now a known architecture question. Current
-  queued jobs are durable in Supabase, but the video payload is not durable
-  unless the app successfully sends it to Render. Supabase Storage is the
-  recommended MVP candidate when this becomes the next implementation priority.
+- Durable Analysis Pipeline Phase 8 MVP is implemented. New evidence jobs can
+  use Supabase Storage as temporary durable analysis input: upload source video
+  to `moment-videos`, store paths on `moments` and `analysis_jobs`, let Render
+  download the stored object, run Gemini Evidence Extraction, and restore the
+  completed EvidenceResult. Local E2E succeeded.
 - Storage policy is explicit: Supabase Storage is temporary durable
   analysis-input storage, not permanent video archive storage. Local video URI
   remains the playback source when available. If local video is unavailable,
   the app should still present thumbnail and analysis results rather than
   trying to replay the Storage source object. Source objects should be deleted
   after successful analysis or after a short QA/retry retention window.
+- Direct multipart upload remains as fallback. Storage object deletion after
+  completed analysis is still not implemented.
 
 Next stage:
 

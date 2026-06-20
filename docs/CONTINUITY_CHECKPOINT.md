@@ -171,10 +171,12 @@ Result:
 - Cold Start Loading UX is a known observation. The app can currently show
   Empty State before Supabase restore completes, then show real data. This is
   not a data bug, but it can feel like one to the user.
-- Durable Analysis Pipeline is a known architecture gap. Current Supabase jobs
-  are durable, but the video input is not durable unless the app successfully
-  uploads it to Render. The documented recommendation is Supabase Storage for
-  the MVP storage-backed worker path.
+- Durable Analysis Pipeline Phase 8 MVP is implemented. New evidence jobs can
+  use Supabase Storage as temporary durable analysis input. Verified flow:
+  source upload to `moment-videos`, path persistence on `moments` and
+  `analysis_jobs`, stored-video analysis endpoint, Render Storage download,
+  Gemini Evidence Extraction, `evidence_results` persistence, and completed
+  restore.
 - Storage policy is explicit: Supabase Storage is temporary durable
   analysis-input storage, not permanent source-video archive storage. App
   playback should use local video URI when available. If local video is no
@@ -182,6 +184,8 @@ Result:
   a valid restored state. Storage source objects should be deletable after
   successful analysis or after a short QA/retry retention window; reanalysis
   may require reuploading the original video.
+- Direct multipart evidence upload remains as fallback. Storage object deletion
+  after completed analysis is not implemented yet.
 - Push Notification is an important future UX feature for async analysis but is
   deferred until after AI Analysis Product Completion.
 
