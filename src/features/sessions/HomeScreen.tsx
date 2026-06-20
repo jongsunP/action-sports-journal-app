@@ -30,7 +30,6 @@ import {
   hasConfiguredSupabaseMoments,
   insertMoment,
   listMoments,
-  type RemoteMomentRecord,
   updateMomentStatus,
 } from '../../services/moments';
 import {
@@ -59,14 +58,7 @@ import {
   savePersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
-import {
-  applyRemoteMomentIds,
-  applyRemoteEvidence,
-  applyRemoteSessions,
-  applyRemoteThumbnails,
-  applyRemoteVideos,
-  buildRemoteMomentSessionIdMap,
-} from './sessionSyncPatches';
+import { useSyncRemoteMoments } from './useSyncRemoteMoments';
 
 import type {
   AnalysisResult,
@@ -132,56 +124,15 @@ export function HomeScreen() {
   const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] =
     useState(false);
 
-  const syncRemoteMoments = useCallback(
-    (remoteMoments: RemoteMomentRecord[]) => {
-      const sessionIdByRemoteMomentId = buildRemoteMomentSessionIdMap({
-        remoteMomentIdsBySessionId,
-        remoteMoments,
-        sessions,
-      });
-
-      setSessions((current) =>
-        applyRemoteSessions({
-          current,
-          remoteMoments,
-          sessionIdByRemoteMomentId,
-        }),
-      );
-
-      setRemoteMomentIdsBySessionId((current) =>
-        applyRemoteMomentIds({
-          current,
-          remoteMoments,
-          sessionIdByRemoteMomentId,
-        }),
-      );
-
-      setVideosBySessionId((current) =>
-        applyRemoteVideos({
-          current,
-          remoteMoments,
-          sessionIdByRemoteMomentId,
-        }),
-      );
-
-      setGeminiEvidenceBySessionId((current) =>
-        applyRemoteEvidence({
-          current,
-          remoteMoments,
-          sessionIdByRemoteMomentId,
-        }),
-      );
-
-      setThumbnailsBySessionId((current) =>
-        applyRemoteThumbnails({
-          current,
-          remoteMoments,
-          sessionIdByRemoteMomentId,
-        }),
-      );
-    },
-    [remoteMomentIdsBySessionId, sessions],
-  );
+  const syncRemoteMoments = useSyncRemoteMoments({
+    remoteMomentIdsBySessionId,
+    sessions,
+    setGeminiEvidenceBySessionId,
+    setRemoteMomentIdsBySessionId,
+    setSessions,
+    setThumbnailsBySessionId,
+    setVideosBySessionId,
+  });
 
   useEffect(() => {
     let isMounted = true;
