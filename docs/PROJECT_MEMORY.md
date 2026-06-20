@@ -377,6 +377,32 @@ checkpoint. Notification tapping opens the app; Detail deep link navigation is
 not implemented yet. Because `expo-notifications` adds a native plugin, a new
 EAS iOS preview/internal build is required before device QA.
 
+Build 20 closeout:
+
+Build 20 is the current preview/internal handoff build for the next QA session.
+It includes the Build 19-validated durable analysis, push, restore, deletion,
+and progress messaging flow, plus two final UX polish changes:
+
+- Remote Moment Detail now shows a stored thumbnail when the original local
+  video URI is unavailable.
+- Detail edge-swipe dismiss is intentionally paused because the current
+  full-screen modal structure made the gesture feel unnatural around video and
+  scroll areas.
+
+The next session should start by installing Build 20 and verifying:
+
+1. Thumbnail fallback on a Moment uploaded from a different device.
+2. Delete-in-progress feedback.
+3. Analysis waiting copy for long Gemini runs.
+4. Push delivery.
+5. Result restore after app relaunch.
+
+Performance timing and bottleneck analysis should wait until real QA data is
+allowed to accumulate. Do not auto-clear QA data after builds. By default keep
+`moments`, `analysis_jobs`, `evidence_results`, and `device_push_tokens` for
+analysis-time measurement, calibration, and real usage pattern review. Only
+delete QA data when the Founder explicitly requests "초기화" or "DB 비우기".
+
 Validated product decisions:
 
 - Large real thumbnails improve perceived product quality.

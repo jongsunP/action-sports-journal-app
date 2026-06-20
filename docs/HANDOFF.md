@@ -271,11 +271,49 @@ Implementation notes:
 - `expo-notifications` is now a native plugin, so a new EAS iOS
   preview/internal build is required for device QA.
 
+Build 20 handoff:
+
+Build 20 has been created as the next preview/internal QA build. It is the
+handoff point for the next session; do not start additional implementation
+before installing and checking it on the device.
+
+Included status:
+
+- Build 19 validated durable analysis, Push, completed restore, deletion sync,
+  and app boot loading.
+- Analysis waiting copy now explains that Gemini can take a few minutes and
+  that Push can notify the rider after closing the app.
+- Deletion has immediate in-app feedback through a deleting/disabled state.
+- Remote Detail thumbnail fallback is implemented: if a Moment restores without
+  a local video URI but has a saved thumbnail, Detail shows the thumbnail above
+  the analysis instead of only a missing-video message.
+- Detail edge-swipe dismiss is paused. The current modal felt more like a
+  full-screen route than a floating card, and the gesture conflicted with video
+  and scroll expectations. Revisit this later in a broader Detail navigation UX
+  pass.
+
+Next session QA checklist:
+
+1. Install Build 20.
+2. Upload a real video on the iPhone.
+3. Confirm Push delivery and completed restore.
+4. Confirm thumbnail fallback by opening the same remote Moment from a context
+   without the local video URI.
+5. Confirm delete-in-progress feedback and remote deletion.
+
+QA data policy:
+
+Do not automatically reset the database after preview/internal builds. Keep QA
+data by default for analysis-time measurement, calibration, and usage-pattern
+review. During build reports, report counts only:
+`moments`, `analysis_jobs`, `evidence_results`, and `device_push_tokens`.
+Delete only when the Founder explicitly requests reset/initialization.
+
 Next stage:
 
-Build and install the notification-enabled iOS preview/internal build. Then run
-one real upload to verify token registration, completion push delivery, Cold
-Start Loading, and durable completed restore.
+Install Build 20 and run device QA. Verify thumbnail fallback, delete feedback,
+analysis waiting copy, Push delivery, and completed result restore before
+starting new implementation work.
 
 Durable analysis design:
 

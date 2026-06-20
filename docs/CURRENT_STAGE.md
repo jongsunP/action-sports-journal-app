@@ -105,12 +105,40 @@ Result:
 - Because `expo-notifications` adds a native plugin, the next iOS
   preview/internal build is required before device QA.
 
+Build 20 status:
+
+Build 20 is created and is the next device QA starting point. This build should
+be installed and checked before any new feature work.
+
+Build 20 includes:
+
+- Build 19 durable analysis, push, restore, and deletion sync flow.
+- Improved analysis waiting copy for long Gemini runs.
+- Delete-in-progress feedback.
+- Detail thumbnail fallback for remote Moments that no longer have a local
+  video URI.
+
+Deferred:
+
+- Detail edge-swipe dismiss. The first implementation worked mechanically but
+  felt unnatural in the current full-screen detail structure, so it is paused
+  until a later Detail navigation/gesture pass.
+- AI accuracy issues such as toeside/heelside calibration remain in the
+  Calibration stage, not in this Build 20 UX handoff.
+
+QA data policy:
+
+Preview/Internal build creation no longer implies automatic database reset.
+Keep DB records by default so analysis timing, performance trends, calibration,
+and real usage patterns can be reviewed. Only clear data when explicitly
+requested by the Founder. Build reports should include counts for `moments`,
+`analysis_jobs`, `evidence_results`, and `device_push_tokens`.
+
 Next stage:
 
 ```text
-Build and install the notification-enabled iOS preview/internal build, then
-verify one real upload through completion push, Cold Start Loading, and
-completed restore.
+Install Build 20, then verify thumbnail fallback, delete feedback, analysis
+waiting copy, Push delivery, and completed result restore on the device.
 ```
 
 Durable analysis reference:

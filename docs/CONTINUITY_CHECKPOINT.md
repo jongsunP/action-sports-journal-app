@@ -212,11 +212,46 @@ Result:
 - `expo-notifications` is a native plugin, so a fresh EAS iOS preview/internal
   build is required.
 
+Build 20 closeout checkpoint:
+
+Build 20 is ready for the next session's installation and QA. The current
+session stops at build creation; actual device installation and QA continue in
+the next session.
+
+Included in Build 20:
+
+- Durable analysis, Push, restore, deletion sync, and Boot Loading from the
+  Build 19 line.
+- Improved waiting copy for 1-5 minute Gemini analysis runs.
+- Delete-in-progress feedback.
+- Detail thumbnail fallback for remote Moments when the original local video is
+  unavailable.
+
+Explicitly deferred:
+
+- Detail gesture dismiss. The edge-swipe experiment is paused because it felt
+  awkward in the current full-screen Detail layout.
+- AI accuracy/calibration questions such as toeside vs heelside. These belong
+  to the Calibration stage after real examples accumulate.
+
+Next session starts with Build 20 QA:
+
+1. Install Build 20.
+2. Verify thumbnail fallback.
+3. Verify delete feedback.
+4. Verify analysis waiting copy.
+5. Verify Push.
+6. Verify completed result restore.
+
+Performance/bottleneck analysis should wait until completed QA rows accumulate.
+The database must not be automatically cleared after builds anymore. Report
+counts only unless the Founder explicitly asks for reset/initialization.
+
 Next starting point:
 
-Create and install the notification-enabled iOS preview/internal build. Verify
-permission/token registration, one real upload, completion push delivery, Cold
-Start Loading, and completed restore.
+Install Build 20 and run device QA. Verify thumbnail fallback, delete feedback,
+analysis waiting copy, Push delivery, and completed result restore. Do not
+auto-clear DB data before or after the QA unless explicitly requested.
 
 Durable pipeline reference:
 
