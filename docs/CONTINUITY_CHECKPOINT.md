@@ -175,6 +175,13 @@ Result:
   are durable, but the video input is not durable unless the app successfully
   uploads it to Render. The documented recommendation is Supabase Storage for
   the MVP storage-backed worker path.
+- Storage policy is explicit: Supabase Storage is temporary durable
+  analysis-input storage, not permanent source-video archive storage. App
+  playback should use local video URI when available. If local video is no
+  longer available, thumbnail plus EvidenceResult/Rider-facing Summary is still
+  a valid restored state. Storage source objects should be deletable after
+  successful analysis or after a short QA/retry retention window; reanalysis
+  may require reuploading the original video.
 - Push Notification is an important future UX feature for async analysis but is
   deferred until after AI Analysis Product Completion.
 

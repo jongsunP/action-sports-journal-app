@@ -73,6 +73,12 @@ Result:
   queued jobs are durable in Supabase, but the video payload is not durable
   unless the app successfully sends it to Render. Supabase Storage is the
   recommended MVP candidate when this becomes the next implementation priority.
+- Storage policy is explicit: Supabase Storage is temporary durable
+  analysis-input storage, not permanent video archive storage. Local video URI
+  remains the playback source when available. If local video is unavailable,
+  the app should still present thumbnail and analysis results rather than
+  trying to replay the Storage source object. Source objects should be deleted
+  after successful analysis or after a short QA/retry retention window.
 
 Next stage:
 

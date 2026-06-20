@@ -3,7 +3,16 @@
 ## Purpose
 
 This document turns the durable analysis pipeline decision into an
-implementation-ready plan for Supabase Storage.
+implementation-ready plan for Supabase Storage as temporary durable analysis
+input storage.
+
+Product boundary:
+
+Supabase Storage is not the product's permanent video library. It is a
+reliability layer for Evidence Extraction. The app remains local-video-first
+for playback, while Storage exists so Render can download the input video even
+if the app has already closed or the original upload request is no longer
+alive.
 
 It does not implement code, run migrations, create buckets, change
 infrastructure, or modify environment variables.
@@ -138,6 +147,29 @@ to:
 analysis_job_id + storage_path
 ```
 
+The `storage_path` is a temporary analysis input reference. It should not be
+treated as a promise that the app can replay the original video forever.
+
+## App Playback Policy
+
+The app should separate video playback from analysis persistence:
+
+```text
+local video uri exists
+-> play local video
+
+local video uri missing
+-> do not try to replay the Storage source video by default
+-> show thumbnail + EvidenceResult + Rider-facing Summary
+```
+
+Missing original video playback is a normal state. The product value should
+remain available through the thumbnail, analysis result, observed facts, and
+rider-facing summary.
+
+If the rider wants reanalysis after the temporary Storage object has been
+deleted, they may need to reselect or reupload the original video.
+
 ## Change Impact
 
 ## App Changes
@@ -266,7 +298,7 @@ unstable.
 
 ### Storage Bucket
 
-Create a private bucket for source videos.
+Create a private bucket for temporary source videos used for analysis input.
 
 Recommended bucket:
 
@@ -638,10 +670,17 @@ Source videos can become expensive if retained forever.
 MVP needs a retention decision:
 
 ```text
-keep source videos for QA period
-or delete after analysis completes
-or keep only user-favorited clips
+delete after analysis completes
+or keep source videos for a short QA/retry period
+then delete
 ```
+
+Default policy:
+
+Source videos should be deleted after they are no longer logically needed for
+analysis. For MVP, this can mean immediate deletion after successful Evidence
+Extraction, or short retention for QA/retry. Permanent retention is explicitly
+not the default.
 
 ### Privacy
 

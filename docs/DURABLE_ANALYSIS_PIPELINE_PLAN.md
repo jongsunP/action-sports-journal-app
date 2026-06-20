@@ -3,7 +3,14 @@
 ## Purpose
 
 This document evaluates whether Action Sports Journal needs durable video
-storage to make the analysis pipeline reliable.
+input storage to make the analysis pipeline reliable.
+
+Important product decision:
+
+Action Sports Journal is not a permanent source-video archive. The purpose of
+video input storage is analysis reliability, not long-term video hosting. The
+source video should be treated as temporary durable input that allows Render to
+finish or retry Gemini Evidence Extraction after the app upload phase.
 
 It is a design document only. It does not create infrastructure, change code,
 add migrations, or modify environment variables.
@@ -190,7 +197,7 @@ or:
 moments.source_video_storage_path
 ```
 
-### Why storage is required
+### Why temporary input storage is required
 
 Gemini needs access to the actual video bytes. If the app is closed and the
 server has no stored copy or retrievable URL, there is nothing to analyze.
@@ -207,15 +214,19 @@ job record
 The project already has durable job records and durable outputs. It is missing
 the durable input.
 
+This does not mean the product should keep source videos forever. The durable
+input only needs to survive long enough for analysis to complete, fail safely,
+or be retried within the MVP retention window.
+
 ## Options
 
 ## Option 1: Supabase Storage
 
 ### Summary
 
-Use Supabase Storage as the first durable video store. The app uploads the
-source video to a private bucket, then Render processes jobs by reading the
-stored object.
+Use Supabase Storage as the first temporary durable analysis-input store. The
+app uploads the source video to a private bucket, then Render processes jobs by
+reading the stored object.
 
 ### Implementation Difficulty
 
@@ -253,7 +264,7 @@ The same platform would own:
 - Moment rows,
 - AnalysisJob rows,
 - EvidenceResult rows,
-- source video objects.
+- temporary source video input objects.
 
 ### Security / RLS / Permissions
 
@@ -476,6 +487,17 @@ It does not solve the durable input problem.
 Use Supabase Storage when the project is ready to make analysis durability a
 product priority.
 
+Storage policy:
+
+- local video URI remains the preferred playback source when it is available on
+  the device,
+- Supabase Storage source video is for Gemini/worker input, not default app
+  playback,
+- after analysis completes, the source object should be eligible for deletion
+  immediately or after a short QA retention window,
+- long-term source-video archive behavior is not part of the default product
+  policy.
+
 Recommended MVP architecture:
 
 ```text
@@ -538,6 +560,24 @@ Before implementing storage, decide:
 6. What stale queued timeout should mark a job abandoned or failed?
 7. Should a failed job be retryable only while the source video exists?
 8. Should old test videos be deleted manually or through lifecycle rules?
+
+Default product answer:
+
+Source videos are temporary inputs. The MVP may choose either:
+
+```text
+analysis completed -> delete source object
+```
+
+or:
+
+```text
+analysis completed -> keep briefly for QA/retry -> delete source object
+```
+
+Permanent source-video retention should require a separate product decision.
+If reanalysis is needed after deletion, the rider may need to upload/select the
+original video again.
 
 ## Proposed Minimal Implementation Order
 

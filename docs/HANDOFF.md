@@ -221,6 +221,13 @@ Result:
   Moment and AnalysisJob, but the backend cannot retry later unless it has a
   durable video input. Supabase Storage is the recommended MVP storage candidate
   if stuck queued jobs remain a repeated QA issue.
+- Supabase Storage must be treated as temporary durable analysis-input storage,
+  not permanent video archive storage. The app should play local video when a
+  local URI exists. If the local video is gone, the Moment can still be valid
+  with thumbnail, EvidenceResult, and Rider-facing Summary only. After analysis
+  completes, the source object should be deletable immediately or after a short
+  QA/retry retention window. Reanalysis may require reuploading the original
+  video.
 - Push Notification is classified as an important future async-analysis UX
   feature:
 

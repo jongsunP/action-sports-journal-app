@@ -299,6 +299,17 @@ The likely MVP infrastructure path is Supabase Storage, because the project
 already uses Supabase for Moment, AnalysisJob, and EvidenceResult state. See
 `docs/DURABLE_ANALYSIS_PIPELINE_PLAN.md`.
 
+Storage policy decision:
+
+Supabase Storage is temporary durable analysis-input storage, not permanent
+video archive storage. Original videos remain local-first. If the local video
+URI is still available, the app should use it for playback. If the local video
+URI is missing, the app should not treat that as a broken Moment; it should show
+the thumbnail, EvidenceResult, and Rider-facing Summary. After analysis
+completes, the Storage source object should be eligible for deletion
+immediately or after a short QA/retry retention window. Reanalysis after source
+deletion may require the rider to reupload the original video.
+
 Future UX priority:
 
 Push Notification is an important future capability for the analysis product:
