@@ -235,20 +235,21 @@ Result:
 - `expo-notifications` is a native plugin, so a fresh EAS iOS preview/internal
   build is required.
 
-Build 20 closeout checkpoint:
+Build 22 closeout checkpoint:
 
-Build 20 is ready for the next session's installation and QA. The current
-session stops at build creation; actual device installation and QA continue in
-the next session.
+Build 22 is ready for the next session's installation and QA. The current
+session stops at build creation and upload-first validation; actual device
+installation and QA continue in the next session.
 
-Included in Build 20:
+Included in Build 22:
 
-- Durable analysis, Push, restore, deletion sync, and Boot Loading from the
-  Build 19 line.
-- Improved waiting copy for 1-5 minute Gemini analysis runs.
-- Delete-in-progress feedback.
-- Detail thumbnail fallback for remote Moments when the original local video is
-  unavailable.
+- Upload-first Moment creation through `POST /api/moments/from-source-video`.
+- Source video reaches temporary durable Storage before Moment/AnalysisJob
+  creation.
+- Upload screen stays open during source upload and warns the rider not to
+  close the app before upload completion.
+- Durable analysis, Push, restore, deletion sync, Boot Loading, waiting copy,
+  delete feedback, and Detail thumbnail fallback from the previous baseline.
 
 Explicitly deferred:
 
@@ -257,14 +258,14 @@ Explicitly deferred:
 - AI accuracy/calibration questions such as toeside vs heelside. These belong
   to the Calibration stage after real examples accumulate.
 
-Next session starts with Build 20 QA:
+Next session starts with Build 22 QA:
 
-1. Install Build 20.
-2. Verify thumbnail fallback.
-3. Verify delete feedback.
-4. Verify analysis waiting copy.
+1. Install Build 22.
+2. Verify upload-first behavior on a real iPhone.
+3. Verify interrupted upload does not leave an incomplete remote Moment.
+4. Verify completed result restore.
 5. Verify Push.
-6. Verify completed result restore.
+6. Verify thumbnail fallback, delete feedback, and analysis waiting copy.
 
 Performance/bottleneck analysis should wait until completed QA rows accumulate.
 The database must not be automatically cleared after builds anymore. Report
@@ -272,9 +273,10 @@ counts only unless the Founder explicitly asks for reset/initialization.
 
 Next starting point:
 
-Install Build 20 and run device QA. Verify thumbnail fallback, delete feedback,
-analysis waiting copy, Push delivery, and completed result restore. Do not
-auto-clear DB data before or after the QA unless explicitly requested.
+Install Build 22 and run device QA. Verify upload-first behavior, interrupted
+upload handling, completed result restore, Push delivery, thumbnail fallback,
+delete feedback, and analysis waiting copy. Do not auto-clear DB data before or
+after the QA unless explicitly requested.
 
 Durable pipeline reference:
 

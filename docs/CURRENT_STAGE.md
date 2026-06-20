@@ -143,18 +143,21 @@ Result:
 - Because `expo-notifications` adds a native plugin, the next iOS
   preview/internal build is required before device QA.
 
-Build 20 status:
+Build 22 status:
 
-Build 20 is created and is the next device QA starting point. This build should
+Build 22 is created and is the next device QA starting point. This build should
 be installed and checked before any new feature work.
 
-Build 20 includes:
+Build 22 includes:
 
-- Build 19 durable analysis, push, restore, and deletion sync flow.
-- Improved analysis waiting copy for long Gemini runs.
-- Delete-in-progress feedback.
-- Detail thumbnail fallback for remote Moments that no longer have a local
-  video URI.
+- The upload-first Moment creation refactor.
+- Default upload endpoint: `POST /api/moments/from-source-video`.
+- Source video reaches temporary durable Storage before Moment/AnalysisJob
+  creation.
+- Upload screen remains open during source upload and warns the rider not to
+  close the app before upload completion.
+- Build 19/20 durable analysis, push, restore, deletion sync, long-analysis
+  waiting copy, delete feedback, and Detail thumbnail fallback.
 
 Deferred:
 
@@ -162,7 +165,7 @@ Deferred:
   felt unnatural in the current full-screen detail structure, so it is paused
   until a later Detail navigation/gesture pass.
 - AI accuracy issues such as toeside/heelside calibration remain in the
-  Calibration stage, not in this Build 20 UX handoff.
+  Calibration stage, not in this Build 22 UX handoff.
 
 QA data policy:
 
@@ -175,8 +178,9 @@ requested by the Founder. Build reports should include counts for `moments`,
 Next stage:
 
 ```text
-Install Build 20, then verify thumbnail fallback, delete feedback, analysis
-waiting copy, Push delivery, and completed result restore on the device.
+Install Build 22, then verify upload-first behavior, interrupted upload
+handling, completed result restore, Push delivery, thumbnail fallback, delete
+feedback, and analysis waiting copy on the device.
 ```
 
 Durable analysis reference:

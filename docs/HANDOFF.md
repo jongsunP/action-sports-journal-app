@@ -292,35 +292,40 @@ Implementation notes:
 - `expo-notifications` is now a native plugin, so a new EAS iOS
   preview/internal build is required for device QA.
 
-Build 20 handoff:
+Build 22 handoff:
 
-Build 20 has been created as the next preview/internal QA build. It is the
+Build 22 has been created as the next preview/internal QA build. It is the
 handoff point for the next session; do not start additional implementation
 before installing and checking it on the device.
 
 Included status:
 
-- Build 19 validated durable analysis, Push, completed restore, deletion sync,
-  and app boot loading.
-- Analysis waiting copy now explains that Gemini can take a few minutes and
-  that Push can notify the rider after closing the app.
-- Deletion has immediate in-app feedback through a deleting/disabled state.
-- Remote Detail thumbnail fallback is implemented: if a Moment restores without
-  a local video URI but has a saved thumbnail, Detail shows the thumbnail above
-  the analysis instead of only a missing-video message.
-- Detail edge-swipe dismiss is paused. The current modal felt more like a
-  full-screen route than a floating card, and the gesture conflicted with video
-  and scroll expectations. Revisit this later in a broader Detail navigation UX
-  pass.
+- Build 22 includes the upload-first Moment creation refactor. The app now uses
+  `POST /api/moments/from-source-video` as the default upload path.
+- The source video must reach temporary durable Storage before the server
+  creates a Moment and AnalysisJob.
+- The Upload screen remains open during source upload and warns the rider not
+  to close the app before upload completion.
+- After upload completion, server-side analysis owns the job and can continue
+  after app close.
+- Fileless upload-first requests return 400 without creating `moments`,
+  `analysis_jobs`, or `evidence_results`.
+- Build 19/20 validated durable analysis, Push, completed restore, deletion
+  sync, app boot loading, thumbnail fallback, and delete feedback remain part of
+  the baseline.
+- Detail edge-swipe dismiss remains paused. Revisit this later in a broader
+  Detail navigation UX pass.
 
 Next session QA checklist:
 
-1. Install Build 20.
-2. Upload a real video on the iPhone.
-3. Confirm Push delivery and completed restore.
-4. Confirm thumbnail fallback by opening the same remote Moment from a context
-   without the local video URI.
-5. Confirm delete-in-progress feedback and remote deletion.
+1. Install Build 22.
+2. Upload a real video on the iPhone and confirm the Upload screen stays open
+   until source upload completes.
+3. Confirm interrupted upload does not leave an incomplete remote Moment that
+   looks like a stuck analysis job.
+4. Confirm completed analysis restores after app relaunch.
+5. Confirm Push delivery.
+6. Confirm thumbnail fallback and delete-in-progress feedback did not regress.
 
 QA data policy:
 
@@ -332,9 +337,9 @@ Delete only when the Founder explicitly requests reset/initialization.
 
 Next stage:
 
-Install Build 20 and run device QA. Verify thumbnail fallback, delete feedback,
-analysis waiting copy, Push delivery, and completed result restore before
-starting new implementation work.
+Install Build 22 and run device QA. Verify upload-first behavior, interrupted
+upload handling, completed result restore, Push delivery, thumbnail fallback,
+and delete feedback before starting new implementation work.
 
 Durable analysis design:
 

@@ -416,25 +416,33 @@ checkpoint. Notification tapping opens the app; Detail deep link navigation is
 not implemented yet. Because `expo-notifications` adds a native plugin, a new
 EAS iOS preview/internal build is required before device QA.
 
-Build 20 closeout:
+Build 22 closeout:
 
-Build 20 is the current preview/internal handoff build for the next QA session.
-It includes the Build 19-validated durable analysis, push, restore, deletion,
-and progress messaging flow, plus two final UX polish changes:
+Build 22 is the current preview/internal handoff build for the next QA session.
+It includes the upload-first Moment creation refactor and the upload progress
+UX needed to make the durable analysis flow understandable:
 
-- Remote Moment Detail now shows a stored thumbnail when the original local
-  video URI is unavailable.
-- Detail edge-swipe dismiss is intentionally paused because the current
-  full-screen modal structure made the gesture feel unnatural around video and
-  scroll areas.
+- The default upload path is `POST /api/moments/from-source-video`.
+- The source video must reach temporary durable Storage before the server
+  creates a Moment and AnalysisJob.
+- The Upload screen stays open during source upload and warns the rider not to
+  close the app before upload completion.
+- After upload completion, server-side analysis owns the job and the app can be
+  closed while analysis continues.
+- Fileless upload-first requests return 400 and do not create DB rows.
+- The force-close-after-upload case is interpreted carefully: success can mean
+  upload already completed or iOS briefly finished the request.
 
-The next session should start by installing Build 20 and verifying:
+The next session should start by installing Build 22 and verifying:
 
-1. Thumbnail fallback on a Moment uploaded from a different device.
-2. Delete-in-progress feedback.
-3. Analysis waiting copy for long Gemini runs.
-4. Push delivery.
-5. Result restore after app relaunch.
+1. Upload screen remains visible while source video upload is in progress.
+2. No incomplete remote Moment appears if upload is interrupted before the
+   source video reaches Storage.
+3. Normal upload creates Storage input first, then Moment, then AnalysisJob.
+4. Completed analysis restores after app relaunch.
+5. Push delivery still works after completed analysis.
+6. Existing thumbnail fallback, delete feedback, and long-analysis waiting copy
+   remain acceptable.
 
 Performance timing and bottleneck analysis should wait until real QA data is
 allowed to accumulate. Do not auto-clear QA data after builds. By default keep
