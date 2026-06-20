@@ -65,6 +65,10 @@ Result:
   Calibration.
 - Push Notification is recognized as an important future async-analysis UX
   feature, but it is not the current priority.
+- Cold Start Loading UX is a newly observed analysis-product issue: the app can
+  briefly show Empty State before Supabase restore finishes. This is technically
+  normal but can feel like a bug because Loading State and Empty State are not
+  clearly separated yet.
 
 Next stage:
 
@@ -72,6 +76,19 @@ Next stage:
 Verify the analysis product loop with real videos.
 Then decide which repeated trust or UX issue deserves the next implementation.
 ```
+
+Cold Start direction:
+
+```text
+app starts
+-> Loading State
+-> Supabase query
+-> data exists: show real data
+-> no data: show Empty State
+```
+
+This should be tracked alongside Analysis Progress UX and Push Notification,
+but it is not an immediate fix before calibration QA.
 
 Update on 2026-06-20, Evidence Calibration Checkpoint:
 

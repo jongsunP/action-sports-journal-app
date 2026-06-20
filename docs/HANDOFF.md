@@ -214,6 +214,9 @@ Result:
 - A second API call remains out of scope.
 - Prompt/schema/validator changes should wait until real-video calibration
   shows repeated patterns.
+- Cold Start Loading UX is a known observation: startup can briefly show Empty
+  State before Supabase restore finishes. This is technically normal but can
+  look like "data disappeared" to the user.
 - Push Notification is classified as an important future async-analysis UX
   feature:
 
@@ -227,6 +230,20 @@ upload
 
 Push is not today's priority. It belongs after the core AI Analysis Product
 Completion loop is trustworthy.
+
+Cold Start Loading UX direction:
+
+```text
+app starts
+-> Loading State
+-> Supabase query
+-> data exists: show real data
+-> no data: show Empty State
+```
+
+Do not treat the current behavior as a data bug. Treat it as a Loading State vs
+Empty State separation issue to revisit in the AI Analysis Product Completion
+UX pass.
 
 Next stage:
 

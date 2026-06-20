@@ -238,6 +238,47 @@ AI analysis takes time. The product does not need to pretend it is instant.
 During analysis, the more important goal is that the user does not feel the app
 has stopped, failed, or hit a bug.
 
+Known Analysis Product UX observations:
+
+1. Analysis Progress UX
+2. Cold Start Loading UX
+3. Push Notification
+
+Cold Start Loading UX:
+
+The current app startup can follow this path:
+
+```text
+app starts
+-> no local restored state yet
+-> Empty State appears
+-> Supabase query finishes
+-> real data appears
+```
+
+This is technically functioning, but the user can perceive it as a bug because
+the app first says "there is no data" and then data appears a moment later.
+
+The principle is:
+
+```text
+Loading State and Empty State must be separate.
+```
+
+Expected future direction:
+
+```text
+app starts
+-> Loading State
+-> Supabase query
+-> if data exists: show real data
+-> if no data exists: show Empty State
+```
+
+This is not an immediate bug fix. It should be handled in the AI Analysis
+Product Completion UX phase after calibration QA clarifies the next highest
+impact issue.
+
 Future UX priority:
 
 Push Notification is an important future capability for the analysis product:

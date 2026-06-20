@@ -168,6 +168,9 @@ Result:
 - A second API call is not introduced.
 - Coaching should later depend on previous session comparison, rider history,
   progression, and priority selection.
+- Cold Start Loading UX is a known observation. The app can currently show
+  Empty State before Supabase restore completes, then show real data. This is
+  not a data bug, but it can feel like one to the user.
 - Push Notification is an important future UX feature for async analysis but is
   deferred until after AI Analysis Product Completion.
 
@@ -175,6 +178,28 @@ Next starting point:
 
 Continue real-video calibration and analysis UX QA before changing Coach,
 prompt/schema, or validator behavior.
+
+Cold Start Loading UX should be handled by separating:
+
+```text
+Loading State
+```
+
+from:
+
+```text
+Empty State
+```
+
+Expected future behavior:
+
+```text
+app starts
+-> Loading State
+-> Supabase query
+-> data exists: show real data
+-> no data: show Empty State
+```
 
 ## 2026-06-20 Evidence Calibration Checkpoint
 
