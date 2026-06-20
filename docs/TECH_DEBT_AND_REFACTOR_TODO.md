@@ -334,3 +334,53 @@ Do not:
 - treat Supabase Storage as permanent video library
 - auto-clear QA data after every build
 - hide architectural debt in chat only
+
+## 2026-06-21 Upload-first Validation
+
+Confirmed fact:
+
+The source-video-first path is implemented and verified against operating Render
++ Supabase.
+
+Default endpoint:
+
+```text
+POST /api/moments/from-source-video
+```
+
+Validation results:
+
+- Fileless request returned HTTP 400: `video file is required`.
+- Fileless request did not change `moments`, `analysis_jobs`, or
+  `evidence_results` counts.
+- Normal upload created a source object in Storage.
+- Moment row was created only after the source upload succeeded.
+- AnalysisJob row was created after the Moment row.
+- Verified timestamp order:
+
+```text
+source_video_storage_uploaded_at
+-> moment.created_at
+-> analysis_jobs.queued_at
+-> analysis_jobs.started_at
+-> analysis_jobs.completed_at
+```
+
+- Completed analysis created an EvidenceResult.
+- Successful analysis cleaned up the source object and set
+  `source_video_storage_status=deleted`.
+
+UX update:
+
+- The Upload screen remains open until source video upload completes.
+- During upload, the app says the video is being uploaded to the server and that
+  the user should not close the app.
+- Only after upload completion does the app move into analysis/queued state where
+  the user may close the app.
+
+QA policy reminder:
+
+- Do not auto-clear DB data after preview/internal builds.
+- Report DB counts only unless the Founder explicitly requests reset/deletion.
+- Simulator upload is not part of default QA. Use simulator for UI/sync/delete
+  checks; use physical iPhone for real upload, Push, quality, and calibration.

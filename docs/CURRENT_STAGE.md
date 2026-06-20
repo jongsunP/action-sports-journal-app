@@ -44,6 +44,15 @@ queued / processing / completed / failed
 Next QA should validate that interrupted uploads do not create remote Moments
 that look like stuck analysis jobs.
 
+2026-06-21 validation update:
+
+- Fileless upload-first request returns HTTP 400 and leaves DB counts unchanged.
+- Normal upload creates durable Storage input before Moment/AnalysisJob creation.
+- Verified order: `source_video_storage_uploaded_at -> moment.created_at -> analysis_jobs.queued_at`.
+- The Upload screen now remains visible until upload completion and includes the explicit "do not close the app" warning.
+- Simulator upload is not part of default QA. Physical iPhone QA should verify the same flow after the next preview/internal build.
+- DB auto-initialization is disabled; build reports should include counts only.
+
 Problem:
 
 The product vision includes AI Coach, but making coaching the next immediate

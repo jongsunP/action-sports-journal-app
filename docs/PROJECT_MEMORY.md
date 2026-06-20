@@ -131,6 +131,16 @@ Immediate focus:
 - ensure incomplete uploads do not leave analysis-looking remote Moments
 - keep legacy/fallback endpoints only while the new path is validated
 
+2026-06-21 validation update:
+
+- Upload screen remains open until source video upload completes.
+- The app now warns users not to close the app during the upload phase.
+- The upload screen closes only after upload succeeds and server-side analysis is accepted.
+- Render + Supabase validation confirmed that fileless requests return 400 without creating rows.
+- Normal upload validation confirmed `source_video_storage_uploaded_at -> moment.created_at -> analysis_jobs.queued_at` ordering.
+- QA policy remains: do not auto-reset DB after builds; report counts only unless the Founder explicitly requests deletion.
+- Simulator upload remains disallowed by default; real upload QA belongs on the physical iPhone.
+
 Later work is grouped by stage:
 
 - UX polish: Moment Detail structure and Push deep link
