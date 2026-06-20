@@ -472,6 +472,22 @@ export function HomeScreen() {
     !isUploadingSession &&
     !isPreparingSelectedVideoThumbnail;
 
+  if (isLoadingInitialMoments) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.bootLoadingScreen,
+          prefersDarkMode ? styles.containerDark : undefined,
+        ]}
+      >
+        <View style={styles.bootLoadingContent}>
+          <Text style={styles.kicker}>Riding Journal</Text>
+          <Text style={styles.bootLoadingTitle}>기록을 불러오는 중입니다</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const closeUploadSheet = () => {
     if (isUploadingSession) {
       return;
@@ -1130,6 +1146,24 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#050507',
+  },
+  bootLoadingScreen: {
+    alignItems: 'center',
+    backgroundColor: '#050507',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  bootLoadingContent: {
+    alignItems: 'center',
+  },
+  bootLoadingTitle: {
+    color: '#f9fafb',
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 26,
+    marginTop: 6,
+    textAlign: 'center',
   },
   keyboardView: {
     flex: 1,
