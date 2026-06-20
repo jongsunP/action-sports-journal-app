@@ -14,6 +14,10 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { DebugResultViewer } from './DebugResultViewer';
 import { getMomentStatusMessage, getRetryEligibility } from './momentStatus';
+import {
+  buildRiderFacingAnalysis,
+  type RiderFacingAnalysis,
+} from './riderFacingAnalysis';
 import { MomentStatusDot } from './sessionComponents';
 import { getSessionDisplayTitle } from './sessionFormatters';
 
@@ -261,7 +265,12 @@ export function MomentDetailModal({
               </View>
             ) : null}
             {visibleEvidence ? (
-              <GeminiEvidenceView evidence={visibleEvidence} />
+              <>
+                <RiderFacingAnalysisCard
+                  analysis={buildRiderFacingAnalysis(visibleEvidence)}
+                />
+                <GeminiEvidenceView evidence={visibleEvidence} />
+              </>
             ) : !shouldShowStatusMessage && !isLoading && video ? (
               <View style={styles.detailStateCard}>
                 <Text style={styles.detailStateTitle}>아직 추출 결과가 없습니다</Text>
@@ -280,6 +289,49 @@ export function MomentDetailModal({
         </ScrollView>
       </SafeAreaView>
     </Modal>
+  );
+}
+
+function RiderFacingAnalysisCard({
+  analysis,
+}: {
+  analysis: RiderFacingAnalysis;
+}) {
+  return (
+    <View style={styles.riderAnalysisCard}>
+      <View style={styles.riderAnalysisHeaderRow}>
+        <Text style={styles.riderAnalysisEyebrow}>분석 요약</Text>
+        <Text style={styles.riderAnalysisBadge}>{analysis.confidenceLabel}</Text>
+      </View>
+      <Text style={styles.riderAnalysisTitle}>{analysis.title}</Text>
+      <Text style={styles.riderAnalysisSummary}>{analysis.summary}</Text>
+      <RiderAnalysisList title="확인된 신호" items={analysis.confirmedSignals} />
+      <RiderAnalysisList title="확인할 점" items={analysis.reviewNotes} />
+      <RiderAnalysisList title="다음 연습" items={analysis.nextPractice} />
+    </View>
+  );
+}
+
+function RiderAnalysisList({
+  items,
+  title,
+}: {
+  items: string[];
+  title: string;
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.riderAnalysisSection}>
+      <Text style={styles.riderAnalysisSectionTitle}>{title}</Text>
+      {items.map((item) => (
+        <Text key={`${title}-${item}`} style={styles.riderAnalysisItem}>
+          - {item}
+        </Text>
+      ))}
+    </View>
   );
 }
 
