@@ -53,6 +53,14 @@ const dailyAnalysisLimit = Math.max(
 );
 const rateLimitWindowMs = readNumberEnv("RATE_LIMIT_WINDOW_MS", 60_000);
 const rateLimitMaxRequests = readNumberEnv("RATE_LIMIT_MAX_REQUESTS", 3);
+const staleQueuedAnalysisMs = readNumberEnv(
+  "STALE_QUEUED_ANALYSIS_MS",
+  15 * 60_000,
+);
+const staleProcessingAnalysisMs = readNumberEnv(
+  "STALE_PROCESSING_ANALYSIS_MS",
+  30 * 60_000,
+);
 const geminiMaxOutputTokens = readNumberEnv("GEMINI_MAX_OUTPUT_TOKENS", 1_200);
 const geminiEvidenceMaxOutputTokens = readNumberEnv(
   "GEMINI_EVIDENCE_MAX_OUTPUT_TOKENS",
@@ -459,6 +467,8 @@ app.get("/api/moments", async (_request, response) => {
     }
 
     const userId = await getOrCreateDefaultSupabaseUser();
+    await cleanupStaleAnalysisJobs({ client, userId });
+
     const { data: moments, error: momentsError } = await client
       .from("moments")
       .select(
@@ -3303,6 +3313,174 @@ async function cleanupStoredVideoAfterCompletedAnalysis({
   console.log(
     `Deleted analyzed source video from Storage: ${storedVideo.bucket}/${storedVideo.path}`,
   );
+}
+
+async function cleanupStaleAnalysisJobs({
+  client,
+  userId,
+}: {
+  client: SupabaseServerClient;
+  userId: string;
+}) {
+  try {
+    const { data: jobs, error } = await client
+      .from("analysis_jobs")
+      .select(
+        [
+          "id",
+          "moment_id",
+          "status",
+          "attempts",
+          "queued_at",
+          "started_at",
+          "created_at",
+          "input_video_storage_provider",
+          "input_video_storage_bucket",
+          "input_video_storage_path",
+        ].join(","),
+      )
+      .eq("user_id", userId)
+      .eq("kind", "evidence_extraction")
+      .in("status", ["queued", "processing"])
+      .order("updated_at", { ascending: true })
+      .limit(25);
+
+    if (error) {
+      console.warn("Stale analysis cleanup skipped:", error.message);
+      return;
+    }
+
+    for (const rawJob of jobs ?? []) {
+      await cleanupStaleAnalysisJob(
+        client,
+        rawJob as unknown as Record<string, unknown>,
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "Stale analysis cleanup failed:",
+      error instanceof Error ? error.message : "unknown cleanup error",
+    );
+  }
+}
+
+async function cleanupStaleAnalysisJob(
+  client: SupabaseServerClient,
+  job: Record<string, unknown>,
+) {
+  const analysisJobId = nullableString(job.id);
+  const momentId = nullableString(job.moment_id);
+  const status = nullableString(job.status);
+
+  if (!analysisJobId || !momentId) {
+    return;
+  }
+
+  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+    client,
+    momentId,
+  });
+
+  if (completedEvidenceResultId) {
+    return;
+  }
+
+  if (status === "queued") {
+    const attempts = Number(job.attempts);
+    const queuedAt = parseOptionalDate(
+      nullableString(job.queued_at) ?? nullableString(job.created_at),
+    );
+
+    if (
+      Number.isFinite(attempts) &&
+      attempts === 0 &&
+      queuedAt &&
+      Date.now() - queuedAt.getTime() >= staleQueuedAnalysisMs
+    ) {
+      const storedVideo = normalizeStoredVideoInput({
+        provider: job.input_video_storage_provider,
+        bucket: job.input_video_storage_bucket,
+        path: job.input_video_storage_path,
+      });
+
+      if (!storedVideo) {
+        await markEvidenceAnalysisJobFailed({
+          analysisJobId,
+          momentId,
+          errorMessage:
+            "stale queued analysis job: no stored video input was received",
+        });
+        return;
+      }
+
+      const storedObjectStatus = await inspectStoredVideoObject(storedVideo);
+
+      if (storedObjectStatus === "missing") {
+        await markEvidenceAnalysisJobFailed({
+          analysisJobId,
+          momentId,
+          errorMessage:
+            "stale queued analysis job: stored video input is missing",
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (status === "processing") {
+    const startedAt = parseOptionalDate(nullableString(job.started_at));
+
+    if (
+      startedAt &&
+      Date.now() - startedAt.getTime() >= staleProcessingAnalysisMs
+    ) {
+      await markEvidenceAnalysisJobFailed({
+        analysisJobId,
+        momentId,
+        errorMessage: "stale processing analysis job after timeout",
+      });
+    }
+  }
+}
+
+async function inspectStoredVideoObject(
+  storedVideo: StoredVideoInput,
+): Promise<"exists" | "missing" | "unknown"> {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return "unknown";
+  }
+
+  const pathParts = storedVideo.path.split("/");
+  const fileName = pathParts.pop();
+  const directory = pathParts.join("/");
+
+  if (!fileName || !directory) {
+    return "unknown";
+  }
+
+  const { data, error } = await client.storage
+    .from(storedVideo.bucket)
+    .list(directory);
+
+  if (error) {
+    console.warn("Stored video inspection failed:", error.message);
+    return "unknown";
+  }
+
+  return data?.some((item) => item.name === fileName) ? "exists" : "missing";
+}
+
+function parseOptionalDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 async function downloadStoredVideoForEvidence(

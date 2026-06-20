@@ -178,30 +178,41 @@ Recommendation:
 
 Do not silently delete rows. Failed/abandoned cleanup should be auditable.
 
-## Server Cleanup Recommendation
+## Server Cleanup MVP
 
-Not implemented in MVP.
+Implemented as lightweight best-effort cleanup during `GET /api/moments`.
 
-Future options:
+This is intentionally conservative. It reduces user-visible stale analysis
+states without adding a scheduler, queue system, new schema, or admin UI.
 
-1. Token-guarded debug endpoint:
-   - scans stale queued jobs,
-   - marks them failed,
-   - returns count and row ids.
-
-2. Lightweight cleanup during `GET /api/moments`:
-   - only if it remains fast and safe.
-
-3. Scheduled cleanup:
-   - later, if infrastructure grows.
-
-Preferred first server cleanup:
+Current cleanup rules:
 
 ```text
-POST /debug/cleanup/stale-queued-moments
+queued + attempts = 0 + older than STALE_QUEUED_ANALYSIS_MS
++ no stored video input
+-> mark analysis job failed
+-> mark moment failed unless completed evidence already exists
+
+queued + attempts = 0 + older than STALE_QUEUED_ANALYSIS_MS
++ stored video path exists
++ Storage object is missing
+-> mark analysis job failed
+-> mark moment failed unless completed evidence already exists
+
+processing + started_at older than STALE_PROCESSING_ANALYSIS_MS
+-> mark analysis job failed
+-> mark moment failed unless completed evidence already exists
 ```
 
-Guard it with `DEBUG_CAPTURE_TOKEN` or a separate admin token.
+Defaults:
+
+```text
+STALE_QUEUED_ANALYSIS_MS = 15 minutes
+STALE_PROCESSING_ANALYSIS_MS = 30 minutes
+```
+
+Cleanup failure does not fail `/api/moments`. It logs a warning and continues
+returning the Moment list.
 
 ## Validation Plan
 
@@ -216,7 +227,7 @@ source_video_uri missing
 latest_evidence_result_id = null
 ```
 
-Expected:
+Expected for app-side incomplete row hiding:
 
 - DB row remains untouched.
 - `/api/moments` may still return it.
@@ -228,19 +239,20 @@ Also verify:
 - queued rows with real file metadata still restore.
 - completed rows still restore.
 - failed rows still restore.
+- stale queued rows without stored input eventually become failed.
+- stale processing rows eventually become failed.
 
 ## Risks
 
 - If a platform returns file metadata late, this filter could hide a Moment before
   retry. The current condition is narrow enough to reduce that risk.
-- The hidden row still exists in DB, so developer tools should eventually expose
-  it for cleanup.
-- This does not solve old queued rows with file metadata but no runnable payload.
-  That needs server/job cleanup design.
+- The app-side hidden row can still exist briefly before server cleanup
+  criteria are met.
+- Cleanup runs during `/api/moments`, not on a timer. A future scheduled worker
+  can make this more deterministic.
 
 ## Next Steps
 
-1. Implement the app-side filter in `normalizeRemoteMoment`.
-2. Verify typecheck and `git diff --check`.
-3. Verify the known incomplete queued row is hidden by local normalization logic.
-4. Later, implement server-side stale cleanup as a separate task.
+1. Continue observing real QA rows for false positives.
+2. Add clearer failed/retryable UX if users encounter stale failures often.
+3. Consider scheduled cleanup only if `/api/moments` cleanup is not enough.

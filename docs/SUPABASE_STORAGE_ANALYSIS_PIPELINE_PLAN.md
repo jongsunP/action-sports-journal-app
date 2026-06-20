@@ -666,15 +666,26 @@ Implemented minimal lifecycle/delete policy:
 This is intentionally not a retention scheduler yet. It only handles the common
 successful analysis path.
 
-### Remaining: Stale Job Rules
+### Implemented: Lightweight Stale Job Cleanup
 
-Add cleanup policy:
+Implemented during `GET /api/moments` as best-effort cleanup:
 
-- queued with no storage path after grace period -> failed/abandoned,
-- queued with storage path -> retryable,
-- queued/processing with missing/deleted source object -> failed or reupload
-  required,
-- processing past timeout -> retryable or failed based on attempts.
+- queued + attempts=0 + older than `STALE_QUEUED_ANALYSIS_MS` + no stored
+  video input -> failed,
+- queued + attempts=0 + older than `STALE_QUEUED_ANALYSIS_MS` + stored path
+  but missing Storage object -> failed,
+- processing + `started_at` older than `STALE_PROCESSING_ANALYSIS_MS` ->
+  failed,
+- completed EvidenceResult is preserved if one already exists.
+
+Cleanup is intentionally non-blocking. If cleanup itself fails, `/api/moments`
+still returns normally.
+
+Still remaining:
+
+- scheduled cleanup independent from app polling,
+- retryable/reupload UX,
+- richer admin/debug visibility for stale rows.
 
 ### Remaining: UX Alignment
 
