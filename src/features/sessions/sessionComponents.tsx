@@ -235,11 +235,11 @@ export function RecentSessionsRail({
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyTitle}>
-          {isLoading ? '기록을 불러오는 중입니다' : '아직 세션이 없습니다'}
+          {isLoading ? 'Wake Board Loading...' : '아직 세션이 없습니다'}
         </Text>
         <Text style={styles.emptyText}>
           {isLoading
-            ? '저장된 세션과 분석 결과를 확인하고 있습니다.'
+            ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
             : '첫 영상을 추가하면 최근 세션이 이곳에 표시됩니다.'}
         </Text>
       </View>
@@ -369,10 +369,10 @@ export function PrimaryInsightCard({
       ) : isLoading ? (
         <>
           <Text style={styles.primaryInsightTitle}>
-            기록을 불러오는 중입니다
+            Wake Board Loading...
           </Text>
           <Text style={styles.primaryInsightText}>
-            저장된 세션과 분석 결과를 확인하고 있습니다.
+            라이딩 기록과 분석 결과를 준비하고 있습니다.
           </Text>
         </>
       ) : (
@@ -409,11 +409,11 @@ export function VideoArchiveList({
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyTitle}>
-          {isLoading ? '기록을 불러오는 중입니다' : '아직 영상 세션이 없습니다'}
+          {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
         </Text>
         <Text style={styles.emptyText}>
           {isLoading
-            ? '저장된 세션과 분석 결과를 확인하고 있습니다.'
+            ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
             : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
         </Text>
       </View>

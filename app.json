@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.jongsunp.actionsportsjournal",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -38,6 +38,7 @@
           "photosPermission": "세션 영상 선택과 분석 준비를 위해 사진 보관함 접근이 필요합니다."
         }
       ],
+      "expo-notifications",
       "expo-video"
     ],
     "extra": {
