@@ -1,6 +1,6 @@
 import type { RemoteMomentRecord } from '../../services/moments';
 import type { SessionVideoAsset } from '../../services/ai';
-import type { Session } from '../../types';
+import type { GeminiEvidenceResult, Session } from '../../types';
 import {
   mergeMomentStatus,
   resolveLocalSessionIdForRemoteMoment,
@@ -107,6 +107,35 @@ export function applyRemoteVideos({
       remoteMoment.session.id;
 
     next[sessionId] = current[sessionId] ?? remoteMoment.video;
+  }
+
+  return next;
+}
+
+export function applyRemoteEvidence({
+  current,
+  remoteMoments,
+  sessionIdByRemoteMomentId,
+}: {
+  current: Record<string, GeminiEvidenceResult>;
+  remoteMoments: RemoteMomentRecord[];
+  sessionIdByRemoteMomentId: Map<string, string>;
+}) {
+  const next = { ...current };
+
+  for (const remoteMoment of remoteMoments) {
+    if (!remoteMoment.evidence) {
+      continue;
+    }
+
+    const sessionId =
+      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      remoteMoment.session.id;
+
+    next[sessionId] = {
+      ...remoteMoment.evidence,
+      sessionId,
+    };
   }
 
   return next;

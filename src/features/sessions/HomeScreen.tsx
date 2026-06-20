@@ -61,6 +61,7 @@ import {
 } from './sessionStorage';
 import {
   applyRemoteMomentIds,
+  applyRemoteEvidence,
   applyRemoteSessions,
   applyRemoteThumbnails,
   applyRemoteVideos,
@@ -163,26 +164,13 @@ export function HomeScreen() {
         }),
       );
 
-      setGeminiEvidenceBySessionId((current) => {
-        const next = { ...current };
-
-        for (const remoteMoment of remoteMoments) {
-          if (!remoteMoment.evidence) {
-            continue;
-          }
-
-          const sessionId =
-            sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
-            remoteMoment.session.id;
-
-          next[sessionId] = {
-            ...remoteMoment.evidence,
-            sessionId,
-          };
-        }
-
-        return next;
-      });
+      setGeminiEvidenceBySessionId((current) =>
+        applyRemoteEvidence({
+          current,
+          remoteMoments,
+          sessionIdByRemoteMomentId,
+        }),
+      );
 
       setThumbnailsBySessionId((current) =>
         applyRemoteThumbnails({
