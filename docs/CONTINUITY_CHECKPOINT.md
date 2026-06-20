@@ -104,6 +104,78 @@ At the time this checkpoint was updated, local `master` was pushed to
 
 ## Today's Conclusions
 
+## 2026-06-20 Analysis-first Product Strategy
+
+Problem:
+
+The project is building toward coaching, but coaching is not the next thing to
+implement. The user first needs the analysis product loop to feel complete and
+trustworthy.
+
+Why it mattered:
+
+The user must trust the basics before trusting advice:
+
+- upload,
+- async processing,
+- analysis completion,
+- result restore,
+- result understanding.
+
+If these are not clear, coaching will feel like decoration on top of an
+uncertain system.
+
+Decision:
+
+Prioritize the product in this order:
+
+```text
+1. AI Analysis UX Completion
+2. Analysis Trust
+3. Coaching
+```
+
+Current stage:
+
+```text
+AI Analysis Product Completion
+```
+
+Scope of the current stage:
+
+```text
+video upload
+-> async analysis
+-> analysis completed
+-> result restored
+-> Rider-facing Summary
+-> user-understandable result
+```
+
+Analysis Trust currently means improving:
+
+- Evidence Extraction,
+- ObservedFacts,
+- Validators,
+- CandidateTrace,
+- KnowledgeRules,
+- Rider-facing Summary,
+- Calibration.
+
+Result:
+
+- AI Coach is not implemented.
+- A second API call is not introduced.
+- Coaching should later depend on previous session comparison, rider history,
+  progression, and priority selection.
+- Push Notification is an important future UX feature for async analysis but is
+  deferred until after AI Analysis Product Completion.
+
+Next starting point:
+
+Continue real-video calibration and analysis UX QA before changing Coach,
+prompt/schema, or validator behavior.
+
 ## 2026-06-20 Evidence Calibration Checkpoint
 
 Problem:

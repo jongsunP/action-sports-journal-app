@@ -159,6 +159,80 @@ Local path:
 
 ## Today's Conclusions
 
+## 2026-06-20 Analysis-first Product Strategy
+
+Problem:
+
+The project name and long-term vision include AI Coach, but the immediate
+product risk is not lack of coaching. The risk is that a rider uploads a video
+and does not yet fully trust the analysis experience: whether the upload worked,
+whether async analysis is progressing, whether the result restores correctly,
+and whether the summary is understandable.
+
+Why it mattered:
+
+Action Sports Journal should not become an app that gives advice before the
+rider believes its analysis. Coaching built on unclear or untrusted analysis
+would make the product sound more advanced while making it less credible.
+
+Decision:
+
+Develop in this order:
+
+```text
+1. AI Analysis UX Completion
+2. Analysis Trust
+3. Coaching
+```
+
+The current stage is AI Analysis Product Completion, not AI Coach.
+
+Implementation boundary:
+
+```text
+video upload
+-> async analysis
+-> analysis completed
+-> result restored
+-> Rider-facing Summary
+-> user-understandable result
+```
+
+Current Analysis Trust work:
+
+- Evidence Extraction
+- ObservedFacts
+- Validators
+- CandidateTrace
+- KnowledgeRules
+- Rider-facing Summary
+- Calibration
+
+Result:
+
+- AI Coach remains unimplemented.
+- A second API call remains out of scope.
+- Prompt/schema/validator changes should wait until real-video calibration
+  shows repeated patterns.
+- Push Notification is classified as an important future async-analysis UX
+  feature:
+
+```text
+upload
+-> close app
+-> analysis completes
+-> push notification
+-> open result
+```
+
+Push is not today's priority. It belongs after the core AI Analysis Product
+Completion loop is trustworthy.
+
+Next stage:
+
+Run real wakeboard clips through the current build and use the calibration
+matrix to decide which analysis UX or trust issue should be fixed next.
+
 ## 2026-06-20 Evidence Calibration Save Point
 
 Problem:

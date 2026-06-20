@@ -83,6 +83,26 @@ Current AI product boundary:
   `docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md`.
 - Latest checkpoint for this boundary: `cc01177`.
 
+Analysis Trust work currently includes:
+
+- Evidence Extraction
+- ObservedFacts
+- Validators
+- CandidateTrace
+- KnowledgeRules
+- Rider-facing Summary
+- Calibration
+
+All of these serve one product question:
+
+```text
+Can the user trust what the app says this video is?
+```
+
+Coaching is the next product layer. It should depend on previous session
+comparison, rider history, progression, and priority selection. It is not part
+of the current implementation stage.
+
 Detailed status documents:
 
 - `docs/CURRENT_STAGE.md`
@@ -177,6 +197,61 @@ Core principles:
 - Local-first is acceptable for early personal usage
 - Korean mobile product polish is preferred over a pure US extreme-sports
   aesthetic
+
+Current product priority:
+
+```text
+1. AI Analysis UX Completion
+2. Analysis Trust
+3. Coaching
+```
+
+Action Sports Journal is not being built as an AI Coach app first. It is an
+AI-based Action Sports Analysis platform. Before coaching can matter, the rider
+must trust the full analysis product loop:
+
+```text
+upload
+-> async processing
+-> analysis completed
+-> result restored
+-> result understood
+```
+
+The current stage is therefore AI Analysis Product Completion:
+
+```text
+video upload
+-> async analysis
+-> completed result
+-> restored result
+-> Rider-facing Summary
+-> user-understandable analysis
+```
+
+Coaching comes after the rider can trust what the system says happened in the
+video.
+
+Analysis UX principle:
+
+AI analysis takes time. The product does not need to pretend it is instant.
+During analysis, the more important goal is that the user does not feel the app
+has stopped, failed, or hit a bug.
+
+Future UX priority:
+
+Push Notification is an important future capability for the analysis product:
+
+```text
+upload
+-> close app
+-> analysis completes
+-> push notification
+-> open result
+```
+
+This is a core UX feature for an async AI analysis product, but it is not the
+current priority. It should be evaluated after AI Analysis Product Completion.
 
 Validated product decisions:
 

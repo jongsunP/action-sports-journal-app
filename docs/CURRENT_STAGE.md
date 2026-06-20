@@ -14,6 +14,65 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Update on 2026-06-20, Analysis-first Product Strategy:
+
+Problem:
+
+The product vision includes AI Coach, but making coaching the next immediate
+build target would skip the product foundation. A rider first needs to trust
+that upload, async processing, analysis completion, result restore, and result
+understanding all work as one coherent experience.
+
+Why it mattered:
+
+Action Sports Journal is an AI-based Action Sports Analysis platform before it
+is an AI Coach app. If coaching appears before the rider trusts the analysis,
+coaching will feel like confident advice built on uncertain ground.
+
+Decision:
+
+Use this product priority order:
+
+```text
+1. AI Analysis UX Completion
+2. Analysis Trust
+3. Coaching
+```
+
+Current stage:
+
+```text
+AI Analysis Product Completion
+```
+
+This means completing the loop:
+
+```text
+video upload
+-> async analysis
+-> analysis completed
+-> result restored
+-> Rider-facing Summary
+-> user-understandable result
+```
+
+Result:
+
+- AI Coach remains out of scope.
+- A second API call remains out of scope.
+- Current work stays focused on Evidence Extraction, ObservedFacts,
+  Validators, CandidateTrace, KnowledgeRules, Rider-facing Summary, and
+  Calibration.
+- Push Notification is recognized as an important future async-analysis UX
+  feature, but it is not the current priority.
+
+Next stage:
+
+```text
+Verify the analysis product loop with real videos.
+Then decide which repeated trust or UX issue deserves the next implementation.
+```
+
 Update on 2026-06-20, Evidence Calibration Checkpoint:
 
 Problem:
