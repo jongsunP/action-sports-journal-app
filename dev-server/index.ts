@@ -225,6 +225,10 @@ app.get("/health", (_request, response) => {
       fallbackModel: geminiFallbackModel,
       endpoint: "/api/extract-session-evidence",
     },
+    pushNotifications: {
+      endpoint: "/api/push-tokens",
+      provider: "expo",
+    },
     spendPolicy: "development budget target: under KRW 10,000/month",
     limits: {
       geminiMaxVideoMb: Math.round(geminiMaxVideoBytes / 1024 / 1024),
@@ -253,6 +257,55 @@ app.get("/health", (_request, response) => {
       openAiReasoningEffort,
     },
   });
+});
+
+app.post("/api/push-tokens", async (request, response) => {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const expoPushToken = nullableString(request.body?.expoPushToken);
+
+    if (!expoPushToken || !isExpoPushToken(expoPushToken)) {
+      response.status(400).json({ error: "A valid Expo push token is required." });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const userId = await getOrCreateDefaultSupabaseUser();
+    const { error } = await client
+      .from("device_push_tokens")
+      .upsert(
+        {
+          user_id: userId,
+          expo_push_token: expoPushToken,
+          platform: nullableString(request.body?.platform),
+          device_id: nullableString(request.body?.deviceId),
+          app_version: nullableString(request.body?.appVersion),
+          enabled: true,
+          last_registered_at: now,
+          updated_at: now,
+        },
+        { onConflict: "expo_push_token" },
+      );
+
+    if (error) {
+      throw new Error(`Failed to upsert device push token: ${error.message}`);
+    }
+
+    response.json({ ok: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Push token registration failed.";
+    console.error("Push token registration failed:", message);
+    response.status(500).json({ error: message });
+  }
 });
 
 app.post("/api/moments", async (request, response) => {
@@ -2818,6 +2871,7 @@ async function persistEvidenceResultForLinkedMoment({
   return {
     status: "inserted" as const,
     momentId: linkedMoment.id,
+    userId: linkedMoment.user_id,
     analysisJobId: resolvedAnalysisJobId,
     evidenceResultId: evidenceResult.id as string,
   };
@@ -3839,6 +3893,14 @@ async function runGeminiEvidenceExtraction({
     Object.assign(evidenceResponse, {
       supabasePersistence: persistence,
     });
+
+    if (!normalizedEvidence.parseFailed) {
+      void sendAnalysisCompletedPushNotification({
+        userId: persistence.userId,
+        momentId: persistence.momentId,
+        evidenceResultId: persistence.evidenceResultId,
+      });
+    }
   }
 
   try {
@@ -3892,6 +3954,119 @@ async function findLinkedMomentForEvidence(metadata: SessionMetadata) {
   }
 
   return null;
+}
+
+async function sendAnalysisCompletedPushNotification({
+  userId,
+  momentId,
+  evidenceResultId,
+}: {
+  userId: string;
+  momentId: string;
+  evidenceResultId: string;
+}) {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      return;
+    }
+
+    const { data, error } = await client
+      .from("device_push_tokens")
+      .select("expo_push_token")
+      .eq("user_id", userId)
+      .eq("enabled", true);
+
+    if (error) {
+      console.warn(
+        "Analysis completion push skipped: failed to load tokens:",
+        error.message,
+      );
+      return;
+    }
+
+    const tokens = Array.from(
+      new Set(
+        (data ?? [])
+          .map((row) => nullableString(row.expo_push_token))
+          .filter((token): token is string => Boolean(token && isExpoPushToken(token))),
+      ),
+    );
+
+    if (tokens.length === 0) {
+      return;
+    }
+
+    const pushResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        tokens.map((token) => ({
+          to: token,
+          title: "분석이 완료되었습니다",
+          body: "결과를 확인해보세요",
+          sound: "default",
+          data: {
+            type: "analysis_completed",
+            momentId,
+            evidenceResultId,
+          },
+        })),
+      ),
+    });
+
+    if (!pushResponse.ok) {
+      console.warn(
+        `Analysis completion push failed with ${pushResponse.status}.`,
+      );
+      return;
+    }
+
+    const pushResult = (await pushResponse.json()) as unknown;
+    const pushErrors = extractExpoPushErrors(pushResult);
+
+    if (pushErrors.length > 0) {
+      console.warn(
+        "Analysis completion push returned ticket errors:",
+        pushErrors.join("; "),
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "Analysis completion push failed:",
+      error instanceof Error ? error.message : "unknown push error",
+    );
+  }
+}
+
+function extractExpoPushErrors(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const response = value as Record<string, unknown>;
+  const tickets = Array.isArray(response.data) ? response.data : [];
+
+  return tickets
+    .map((ticket) => {
+      if (!ticket || typeof ticket !== "object") {
+        return null;
+      }
+
+      const item = ticket as Record<string, unknown>;
+
+      if (item.status !== "error") {
+        return null;
+      }
+
+      return nullableString(item.message) ?? "unknown Expo push ticket error";
+    })
+    .filter((message): message is string => Boolean(message));
 }
 
 async function findMomentByColumn(column: "id" | "session_id", value: string) {
@@ -4023,6 +4198,10 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
+}
+
+function isExpoPushToken(value: string) {
+  return /^Expo(nent)?PushToken\[[^\]]+\]$/.test(value);
 }
 
 function readMomentStatus(value: unknown, fallback?: "queued") {

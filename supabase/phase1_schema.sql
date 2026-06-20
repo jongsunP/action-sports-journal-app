@@ -109,6 +109,19 @@ create table if not exists public.evidence_results (
   constraint evidence_results_status_check check (status in ('completed', 'failed'))
 );
 
+create table if not exists public.device_push_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  expo_push_token text not null unique,
+  platform text,
+  device_id text,
+  app_version text,
+  enabled boolean not null default true,
+  last_registered_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.moments
   add constraint moments_latest_evidence_result_fk
   foreign key (latest_evidence_result_id)
@@ -148,10 +161,14 @@ create index if not exists evidence_results_user_created_at_idx
 create index if not exists evidence_results_needs_review_idx
   on public.evidence_results (needs_review);
 
+create index if not exists device_push_tokens_user_enabled_idx
+  on public.device_push_tokens (user_id, enabled);
+
 alter table public.users enable row level security;
 alter table public.moments enable row level security;
 alter table public.analysis_jobs enable row level security;
 alter table public.evidence_results enable row level security;
+alter table public.device_push_tokens enable row level security;
 
 -- Phase 1 locked-down RLS:
 -- Service role can manage rows. Authenticated client policies are intentionally
@@ -162,3 +179,4 @@ grant all on table public.users to service_role;
 grant all on table public.moments to service_role;
 grant all on table public.analysis_jobs to service_role;
 grant all on table public.evidence_results to service_role;
+grant all on table public.device_push_tokens to service_role;

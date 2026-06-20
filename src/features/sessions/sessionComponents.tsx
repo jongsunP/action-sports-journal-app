@@ -220,11 +220,13 @@ export function ProfilePlaceholderTab({ styles }: { styles: HomeScreenStyles }) 
 
 export function RecentSessionsRail({
   formatShortSessionDate,
+  isLoading = false,
   onOpenSession,
   sessions,
   styles,
 }: {
   formatShortSessionDate: (value: string) => string;
+  isLoading?: boolean;
   onOpenSession: (session: Session) => void;
   sessions: SessionSummary[];
   styles: HomeScreenStyles;
@@ -232,9 +234,13 @@ export function RecentSessionsRail({
   if (sessions.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>아직 세션이 없습니다</Text>
+        <Text style={styles.emptyTitle}>
+          {isLoading ? '기록을 불러오는 중입니다' : '아직 세션이 없습니다'}
+        </Text>
         <Text style={styles.emptyText}>
-          첫 영상을 추가하면 최근 세션이 이곳에 표시됩니다.
+          {isLoading
+            ? '저장된 세션과 분석 결과를 확인하고 있습니다.'
+            : '첫 영상을 추가하면 최근 세션이 이곳에 표시됩니다.'}
         </Text>
       </View>
     );
@@ -295,11 +301,13 @@ export function RecentSessionsRail({
 
 export function PrimaryInsightCard({
   formatShortSessionDate,
+  isLoading = false,
   onOpenSession,
   summary,
   styles,
 }: {
   formatShortSessionDate: (value: string) => string;
+  isLoading?: boolean;
   onOpenSession: (session: Session) => void;
   summary?: SessionSummary;
   styles: HomeScreenStyles;
@@ -358,6 +366,15 @@ export function PrimaryInsightCard({
             </Text>
           </View>
         </>
+      ) : isLoading ? (
+        <>
+          <Text style={styles.primaryInsightTitle}>
+            기록을 불러오는 중입니다
+          </Text>
+          <Text style={styles.primaryInsightText}>
+            저장된 세션과 분석 결과를 확인하고 있습니다.
+          </Text>
+        </>
       ) : (
         <>
           <Text style={styles.primaryInsightTitle}>
@@ -376,12 +393,14 @@ export function PrimaryInsightCard({
 export function VideoArchiveList({
   formatShortSessionDate,
   getVideoArchiveDescription,
+  isLoading = false,
   onOpenSession,
   sessions,
   styles,
 }: {
   formatShortSessionDate: (value: string) => string;
   getVideoArchiveDescription: (session: Session) => string;
+  isLoading?: boolean;
   onOpenSession: (session: Session) => void;
   sessions: SessionSummary[];
   styles: HomeScreenStyles;
@@ -389,9 +408,13 @@ export function VideoArchiveList({
   if (sessions.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>아직 영상 세션이 없습니다</Text>
+        <Text style={styles.emptyTitle}>
+          {isLoading ? '기록을 불러오는 중입니다' : '아직 영상 세션이 없습니다'}
+        </Text>
         <Text style={styles.emptyText}>
-          홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.
+          {isLoading
+            ? '저장된 세션과 분석 결과를 확인하고 있습니다.'
+            : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
         </Text>
       </View>
     );

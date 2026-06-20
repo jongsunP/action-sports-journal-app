@@ -123,8 +123,9 @@ export function HomeScreen() {
     null,
   );
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
-  const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] =
-    useState(false);
+  const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] = useState(
+    !hasConfiguredSupabaseMoments(),
+  );
 
   const syncRemoteMoments = useSyncRemoteMoments({
     remoteMomentIdsBySessionId,
@@ -351,6 +352,11 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
+  const isLoadingInitialMoments =
+    !isStorageLoaded ||
+    (hasConfiguredSupabaseMoments() &&
+      !isRemoteMomentSyncLoaded &&
+      visibleSessions.length === 0);
   const homeSessionSummaries = useMemo(
     () =>
       visibleSessions.map((session) => {
@@ -907,6 +913,7 @@ export function HomeScreen() {
         <VideoArchiveList
           formatShortSessionDate={formatShortSessionDate}
           getVideoArchiveDescription={getVideoArchiveDescription}
+          isLoading={isLoadingInitialMoments}
           onOpenSession={openEvidenceSheet}
           sessions={homeSessionSummaries}
           styles={styles}
@@ -975,6 +982,7 @@ export function HomeScreen() {
 
           <PrimaryInsightCard
             formatShortSessionDate={formatShortSessionDate}
+            isLoading={isLoadingInitialMoments}
             onOpenSession={openEvidenceSheet}
             styles={styles}
             summary={primaryInsightSummary}
@@ -987,6 +995,7 @@ export function HomeScreen() {
             </View>
             <RecentSessionsRail
               formatShortSessionDate={formatShortSessionDate}
+              isLoading={isLoadingInitialMoments}
               onOpenSession={openEvidenceSheet}
               sessions={recentSessionSummaries}
               styles={styles}
