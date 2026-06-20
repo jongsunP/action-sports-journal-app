@@ -47,7 +47,7 @@ docs/TECH_DEBT_AND_REFACTOR_TODO.md
 
 Current architectural priority:
 
-The durable analysis path should create/confirm a remote Moment only after the
+The default durable analysis path is `POST /api/moments/from-source-video`. It should create/confirm a remote Moment only after the
 source video is safely in temporary durable Storage. Uploading and analysis are
 separate product states, not one generic "analysis in progress" state:
 

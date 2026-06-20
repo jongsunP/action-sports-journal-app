@@ -85,7 +85,7 @@ app selects video
 
 Status:
 
-Implemented as the preferred direction through a source-video-first endpoint.
+Implemented as the preferred direction through the source-video-first endpoint `POST /api/moments/from-source-video`.
 Continue validating this as the default path before creating the next QA build.
 
 Do not regress to:

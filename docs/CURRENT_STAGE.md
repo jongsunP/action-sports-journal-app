@@ -25,7 +25,8 @@ docs/TECH_DEBT_AND_REFACTOR_TODO.md
 Current architecture cleanup priority:
 
 ```text
-source video reaches temporary durable Storage
+POST /api/moments/from-source-video
+-> source video reaches temporary durable Storage
 -> Moment is created
 -> AnalysisJob is created
 -> server starts Gemini analysis

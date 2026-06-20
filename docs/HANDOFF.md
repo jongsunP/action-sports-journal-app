@@ -59,7 +59,7 @@ uploading / upload_failed
 queued / processing / completed / failed
 ```
 
-Do not treat legacy/fallback endpoints as final architecture. Keep them only
+The default upload endpoint is `POST /api/moments/from-source-video`. Do not treat legacy/fallback endpoints as final architecture. Keep them only
 while the source-video-first path is being validated.
 
 On 2026-06-12, the priority changed from Expo Go validation to installing and

@@ -127,7 +127,7 @@ queued / processing / completed / failed
 
 Immediate focus:
 
-- keep the source-video-first upload path as the preferred path
+- keep `POST /api/moments/from-source-video` as the preferred source-video-first upload path
 - ensure incomplete uploads do not leave analysis-looking remote Moments
 - keep legacy/fallback endpoints only while the new path is validated
 
