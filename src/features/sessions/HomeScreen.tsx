@@ -1166,6 +1166,9 @@ export function HomeScreen() {
         }
         session={selectedSession}
         styles={styles}
+        thumbnailUri={
+          selectedSession ? thumbnailsBySessionId[selectedSession.id] : undefined
+        }
         video={selectedSessionVideo}
       />
       <UploadSheet

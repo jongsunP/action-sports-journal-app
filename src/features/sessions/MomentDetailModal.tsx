@@ -98,6 +98,7 @@ export function MomentDetailModal({
   onRetry,
   session,
   styles: nextStyles,
+  thumbnailUri,
   video,
 }: {
   canRequestGeminiEvidence: boolean;
@@ -111,6 +112,7 @@ export function MomentDetailModal({
   onRetry?: () => void;
   session?: Session;
   styles: HomeScreenStyles;
+  thumbnailUri?: string;
   video?: SessionVideoAsset | null;
 }) {
   styles = nextStyles;
@@ -227,12 +229,18 @@ export function MomentDetailModal({
               </Pressable>
             ) : video ? (
               <LocalSessionVideoPlayer videoUri={video.uri} />
+            ) : thumbnailUri ? (
+              <Image
+                resizeMode="cover"
+                source={{ uri: thumbnailUri }}
+                style={styles.detailVideo}
+              />
             ) : (
               <View style={styles.videoMissingFallback}>
                 <Text style={styles.videoMissingTitle}>영상이 필요합니다</Text>
                 <Text style={styles.videoMissingText}>
-                  Evidence Extraction MVP는 웨이크보드 영상을 기준으로 동작 근거를
-                  추출합니다.
+                  원본 영상은 이 기기에 없지만, 저장된 분석 결과는 계속 확인할 수
+                  있습니다.
                 </Text>
               </View>
             )}
