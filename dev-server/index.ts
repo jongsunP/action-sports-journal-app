@@ -440,8 +440,31 @@ app.post(
 app.post(
   "/api/moments/from-source-video",
   analysisRateLimit,
+  (_request, response, next) => {
+    response.locals.sourceVideoRequestStartedAt = Date.now();
+    console.info("[source_video_timing]", {
+      elapsedMs: 0,
+      event: "from_source_video_request_received",
+    });
+    next();
+  },
   upload.single("video"),
   async (request, response) => {
+    const requestStartedAt =
+      typeof response.locals.sourceVideoRequestStartedAt === "number"
+        ? response.locals.sourceVideoRequestStartedAt
+        : Date.now();
+    const logSourceVideoTiming = (
+      event: string,
+      details?: Record<string, unknown>,
+    ) => {
+      console.info("[source_video_timing]", {
+        elapsedMs: Date.now() - requestStartedAt,
+        event,
+        ...details,
+      });
+    };
+
     try {
       const client = getSupabaseServerClient();
 
@@ -456,6 +479,11 @@ app.post(
         response.status(400).json({ error: "video file is required." });
         return;
       }
+
+      logSourceVideoTiming("multipart_file_received", {
+        fileSize: request.file.size,
+        mimeType: request.file.mimetype,
+      });
 
       if (request.file.size > geminiMaxVideoBytes) {
         response.status(413).json({
@@ -473,6 +501,7 @@ app.post(
           originalname: request.file.originalname,
           size: request.file.size,
         },
+        onTiming: logSourceVideoTiming,
       });
 
       const queuedJob = result.queuedJob;
@@ -497,6 +526,10 @@ app.post(
         analysisJobStatus: queuedJob?.status,
         analysisStarted: queuedJob?.status === "queued",
         uploadedAt: result.uploadedAt,
+      });
+      logSourceVideoTiming("response_sent", {
+        analysisJobId: queuedJob?.id,
+        momentId: result.momentId,
       });
     } catch (error) {
       const message =
@@ -3304,10 +3337,12 @@ async function createStoredMomentFromSourceVideo({
   body,
   client,
   file,
+  onTiming,
 }: {
   body: Record<string, unknown>;
   client: SupabaseServerClient;
   file: EvidenceJobVideoFile;
+  onTiming?: (event: string, details?: Record<string, unknown>) => void;
 }) {
   const momentId = randomUUID();
   const now = new Date().toISOString();
@@ -3328,6 +3363,10 @@ async function createStoredMomentFromSourceVideo({
       `Failed to upload source video to Storage: ${uploadResult.error.message}`,
     );
   }
+
+  onTiming?.("storage_upload_completed", {
+    storagePath,
+  });
 
   const durationMs = Number(body?.durationMs);
   const occurredAt = getField(body?.occurredAt, now);
@@ -3366,6 +3405,10 @@ async function createStoredMomentFromSourceVideo({
     throw new Error(`Failed to insert stored Moment: ${momentInsertError.message}`);
   }
 
+  onTiming?.("moment_inserted", {
+    momentId,
+  });
+
   try {
     const queuedJob = await createQueuedEvidenceAnalysisJob({
       userId,
@@ -3382,6 +3425,10 @@ async function createStoredMomentFromSourceVideo({
         client,
         analysisJobId: queuedJob.id,
         storedVideo,
+      });
+      onTiming?.("analysis_job_queued", {
+        analysisJobId: queuedJob.id,
+        momentId,
       });
     }
 

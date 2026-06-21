@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEventListener } from 'expo';
 import {
+  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -554,7 +555,7 @@ export function UploadSheet({
 
           <View style={styles.uploadPageFooter}>
             <Text style={styles.uploadAiNotice}>
-              업로드가 끝나면 AI 분석을 시작합니다. 업로드가 완료되기 전에는 앱을 닫지 마세요.
+              업로드가 끝나면 AI 분석을 시작합니다. 업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.
             </Text>
             {isSubmitting ? (
               <View style={styles.uploadSubmittingPanel}>
@@ -562,7 +563,7 @@ export function UploadSheet({
                   영상을 서버에 업로드하고 있습니다.
                 </Text>
                 <Text style={styles.uploadSubmittingHint}>
-                  이 단계에서는 앱을 닫지 마세요. 업로드가 완료되면 분석은 서버에서 계속됩니다.
+                  업로드가 완료되면 분석은 서버에서 계속됩니다.
                 </Text>
               </View>
             ) : isPreparingThumbnail ? (
@@ -614,6 +615,25 @@ export function UploadSheet({
               </Pressable>
             </View>
           </View>
+          {isSubmitting ? (
+            <View
+              accessibilityRole="progressbar"
+              style={styles.uploadBlockingOverlay}
+            >
+              <View style={styles.uploadBlockingCard}>
+                <ActivityIndicator color="#f8fafc" size="large" />
+                <Text style={styles.uploadBlockingTitle}>
+                  영상을 업로드하고 있습니다.
+                </Text>
+                <Text style={styles.uploadBlockingText}>
+                  업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.
+                </Text>
+                <Text style={styles.uploadBlockingText}>
+                  업로드가 완료되면 분석은 서버에서 계속됩니다.
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
       </SafeAreaView>
     </Modal>

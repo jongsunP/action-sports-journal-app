@@ -646,6 +646,8 @@ export function HomeScreen() {
     setSelectedVideoThumbnailUri(null);
 
     void (async () => {
+      let uploadStartedAt: number | undefined;
+
       try {
         if (!hasConfiguredSupabaseMoments()) {
           await handleExtractEvidence(nextSession, {
@@ -655,12 +657,26 @@ export function HomeScreen() {
           return;
         }
 
+        uploadStartedAt = Date.now();
+
+        console.info('[upload_timing]', {
+          event: 'upload_start',
+          fileSize: videoForUpload.fileSize,
+          localSessionId: nextSession.id,
+        });
+
         const storedMoment = await createMomentFromSourceVideo(
           nextSession,
           videoForUpload,
         );
 
         if (!storedMoment) {
+          console.info('[upload_timing]', {
+            elapsedMs: Date.now() - uploadStartedAt,
+            event: 'upload_failure',
+            localSessionId: nextSession.id,
+            reason: 'no_stored_moment',
+          });
           updateLocalMomentStatus(nextSession.id, 'upload_failed');
           Alert.alert(
             '영상 업로드에 실패했습니다',
@@ -680,9 +696,26 @@ export function HomeScreen() {
             ? 'processing'
             : 'queued';
 
+        console.info('[upload_timing]', {
+          elapsedMs: Date.now() - uploadStartedAt,
+          event: 'upload_success',
+          localSessionId: nextSession.id,
+          momentId: storedMoment.momentId,
+          nextMomentStatus,
+        });
+
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
         setIsComposerOpen(false);
       } catch (error) {
+        console.info('[upload_timing]', {
+          elapsedMs:
+            typeof uploadStartedAt === 'number'
+              ? Date.now() - uploadStartedAt
+              : undefined,
+          event: 'upload_failure',
+          localSessionId: nextSession.id,
+          reason: error instanceof Error ? error.message : 'unknown',
+        });
         updateLocalMomentStatus(nextSession.id, 'upload_failed');
         setIsComposerOpen(false);
         console.warn(
@@ -1828,6 +1861,44 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 17,
     marginBottom: 4,
+    textAlign: 'center',
+  },
+  uploadBlockingOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(5, 5, 7, 0.86)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    paddingHorizontal: 24,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  uploadBlockingCard: {
+    alignItems: 'center',
+    backgroundColor: '#101218',
+    borderColor: 'rgba(125, 211, 252, 0.34)',
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 10,
+    maxWidth: 340,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    width: '100%',
+  },
+  uploadBlockingTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    lineHeight: 22,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  uploadBlockingText: {
+    color: '#bae6fd',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
     textAlign: 'center',
   },
   buttonPressed: {
