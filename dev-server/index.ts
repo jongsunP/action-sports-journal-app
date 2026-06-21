@@ -404,6 +404,75 @@ app.post("/api/video-upload-targets", analysisRateLimit, async (request, respons
   }
 });
 
+app.post(
+  "/api/video-upload-targets/:uploadId/failure",
+  analysisRateLimit,
+  async (request, response) => {
+    try {
+      const client = getSupabaseServerClient();
+
+      if (!client) {
+        response.status(503).json({
+          error: "Supabase service role env is not configured.",
+        });
+        return;
+      }
+
+      const uploadId = getField(request.params.uploadId, "");
+
+      if (!isUuid(uploadId)) {
+        response.status(400).json({ error: "Invalid upload id." });
+        return;
+      }
+
+      const reason = getField(
+        request.body?.reason,
+        "Direct upload failed before fallback.",
+      );
+      const stage = nullableString(request.body?.stage);
+      const blobSize = Number(request.body?.blobSize);
+      const storagePath = nullableString(request.body?.storagePath);
+      const videoUriScheme = nullableString(request.body?.videoUriScheme);
+      const failureReason = [
+        "direct_upload_failed",
+        stage ? `stage=${stage}` : undefined,
+        `reason=${reason}`,
+        Number.isFinite(blobSize) ? `blobSize=${blobSize}` : undefined,
+        storagePath ? `storagePath=${storagePath}` : undefined,
+        videoUriScheme ? `videoUriScheme=${videoUriScheme}` : undefined,
+        "fallback_attempted=true",
+      ]
+        .filter(Boolean)
+        .join("; ");
+
+      await updateUploadTargetStatus({
+        client,
+        failureReason,
+        status: "failed",
+        uploadId,
+      });
+
+      console.warn("[upload_timing] direct_upload_failure", {
+        blobSize: Number.isFinite(blobSize) ? blobSize : undefined,
+        reason,
+        stage,
+        storagePath,
+        uploadId,
+        videoUriScheme,
+      });
+
+      response.json({ ok: true });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Upload target failure report failed.";
+      console.error("Upload target failure report failed:", message);
+      response.status(500).json({ error: message });
+    }
+  },
+);
+
 app.post("/api/moments", async (request, response) => {
   try {
     const client = getSupabaseServerClient();

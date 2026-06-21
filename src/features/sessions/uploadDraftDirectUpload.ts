@@ -1,5 +1,6 @@
 import {
   finalizeUploadedSourceVideo,
+  reportUploadTargetFailure,
   requestUploadTarget,
   uploadVideoToSignedTarget,
   type VideoUploadTarget,
@@ -16,11 +17,12 @@ export async function uploadDraftSourceVideoDirectly(
   draft: UploadDraft,
 ): Promise<VideoUploadTarget | undefined> {
   const video = getVideoFromUploadDraft(draft);
+  let uploadTarget: VideoUploadTarget | undefined;
 
   await updateUploadDraft({ status: 'uploading' });
 
   try {
-    const uploadTarget = await requestUploadTarget({
+    uploadTarget = await requestUploadTarget({
       draftId: draft.draftId,
       fileName: draft.fileName,
       fileSize: draft.fileSize,
@@ -54,6 +56,15 @@ export async function uploadDraftSourceVideoDirectly(
     return uploadTarget;
   } catch (error) {
     await updateUploadDraft({ status: 'upload_failed' });
+    if (uploadTarget) {
+      await reportUploadTargetFailure({
+        reason: error instanceof Error ? error.message : 'unknown',
+        stage: 'signed_upload',
+        storagePath: uploadTarget.storagePath,
+        uploadId: uploadTarget.uploadId,
+        videoUriScheme: video.uri.split(':', 1)[0],
+      });
+    }
     throw error;
   }
 }
@@ -73,16 +84,29 @@ export async function finalizeUploadedDraftSource(
   }
 
   const video = getVideoFromUploadDraft(draft);
-  const finalizedMoment = await finalizeUploadedSourceVideo({
-    draftId: draft.draftId,
-    uploadId: draft.uploadId,
-    storageProvider: draft.storageProvider,
-    storageBucket: draft.storageBucket,
-    storagePath: draft.storagePath,
-    session,
-    video,
-    thumbnailUri: draft.localThumbnailUri,
-  });
+  let finalizedMoment;
+
+  try {
+    finalizedMoment = await finalizeUploadedSourceVideo({
+      draftId: draft.draftId,
+      uploadId: draft.uploadId,
+      storageProvider: draft.storageProvider,
+      storageBucket: draft.storageBucket,
+      storagePath: draft.storagePath,
+      session,
+      video,
+      thumbnailUri: draft.localThumbnailUri,
+    });
+  } catch (error) {
+    await reportUploadTargetFailure({
+      reason: error instanceof Error ? error.message : 'unknown',
+      stage: 'finalize',
+      storagePath: draft.storagePath,
+      uploadId: draft.uploadId,
+      videoUriScheme: video.uri.split(':', 1)[0],
+    });
+    throw error;
+  }
 
   if (finalizedMoment) {
     await clearUploadDraft();

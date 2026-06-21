@@ -117,8 +117,17 @@ const uploadTargetsEndpoint = analysisEndpoint?.replace(
   /\/api\/analyze-session-video$/,
   '/api/video-upload-targets',
 );
-const SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS = 10000;
-const SIGNED_UPLOAD_REQUEST_TIMEOUT_MS = 20000;
+const SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS = 5000;
+const SIGNED_UPLOAD_REQUEST_TIMEOUT_MS = 8000;
+
+export type ReportUploadTargetFailureInput = {
+  uploadId: string;
+  reason: string;
+  blobSize?: number;
+  stage?: string;
+  storagePath?: string;
+  videoUriScheme?: string;
+};
 
 export function hasConfiguredSupabaseMoments() {
   return Boolean(momentsEndpoint);
@@ -264,6 +273,48 @@ export async function uploadVideoToSignedTarget(
   });
 
   return data;
+}
+
+export async function reportUploadTargetFailure({
+  blobSize,
+  reason,
+  stage,
+  storagePath,
+  uploadId,
+  videoUriScheme,
+}: ReportUploadTargetFailureInput) {
+  if (!uploadTargetsEndpoint) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${uploadTargetsEndpoint}/${uploadId}/failure`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        blobSize: typeof blobSize === 'number' ? blobSize : null,
+        reason,
+        stage: stage ?? null,
+        storagePath: storagePath ?? null,
+        videoUriScheme: videoUriScheme ?? null,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await readRemoteErrorMessage(response);
+      console.warn(
+        'Upload target failure report failed:',
+        message ?? response.status,
+      );
+    }
+  } catch (error) {
+    console.warn(
+      'Upload target failure report failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+  }
 }
 
 export async function finalizeUploadedSourceVideo(
