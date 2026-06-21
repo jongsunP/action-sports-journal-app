@@ -61,6 +61,7 @@ import {
 } from './sessionStorage';
 import { listMomentsWithTimeout, useBootSync } from './useBootSync';
 import { useDeleteMoment } from './useDeleteMoment';
+import { useMomentDetail } from './useMomentDetail';
 import { useSyncRemoteMoments } from './useSyncRemoteMoments';
 import { useSessionRepository } from './useSessionRepository';
 
@@ -128,10 +129,20 @@ export function HomeScreen() {
   ] = useState(false);
   const [extractingEvidenceBySessionId, setExtractingEvidenceBySessionId] =
     useState<Record<string, boolean>>({});
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [playingVideoSessionId, setPlayingVideoSessionId] = useState<string | null>(
-    null,
-  );
+  const {
+    closeMomentDetail,
+    closeMomentDetailIfSelected,
+    openMomentDetail,
+    selectedMomentStatus,
+    selectedSession,
+    selectedSessionVideo,
+    selectMomentDetail,
+  } = useMomentDetail({
+    extractingEvidenceBySessionId,
+    geminiEvidenceBySessionId,
+    sessions,
+    videosBySessionId,
+  });
 
   const syncRemoteMoments = useSyncRemoteMoments({
     remoteMomentIdsBySessionId,
@@ -353,19 +364,6 @@ export function HomeScreen() {
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
   const canCreateVideoThumbnail = hasConfiguredVideoThumbnailEndpoint();
-  const selectedSession = selectedSessionId
-    ? sessions.find((session) => session.id === selectedSessionId)
-    : undefined;
-  const selectedSessionVideo = selectedSession
-    ? videosBySessionId[selectedSession.id] ?? getVideoAssetFromSession(selectedSession)
-    : null;
-  const selectedMomentStatus = selectedSession
-    ? getMomentStatus({
-        evidence: geminiEvidenceBySessionId[selectedSession.id],
-        isProcessing: Boolean(extractingEvidenceBySessionId[selectedSession.id]),
-        sessionStatus: selectedSession.momentStatus,
-      })
-    : undefined;
   const canUploadSession =
     Boolean(selectedVideo) &&
     !isUploadingSession &&
@@ -373,12 +371,8 @@ export function HomeScreen() {
 
   const removeSessionLocally = useCallback((sessionId: string) => {
     removeSessionDataLocally(sessionId);
-
-    if (selectedSessionId === sessionId) {
-      setSelectedSessionId(null);
-      setPlayingVideoSessionId(null);
-    }
-  }, [removeSessionDataLocally, selectedSessionId]);
+    closeMomentDetailIfSelected(sessionId);
+  }, [closeMomentDetailIfSelected, removeSessionDataLocally]);
 
   const { deletingSessionIds, handleDeleteSession } = useDeleteMoment({
     remoteMomentIdsBySessionId,
@@ -467,8 +461,7 @@ export function HomeScreen() {
   };
 
   const openEvidenceSheet = (session: Session) => {
-    setSelectedSessionId(session.id);
-    setPlayingVideoSessionId(null);
+    openMomentDetail(session.id);
 
     const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
 
@@ -743,7 +736,7 @@ export function HomeScreen() {
     }
 
     if (options?.openSheet !== false) {
-      setSelectedSessionId(session.id);
+      selectMomentDetail(session.id);
     }
 
     const group =
@@ -996,10 +989,7 @@ export function HomeScreen() {
           selectedSession ? Boolean(extractingEvidenceBySessionId[selectedSession.id]) : false
         }
         momentStatus={selectedMomentStatus}
-        onClose={() => {
-          setSelectedSessionId(null);
-          setPlayingVideoSessionId(null);
-        }}
+        onClose={closeMomentDetail}
         onDelete={
           selectedSession ? () => handleDeleteSession(selectedSession) : undefined
         }
