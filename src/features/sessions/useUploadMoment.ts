@@ -24,6 +24,10 @@ import {
 import type { Session } from '../../types';
 import type { AppTabId } from './sessionComponents';
 import {
+  finalizeUploadedDraftSource,
+  uploadDraftSourceVideoDirectly,
+} from './uploadDraftDirectUpload';
+import {
   clearUploadDraft,
   createUploadDraftFromVideo,
   getVideoFromUploadDraft,
@@ -352,6 +356,7 @@ export function useUploadMoment({
     setActiveTab('video');
     void (async () => {
       let uploadStartedAt: number | undefined;
+      let usedUploadFallback = false;
 
       try {
         await persistUploadDraftStatus('uploading');
@@ -378,10 +383,18 @@ export function useUploadMoment({
           localSessionId: nextSession.id,
         });
 
-        const storedMoment = await createMomentFromSourceVideo(
-          nextSession,
-          videoForUpload,
-        );
+        let storedMoment = await createMomentFromDirectUpload({
+          draft: uploadDraft,
+          session: nextSession,
+        });
+
+        if (!storedMoment) {
+          usedUploadFallback = true;
+          storedMoment = await createMomentFromSourceVideo(
+            nextSession,
+            videoForUpload,
+          );
+        }
 
         if (!storedMoment) {
           console.info('[upload_timing]', {
@@ -415,6 +428,7 @@ export function useUploadMoment({
           localSessionId: nextSession.id,
           momentId: storedMoment.momentId,
           nextMomentStatus,
+          uploadPath: usedUploadFallback ? 'multipart_fallback' : 'direct',
         });
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
@@ -469,6 +483,44 @@ export function useUploadMoment({
 
 function draftVideoFromUploadDraft(draft: UploadDraft | null) {
   return draft ? getVideoFromUploadDraft(draft) : null;
+}
+
+async function createMomentFromDirectUpload({
+  draft,
+  session,
+}: {
+  draft: UploadDraft | null;
+  session: Session;
+}) {
+  if (!draft) {
+    return undefined;
+  }
+
+  try {
+    const uploadTarget = await uploadDraftSourceVideoDirectly(draft);
+
+    if (!uploadTarget) {
+      return undefined;
+    }
+
+    const uploadedDraft: UploadDraft = {
+      ...draft,
+      status: 'uploaded',
+      uploadedAt: new Date().toISOString(),
+      uploadId: uploadTarget.uploadId,
+      storageProvider: uploadTarget.provider,
+      storageBucket: uploadTarget.bucket,
+      storagePath: uploadTarget.storagePath,
+    };
+
+    return await finalizeUploadedDraftSource(uploadedDraft, session);
+  } catch (error) {
+    console.warn(
+      'Direct upload finalize path failed; falling back to multipart upload:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+    return undefined;
+  }
 }
 
 function createLocalSessionId() {
