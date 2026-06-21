@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -69,6 +70,7 @@ export function useBootSync({
     useState<RemoteMomentSyncStatus>(
       isRemoteMomentSyncConfigured ? 'waiting_for_storage' : 'not_configured',
   );
+  const hasStartedInitialRemoteSyncRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -130,12 +132,13 @@ export function useBootSync({
   useEffect(() => {
     if (
       !isStorageLoaded ||
-      remoteMomentSyncStatus !== 'waiting_for_storage' ||
-      !isRemoteMomentSyncConfigured
+      !isRemoteMomentSyncConfigured ||
+      hasStartedInitialRemoteSyncRef.current
     ) {
       return;
     }
 
+    hasStartedInitialRemoteSyncRef.current = true;
     let isMounted = true;
 
     async function loadRemoteMoments() {
@@ -171,7 +174,6 @@ export function useBootSync({
   }, [
     isStorageLoaded,
     isRemoteMomentSyncConfigured,
-    remoteMomentSyncStatus,
     syncRemoteMoments,
   ]);
 
