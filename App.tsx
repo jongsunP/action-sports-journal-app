@@ -1,11 +1,16 @@
 import { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 
 import { HomeScreen } from './src/features/sessions/HomeScreen';
+import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
+import type { RootStackParamList } from './src/navigation/types';
 
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   useEffect(() => {
@@ -27,7 +32,17 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <HomeScreen />
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            contentStyle: styles.container,
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="MomentDetail" component={MomentDetailScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
       <StatusBar backgroundColor="#0b0d12" style="light" />
     </View>
   );

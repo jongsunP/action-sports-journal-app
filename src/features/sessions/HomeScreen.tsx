@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Alert,
   AppState,
@@ -34,7 +36,6 @@ import {
   UploadSheet,
   VideoArchiveList,
 } from './sessionComponents';
-import { MomentDetailModal } from './MomentDetailModal';
 import {
   formatShortSessionDate,
   formatVideoMeta,
@@ -47,6 +48,7 @@ import {
   savePersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
+import { setMomentDetailRuntimeState } from './momentDetailRuntimeStore';
 import { listMomentsWithTimeout, useBootSync } from './useBootSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
@@ -59,12 +61,15 @@ import type {
   AnalysisResult,
   Session,
 } from '../../types';
+import type { RootStackParamList } from '../../navigation/types';
 
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
 
 export function HomeScreen() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
   const colorScheme = useColorScheme();
   const prefersDarkMode = colorScheme === 'dark';
   const [selectedGroupId, setSelectedGroupId] = useState(
@@ -107,12 +112,7 @@ export function HomeScreen() {
     videosBySessionId,
   });
   const {
-    closeMomentDetail,
     closeMomentDetailIfSelected,
-    openMomentDetail,
-    selectedMomentStatus,
-    selectedSession,
-    selectedSessionVideo,
     selectMomentDetail,
   } = useMomentDetail({
     extractingEvidenceBySessionId,
@@ -373,6 +373,36 @@ export function HomeScreen() {
     updateLocalMomentStatus,
   });
 
+  useEffect(() => {
+    setMomentDetailRuntimeState({
+      canRequestGeminiEvidence,
+      debugEndpoint: __DEV__
+        ? configuredAiEndpoints.geminiEvidenceEndpoint
+        : undefined,
+      deletingSessionIds,
+      extractingEvidenceBySessionId,
+      geminiEvidenceBySessionId,
+      handleDeleteSession,
+      handleExtractEvidence,
+      isReady: true,
+      sessions,
+      styles,
+      thumbnailsBySessionId,
+      videosBySessionId,
+    });
+  }, [
+    canRequestGeminiEvidence,
+    configuredAiEndpoints.geminiEvidenceEndpoint,
+    deletingSessionIds,
+    extractingEvidenceBySessionId,
+    geminiEvidenceBySessionId,
+    handleDeleteSession,
+    handleExtractEvidence,
+    sessions,
+    thumbnailsBySessionId,
+    videosBySessionId,
+  ]);
+
   if (isLoadingInitialMoments) {
     return (
       <SafeAreaView
@@ -390,7 +420,7 @@ export function HomeScreen() {
   }
 
   const openEvidenceSheet = (session: Session) => {
-    openMomentDetail(session.id);
+    navigation.navigate('MomentDetail', { sessionId: session.id });
 
     const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
 
@@ -526,35 +556,6 @@ export function HomeScreen() {
         isDarkMode={prefersDarkMode}
         onChangeTab={setActiveTab}
         styles={styles}
-      />
-      <MomentDetailModal
-        canRequestGeminiEvidence={canRequestGeminiEvidence}
-        debugEndpoint={
-          __DEV__ ? configuredAiEndpoints.geminiEvidenceEndpoint : undefined
-        }
-        evidence={selectedSession ? geminiEvidenceBySessionId[selectedSession.id] : undefined}
-        isDeleting={
-          selectedSession ? Boolean(deletingSessionIds[selectedSession.id]) : false
-        }
-        isLoading={
-          selectedSession ? Boolean(extractingEvidenceBySessionId[selectedSession.id]) : false
-        }
-        momentStatus={selectedMomentStatus}
-        onClose={closeMomentDetail}
-        onDelete={
-          selectedSession ? () => handleDeleteSession(selectedSession) : undefined
-        }
-        onRetry={
-          selectedSession
-            ? () => handleExtractEvidence(selectedSession, { openSheet: true })
-            : undefined
-        }
-        session={selectedSession}
-        styles={styles}
-        thumbnailUri={
-          selectedSession ? thumbnailsBySessionId[selectedSession.id] : undefined
-        }
-        video={selectedSessionVideo}
       />
       <UploadSheet
         canUploadSession={canUploadSession}
