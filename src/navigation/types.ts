@@ -3,4 +3,5 @@ export type RootStackParamList = {
   MomentDetail: {
     sessionId: string;
   };
+  Upload: undefined;
 };

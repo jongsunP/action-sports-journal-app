@@ -5,6 +5,7 @@ import {
   Alert,
   AppState,
   type AppStateStatus,
+  InteractionManager,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -33,7 +34,6 @@ import {
   FlowPlaceholderTab,
   PrimaryInsightCard,
   RecentSessionsRail,
-  UploadSheet,
   VideoArchiveList,
 } from './sessionComponents';
 import {
@@ -49,6 +49,7 @@ import {
   type PersistedSessionState,
 } from './sessionStorage';
 import { setMomentDetailRuntimeState } from './momentDetailRuntimeStore';
+import { setUploadRuntimeState } from './uploadRuntimeStore';
 import { listMomentsWithTimeout, useBootSync } from './useBootSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
@@ -99,6 +100,7 @@ export function HomeScreen() {
     videosBySessionId,
   } = useSessionRepository();
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const didNavigateToUploadRef = useRef(false);
   const selectMomentDetailRef = useRef<(sessionId: string) => void>(() => {});
   const {
     extractingEvidenceBySessionId,
@@ -374,6 +376,22 @@ export function HomeScreen() {
   });
 
   useEffect(() => {
+    if (!isComposerOpen) {
+      didNavigateToUploadRef.current = false;
+      return;
+    }
+
+    if (selectedVideo && !didNavigateToUploadRef.current) {
+      didNavigateToUploadRef.current = true;
+      const navigationTask = InteractionManager.runAfterInteractions(() => {
+        navigation.navigate('Upload');
+      });
+
+      return () => navigationTask.cancel();
+    }
+  }, [isComposerOpen, navigation, selectedVideo]);
+
+  useEffect(() => {
     setMomentDetailRuntimeState({
       canRequestGeminiEvidence,
       debugEndpoint: __DEV__
@@ -401,6 +419,31 @@ export function HomeScreen() {
     sessions,
     thumbnailsBySessionId,
     videosBySessionId,
+  ]);
+
+  useEffect(() => {
+    setUploadRuntimeState({
+      canUploadSession,
+      formatVideoMeta,
+      isOpen: isComposerOpen,
+      isPreparingThumbnail: isPreparingSelectedVideoThumbnail,
+      isReady: true,
+      isSubmitting: isUploadingSession,
+      onClose: closeUploadSheet,
+      onPickVideo: handlePickVideo,
+      onSubmit: handleAddSession,
+      selectedVideo,
+      styles,
+    });
+  }, [
+    canUploadSession,
+    closeUploadSheet,
+    handleAddSession,
+    handlePickVideo,
+    isComposerOpen,
+    isPreparingSelectedVideoThumbnail,
+    isUploadingSession,
+    selectedVideo,
   ]);
 
   if (isLoadingInitialMoments) {
@@ -555,18 +598,6 @@ export function HomeScreen() {
         activeTab={activeTab}
         isDarkMode={prefersDarkMode}
         onChangeTab={setActiveTab}
-        styles={styles}
-      />
-      <UploadSheet
-        canUploadSession={canUploadSession}
-        formatVideoMeta={formatVideoMeta}
-        isOpen={isComposerOpen}
-        isPreparingThumbnail={isPreparingSelectedVideoThumbnail}
-        isSubmitting={isUploadingSession}
-        onClose={closeUploadSheet}
-        onPickVideo={handlePickVideo}
-        onSubmit={handleAddSession}
-        selectedVideo={selectedVideo}
         styles={styles}
       />
     </SafeAreaView>

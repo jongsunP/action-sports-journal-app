@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { HomeScreen } from './src/features/sessions/HomeScreen';
 import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
+import { UploadScreen } from './src/features/sessions/UploadScreen';
 import type { RootStackParamList } from './src/navigation/types';
 
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
@@ -40,6 +41,16 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen
+            name="Upload"
+            component={UploadScreen}
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen
             name="MomentDetail"
             component={MomentDetailScreen}
