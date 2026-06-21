@@ -35,8 +35,8 @@ const UPLOAD_PROGRESS_COPY: Record<
     label: '영상 전송 중',
   },
   finalizing_upload: {
-    detail: '업로드된 영상을 확인하고 분석을 준비하고 있습니다.',
-    label: '업로드 확인 중',
+    detail: '영상 전송이 완료되었습니다. 서버에서 분석을 시작할 준비를 하고 있습니다.',
+    label: '분석 준비 중',
   },
   requesting_analysis: {
     detail: '서버에서 분석을 계속할 수 있도록 요청을 등록하고 있습니다.',

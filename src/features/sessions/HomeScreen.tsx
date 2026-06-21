@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  ActivityIndicator,
   Alert,
   AppState,
   type AppStateStatus,
@@ -71,6 +72,7 @@ import type { RootStackParamList } from '../../navigation/types';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
+type RemoteRefreshReason = 'foreground' | 'initial_retry' | 'push_response';
 
 export function HomeScreen() {
   const navigation =
@@ -82,6 +84,8 @@ export function HomeScreen() {
   );
   const [activeTab, setActiveTab] = useState<AppTabId>('home');
   const [isRemoteRefreshActive, setIsRemoteRefreshActive] = useState(false);
+  const [remoteRefreshReason, setRemoteRefreshReason] =
+    useState<RemoteRefreshReason | null>(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
   const {
@@ -167,7 +171,7 @@ export function HomeScreen() {
     isLoadingInitialMoments || isInitialRemoteMomentSyncPending;
 
   const refreshRemoteMoments = useCallback(
-    async (reason: 'foreground' | 'initial_retry' | 'push_response') => {
+    async (reason: RemoteRefreshReason) => {
       if (
         !isStorageLoaded ||
         !isRemoteMomentSyncLoaded ||
@@ -178,6 +182,7 @@ export function HomeScreen() {
       }
 
       isRefreshingRemoteMomentsRef.current = true;
+      setRemoteRefreshReason(reason);
       setIsRemoteRefreshActive(true);
 
       try {
@@ -197,6 +202,7 @@ export function HomeScreen() {
       } finally {
         isRefreshingRemoteMomentsRef.current = false;
         setIsRemoteRefreshActive(false);
+        setRemoteRefreshReason(null);
       }
     },
     [
@@ -352,6 +358,21 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
+  const hasActiveVisibleMoment = useMemo(
+    () =>
+      visibleSessions.some(
+        (session) =>
+          session.momentStatus === 'uploading' ||
+          session.momentStatus === 'queued' ||
+          session.momentStatus === 'processing',
+      ),
+    [visibleSessions],
+  );
+  const shouldBlockForRemoteRefresh =
+    isRemoteRefreshActive &&
+    hasActiveVisibleMoment &&
+    (remoteRefreshReason === 'foreground' ||
+      remoteRefreshReason === 'push_response');
   const homeSessionSummaries = useMemo(
     () =>
       visibleSessions.map((session) => {
@@ -678,6 +699,17 @@ export function HomeScreen() {
         onChangeTab={setActiveTab}
         styles={styles}
       />
+      {shouldBlockForRemoteRefresh ? (
+        <View accessibilityRole="progressbar" style={styles.syncBlockingOverlay}>
+          <View style={styles.syncBlockingCard}>
+            <ActivityIndicator color="#f8fafc" size="large" />
+            <Text style={styles.syncBlockingTitle}>결과를 동기화하고 있습니다</Text>
+            <Text style={styles.syncBlockingText}>
+              방금 완료된 분석 결과를 불러오는 중입니다.
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -743,6 +775,45 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0,
     lineHeight: 16,
+  },
+  syncBlockingOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(5, 5, 7, 0.72)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    paddingHorizontal: 28,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 30,
+  },
+  syncBlockingCard: {
+    alignItems: 'center',
+    backgroundColor: '#101218',
+    borderColor: 'rgba(125, 211, 252, 0.34)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    maxWidth: 320,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    width: '100%',
+  },
+  syncBlockingTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    lineHeight: 22,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  syncBlockingText: {
+    color: '#bae6fd',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+    textAlign: 'center',
   },
   bottomTabBar: {
     alignItems: 'center',
