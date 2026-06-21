@@ -26,6 +26,73 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Part 1 Upload Experience Closeout - 2026-06-22
+
+Problem:
+
+Part 1's risk was not only upload failure. The larger risk was shipping a flow
+where upload, analysis, result restore, Push, Realtime, and completion feedback
+all technically existed but did not feel like one coherent mobile experience.
+
+Why it mattered:
+
+Upload is the front door of the product. If the user cannot tell whether the
+video is still uploading, whether analysis has moved server-side, or whether a
+result has completed while the app is active, then later AI Calibration work
+will not repair the trust problem.
+
+Decision:
+
+Part 1 is closed for single-user internal QA with the following boundary:
+
+```text
+Direct Upload preferred
++ multipart fallback retained
++ /api/moments source of truth
++ Push for background notification
++ Realtime Broadcast for active refresh
++ in-app banner for active completion awareness
+```
+
+Local Draft Resume is removed. Future draft work must be server/upload-session
+based, not a persisted `file://` URI retry.
+
+Implementation:
+
+- UploadScreen keeps the user in flow until upload/finalize completes.
+- Direct Upload uses signed URL and `FileSystem.uploadAsync`.
+- Real upload percentage is shown only during actual file transfer.
+- Boot Loading and Empty State are separated.
+- Result sync uses `/api/moments`; Realtime payloads trigger refresh only.
+- In-app completion banner appears after local state reflects completed.
+
+Result:
+
+Part 1 is acceptable for founder/internal single-user QA. It is not an
+external-user release baseline until ownership and cleanup boundaries are fixed.
+
+Remaining risks:
+
+- Auth/User Ownership: Part 1 blocker for external users.
+- `upload_targets` semantics: Part 2 cleanup prerequisite. A failed Direct
+  Upload followed by successful multipart fallback can leave a failed target
+  even though the user upload succeeded.
+- Direct Upload sample size: continue measuring direct vs fallback outcomes.
+- Realtime privacy: public Broadcast is internal QA MVP only.
+
+Part 2 TODOs:
+
+1. Server Draft / upload session.
+2. Upload target / orphan cleanup policy.
+3. Auth and user ownership.
+4. Realtime private/scoped channel.
+5. Push deep link to Moment Detail.
+6. Upload pre-processing investigation: Instagram/TikTok-style client
+   re-encoding, resolution downscale, bitrate tuning, proxy video generation,
+   and AI-analysis quality impact.
+7. Source cleanup monitoring and retry policy.
+8. AI Calibration after upload experience remains stable.
+
 ## Build 29 Direct Upload Case Study - 2026-06-21
 
 Build 29 is the current upload architecture QA build:

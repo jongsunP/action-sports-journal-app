@@ -14,6 +14,82 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Part 1 Upload Experience closeout, 2026-06-22:
+
+Problem:
+
+The app's core product promise is not AI Calibration yet. The immediate
+question is whether one real wakeboard video can be uploaded, handed to the
+server, analyzed, restored, and understood in a way that feels like a proper
+iPhone app. Earlier builds exposed several failure modes: Moment rows could be
+created before durable video input existed, Direct Upload could create 0 byte
+objects, foreground/result sync could show stale state, and active users could
+miss analysis completion even after Realtime was added.
+
+Why it mattered:
+
+If the upload-to-result loop feels unreliable, later AI coaching and trick-name
+calibration will sit on an untrusted product foundation. Riders need to believe
+that upload, progress, analysis start, completion, restore, and notification
+states are coherent before they judge the AI's sporting accuracy.
+
+Options:
+
+- Keep Render multipart as the main path and defer Direct Upload.
+- Use Direct Upload as the preferred path with multipart fallback.
+- Keep Local Draft Resume for app restarts.
+- Remove Local Draft Resume and require the rider to stay on the Upload screen
+  until durable upload completes.
+
+Decision:
+
+Close Part 1 for single-user internal QA on the Direct Upload + multipart
+fallback architecture. Remove Local Draft Resume because long-lived
+`file://` video URI reuse is not reliable enough. Keep `/api/moments` as the
+source of truth for result state. Keep Push for background notification,
+Realtime Broadcast for active-screen refresh, and foreground refresh as a
+fallback.
+
+Implementation:
+
+- Direct Upload now uses `FileSystem.uploadAsync` against the signed upload URL
+  and reports real byte progress during the video transfer stage.
+- Multipart upload remains as fallback if Direct Upload fails.
+- Upload UI keeps the user on the Upload screen until upload/finalize finishes.
+- Local Draft Resume and "continue previous upload" UX were removed.
+- Boot Loading and Empty State are separated so Empty State appears only after
+  remote sync has actually resolved to no records.
+- Push, Realtime Broadcast, foreground refresh, and an in-app completion banner
+  work together to communicate analysis completion.
+- `upload_targets` tracks target issue/upload/finalize/failure state for
+  diagnostics and future cleanup.
+
+Result:
+
+Part 1 is complete for a single-user internal QA build. A real Build 29 upload
+confirmed `upload_targets.status=finalized`, Moment/AnalysisJob/EvidenceResult
+creation, Push, result restore, and source cleanup. Build 36 adds active-state
+completion awareness through an in-app banner after Realtime-triggered refresh
+has actually reflected a completed Moment in local state.
+
+Remaining risks:
+
+- External or multi-user launch still requires Auth/User Ownership. The current
+  default-user model is not acceptable for broader release.
+- `upload_targets` state semantics need cleanup before automated orphan
+  deletion. A failed Direct Upload followed by successful multipart fallback
+  can leave a failed target row while the user upload succeeded.
+- Direct Upload should keep collecting real-device samples; fallback remains
+  necessary.
+- Realtime Broadcast is public MVP and should become scoped/private after Auth.
+
+Next stage:
+
+Part 2 should focus on upload architecture hardening, not AI Calibration first:
+server-side draft/upload session, upload target/orphan cleanup policy,
+pre-upload video optimization investigation, Push deep link, and Auth/user
+ownership. AI Calibration follows once the app-like upload loop stays stable.
+
 Update on 2026-06-20, Analysis-first Product Strategy:
 
 Build 29 Direct Upload checkpoint, 2026-06-21:

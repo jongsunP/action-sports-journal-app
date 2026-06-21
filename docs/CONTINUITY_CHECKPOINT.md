@@ -39,6 +39,81 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
+## Part 1 Upload Experience Closeout - 2026-06-22
+
+Problem:
+
+Part 1 was not only about making uploads technically work. It was about making
+the first real video upload feel durable, understandable, and app-native before
+moving into AI Calibration. The team found that a rider could otherwise confuse
+uploading with analysis, miss active-state completion, see stale processing
+state after Push/foreground transitions, or depend on a local draft URI that may
+not survive app lifecycle changes.
+
+Why it mattered:
+
+The app's first trust contract is:
+
+```text
+video selected
+-> durable upload
+-> server-owned analysis
+-> result restore
+-> rider-readable completion
+```
+
+If that contract is weak, coaching and calibration improvements will not matter
+because the user will not trust the product loop.
+
+Decision:
+
+Close Part 1 as complete for single-user internal QA, with explicit boundaries:
+
+- Direct Upload is the preferred architecture.
+- Multipart remains as a reliability fallback.
+- Local Draft Resume is removed.
+- `/api/moments` remains the source of truth for result state.
+- Push is for background user notification.
+- Realtime Broadcast is for active app screen refresh.
+- Foreground refresh remains fallback.
+
+Implementation:
+
+- UploadScreen / UploadContent are route-backed.
+- Direct Upload uses signed target + `FileSystem.uploadAsync`.
+- Real byte-based percent appears only during the actual video transfer stage.
+- Finalize creates Moment and AnalysisJob only after Storage input exists.
+- Boot Loading and Empty State are separated.
+- Push, Realtime Broadcast, passive foreground refresh, and in-app completion
+  banner cover result awareness.
+- `upload_targets` tracks issue/upload/finalize/failure for diagnostics.
+
+Result:
+
+The single-user internal QA baseline is now Part 1 complete. Build 36 is the
+latest build prepared after the Realtime completion banner:
+
+```text
+buildNumber: 36
+feature commit: fb42fde feat: show in-app banner for realtime analysis completion
+build commit: cf80100 chore: prepare realtime completion banner build
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/cefad9fb-2a43-4cf9-bfee-dd092e18dcf3
+```
+
+Remaining risks:
+
+- External testers require Auth/User Ownership first.
+- `upload_targets` status semantics must be clarified before orphan cleanup.
+- Direct Upload needs more real-device samples; fallback must stay.
+- Realtime Broadcast is public MVP and should be scoped after Auth.
+
+Next:
+
+Do not begin AI Calibration as the immediate next step unless the Founder
+explicitly changes priority. Next structural candidates are server Draft/upload
+session, upload/orphan cleanup policy, Push deep link, pre-upload video
+optimization investigation, and Auth/user ownership.
+
 Build 28 save point, 2026-06-21:
 
 - Latest preview/internal buildNumber is `28`.

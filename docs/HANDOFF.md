@@ -53,6 +53,73 @@ continuity as well as technical continuity:
 
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 
+Part 1 Upload Experience closeout, 2026-06-22:
+
+Problem:
+
+The team needed to decide whether the upload experience was good enough to
+move on from Part 1. This was not a generic UI polish question. The launch
+question was whether a rider can upload one real video and understand exactly
+what is happening before the app asks them to trust AI analysis.
+
+Why it mattered:
+
+Earlier iterations mixed upload and analysis states, depended on local draft
+URIs across app restarts, showed stale processing after background/Push
+transitions, and did not clearly notify active users when Realtime completed a
+result. Those issues make a technically working pipeline feel broken.
+
+Options:
+
+- Treat multipart fallback as final and defer signed Direct Upload.
+- Make Direct Upload the preferred architecture while keeping fallback.
+- Preserve Local Draft Resume.
+- Remove Local Draft Resume and keep the rider in an explicit upload flow until
+  durable input exists.
+
+Decision:
+
+Part 1 is closed for single-user internal QA with Direct Upload + multipart
+fallback. Local Draft Resume is removed. `/api/moments` is the result source of
+truth. Push, Realtime Broadcast, foreground refresh, and in-app banner have
+separate roles instead of competing UI responsibilities.
+
+Implementation:
+
+- Direct Upload uses upload target -> signed URL -> `FileSystem.uploadAsync`
+  -> finalize -> Moment/AnalysisJob.
+- Fallback multipart remains available.
+- Upload progress shows real byte percent during video transfer and
+  user-facing stage copy elsewhere.
+- Boot Loading and Empty State are separated.
+- Active app completion now shows an in-app banner only after Realtime-triggered
+  refresh has reflected a completed Moment locally.
+- Push remains for background notification.
+
+Result:
+
+Current build:
+
+```text
+buildNumber: 36
+feature commit: fb42fde
+build commit: cf80100
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/cefad9fb-2a43-4cf9-bfee-dd092e18dcf3
+```
+
+Single-user internal QA can proceed from this baseline. Do not represent this
+as external-user ready.
+
+Remaining risks:
+
+- Auth/User Ownership is required before external or multi-user use.
+- `upload_targets` needs status semantics cleanup before orphan cleanup.
+- Direct Upload still needs repeated device samples; fallback remains part of
+  the reliability strategy.
+- Push deep link, server Draft/upload session, and pre-upload optimization are
+  Part 2 items.
+- AI Calibration is after Part 1, not part of Part 1.
+
 Build 29 Direct Upload checkpoint, 2026-06-21:
 
 Problem -> Cause -> Decision:
