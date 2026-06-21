@@ -363,26 +363,34 @@ progress percentage, or concurrent users become recurring issues.
 
 Draft Upload Flow decision:
 
-Draft Upload Flow is useful for a more app-native Level 1 upload experience,
-but it is not implemented now. `UploadScreen` is the new foundation for the
-future Draft screen; keep Draft itself as the next P1 structure backlog item:
+Local Draft Upload Flow is implemented for the first app-native Level 1 upload
+experience:
 
 ```text
 video selected
 -> local draft
 -> app can close
 -> continue previous draft / start new
--> upload target
--> signed/direct upload
--> finalize endpoint
+-> current upload-first Render multipart upload
 -> Moment and AnalysisJob
 ```
 
+Current behavior:
+
+- `UploadDraft` is local-only and persisted in AsyncStorage.
+- Selecting a video creates a draft without creating a remote Moment.
+- App re-entry can ask whether to continue the previous upload or start a new
+  one.
+- `UploadScreen` can render from the stored draft.
+- Upload success clears the draft.
+- Upload failure stores `upload_failed` and keeps retry possible.
+
 Concept boundary: Draft is the user's selected upload work; signed/direct
-upload is the transport; finalize turns uploaded media into a server-side
-Moment; Moment means durable input exists and analysis can start. Future
-multi-user design should consider `draftId`, `uploadId`, future `userId`,
-Storage path ownership, orphan cleanup, and path shape
+upload is the future transport; finalize later turns uploaded media into a
+server-side Moment; Moment means durable input exists and analysis can start.
+Signed/direct upload, finalize endpoint, and orphan cleanup remain
+unimplemented. Future multi-user design should consider `uploadId`, future
+`userId`, Storage path ownership, orphan cleanup, and path shape
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Durable pipeline reference:

@@ -369,10 +369,23 @@ previous upload work or start a new one.
 
 Current decision:
 
-Do not implement Draft Upload Flow in the UploadScreen transition commit.
-Build 23 upload-first behavior, blocking overlay, restore, and Push should
-remain the active QA focus. Keep Draft Upload Flow as the next P1 structure
-backlog item.
+Local Draft Upload Flow is implemented as the first step. It keeps Draft
+local-only and does not create a remote Moment until the rider starts upload
+and the current upload-first backend path accepts the source video.
+
+Current implementation:
+
+- `UploadDraft` contains `draftId`, local video URI, file metadata, local
+  thumbnail URI, timestamps, and `selected / ready_to_upload / uploading /
+  upload_failed` status.
+- Drafts are persisted in AsyncStorage.
+- Selecting a video creates a local draft and navigates to `UploadScreen`.
+- App re-entry can prompt "이전 업로드를 이어서 하시겠습니까?" with continue or
+  start-new options.
+- `UploadScreen` can render from the draft rather than transient selected video
+  state only.
+- Upload success clears the draft.
+- Upload failure stores `upload_failed` and keeps the draft retryable.
 
 Concept boundaries:
 
@@ -391,6 +404,16 @@ select video
 -> create local draft
 -> app can close
 -> app re-entry offers continue previous draft / start new
+-> current upload-first Render multipart upload
+-> Moment created
+-> AnalysisJob created
+-> Gemini analysis starts
+```
+
+Future long-term flow after signed/direct upload:
+
+```text
+local draft
 -> request upload target
 -> signed/direct upload
 -> finalize endpoint
@@ -416,24 +439,23 @@ Preferred path shape:
 users/{userId}/uploads/{uploadId}/source.mov
 ```
 
-Risks if implemented too early:
+Remaining risks:
 
-- increases `HomeScreen` complexity,
-- may add more conditional rendering if it bypasses the new UploadScreen route,
 - local video URI persistence after app relaunch needs verification,
 - Draft and remote Moment boundaries can become confusing,
-- could destabilize the just-validated upload-first path.
+- signed/direct upload and finalize still need ownership and cleanup design,
+- retry behavior after `upload_failed` needs real-device QA.
 
 Recommended order:
 
-1. Continue Build 23 QA.
-2. Collect upload timing data.
-3. Validate the UploadScreen route on device without changing upload semantics.
-4. Finalize Draft Upload Flow design.
-5. Implement local-only Draft persistence.
-6. Implement signed/direct upload and finalize endpoint.
-7. Implement orphan cleanup.
-8. Strengthen ownership during Auth/RLS work.
+1. Device QA the local Draft flow without DB auto-reset.
+2. Verify draft resume prompt after app restart.
+3. Verify `upload_failed` retry behavior.
+4. Collect upload timing data.
+5. Implement signed/direct upload and finalize endpoint only after criteria are
+   met.
+6. Implement orphan cleanup.
+7. Strengthen ownership during Auth/RLS work.
 
 ### 4. Analysis Timing and Quality Observation Data
 

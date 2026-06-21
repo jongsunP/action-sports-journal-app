@@ -281,24 +281,31 @@ item, but wait for 5-10 paired timing samples before implementing.
 
 Draft Upload Flow decision:
 
-Draft Upload Flow is also P1 structure backlog. `UploadScreen` is now the
-route-backed foundation for it, but Draft itself is not implemented yet. It is
-the app-like layer above signed/direct upload:
+Local Draft Upload Flow is implemented as the app-like layer before upload
+transport:
 
 ```text
 select video
 -> local draft
 -> resume previous draft / start new
--> upload target
--> signed/direct upload
--> finalize
+-> current upload-first Render multipart upload
 -> Moment/AnalysisJob
 ```
 
+Current implementation:
+
+- `UploadDraft` is local-only and stored in AsyncStorage.
+- Video selection creates and saves a draft without creating a remote Moment.
+- App re-entry can prompt "이전 업로드를 이어서 하시겠습니까?"
+- `UploadScreen` can render from the draft.
+- Upload success clears the draft.
+- Upload failure stores `upload_failed` and keeps retry possible.
+
 Do not create remote Moments for Drafts. A Draft is local selected upload work;
-a Moment is created only after upload/finalize makes the video analysis-ready.
-Future design should include `draftId`, `uploadId`, future `userId`, Storage
-path ownership, orphan cleanup, and a path convention like
+a Moment is created only after upload makes the video analysis-ready.
+Signed/direct upload, finalize endpoint, and orphan cleanup are not implemented
+yet. Future design should include `uploadId`, future `userId`, Storage path
+ownership, orphan cleanup, and a path convention like
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Durable analysis reference:

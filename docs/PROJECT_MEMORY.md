@@ -559,27 +559,36 @@ multi-user/concurrent upload QA starts.
 
 Draft Upload Flow architecture decision:
 
-Draft Upload Flow is a valid Level 1 mobile-app UX direction. The product
-should eventually support:
+Local Draft Upload Flow is now implemented as the first Level 1 upload-work
+layer:
 
 ```text
 select video
 -> local draft
 -> app can close
 -> continue previous draft / start new
--> upload target
--> signed/direct upload
--> finalize
+-> current upload-first Render multipart upload
 -> Moment and AnalysisJob
 ```
 
-Do not implement Draft/signed upload in the UploadScreen transition commit. The
-UploadScreen route now gives Draft a natural future home, but Draft is still
-not a remote Moment. Draft is the user's selected upload work in progress;
-signed/direct upload is how the Draft's video reaches Storage; finalize is what
-turns the uploaded Draft into a server-side Moment and AnalysisJob. Future
-design should reserve `draftId`, `uploadId`, future `userId`, Storage path
-ownership, and orphan cleanup, with a path shape like
+Implementation status:
+
+- `UploadDraft` is a local model with a UUID `draftId`, local video metadata,
+  local thumbnail URI, timestamps, and `selected / ready_to_upload / uploading /
+  upload_failed` status.
+- Drafts are persisted through AsyncStorage and restored on app re-entry.
+- Selecting a video creates a local draft and does not create a remote Moment.
+- If a stored draft exists at app start, the app asks whether to continue the
+  previous upload or start a new one.
+- `UploadScreen` can render from the draft, not only transient runtime state.
+- Successful upload clears the draft.
+- Failed upload stores `upload_failed` and keeps the draft retryable.
+
+Draft is still not a remote Moment. A Moment is created only after the source
+video reaches the current upload-first backend path. Signed/direct upload,
+finalize endpoint, and orphan cleanup remain unimplemented. Future design
+should reserve `uploadId`, future `userId`, Storage path ownership, and orphan
+cleanup, with a path shape like
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Validated product decisions:

@@ -427,27 +427,34 @@ need for progress percentage, or multi-user/concurrent upload QA.
 
 Draft Upload Flow decision:
 
-Draft is a separate P1 structure backlog item. It should eventually model the
-selected upload work before it becomes a server-side Moment:
+Local Draft Upload Flow is implemented as the first P1 upload-work layer. It
+models selected upload work before it becomes a server-side Moment:
 
 ```text
 video selected
 -> local draft created
 -> app can close
 -> continue previous draft / start new
--> upload target
--> signed/direct upload
--> finalize endpoint
+-> current upload-first Render multipart upload
 -> Moment/AnalysisJob
 ```
 
-Do not implement Draft in the UploadScreen transition commit. `UploadScreen`
-now gives Draft a route-backed home for the next step, but the concepts remain
-separate: Draft is user work in progress, signed/direct upload is the transport
-method, finalize turns uploaded media into a Moment, and Moment means the
-server has durable input and can analyze. Future multi-user design should
-account for `draftId`, `uploadId`, future `userId`, user-scoped Storage paths,
-ownership validation, and orphan cleanup.
+Implementation status:
+
+- `UploadDraft` is local-only and persisted in AsyncStorage.
+- Video selection creates a draft without creating a remote Moment.
+- App re-entry prompts the rider to continue the previous upload or start a new
+  one.
+- `UploadScreen` can render from the stored draft.
+- Upload success clears the draft.
+- Upload failure stores `upload_failed` and keeps retry possible.
+
+The concepts remain separate: Draft is user work in progress, signed/direct
+upload is the future transport method, finalize will later turn uploaded media
+into a Moment, and Moment means the server has durable input and can analyze.
+Signed/direct upload, finalize endpoint, and orphan cleanup are still
+unimplemented. Future multi-user design should account for `uploadId`, future
+`userId`, user-scoped Storage paths, ownership validation, and orphan cleanup.
 
 Next stage:
 
