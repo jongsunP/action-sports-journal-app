@@ -358,21 +358,16 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
-  const hasActiveVisibleMoment = useMemo(
-    () =>
-      visibleSessions.some(
-        (session) =>
-          session.momentStatus === 'uploading' ||
-          session.momentStatus === 'queued' ||
-          session.momentStatus === 'processing',
-      ),
-    [visibleSessions],
-  );
-  const shouldBlockForRemoteRefresh =
-    isRemoteRefreshActive &&
-    hasActiveVisibleMoment &&
-    (remoteRefreshReason === 'foreground' ||
-      remoteRefreshReason === 'push_response');
+  const syncBlockingCopy =
+    remoteRefreshReason === 'initial_retry' || isInitialRemoteMomentSyncPending
+      ? {
+          body: '최신 활동을 불러오는 중입니다.',
+          title: '기록을 동기화하고 있습니다',
+        }
+      : {
+          body: '방금 완료된 분석 결과를 불러오는 중입니다.',
+          title: '결과를 동기화하고 있습니다',
+        };
   const homeSessionSummaries = useMemo(
     () =>
       visibleSessions.map((session) => {
@@ -619,15 +614,6 @@ export function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {isRemoteRefreshActive ? (
-            <View style={styles.syncStatusPill}>
-              <Text style={styles.syncStatusText}>
-                {isInitialRemoteMomentSyncPending
-                  ? '기록 동기화 중'
-                  : '결과 동기화 중'}
-              </Text>
-            </View>
-          ) : null}
           {activeTab === 'home' ? (
             <>
           <View style={styles.header}>
@@ -699,13 +685,13 @@ export function HomeScreen() {
         onChangeTab={setActiveTab}
         styles={styles}
       />
-      {shouldBlockForRemoteRefresh ? (
+      {isRemoteRefreshActive ? (
         <View accessibilityRole="progressbar" style={styles.syncBlockingOverlay}>
           <View style={styles.syncBlockingCard}>
             <ActivityIndicator color="#f8fafc" size="large" />
-            <Text style={styles.syncBlockingTitle}>결과를 동기화하고 있습니다</Text>
+            <Text style={styles.syncBlockingTitle}>{syncBlockingCopy.title}</Text>
             <Text style={styles.syncBlockingText}>
-              방금 완료된 분석 결과를 불러오는 중입니다.
+              {syncBlockingCopy.body}
             </Text>
           </View>
         </View>
@@ -758,23 +744,6 @@ const styles = StyleSheet.create({
     paddingBottom: 124,
     paddingHorizontal: 0,
     paddingTop: 6,
-  },
-  syncStatusPill: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.16)',
-    borderColor: 'rgba(56, 189, 248, 0.28)',
-    borderRadius: 999,
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  syncStatusText: {
-    color: '#bae6fd',
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 16,
   },
   syncBlockingOverlay: {
     alignItems: 'center',
