@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 import type { SessionVideoAsset } from '../../services/ai';
+import type { UploadDraft } from './uploadDraftStorage';
 
 type HomeScreenStyles = Record<string, any>;
 
@@ -16,6 +17,7 @@ export type UploadRuntimeState = {
   onSubmit: () => void;
   selectedVideo: SessionVideoAsset | null;
   styles: HomeScreenStyles;
+  uploadDraft: UploadDraft | null;
 };
 
 const emptyStyles: HomeScreenStyles = {};
@@ -32,6 +34,7 @@ let currentState: UploadRuntimeState = {
   onSubmit: () => {},
   selectedVideo: null,
   styles: emptyStyles,
+  uploadDraft: null,
 };
 
 const listeners = new Set<() => void>();

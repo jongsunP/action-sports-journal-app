@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -16,6 +23,16 @@ import {
 
 import type { Session } from '../../types';
 import type { AppTabId } from './sessionComponents';
+import {
+  clearUploadDraft,
+  createUploadDraftFromVideo,
+  getVideoFromUploadDraft,
+  loadUploadDraft,
+  saveUploadDraft,
+  updateUploadDraft,
+  type UploadDraft,
+  type UploadDraftStatus,
+} from './uploadDraftStorage';
 
 type ExtractEvidenceOptions = {
   openSheet?: boolean;
@@ -61,6 +78,7 @@ export function useUploadMoment({
   const [selectedVideo, setSelectedVideo] = useState<SessionVideoAsset | null>(
     null,
   );
+  const [uploadDraft, setUploadDraft] = useState<UploadDraft | null>(null);
   const [selectedVideoThumbnailUri, setSelectedVideoThumbnailUri] = useState<
     string | null
   >(null);
@@ -72,11 +90,66 @@ export function useUploadMoment({
   const canCreateVideoThumbnail = hasConfiguredVideoThumbnailEndpoint();
   const canUploadSession = useMemo(
     () =>
-      Boolean(selectedVideo) &&
+      Boolean(selectedVideo ?? uploadDraft) &&
       !isUploadingSession &&
       !isPreparingSelectedVideoThumbnail,
-    [isPreparingSelectedVideoThumbnail, isUploadingSession, selectedVideo],
+    [isPreparingSelectedVideoThumbnail, isUploadingSession, selectedVideo, uploadDraft],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void (async () => {
+      const storedDraft = await loadUploadDraft();
+
+      if (!isMounted || !storedDraft) {
+        return;
+      }
+
+      Alert.alert(
+        '이전 업로드를 이어서 하시겠습니까?',
+        '아직 업로드하지 않은 영상 초안이 있습니다.',
+        [
+          {
+            text: '새로 시작하기',
+            style: 'destructive',
+            onPress: () => {
+              void clearUploadDraft();
+              if (!isMounted) {
+                return;
+              }
+              setUploadDraft(null);
+              setSelectedVideo(null);
+              selectedVideoThumbnailUriRef.current = null;
+              setSelectedVideoThumbnailUri(null);
+              setIsComposerOpen(false);
+            },
+          },
+          {
+            text: '이어서 하기',
+            onPress: () => {
+              if (!isMounted) {
+                return;
+              }
+              const restoredVideo = getVideoFromUploadDraft(storedDraft);
+              setUploadDraft(storedDraft);
+              setSelectedVideo(restoredVideo);
+              selectedVideoThumbnailUriRef.current =
+                storedDraft.localThumbnailUri ?? null;
+              setSelectedVideoThumbnailUri(
+                storedDraft.localThumbnailUri ?? null,
+              );
+              setIsComposerOpen(true);
+            },
+          },
+        ],
+      );
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const closeUploadSheet = () => {
     if (isUploadingSession) {
@@ -107,7 +180,10 @@ export function useUploadMoment({
     }
   };
 
-  const prepareSelectedVideoThumbnail = async (video: SessionVideoAsset) => {
+  const prepareSelectedVideoThumbnail = async (
+    video: SessionVideoAsset,
+    draftId?: string,
+  ) => {
     const requestId = uploadThumbnailRequestIdRef.current + 1;
     uploadThumbnailRequestIdRef.current = requestId;
     selectedVideoThumbnailUriRef.current = null;
@@ -126,6 +202,26 @@ export function useUploadMoment({
 
       selectedVideoThumbnailUriRef.current = imageUri;
       setSelectedVideoThumbnailUri(imageUri);
+
+      if (draftId) {
+        setUploadDraft((currentDraft) =>
+          currentDraft?.draftId === draftId
+            ? {
+                ...currentDraft,
+                localThumbnailUri: imageUri,
+                updatedAt: new Date().toISOString(),
+              }
+            : currentDraft,
+        );
+        void updateUploadDraft((currentDraft) =>
+          currentDraft.draftId === draftId
+            ? {
+                ...currentDraft,
+                localThumbnailUri: imageUri,
+              }
+            : currentDraft,
+        );
+      }
     } catch (error) {
       if (uploadThumbnailRequestIdRef.current !== requestId) {
         return;
@@ -179,9 +275,12 @@ export function useUploadMoment({
       mimeType: asset.mimeType,
       duration: asset.duration,
     };
+    const nextDraft = createUploadDraftFromVideo(nextVideo);
 
     setSelectedVideo(nextVideo);
-    void prepareSelectedVideoThumbnail(nextVideo);
+    setUploadDraft(nextDraft);
+    void saveUploadDraft(nextDraft);
+    void prepareSelectedVideoThumbnail(nextVideo, nextDraft.draftId);
 
     return true;
   };
@@ -198,10 +297,25 @@ export function useUploadMoment({
     }
   };
 
+  const persistUploadDraftStatus = async (status: UploadDraftStatus) => {
+    setUploadDraft((currentDraft) =>
+      currentDraft
+        ? {
+            ...currentDraft,
+            status,
+            updatedAt: new Date().toISOString(),
+          }
+        : currentDraft,
+    );
+    await updateUploadDraft({ status });
+  };
+
   const handleAddSession = () => {
+    const videoForUpload = selectedVideo ?? draftVideoFromUploadDraft(uploadDraft);
+
     if (
       !activityGroupId ||
-      !selectedVideo ||
+      !videoForUpload ||
       isUploadingSession ||
       isPreparingSelectedVideoThumbnail ||
       isUploadingSessionRef.current
@@ -212,7 +326,6 @@ export function useUploadMoment({
     isUploadingSessionRef.current = true;
     setIsUploadingSession(true);
 
-    const videoForUpload = selectedVideo;
     const now = new Date().toISOString();
     const nextSession: Session = {
       id: createLocalSessionId(),
@@ -237,19 +350,23 @@ export function useUploadMoment({
       createThumbnailForSession(nextSession.id, videoForUpload);
     }
     setActiveTab('video');
-    setSelectedVideo(null);
-    selectedVideoThumbnailUriRef.current = null;
-    setSelectedVideoThumbnailUri(null);
-
     void (async () => {
       let uploadStartedAt: number | undefined;
 
       try {
+        await persistUploadDraftStatus('uploading');
+
         if (!hasConfiguredSupabaseMoments()) {
           await extractEvidence(nextSession, {
             openSheet: false,
             videoOverride: videoForUpload,
           });
+          await clearUploadDraft();
+          setUploadDraft(null);
+          setSelectedVideo(null);
+          selectedVideoThumbnailUriRef.current = null;
+          setSelectedVideoThumbnailUri(null);
+          setIsComposerOpen(false);
           return;
         }
 
@@ -273,7 +390,10 @@ export function useUploadMoment({
             localSessionId: nextSession.id,
             reason: 'no_stored_moment',
           });
-          updateLocalMomentStatus(nextSession.id, 'upload_failed');
+          setSessions((current) =>
+            current.filter((session) => session.id !== nextSession.id),
+          );
+          await persistUploadDraftStatus('upload_failed');
           Alert.alert(
             '영상 업로드에 실패했습니다',
             '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
@@ -298,6 +418,11 @@ export function useUploadMoment({
         });
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
+        await clearUploadDraft();
+        setUploadDraft(null);
+        setSelectedVideo(null);
+        selectedVideoThumbnailUriRef.current = null;
+        setSelectedVideoThumbnailUri(null);
         setIsComposerOpen(false);
       } catch (error) {
         console.info('[upload_timing]', {
@@ -309,8 +434,10 @@ export function useUploadMoment({
           localSessionId: nextSession.id,
           reason: error instanceof Error ? error.message : 'unknown',
         });
-        updateLocalMomentStatus(nextSession.id, 'upload_failed');
-        setIsComposerOpen(false);
+        setSessions((current) =>
+          current.filter((session) => session.id !== nextSession.id),
+        );
+        await persistUploadDraftStatus('upload_failed');
         console.warn(
           'Stored Moment source upload failed:',
           error instanceof Error ? error.message : 'Unknown error',
@@ -336,7 +463,12 @@ export function useUploadMoment({
     isPreparingSelectedVideoThumbnail,
     isUploadingSession,
     selectedVideo,
+    uploadDraft,
   };
+}
+
+function draftVideoFromUploadDraft(draft: UploadDraft | null) {
+  return draft ? getVideoFromUploadDraft(draft) : null;
 }
 
 function createLocalSessionId() {

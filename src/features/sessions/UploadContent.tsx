@@ -11,6 +11,10 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 
 import type { SessionVideoAsset } from '../../services/ai';
+import {
+  getVideoFromUploadDraft,
+  type UploadDraft,
+} from './uploadDraftStorage';
 
 type HomeScreenStyles = Record<string, any>;
 
@@ -24,6 +28,7 @@ export type UploadContentProps = {
   onSubmit: () => void;
   selectedVideo: SessionVideoAsset | null;
   styles: HomeScreenStyles;
+  uploadDraft?: UploadDraft | null;
 };
 
 export function UploadContent({
@@ -36,7 +41,12 @@ export function UploadContent({
   onSubmit,
   selectedVideo,
   styles,
+  uploadDraft,
 }: UploadContentProps) {
+  const visibleVideo =
+    selectedVideo ?? (uploadDraft ? getVideoFromUploadDraft(uploadDraft) : null);
+  const hasUploadFailed = uploadDraft?.status === 'upload_failed';
+
   return (
     <SafeAreaView style={styles.uploadSheetBackdrop}>
       <View style={styles.uploadSheet}>
@@ -62,12 +72,12 @@ export function UploadContent({
           contentContainerStyle={styles.uploadPageBody}
           showsVerticalScrollIndicator={false}
         >
-          {selectedVideo ? (
+          {visibleVideo ? (
             <>
               <LocalUploadVideoPreview
-                key={selectedVideo.uri}
+                key={visibleVideo.uri}
                 styles={styles}
-                videoUri={selectedVideo.uri}
+                videoUri={visibleVideo.uri}
               />
               <View
                 style={[
@@ -77,10 +87,10 @@ export function UploadContent({
               >
                 <Text style={styles.selectedVideoLabel}>선택된 영상</Text>
                 <Text style={styles.selectedVideoTitle} numberOfLines={1}>
-                  {selectedVideo.fileName ?? '선택한 영상'}
+                  {visibleVideo.fileName ?? '선택한 영상'}
                 </Text>
                 <Text style={styles.selectedVideoMeta}>
-                  {formatVideoMeta(selectedVideo)}
+                  {formatVideoMeta(visibleVideo)}
                 </Text>
               </View>
             </>
@@ -108,6 +118,10 @@ export function UploadContent({
           ) : isPreparingThumbnail ? (
             <Text style={styles.uploadSubmittingHint}>
               썸네일을 준비하고 있습니다.
+            </Text>
+          ) : hasUploadFailed ? (
+            <Text style={styles.uploadSubmittingHint}>
+              업로드가 완료되지 않았습니다. 다시 시도해 주세요.
             </Text>
           ) : null}
           <View style={styles.uploadPageFooterActions}>

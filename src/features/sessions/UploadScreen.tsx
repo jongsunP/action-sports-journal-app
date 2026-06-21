@@ -70,6 +70,7 @@ export function UploadScreen({ navigation }: UploadScreenProps) {
       onSubmit={runtimeState.onSubmit}
       selectedVideo={runtimeState.selectedVideo}
       styles={runtimeState.styles}
+      uploadDraft={runtimeState.uploadDraft}
     />
   );
 }

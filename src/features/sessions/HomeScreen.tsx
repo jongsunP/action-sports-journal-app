@@ -364,6 +364,7 @@ export function HomeScreen() {
     isPreparingSelectedVideoThumbnail,
     isUploadingSession,
     selectedVideo,
+    uploadDraft,
   } = useUploadMoment({
     activityGroupId: selectedGroup?.id,
     extractEvidence: handleExtractEvidence,
@@ -381,7 +382,7 @@ export function HomeScreen() {
       return;
     }
 
-    if (selectedVideo && !didNavigateToUploadRef.current) {
+    if ((selectedVideo || uploadDraft) && !didNavigateToUploadRef.current) {
       didNavigateToUploadRef.current = true;
       const navigationTask = InteractionManager.runAfterInteractions(() => {
         navigation.navigate('Upload');
@@ -389,7 +390,7 @@ export function HomeScreen() {
 
       return () => navigationTask.cancel();
     }
-  }, [isComposerOpen, navigation, selectedVideo]);
+  }, [isComposerOpen, navigation, selectedVideo, uploadDraft]);
 
   useEffect(() => {
     setMomentDetailRuntimeState({
@@ -434,6 +435,7 @@ export function HomeScreen() {
       onSubmit: handleAddSession,
       selectedVideo,
       styles,
+      uploadDraft,
     });
   }, [
     canUploadSession,
@@ -444,6 +446,7 @@ export function HomeScreen() {
     isPreparingSelectedVideoThumbnail,
     isUploadingSession,
     selectedVideo,
+    uploadDraft,
   ]);
 
   if (isLoadingInitialMoments) {
