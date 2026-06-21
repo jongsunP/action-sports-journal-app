@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEventListener } from 'expo';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -300,6 +301,19 @@ export function MomentDetailContent({
               </View>
             ) : null}
       </ScrollView>
+      {isDeleting ? (
+        <View accessibilityRole="progressbar" style={styles.uploadBlockingOverlay}>
+          <View style={styles.uploadBlockingCard}>
+            <ActivityIndicator color="#f8fafc" size="large" />
+            <Text style={styles.uploadBlockingTitle}>
+              영상을 삭제하고 있습니다.
+            </Text>
+            <Text style={styles.uploadBlockingText}>
+              잠시만 기다려 주세요.
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
