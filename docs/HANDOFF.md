@@ -424,6 +424,30 @@ should be triggered by repeated evidence: larger 25-50 MB+ files, frequent
 10s+ upload waits, Render bandwidth/memory pressure, upload failures, product
 need for progress percentage, or multi-user/concurrent upload QA.
 
+Draft Upload Flow decision:
+
+Draft is a separate P1 structure backlog item. It should eventually model the
+selected upload work before it becomes a server-side Moment:
+
+```text
+video selected
+-> local draft created
+-> app can close
+-> continue previous draft / start new
+-> upload target
+-> signed/direct upload
+-> finalize endpoint
+-> Moment/AnalysisJob
+```
+
+Do not implement Draft now. It should wait until Build 23 upload-first QA is
+stable and UploadScreen / DetailScreen direction is clearer. Keep the concepts
+separate: Draft is user work in progress, signed/direct upload is the transport
+method, finalize turns uploaded media into a Moment, and Moment means the
+server has durable input and can analyze. Future multi-user design should
+account for `draftId`, `uploadId`, future `userId`, user-scoped Storage paths,
+ownership validation, and orphan cleanup.
+
 Next stage:
 
 Continue Build 23 device QA. Verify more real uploads, collect timing logs,

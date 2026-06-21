@@ -147,7 +147,8 @@ Immediate focus:
 Later work is grouped by stage:
 
 - Upload structure and UX: upload-first path, signed/direct upload evaluation,
-  upload progress feasibility, blocking overlay, and timing logs
+  Draft Upload Flow, upload progress feasibility, blocking overlay, and timing
+  logs
 - Mobile app screen structure: reduce Home-owned modal/conditional rendering,
   evaluate UploadScreen and MomentDetailScreen, and decide whether React
   Navigation or Expo Router is the right route layer
@@ -551,6 +552,30 @@ Do not switch immediately. Revisit if 25-50 MB+ videos become common, upload
 waits over 10 seconds repeat, Render memory/bandwidth becomes a bottleneck,
 upload failures increase, progress percentage becomes product-critical, or
 multi-user/concurrent upload QA starts.
+
+Draft Upload Flow architecture decision:
+
+Draft Upload Flow is a valid Level 1 mobile-app UX direction. The product
+should eventually support:
+
+```text
+select video
+-> local draft
+-> app can close
+-> continue previous draft / start new
+-> upload target
+-> signed/direct upload
+-> finalize
+-> Moment and AnalysisJob
+```
+
+Do not implement this immediately. Keep Build 23 upload-first QA stable first.
+Draft is not a remote Moment. Draft is the user's selected upload work in
+progress; signed/direct upload is how the Draft's video reaches Storage;
+finalize is what turns the uploaded Draft into a server-side Moment and
+AnalysisJob. Future design should reserve `draftId`, `uploadId`, future
+`userId`, Storage path ownership, and orphan cleanup, with a path shape like
+`users/{userId}/uploads/{uploadId}/source.mov`.
 
 Validated product decisions:
 

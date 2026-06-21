@@ -81,28 +81,29 @@ Guidelines:
 2. Upload completion before Moment creation.
 3. Upload state and analysis state separation.
 4. Signed/direct upload evaluation.
-5. Upload timing logs and progress feasibility.
+5. Draft Upload Flow architecture.
+6. Upload timing logs and progress feasibility.
 
 ### Later UX Stage
 
-6. Mobile app screen structure.
-7. Moment Detail screen structure.
-8. Push notification deep link.
-9. Native stack gesture / return behavior.
+7. Mobile app screen structure.
+8. Moment Detail screen structure.
+9. Push notification deep link.
+10. Native stack gesture / return behavior.
 
 ### Calibration Stage
 
-10. Analysis timing and quality observation data.
-11. AI calibration system.
+11. Analysis timing and quality observation data.
+12. AI calibration system.
 
 ### Stabilization Cleanup
 
-12. Legacy/fallback endpoint cleanup.
-13. Thumbnail storage policy.
+13. Legacy/fallback endpoint cleanup.
+14. Thumbnail storage policy.
 
 ### Multi-user / Product Stage
 
-14. Auth and user model.
+15. Auth and user model.
 
 ### Long-term Stability
 
@@ -336,6 +337,83 @@ Recommended order:
 4. Finalize signed/direct upload design only after repeated evidence.
 5. Implement `POST /api/video-upload-targets` and
    `POST /api/moments/from-uploaded-source` if the criteria are met.
+
+### Draft Upload Flow Architecture
+
+Product need:
+
+The Level 1 product goal is that even one uploaded video behaves like a proper
+mobile app. Draft Upload Flow is closer to Instagram/TikTok-style mobile upload
+UX than the current one-shot picker -> upload button flow. A rider should be
+able to select a video, leave the app, and later choose whether to continue the
+previous upload work or start a new one.
+
+Current decision:
+
+Do not implement Draft Upload Flow immediately. Build 23 upload-first behavior,
+blocking overlay, restore, and Push should remain the active QA focus. Keep
+Draft Upload Flow as a P1 structure backlog item.
+
+Concept boundaries:
+
+- Draft: the user's selected upload work in progress.
+- Signed/direct upload: the technical method for sending a Draft's source video
+  to Storage.
+- Finalize endpoint: the server step that turns an uploaded Draft source into a
+  Moment and AnalysisJob.
+- Moment: the server-side object that exists only after upload is complete and
+  the video is analysis-ready.
+
+Recommended long-term flow:
+
+```text
+select video
+-> create local draft
+-> app can close
+-> app re-entry offers continue previous draft / start new
+-> request upload target
+-> signed/direct upload
+-> finalize endpoint
+-> Moment created
+-> AnalysisJob created
+-> Gemini analysis starts
+```
+
+Future multi-user assumptions:
+
+Do not implement Auth/User now, but design Draft around future ownership:
+
+- `draftId`: local app UUID.
+- `uploadId`: server-issued upload target id.
+- future `userId`: owner.
+- `storagePath`: future user-scoped path.
+- ownership: finalize must verify that the upload target belongs to the user.
+- orphan cleanup: uploaded-but-not-finalized objects must expire or be removed.
+
+Preferred path shape:
+
+```text
+users/{userId}/uploads/{uploadId}/source.mov
+```
+
+Risks if implemented too early:
+
+- increases `HomeScreen` complexity,
+- may add more conditional rendering before UploadScreen exists,
+- local video URI persistence after app relaunch needs verification,
+- Draft and remote Moment boundaries can become confusing,
+- could destabilize the just-validated upload-first path.
+
+Recommended order:
+
+1. Continue Build 23 QA.
+2. Collect upload timing data.
+3. Clarify UploadScreen / DetailScreen structure.
+4. Finalize Draft Upload Flow design.
+5. Implement local-only Draft persistence.
+6. Implement signed/direct upload and finalize endpoint.
+7. Implement orphan cleanup.
+8. Strengthen ownership during Auth/RLS work.
 
 ### 4. Analysis Timing and Quality Observation Data
 

@@ -277,6 +277,27 @@ file relay load, scales better for larger/concurrent uploads, and improves the
 path toward progress or resumable upload. Keep it as a P1 architecture backlog
 item, but wait for 5-10 paired timing samples before implementing.
 
+Draft Upload Flow decision:
+
+Draft Upload Flow is also P1 structure backlog, but not a Build 23 code task.
+It is the app-like layer above signed/direct upload:
+
+```text
+select video
+-> local draft
+-> resume previous draft / start new
+-> upload target
+-> signed/direct upload
+-> finalize
+-> Moment/AnalysisJob
+```
+
+Do not create remote Moments for Drafts. A Draft is local selected upload work;
+a Moment is created only after upload/finalize makes the video analysis-ready.
+Future design should include `draftId`, `uploadId`, future `userId`, Storage
+path ownership, orphan cleanup, and a path convention like
+`users/{userId}/uploads/{uploadId}/source.mov`.
+
 Durable analysis reference:
 
 ```text

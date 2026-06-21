@@ -360,6 +360,30 @@ AnalysisJob creation. Revisit after 5-10 paired timing samples or if larger
 files, 10s+ upload waits, Render bandwidth/memory pressure, upload failures,
 progress percentage, or concurrent users become recurring issues.
 
+Draft Upload Flow decision:
+
+Draft Upload Flow is useful for a more app-native Level 1 upload experience,
+but it is not implemented now. Keep it as P1 structure backlog after Build 23
+QA stabilizes:
+
+```text
+video selected
+-> local draft
+-> app can close
+-> continue previous draft / start new
+-> upload target
+-> signed/direct upload
+-> finalize endpoint
+-> Moment and AnalysisJob
+```
+
+Concept boundary: Draft is the user's selected upload work; signed/direct
+upload is the transport; finalize turns uploaded media into a server-side
+Moment; Moment means durable input exists and analysis can start. Future
+multi-user design should consider `draftId`, `uploadId`, future `userId`,
+Storage path ownership, orphan cleanup, and path shape
+`users/{userId}/uploads/{uploadId}/source.mov`.
+
 Durable pipeline reference:
 
 ```text
