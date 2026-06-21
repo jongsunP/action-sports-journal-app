@@ -61,10 +61,7 @@ export default function App() {
               gestureEnabled: true,
               gestureDirection: 'horizontal',
               gestureResponseDistance: { start: 80 },
-              headerBackVisible: false,
-              headerShown: true,
-              headerTransparent: true,
-              headerTitle: '',
+              headerShown: false,
               presentation: 'card',
             }}
           />
