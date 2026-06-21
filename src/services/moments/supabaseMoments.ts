@@ -197,18 +197,25 @@ export async function uploadVideoToSignedTarget(
     throw new Error('Supabase client is not configured.');
   }
 
+  const fileResponse = await fetch(video.uri);
+
+  if (!fileResponse.ok) {
+    throw new Error(
+      `Failed to read source video for signed upload: ${fileResponse.status}`,
+    );
+  }
+
+  const fileBody = await fileResponse.blob();
+  const contentType = video.mimeType ?? target.mimeType ?? 'video/quicktime';
+
   const { data, error } = await supabase.storage
     .from(target.bucket)
     .uploadToSignedUrl(
       target.storagePath,
       target.signedUploadToken,
+      fileBody,
       {
-        uri: video.uri,
-        name: video.fileName ?? `${target.uploadId}.mov`,
-        type: video.mimeType ?? target.mimeType ?? 'video/quicktime',
-      } as unknown as Blob,
-      {
-        contentType: video.mimeType ?? target.mimeType ?? 'video/quicktime',
+        contentType,
         upsert: false,
       },
     );
