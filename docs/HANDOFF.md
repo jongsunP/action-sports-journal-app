@@ -81,6 +81,27 @@ Upload close/kill interpretation:
 - Improve the upload copy later from "이 단계에서는 앱을 닫지 마세요." toward "업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다." and "업로드가 완료되면 분석은 서버에서 계속됩니다."
 - Follow-up TODOs: test before/after-upload app termination deliberately, refine upload-state copy, collect analysis timing data, continue sample-based AI Calibration, revisit Detail structure, add Push deep link later, and consider background upload as a long-term option.
 
+Current product priority clarification:
+
+The next product goal is not AI accuracy tuning. It is making one uploaded
+video feel like a complete mobile app flow. Prioritize:
+
+```text
+1. Upload structure / UX completion
+2. Mobile app screen structure
+3. App-native gestures and return/deep-link behavior
+4. UX stabilization
+5. AI Calibration
+```
+
+This means upload-first behavior, signed/direct upload evaluation, progress
+feasibility, blocking overlay, and timing logs come before prompt/evidence
+tuning. Home-owned modal/conditional rendering should be reduced later through
+UploadScreen / MomentDetailScreen planning, with React Navigation or Expo
+Router evaluated when the route model is clear. AI Calibration for
+toeside/heelside, Back Roll, and other trick-name accuracy should wait until
+the mobile app loop itself feels stable.
+
 On 2026-06-12, the priority changed from Expo Go validation to installing and
 running Action Sports Journal as a standalone iPhone app through an EAS
 preview/internal distribution build.

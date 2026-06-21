@@ -146,10 +146,39 @@ Immediate focus:
 
 Later work is grouped by stage:
 
-- UX polish: Moment Detail structure and Push deep link
+- Upload structure and UX: upload-first path, signed/direct upload evaluation,
+  upload progress feasibility, blocking overlay, and timing logs
+- Mobile app screen structure: reduce Home-owned modal/conditional rendering,
+  evaluate UploadScreen and MomentDetailScreen, and decide whether React
+  Navigation or Expo Router is the right route layer
+- App-native return/gesture behavior: native stack swipe back, Push tap to the
+  relevant Moment Detail, and foreground/background restore polish
+- UX stabilization: Boot Loading, Upload, Delete, Empty/Error states, and
+  cross-device thumbnail fallback
 - Calibration: timing/quality observation data and sample-based AI calibration
 - Stabilization: legacy endpoint cleanup and thumbnail storage policy
 - Product scale: auth/user ownership and background upload
+
+Current product priority clarification:
+
+The near-term goal is not to improve AI result accuracy first. The goal is that
+even one uploaded video behaves like a proper mobile app experience:
+
+```text
+select video
+-> upload clearly
+-> secure durable input
+-> transition into server-owned analysis
+-> restore result
+-> notify user
+-> show understandable output
+```
+
+AI Calibration for toeside/heelside, Back Roll, and other trick-name accuracy
+comes after Upload structure, mobile screen structure, app-native gestures /
+return flows, and core UX states are stable. Do not tune prompts or validators
+just because one QA sample feels surprising while the upload/detail/navigation
+experience is still being settled.
 
 ## Mobile-First UX Development Principle
 

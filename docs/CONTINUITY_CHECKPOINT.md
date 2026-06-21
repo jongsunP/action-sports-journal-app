@@ -69,6 +69,30 @@ Upload close/kill interpretation:
 - Later copy should communicate risk more precisely: "업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다." and "업로드가 완료되면 분석은 서버에서 계속됩니다."
 - Follow-up TODOs: test before/after-upload termination, polish upload-state copy, collect analysis timing data, continue sample-based AI Calibration, revisit Detail structure, add Push deep link, and consider background upload as a long-term option.
 
+Current product priority clarification:
+
+The current priority is not improving AI accuracy first. The priority is making
+one real video upload behave like a proper mobile app flow. Continue in this
+order:
+
+```text
+1. Upload structure / UX completion
+2. Mobile app screen structure
+3. App-native gestures and return behavior
+4. UX stabilization
+5. AI Calibration
+```
+
+Upload structure includes upload-first behavior, signed/direct upload
+evaluation, progress feasibility, blocking overlay, and timing logs. Mobile
+screen structure includes reducing `HomeScreen` modal/conditional-rendering
+ownership and evaluating UploadScreen, MomentDetailScreen, React Navigation, or
+Expo Router. App-native return behavior includes native stack swipe back, Push
+tap to Moment Detail, and foreground/background restore.
+
+AI Calibration for toeside/heelside, Back Roll, and other trick-name accuracy
+should wait until the upload/detail/navigation lifecycle feels stable.
+
 The latest known project checkpoint is:
 
 ```text

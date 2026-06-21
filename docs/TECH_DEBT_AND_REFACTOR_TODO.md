@@ -26,6 +26,33 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+Current product priority:
+
+The immediate priority is not AI result accuracy. It is making the core
+upload-to-analysis flow behave like a proper mobile app. Rank work in this
+order:
+
+```text
+1. Upload structure / UX completion
+2. Mobile app screen structure
+3. App-native gestures / return flows
+4. UX stabilization
+5. AI Calibration
+```
+
+Upload structure includes the upload-first flow, signed/direct upload
+evaluation, upload progress feasibility, blocking overlay, and timing logs.
+Screen structure includes reducing Home-owned modal/conditional rendering and
+evaluating UploadScreen, MomentDetailScreen, React Navigation, or Expo Router.
+App-native return flows include native stack swipe back, Push tap to the
+relevant Moment Detail, and foreground/background restore behavior. UX
+stabilization includes Boot Loading, Upload, Delete, Empty/Error states, and
+cross-device thumbnail fallback.
+
+AI Calibration remains a later stage. Do not prioritize toeside/heelside, Back
+Roll, or other trick-name tuning before the app's upload, screen, lifecycle,
+and recovery flows feel stable.
+
 Mobile-first UX development principle:
 
 The Founder may frame requests with web-development analogies, but Action
@@ -50,27 +77,32 @@ Guidelines:
 
 ### Now
 
-1. Upload completion before Moment creation.
-2. Upload state and analysis state separation.
+1. Upload structure / UX completion.
+2. Upload completion before Moment creation.
+3. Upload state and analysis state separation.
+4. Signed/direct upload evaluation.
+5. Upload timing logs and progress feasibility.
 
 ### Later UX Stage
 
-3. Moment Detail screen structure.
-9. Push notification deep link.
+6. Mobile app screen structure.
+7. Moment Detail screen structure.
+8. Push notification deep link.
+9. Native stack gesture / return behavior.
 
 ### Calibration Stage
 
-4. Analysis timing and quality observation data.
-5. AI calibration system.
+10. Analysis timing and quality observation data.
+11. AI calibration system.
 
 ### Stabilization Cleanup
 
-6. Legacy/fallback endpoint cleanup.
-7. Thumbnail storage policy.
+12. Legacy/fallback endpoint cleanup.
+13. Thumbnail storage policy.
 
 ### Multi-user / Product Stage
 
-8. Auth and user model.
+14. Auth and user model.
 
 ### Long-term Stability
 

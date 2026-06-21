@@ -125,7 +125,12 @@ Result:
 - Build 14 QA found that storage upload could succeed while the job remained
   queued because analysis start still depended on the app calling
   `/analyze-stored-video` after upload. The durable pipeline now starts
-  analysis server-side immediately after `/source-video` succeeds. The
+  analysis automatically after source-video upload.
+- Build 15/16/17/18 QA found that upload completion, foreground refresh, and
+  boot loading all need to behave like mobile lifecycle features, not web
+  refresh patterns.
+- The durable pipeline starts analysis server-side immediately after
+  `/source-video` succeeds. The
   `/analyze-stored-video` endpoint remains as legacy/fallback.
 - Real Render + Gemini Pro E2E succeeded after the change: the job recorded
   `started_at`, moved through processing to completed, created an
@@ -146,12 +151,42 @@ Result:
 - App-facing progress language now separates `대기`, `분석중`, `완료`, and
   `실패`.
 - Direct multipart upload remains as fallback.
+- Build 23 QA confirmed that Boot Loading and Upload Overlay are now acceptable
+  for the first real-device pass.
 - `supabase/phase9_device_push_tokens.sql` is the DB migration for push token
   storage and is assumed applied remotely for this checkpoint.
 - Notification tap currently opens the app only. Detail deep link navigation is
   not implemented yet.
 - Because `expo-notifications` adds a native plugin, the next iOS
   preview/internal build is required before device QA.
+
+2026-06-21 app-first UX priority update:
+
+The immediate product objective is not better AI accuracy. The immediate
+objective is making the core upload-to-analysis loop feel like a real mobile
+app even if the user uploads only one video.
+
+Prioritize in this order:
+
+```text
+1. Upload structure / UX completion
+2. Mobile app screen structure
+3. App-native gestures and foreground/background return behavior
+4. UX stabilization
+5. AI Calibration
+```
+
+Upload work includes the upload-first structure, signed/direct upload
+evaluation, upload progress feasibility, blocking overlay, and timing logs.
+Screen-structure work includes reducing Home-owned modal/conditional rendering
+and evaluating UploadScreen, MomentDetailScreen, React Navigation, or Expo
+Router. App-native behavior includes native stack swipe back, Push tap to the
+relevant Moment Detail, and foreground/background restore flow.
+
+AI Calibration remains important, but it starts after these mobile app
+foundations are stable. Do not prioritize toeside/heelside, Back Roll, or
+similar trick-name tuning ahead of Upload, Detail, Push return, and core UX
+stability.
 
 Build 22 status:
 
