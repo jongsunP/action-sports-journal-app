@@ -60,7 +60,7 @@ export default function App() {
               fullScreenGestureEnabled: false,
               gestureEnabled: true,
               gestureDirection: 'horizontal',
-              gestureResponseDistance: { start: 32 },
+              gestureResponseDistance: { start: 44 },
               headerShown: false,
               presentation: 'card',
             }}

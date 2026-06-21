@@ -38,7 +38,7 @@ import {
   type UploadDraftStatus,
 } from './uploadDraftStorage';
 
-const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 15000;
+const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
 
 type ExtractEvidenceOptions = {
   openSheet?: boolean;

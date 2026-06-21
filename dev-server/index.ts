@@ -430,7 +430,11 @@ app.post(
         "Direct upload failed before fallback.",
       );
       const stage = nullableString(request.body?.stage);
-      const blobSize = Number(request.body?.blobSize);
+      const requestedBlobSize = request.body?.blobSize;
+      const blobSize =
+        typeof requestedBlobSize === "number"
+          ? requestedBlobSize
+          : Number.NaN;
       const storagePath = nullableString(request.body?.storagePath);
       const videoUriScheme = nullableString(request.body?.videoUriScheme);
       const failureReason = [

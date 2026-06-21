@@ -57,7 +57,7 @@ export async function uploadDraftSourceVideoDirectly(
   } catch (error) {
     await updateUploadDraft({ status: 'upload_failed' });
     if (uploadTarget) {
-      await reportUploadTargetFailure({
+      void reportUploadTargetFailure({
         reason: error instanceof Error ? error.message : 'unknown',
         stage: 'signed_upload',
         storagePath: uploadTarget.storagePath,
@@ -98,7 +98,7 @@ export async function finalizeUploadedDraftSource(
       thumbnailUri: draft.localThumbnailUri,
     });
   } catch (error) {
-    await reportUploadTargetFailure({
+    void reportUploadTargetFailure({
       reason: error instanceof Error ? error.message : 'unknown',
       stage: 'finalize',
       storagePath: draft.storagePath,
