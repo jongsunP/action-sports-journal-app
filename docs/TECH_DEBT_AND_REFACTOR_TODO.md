@@ -245,6 +245,98 @@ Risks if done too early:
 
 Do not patch gestures repeatedly without first deciding the screen model.
 
+### Signed / Direct Upload Architecture
+
+Current judgment:
+
+The current Render multipart relay is working for Build 23 QA. The app uploads
+to:
+
+```text
+app
+-> Render POST /api/moments/from-source-video multipart
+-> Render receives file
+-> Render uploads to Supabase Storage
+-> Moment created
+-> AnalysisJob created
+-> Gemini analysis
+```
+
+Build 23 real-device QA validated the surrounding product flow:
+
+- upload-first structure works,
+- blocking Upload Overlay felt natural,
+- Push was received,
+- completed result restore worked,
+- about 18.25 MB / 9 second video produced a perceived upload wait of about
+  5-8 seconds.
+
+Decision:
+
+Do not implement signed/direct upload immediately. Keep the current path for
+Build 23 QA and collect more timing data first. However, because video upload
+is the product's core action, signed/direct upload remains a P1 architecture
+backlog item.
+
+Long-term recommended shape:
+
+```text
+app
+-> request upload target
+-> Render issues signed upload URL / token
+-> app uploads directly to Supabase Storage
+-> app calls finalize endpoint
+-> Render verifies Storage object
+-> Moment created
+-> AnalysisJob created
+-> Gemini analysis
+```
+
+Expected endpoints:
+
+```text
+POST /api/video-upload-targets
+POST /api/moments/from-uploaded-source
+```
+
+Advantages:
+
+- reduces Render file relay bandwidth and memory pressure,
+- scales better for larger files and concurrent uploads,
+- makes upload progress more feasible,
+- better matches video upload as a core product capability,
+- creates a cleaner path toward resumable upload later.
+
+Required design before implementation:
+
+- finalize endpoint,
+- orphan object cleanup for uploaded-but-not-finalized files,
+- user ownership and path validation,
+- file size and content type limits,
+- signed URL/token expiry behavior,
+- Auth/RLS-backed Storage policy when the project moves beyond single-user QA.
+
+Switching criteria:
+
+Revisit signed/direct upload if any of these repeat:
+
+- 25-50 MB+ videos become common,
+- upload wait is frequently over 10 seconds,
+- Render memory or bandwidth becomes a bottleneck,
+- upload failures increase,
+- progress percentage becomes product-critical,
+- multi-user or concurrent upload QA starts.
+
+Recommended order:
+
+1. Continue Build 23 QA.
+2. Collect 5-10 paired iPhone `[upload_timing]` and Render
+   `[source_video_timing]` samples.
+3. Compare upload time by file size.
+4. Finalize signed/direct upload design only after repeated evidence.
+5. Implement `POST /api/video-upload-targets` and
+   `POST /api/moments/from-uploaded-source` if the criteria are met.
+
 ### 4. Analysis Timing and Quality Observation Data
 
 Problem:

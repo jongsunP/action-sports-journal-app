@@ -401,6 +401,29 @@ Progress percentage is not required immediately. The next timing step is to
 capture paired iPhone `[upload_timing]` logs and Render Dashboard
 `[source_video_timing]` logs before changing upload architecture.
 
+Signed/direct upload architecture decision:
+
+Do not switch away from the current Render multipart relay yet. Build 23 QA
+shows the current path is good enough to keep testing:
+
+```text
+app
+-> Render /api/moments/from-source-video multipart
+-> Render file receive
+-> Supabase Storage upload by Render
+-> Moment
+-> AnalysisJob
+-> Gemini
+```
+
+Because file upload is the core action of the product, signed/direct upload
+stays P1 architecture backlog. The future shape should be upload target request
+-> signed upload URL -> app direct upload to Supabase Storage -> finalize
+endpoint -> Storage object verification -> Moment/AnalysisJob creation. It
+should be triggered by repeated evidence: larger 25-50 MB+ files, frequent
+10s+ upload waits, Render bandwidth/memory pressure, upload failures, product
+need for progress percentage, or multi-user/concurrent upload QA.
+
 Next stage:
 
 Continue Build 23 device QA. Verify more real uploads, collect timing logs,

@@ -526,6 +526,32 @@ progress bar. For exact bottleneck analysis, capture paired iPhone
 `[upload_timing]` logs and Render Dashboard `[source_video_timing]` logs. Keep
 Build 23 QA running and keep code changes paused until more samples accumulate.
 
+Signed/direct upload architecture decision:
+
+The current Render multipart relay remains the active implementation:
+
+```text
+app
+-> Render /api/moments/from-source-video multipart
+-> Render receives file
+-> Render uploads to Supabase Storage
+-> Moment created
+-> AnalysisJob created
+-> Gemini analysis
+```
+
+This is acceptable for Build 23 QA because upload-first behavior, blocking
+Upload Overlay, Push, and restore all passed the first real-device check.
+However, video upload is the core product action. Keep signed/direct upload as
+a P1 architecture backlog item, not a progress-bar-only enhancement. The
+long-term shape is upload target request -> signed upload URL -> direct
+Supabase Storage upload -> finalize endpoint -> Moment/AnalysisJob creation.
+
+Do not switch immediately. Revisit if 25-50 MB+ videos become common, upload
+waits over 10 seconds repeat, Render memory/bandwidth becomes a bottleneck,
+upload failures increase, progress percentage becomes product-critical, or
+multi-user/concurrent upload QA starts.
+
 Validated product decisions:
 
 - Large real thumbnails improve perceived product quality.

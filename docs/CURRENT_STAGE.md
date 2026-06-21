@@ -258,6 +258,25 @@ Do not implement a progress bar or upload architecture change yet. Continue
 Build 23 QA, preserve QA rows, and collect iPhone `[upload_timing]` plus Render
 Dashboard `[source_video_timing]` logs before making the next change.
 
+Signed/direct upload decision:
+
+The active Build 23 path remains Render multipart relay:
+
+```text
+app
+-> Render /api/moments/from-source-video
+-> Render receives file
+-> Render uploads to Supabase Storage
+-> Moment/AnalysisJob
+-> Gemini
+```
+
+This is acceptable for the current single-user QA stage. Signed/direct upload
+is still the likely long-term upload architecture because it reduces Render
+file relay load, scales better for larger/concurrent uploads, and improves the
+path toward progress or resumable upload. Keep it as a P1 architecture backlog
+item, but wait for 5-10 paired timing samples before implementing.
+
 Durable analysis reference:
 
 ```text

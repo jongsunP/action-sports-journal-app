@@ -337,6 +337,29 @@ iPhone `[upload_timing]` logs plus Render Dashboard `[source_video_timing]`
 logs. Progress bar work is not mandatory until repeated timing samples show it
 is needed.
 
+Signed/direct upload architecture decision:
+
+The current Render multipart relay remains active for Build 23 QA. It is
+working well enough for the current stage:
+
+```text
+app
+-> Render /api/moments/from-source-video multipart
+-> Render receives file
+-> Render uploads to Supabase Storage
+-> Moment created
+-> AnalysisJob created
+-> Gemini analysis
+```
+
+Do not implement signed/direct upload immediately. Keep it as a P1 architecture
+backlog item because video upload is the core product action. The future
+candidate shape is upload target request -> signed upload URL -> app direct
+Storage upload -> finalize endpoint -> Storage verification -> Moment and
+AnalysisJob creation. Revisit after 5-10 paired timing samples or if larger
+files, 10s+ upload waits, Render bandwidth/memory pressure, upload failures,
+progress percentage, or concurrent users become recurring issues.
+
 Durable pipeline reference:
 
 ```text
