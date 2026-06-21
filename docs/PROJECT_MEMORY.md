@@ -151,6 +151,26 @@ Later work is grouped by stage:
 - Stabilization: legacy endpoint cleanup and thumbnail storage policy
 - Product scale: auth/user ownership and background upload
 
+## Mobile-First UX Development Principle
+
+The Founder may describe product behavior with web-development analogies, but
+Action Sports Journal is an iOS-first mobile app. Future implementation should
+evaluate mobile app patterns before falling back to web-style conditional
+rendering.
+
+Principles:
+
+- Do not default to web-style screen swaps or conditional rendering when a
+  mobile navigation, lifecycle, or gesture pattern would be more natural.
+- Consider common mobile app structure first for Upload, Detail, Push,
+  foreground/background refresh, app lifecycle, and long-running upload flows.
+- If the user describes a web-like approach but there is a more appropriate
+  mobile app structure, propose the mobile-native option first.
+- Treat "it works" as insufficient when the interaction does not feel natural
+  in a real app.
+- Prioritize whether the user perceives the flow as app-like, stable, and
+  trustworthy.
+
 ## Roles
 
 Founder / Product Owner / Domain Expert:

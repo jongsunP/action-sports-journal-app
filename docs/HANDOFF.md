@@ -27,6 +27,16 @@ changes. The user owns product direction, domain knowledge, QA feedback, and
 priorities. Codex owns implementation, technical execution, code changes, and
 documentation updates.
 
+Mobile-first UX principle:
+
+The Founder may use web-development analogies, but this project should be
+implemented as a mobile app first. Before using web-style conditional rendering
+or screen swaps, consider app-native navigation, lifecycle, gesture,
+foreground/background, Push, and upload patterns. If the user's web analogy
+points to a working but awkward mobile interaction, propose the more app-like
+structure first. A feature being technically functional is not enough; it
+should feel natural on iPhone.
+
 When the user asks for "today's wrap-up", "정리", or "handoff", include product
 continuity as well as technical continuity:
 

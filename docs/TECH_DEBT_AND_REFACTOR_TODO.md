@@ -26,6 +26,26 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+Mobile-first UX development principle:
+
+The Founder may frame requests with web-development analogies, but Action
+Sports Journal should be judged as an iOS-first mobile app. For Upload,
+Detail, Push, foreground/background refresh, lifecycle behavior, and long
+running upload flows, evaluate common mobile app patterns before using
+web-style conditional rendering or screen swaps.
+
+Guidelines:
+
+- Prefer app-native navigation and lifecycle patterns when they better match
+  the user's expectation.
+- Do not treat "the feature works" as complete if the flow feels unlike a
+  normal mobile app.
+- If a web-style implementation would be simpler but awkward on iPhone, record
+  the tradeoff and propose the mobile-first structure.
+- Use this principle when deciding whether to keep modal/conditional UI,
+  introduce route-backed screens, support gestures, or handle foreground and
+  background transitions.
+
 ## Priority Groups
 
 ### Now

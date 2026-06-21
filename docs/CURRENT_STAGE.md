@@ -44,6 +44,14 @@ queued / processing / completed / failed
 Next QA should validate that interrupted uploads do not create remote Moments
 that look like stuck analysis jobs.
 
+Mobile-first UX principle for this stage:
+
+Do not judge Upload, Detail, Push, foreground refresh, app lifecycle, or
+long-running upload flows only by whether they technically work. The UI should
+feel like a mobile app. Prefer app-native navigation, lifecycle, gesture, and
+foreground/background patterns over web-style conditional rendering when the
+mobile pattern better matches user expectation.
+
 2026-06-21 validation update:
 
 - Fileless upload-first request returns HTTP 400 and leaves DB counts unchanged.
