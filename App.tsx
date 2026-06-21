@@ -57,10 +57,10 @@ export default function App() {
             options={{
               animation: 'slide_from_right',
               animationMatchesGesture: true,
-              fullScreenGestureEnabled: true,
+              fullScreenGestureEnabled: false,
               gestureEnabled: true,
               gestureDirection: 'horizontal',
-              gestureResponseDistance: { start: 24 },
+              gestureResponseDistance: { start: 32 },
               headerShown: false,
               presentation: 'card',
             }}

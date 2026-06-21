@@ -442,6 +442,8 @@ export function useUploadMoment({
         setSelectedVideoThumbnailUri(null);
         setIsComposerOpen(false);
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'unknown';
         console.info('[upload_timing]', {
           elapsedMs:
             typeof uploadStartedAt === 'number'
@@ -449,7 +451,7 @@ export function useUploadMoment({
               : undefined,
           event: 'upload_failure',
           localSessionId: nextSession.id,
-          reason: error instanceof Error ? error.message : 'unknown',
+          reason: errorMessage,
         });
         setSessions((current) =>
           current.filter((session) => session.id !== nextSession.id),
@@ -457,12 +459,19 @@ export function useUploadMoment({
         await persistUploadDraftStatus('upload_failed');
         console.warn(
           'Stored Moment source upload failed:',
-          error instanceof Error ? error.message : 'Unknown error',
+          errorMessage,
         );
-        Alert.alert(
-          '영상 업로드에 실패했습니다',
-          '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
-        );
+        if (isLocalVideoAccessFailure(errorMessage)) {
+          Alert.alert(
+            '영상 파일을 다시 선택해 주세요',
+            '이전 업로드 초안의 영상 파일에 다시 접근하지 못했습니다. 새로 시작하기를 눌러 영상을 다시 선택해주세요.',
+          );
+        } else {
+          Alert.alert(
+            '영상 업로드에 실패했습니다',
+            '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+          );
+        }
       } finally {
         isUploadingSessionRef.current = false;
         setIsUploadingSession(false);
@@ -486,6 +495,15 @@ export function useUploadMoment({
 
 function draftVideoFromUploadDraft(draft: UploadDraft | null) {
   return draft ? getVideoFromUploadDraft(draft) : null;
+}
+
+function isLocalVideoAccessFailure(message: string) {
+  return (
+    message.includes('source video for signed upload') ||
+    message.includes('signed upload file body') ||
+    message.includes('Signed upload file body is empty') ||
+    message.includes('Multipart fallback upload timed out')
+  );
 }
 
 async function createMomentFromDirectUpload({
