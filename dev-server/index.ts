@@ -370,6 +370,18 @@ app.post("/api/video-upload-targets", analysisRateLimit, async (request, respons
       throw new Error("Signed upload target did not include an upload token.");
     }
 
+    await recordUploadTargetIssued({
+      client,
+      draftId,
+      durationMs: Number.isFinite(durationMs) ? Math.round(durationMs) : null,
+      fileName,
+      fileSize,
+      mimeType,
+      storagePath,
+      uploadId,
+      userId,
+    });
+
     response.json({
       uploadId,
       draftId,
@@ -3656,6 +3668,12 @@ async function createStoredMomentFromUploadedSource({
     );
   }
 
+  await updateUploadTargetStatus({
+    client,
+    status: "uploaded",
+    uploadId,
+  });
+
   const momentId = randomUUID();
   const now = new Date().toISOString();
   const sessionId = getField(body?.sessionId, "");
@@ -3709,6 +3727,12 @@ async function createStoredMomentFromUploadedSource({
       });
     }
 
+    await updateUploadTargetStatus({
+      client,
+      status: "finalized",
+      uploadId,
+    });
+
     return {
       momentId,
       uploadedAt: now,
@@ -3728,7 +3752,95 @@ async function createStoredMomentFromUploadedSource({
       client,
       momentId,
     });
+    await updateUploadTargetStatus({
+      client,
+      failureReason: error instanceof Error ? error.message : "unknown",
+      status: "failed",
+      uploadId,
+    });
     throw error;
+  }
+}
+
+async function recordUploadTargetIssued({
+  client,
+  draftId,
+  durationMs,
+  fileName,
+  fileSize,
+  mimeType,
+  storagePath,
+  uploadId,
+  userId,
+}: {
+  client: SupabaseServerClient;
+  draftId: string;
+  durationMs: number | null;
+  fileName: string | null;
+  fileSize: number;
+  mimeType: string;
+  storagePath: string;
+  uploadId: string;
+  userId: string;
+}) {
+  const now = new Date().toISOString();
+  const { error } = await client.from("upload_targets").insert({
+    upload_id: uploadId,
+    user_id: userId,
+    draft_id: draftId,
+    storage_provider: sourceVideoStorageProvider,
+    storage_bucket: sourceVideoStorageBucket,
+    storage_path: storagePath,
+    status: "issued",
+    file_name: fileName,
+    mime_type: mimeType,
+    file_size: fileSize,
+    duration_ms: durationMs,
+    issued_at: now,
+    created_at: now,
+    updated_at: now,
+  });
+
+  if (error) {
+    console.warn("Upload target tracking insert failed:", error.message);
+  }
+}
+
+async function updateUploadTargetStatus({
+  client,
+  failureReason,
+  status,
+  uploadId,
+}: {
+  client: SupabaseServerClient;
+  failureReason?: string;
+  status: "uploaded" | "finalized" | "failed";
+  uploadId: string;
+}) {
+  const now = new Date().toISOString();
+  const timestampColumn =
+    status === "uploaded"
+      ? "uploaded_at"
+      : status === "finalized"
+        ? "finalized_at"
+        : "failed_at";
+  const updatePayload: Record<string, unknown> = {
+    status,
+    updated_at: now,
+    [timestampColumn]: now,
+  };
+
+  if (failureReason) {
+    updatePayload.failure_reason = failureReason;
+  }
+
+  const { error } = await client
+    .from("upload_targets")
+    .update(updatePayload)
+    .eq("upload_id", uploadId);
+
+  if (error) {
+    console.warn("Upload target tracking update failed:", error.message);
   }
 }
 
