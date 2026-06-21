@@ -108,6 +108,7 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sourceVideoStorageProvider = "supabase";
 const sourceVideoStorageBucket = "moment-videos";
+const realtimeAnalysisChannel = "analysis-updates";
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const appEnv = process.env.APP_ENV ?? "development";
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
@@ -4894,6 +4895,10 @@ async function runGeminiEvidenceExtraction({
         momentId: persistence.momentId,
         evidenceResultId: persistence.evidenceResultId,
       });
+      void broadcastAnalysisCompleted({
+        momentId: persistence.momentId,
+        analysisJobId: persistence.analysisJobId,
+      });
     }
   }
 
@@ -5035,6 +5040,65 @@ async function sendAnalysisCompletedPushNotification({
       "Analysis completion push failed:",
       error instanceof Error ? error.message : "unknown push error",
     );
+  }
+}
+
+async function broadcastAnalysisCompleted({
+  momentId,
+  analysisJobId,
+}: {
+  momentId: string;
+  analysisJobId: string;
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return;
+  }
+
+  const channel = client.channel(realtimeAnalysisChannel, {
+    config: {
+      broadcast: {
+        ack: true,
+        self: false,
+      },
+    },
+  });
+
+  try {
+    const status = await channel.send(
+      {
+        type: "broadcast",
+        event: "analysis_completed",
+        payload: {
+          momentId,
+          analysisJobId,
+          status: "completed",
+        },
+      },
+      { timeout: 5_000 },
+    );
+
+    if (status !== "ok") {
+      console.warn(
+        "Analysis completion realtime broadcast was not acknowledged:",
+        status,
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "Analysis completion realtime broadcast failed:",
+      error instanceof Error ? error.message : "unknown realtime error",
+    );
+  } finally {
+    try {
+      await client.removeChannel(channel);
+    } catch (error) {
+      console.warn(
+        "Failed to remove realtime broadcast channel:",
+        error instanceof Error ? error.message : "unknown realtime cleanup error",
+      );
+    }
   }
 }
 

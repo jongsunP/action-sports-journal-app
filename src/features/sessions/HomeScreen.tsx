@@ -56,6 +56,7 @@ import {
 import { setMomentDetailRuntimeState } from './momentDetailRuntimeStore';
 import { setUploadRuntimeState } from './uploadRuntimeStore';
 import { listMomentsWithTimeout, useBootSync } from './useBootSync';
+import { useAnalysisRealtimeSync } from './useAnalysisRealtimeSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
 import { useMomentDetail } from './useMomentDetail';
@@ -72,7 +73,11 @@ import type { RootStackParamList } from '../../navigation/types';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
-type RemoteRefreshReason = 'foreground' | 'initial_retry' | 'push_response';
+type RemoteRefreshReason =
+  | 'foreground'
+  | 'initial_retry'
+  | 'push_response'
+  | 'realtime';
 
 export function HomeScreen() {
   const navigation =
@@ -212,6 +217,16 @@ export function HomeScreen() {
       syncRemoteMoments,
     ],
   );
+
+  useAnalysisRealtimeSync({
+    enabled:
+      isStorageLoaded &&
+      isRemoteMomentSyncLoaded &&
+      hasConfiguredSupabaseMoments(),
+    onAnalysisCompleted: () => {
+      void refreshRemoteMoments('realtime');
+    },
+  });
 
   useEffect(() => {
     if (!isStorageLoaded) {
