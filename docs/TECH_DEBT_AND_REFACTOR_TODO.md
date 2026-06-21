@@ -189,6 +189,100 @@ Use this data to distinguish:
 - Render/backend bottleneck
 - app restore/polling UX bottleneck
 
+#### Upload Timing Log Collection Procedure
+
+Purpose:
+
+The next real-device upload QA should separate the time spent in client upload,
+server-side Storage write, Moment creation, and AnalysisJob creation. Do not
+guess the bottleneck from the total time alone.
+
+Client log location:
+
+```text
+src/features/sessions/HomeScreen.tsx
+```
+
+Filter for:
+
+```text
+[upload_timing]
+```
+
+Expected client events:
+
+- `upload_start`: emitted immediately before `createMomentFromSourceVideo`.
+- `upload_success`: emitted after the server response resolves and before the
+  Upload screen closes.
+- `upload_failure`: emitted when the upload promise rejects or returns no stored
+  Moment.
+
+Client fields to record:
+
+- `localSessionId`
+- `fileSize`
+- `elapsedMs`
+- `momentId` if available
+- `nextMomentStatus` if available
+- failure `reason` if available
+
+Server log location:
+
+```text
+dev-server/index.ts
+```
+
+Filter Render logs for:
+
+```text
+[source_video_timing]
+```
+
+Expected server events:
+
+- `from_source_video_request_received`: request reached `/api/moments/from-source-video`.
+- `multipart_file_received`: multer finished receiving the uploaded file.
+- `storage_upload_completed`: Supabase Storage write completed.
+- `moment_inserted`: `moments` row was created.
+- `analysis_job_queued`: `analysis_jobs` row was created and linked to Storage input.
+- `response_sent`: server response returned to the app.
+
+Server fields to record:
+
+- `elapsedMs`
+- `fileSize`
+- `mimeType`
+- `storagePath`
+- `momentId`
+- `analysisJobId`
+
+Derived measurements:
+
+- Real app wait time: client `upload_success.elapsedMs`.
+- Client-to-server transfer time: server `multipart_file_received.elapsedMs`.
+- Storage save time: `storage_upload_completed.elapsedMs - multipart_file_received.elapsedMs`.
+- Moment creation time: `moment_inserted.elapsedMs - storage_upload_completed.elapsedMs`.
+- Job creation time: `analysis_job_queued.elapsedMs - moment_inserted.elapsedMs`.
+- Server response overhead: `response_sent.elapsedMs - analysis_job_queued.elapsedMs`.
+
+QA procedure:
+
+1. Use a physical iPhone, not simulator upload, unless explicitly requested.
+2. Upload one real wakeboard video.
+3. Capture the app log lines containing `[upload_timing]`.
+4. Capture Render log lines containing `[source_video_timing]` for the same
+   upload.
+5. Match logs by `momentId`, `analysisJobId`, approximate timestamp, and file
+   size.
+6. Record the derived measurements before changing upload architecture,
+   progress UI, or server behavior.
+
+Do not:
+
+- infer progress percentages from these logs
+- auto-clear DB rows before timing review
+- use one single slow upload as enough evidence for architectural change
+
 ### 5. AI Calibration System
 
 Problem:
