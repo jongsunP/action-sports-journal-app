@@ -27,9 +27,47 @@ type UploadMomentSourceVideoResponse = {
   uploadedAt?: unknown;
 };
 
+type UploadTargetResponse = {
+  uploadId?: unknown;
+  draftId?: unknown;
+  provider?: unknown;
+  bucket?: unknown;
+  storagePath?: unknown;
+  signedUploadToken?: unknown;
+  signedUploadUrl?: unknown;
+  expiresInSeconds?: unknown;
+  fileName?: unknown;
+  mimeType?: unknown;
+  fileSize?: unknown;
+  durationMs?: unknown;
+};
+
 type DeleteMomentResponse = {
   ok?: unknown;
   storageCleanupFailed?: unknown;
+};
+
+export type RequestUploadTargetInput = {
+  draftId: string;
+  fileName?: string | null;
+  fileSize?: number;
+  mimeType?: string | null;
+  durationMs?: number | null;
+};
+
+export type VideoUploadTarget = {
+  uploadId: string;
+  draftId: string;
+  provider: string;
+  bucket: string;
+  storagePath: string;
+  signedUploadToken: string;
+  signedUploadUrl?: string;
+  expiresInSeconds?: number;
+  fileName?: string;
+  mimeType?: string;
+  fileSize?: number;
+  durationMs?: number;
 };
 
 export type UploadedMomentSourceVideo = {
@@ -63,9 +101,80 @@ const momentsEndpoint = analysisEndpoint?.replace(
   /\/api\/analyze-session-video$/,
   '/api/moments',
 );
+const uploadTargetsEndpoint = analysisEndpoint?.replace(
+  /\/api\/analyze-session-video$/,
+  '/api/video-upload-targets',
+);
 
 export function hasConfiguredSupabaseMoments() {
   return Boolean(momentsEndpoint);
+}
+
+export async function requestUploadTarget(
+  input: RequestUploadTargetInput,
+): Promise<VideoUploadTarget | undefined> {
+  if (!uploadTargetsEndpoint) {
+    return undefined;
+  }
+
+  const response = await fetch(uploadTargetsEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      draftId: input.draftId,
+      fileName: input.fileName ?? null,
+      fileSize: input.fileSize ?? null,
+      mimeType: input.mimeType ?? null,
+      durationMs:
+        typeof input.durationMs === 'number' && Number.isFinite(input.durationMs)
+          ? Math.round(input.durationMs)
+          : null,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(
+      message ?? `Upload target creation failed with ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as UploadTargetResponse;
+  const uploadId = asString(data.uploadId);
+  const draftId = asString(data.draftId);
+  const provider = asString(data.provider);
+  const bucket = asString(data.bucket);
+  const storagePath = asString(data.storagePath);
+  const signedUploadToken = asString(data.signedUploadToken);
+
+  if (
+    !uploadId ||
+    !draftId ||
+    !provider ||
+    !bucket ||
+    !storagePath ||
+    !signedUploadToken
+  ) {
+    throw new Error('Upload target response returned invalid data.');
+  }
+
+  return {
+    uploadId,
+    draftId,
+    provider,
+    bucket,
+    storagePath,
+    signedUploadToken,
+    signedUploadUrl: asString(data.signedUploadUrl),
+    expiresInSeconds: asNumber(data.expiresInSeconds),
+    fileName: asString(data.fileName),
+    mimeType: asString(data.mimeType),
+    fileSize: asNumber(data.fileSize),
+    durationMs: asNumber(data.durationMs),
+  };
 }
 
 export async function insertMoment(session: Session, video?: SessionVideoAsset | null) {

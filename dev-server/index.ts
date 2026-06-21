@@ -309,6 +309,89 @@ app.post("/api/push-tokens", async (request, response) => {
   }
 });
 
+app.post("/api/video-upload-targets", analysisRateLimit, async (request, response) => {
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const draftId = getField(request.body?.draftId, "");
+    const fileName = nullableString(request.body?.fileName);
+    const mimeType = nullableString(request.body?.mimeType);
+    const fileSize = Number(request.body?.fileSize);
+    const durationMs = Number(request.body?.durationMs);
+
+    if (!draftId) {
+      response.status(400).json({ error: "draftId is required." });
+      return;
+    }
+
+    if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
+      response.status(400).json({ error: "Unsupported or missing video type." });
+      return;
+    }
+
+    if (!Number.isFinite(fileSize) || fileSize <= 0) {
+      response.status(400).json({ error: "fileSize is required." });
+      return;
+    }
+
+    if (fileSize > geminiMaxVideoBytes) {
+      response.status(413).json({
+        error: `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
+      });
+      return;
+    }
+
+    const userId = await getOrCreateDefaultSupabaseUser();
+    const uploadId = randomUUID();
+    const extension =
+      extensionForFileName(fileName ?? "") ?? extensionForMimeType(mimeType);
+    const storagePath = `users/${userId}/uploads/${uploadId}/source${extension}`;
+    const { data, error } = await client.storage
+      .from(sourceVideoStorageBucket)
+      .createSignedUploadUrl(storagePath, {
+        upsert: false,
+      } as never);
+
+    if (error) {
+      throw new Error(`Failed to create signed upload URL: ${error.message}`);
+    }
+
+    const signedUploadToken = nullableString(data?.token);
+    const signedUploadUrl = nullableString(data?.signedUrl);
+
+    if (!signedUploadToken) {
+      throw new Error("Signed upload target did not include an upload token.");
+    }
+
+    response.json({
+      uploadId,
+      draftId,
+      provider: sourceVideoStorageProvider,
+      bucket: sourceVideoStorageBucket,
+      storagePath,
+      signedUploadToken,
+      signedUploadUrl,
+      expiresInSeconds: 2 * 60 * 60,
+      fileName,
+      mimeType,
+      fileSize,
+      durationMs: Number.isFinite(durationMs) ? Math.round(durationMs) : null,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Upload target creation failed.";
+    console.error("Upload target creation failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
 app.post("/api/moments", async (request, response) => {
   try {
     const client = getSupabaseServerClient();
