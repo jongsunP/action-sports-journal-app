@@ -38,6 +38,8 @@ import {
   type UploadDraftStatus,
 } from './uploadDraftStorage';
 
+const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
+
 type ExtractEvidenceOptions = {
   openSheet?: boolean;
   videoOverride?: SessionVideoAsset;
@@ -390,9 +392,10 @@ export function useUploadMoment({
 
         if (!storedMoment) {
           usedUploadFallback = true;
-          storedMoment = await createMomentFromSourceVideo(
-            nextSession,
-            videoForUpload,
+          storedMoment = await withUploadTimeout(
+            createMomentFromSourceVideo(nextSession, videoForUpload),
+            MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS,
+            'Multipart fallback upload timed out.',
           );
         }
 
@@ -500,6 +503,12 @@ async function createMomentFromDirectUpload({
     const uploadTarget = await uploadDraftSourceVideoDirectly(draft);
 
     if (!uploadTarget) {
+      console.info('[upload_timing]', {
+        draftId: draft.draftId,
+        event: 'direct_upload_skipped',
+        localSessionId: session.id,
+        reason: 'no_upload_target',
+      });
       return undefined;
     }
 
@@ -515,12 +524,37 @@ async function createMomentFromDirectUpload({
 
     return await finalizeUploadedDraftSource(uploadedDraft, session);
   } catch (error) {
+    console.info('[upload_timing]', {
+      draftId: draft.draftId,
+      event: 'direct_upload_failure',
+      localSessionId: session.id,
+      reason: error instanceof Error ? error.message : 'unknown',
+      videoUriScheme: draft.localVideoUri.split(':', 1)[0],
+    });
     console.warn(
       'Direct upload finalize path failed; falling back to multipart upload:',
       error instanceof Error ? error.message : 'Unknown error',
     );
     return undefined;
   }
+}
+
+function withUploadTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+
+    promise
+      .then(resolve, reject)
+      .finally(() => {
+        clearTimeout(timeout);
+      });
+  });
 }
 
 function createLocalSessionId() {

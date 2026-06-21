@@ -117,6 +117,8 @@ const uploadTargetsEndpoint = analysisEndpoint?.replace(
   /\/api\/analyze-session-video$/,
   '/api/video-upload-targets',
 );
+const SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS = 10000;
+const SIGNED_UPLOAD_REQUEST_TIMEOUT_MS = 20000;
 
 export function hasConfiguredSupabaseMoments() {
   return Boolean(momentsEndpoint);
@@ -197,7 +199,11 @@ export async function uploadVideoToSignedTarget(
     throw new Error('Supabase client is not configured.');
   }
 
-  const fileResponse = await fetch(video.uri);
+  const fileResponse = await withTimeout(
+    fetch(video.uri),
+    SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS,
+    'Timed out while reading source video for signed upload.',
+  );
 
   if (!fileResponse.ok) {
     throw new Error(
@@ -205,24 +211,57 @@ export async function uploadVideoToSignedTarget(
     );
   }
 
-  const fileBody = await fileResponse.blob();
+  const fileBody = await withTimeout(
+    fileResponse.blob(),
+    SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS,
+    'Timed out while creating signed upload file body.',
+  );
   const contentType = video.mimeType ?? target.mimeType ?? 'video/quicktime';
+  const fileBodySize =
+    typeof fileBody.size === 'number' && Number.isFinite(fileBody.size)
+      ? fileBody.size
+      : undefined;
 
-  const { data, error } = await supabase.storage
-    .from(target.bucket)
-    .uploadToSignedUrl(
-      target.storagePath,
-      target.signedUploadToken,
-      fileBody,
-      {
-        contentType,
-        upsert: false,
-      },
-    );
+  console.info('[upload_timing]', {
+    blobSize: fileBodySize,
+    blobType: fileBody.type,
+    event: 'direct_upload_file_body',
+    storagePath: target.storagePath,
+    uploadId: target.uploadId,
+    videoUriScheme: video.uri.split(':', 1)[0],
+  });
+
+  if (!fileBodySize || fileBodySize <= 0) {
+    throw new Error('Signed upload file body is empty.');
+  }
+
+  const { data, error } = await withTimeout(
+    supabase.storage
+      .from(target.bucket)
+      .uploadToSignedUrl(
+        target.storagePath,
+        target.signedUploadToken,
+        fileBody,
+        {
+          contentType,
+          upsert: false,
+        },
+      ),
+    SIGNED_UPLOAD_REQUEST_TIMEOUT_MS,
+    'Timed out while uploading source video to signed target.',
+  );
 
   if (error) {
     throw new Error(`Signed source video upload failed: ${error.message}`);
   }
+
+  console.info('[upload_timing]', {
+    event: 'direct_upload_success',
+    fullPath: data.fullPath,
+    path: data.path,
+    storagePath: target.storagePath,
+    uploadId: target.uploadId,
+  });
 
   return data;
 }
@@ -961,6 +1000,24 @@ function asNumber(value: unknown) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+
+    promise
+      .then(resolve, reject)
+      .finally(() => {
+        clearTimeout(timeout);
+      });
+  });
 }
 
 function asStringArray(value: unknown) {
