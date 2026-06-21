@@ -365,6 +365,7 @@ export function HomeScreen() {
     isUploadingSession,
     selectedVideo,
     uploadDraft,
+    uploadProgress,
   } = useUploadMoment({
     activityGroupId: selectedGroup?.id,
     extractEvidence: handleExtractEvidence,
@@ -436,6 +437,7 @@ export function HomeScreen() {
       selectedVideo,
       styles,
       uploadDraft,
+      uploadProgress,
     });
   }, [
     canUploadSession,
@@ -447,6 +449,7 @@ export function HomeScreen() {
     isUploadingSession,
     selectedVideo,
     uploadDraft,
+    uploadProgress,
   ]);
 
   if (isLoadingInitialMoments) {
@@ -1282,6 +1285,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  uploadBlockingStep: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    lineHeight: 16,
+  },
+  uploadProgressFill: {
+    backgroundColor: '#38bdf8',
+    borderRadius: 999,
+    height: '100%',
+  },
+  uploadProgressTrack: {
+    backgroundColor: 'rgba(148, 163, 184, 0.24)',
+    borderRadius: 999,
+    height: 8,
+    overflow: 'hidden',
+    width: '100%',
   },
   buttonPressed: {
     opacity: 0.85,

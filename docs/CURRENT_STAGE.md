@@ -71,9 +71,12 @@ Result:
 Insight:
 
 The current Level 1 upload experience is now functionally sound for a real
-single-video flow. The next major product risk is Resume Draft behavior:
-restored local file URIs may not be reusable after app restart, and they must
-fail quickly into "select the video again" rather than making the rider wait.
+single-video flow. The next product decision is to remove Local Draft Resume:
+persisting `file://` local video URIs across app restarts is not reliable
+enough for an app-like upload experience. The chosen Part 1 behavior is to keep
+the rider on the Upload screen until upload finishes, show clear step-based
+progress, and only then let server-side analysis continue. Future draft work
+should be server/upload-target based rather than local URI resume based.
 Pre-upload video optimization, such as Instagram/TikTok-style re-encoding or
 analysis proxy generation, is recorded as a later final-product investigation,
 not current priority.
@@ -360,15 +363,16 @@ and is applied to remote Supabase. The `upload_targets` table was verified at
 0 rows before the next build. Server tracking is best-effort: tracking issues
 should warn, not block upload.
 
-Draft Upload Flow decision:
+Upload Draft decision:
 
-Local Draft Upload Flow is implemented as the app-like layer before upload
-transport:
+Local Draft Resume is removed from the current product path. The app still uses
+a short-lived in-memory `UploadDraft` while the Upload screen is open, but it no
+longer persists selected `file://` videos to AsyncStorage for app re-entry.
 
 ```text
 select video
--> local draft
--> resume previous draft / start new
+-> in-memory upload draft
+-> upload screen stays open
 -> signed/direct upload
 -> finalize
 -> Moment/AnalysisJob
@@ -376,19 +380,22 @@ select video
 
 Current implementation:
 
-- `UploadDraft` is local-only and stored in AsyncStorage.
-- Video selection creates and saves a draft without creating a remote Moment.
-- App re-entry can prompt "이전 업로드를 이어서 하시겠습니까?"
-- `UploadScreen` can render from the draft.
-- Upload success clears the draft.
-- Upload failure stores `upload_failed` and keeps retry possible.
+- `UploadDraft` is local-only and in-memory for the active Upload screen.
+- Video selection creates a draft without creating a remote Moment.
+- App re-entry no longer prompts to resume a local draft.
+- Upload progress is step-based: preparing, upload target creation, video
+  upload, upload verification, and analysis request.
+- Upload success clears the local draft and closes the Upload screen.
+- Upload failure keeps the current screen state retryable while encouraging
+  selecting the video again when local file access fails.
 
 Do not create remote Moments for Drafts. A Draft is local selected upload work;
 a Moment is created only after upload makes the video analysis-ready.
 Signed/direct upload and finalize are implemented, while orphan cleanup
-automation is not. Future design should include future `userId`, stronger
-Storage path ownership, orphan cleanup, and a path convention like
-`users/{userId}/uploads/{uploadId}/source.mov`.
+automation is not. Future draft design should use a server-side upload session
+or upload target rather than long-lived local URI persistence. It should include
+future `userId`, stronger Storage path ownership, orphan cleanup, and a path
+convention like `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Durable analysis reference:
 

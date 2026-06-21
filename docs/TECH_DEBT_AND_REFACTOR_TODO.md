@@ -84,10 +84,12 @@ Result:
 
 Next:
 
-Validate Direct Upload with several more real-device uploads. The next urgent
-UX task is Resume Draft failure handling: restored `localVideoUri` values may
-not remain accessible after app restart and should fail quickly into "select
-the video again" rather than waiting through upload timeouts.
+Validate Direct Upload with several more real-device uploads. Local Draft
+Resume is removed from the Part 1 path because restored `file://`
+`localVideoUri` values may not remain accessible after app restart. The current
+UX choice is to keep the rider on the Upload screen until upload completes and
+show step-based progress. Future draft work should be server/upload-target
+based rather than local URI resume based.
 
 Current product priority:
 
@@ -469,35 +471,36 @@ Important guardrails:
 - Evaluate AI accuracy impact together with UX speed impact.
 - Keep this as a final-product investigation, not a temporary workaround.
 
-### Draft Upload Flow Architecture
+### Upload Draft Flow Architecture
 
 Product need:
 
 The Level 1 product goal is that even one uploaded video behaves like a proper
-mobile app. Draft Upload Flow is closer to Instagram/TikTok-style mobile upload
-UX than the current one-shot picker -> upload button flow. A rider should be
-able to select a video, leave the app, and later choose whether to continue the
-previous upload work or start a new one.
+mobile app. The app should keep the rider informed during the pre-analysis
+upload phase rather than making upload feel frozen. Long-lived local resume is
+not currently reliable because selected `file://` videos may not remain
+accessible after app restart.
 
 Current decision:
 
-Local Draft Upload Flow is implemented as the first step. It keeps Draft
-local-only and does not create a remote Moment until the rider starts upload
-and the current upload-first backend path accepts the source video.
+Local Draft Resume is removed from the current Part 1 flow. The app keeps a
+short-lived in-memory `UploadDraft` only while the Upload screen is open. Future
+draft/resume behavior should be built around server-side upload sessions or
+upload targets, not persisted local video URIs.
 
 Current implementation:
 
 - `UploadDraft` contains `draftId`, local video URI, file metadata, local
   thumbnail URI, timestamps, and `selected / ready_to_upload / uploading /
   upload_failed` status.
-- Drafts are persisted in AsyncStorage.
 - Selecting a video creates a local draft and navigates to `UploadScreen`.
-- App re-entry can prompt "이전 업로드를 이어서 하시겠습니까?" with continue or
-  start-new options.
-- `UploadScreen` can render from the draft rather than transient selected video
-  state only.
+- Drafts are not persisted for app re-entry.
+- App re-entry no longer prompts to resume a previous local draft.
+- `UploadScreen` renders from the current selected video / in-memory draft.
+- Upload progress is stage-based rather than fake percent-based.
 - Upload success clears the draft.
-- Upload failure stores `upload_failed` and keeps the draft retryable.
+- Upload failure stores `upload_failed` in memory and keeps retry possible while
+  the screen is active.
 
 Concept boundaries:
 
@@ -513,9 +516,9 @@ Recommended long-term flow:
 
 ```text
 select video
--> create local draft
--> app can close
--> app re-entry offers continue previous draft / start new
+-> create in-memory upload draft
+-> keep UploadScreen open
+-> show stage-based progress
 -> signed/direct upload
 -> finalize endpoint
 -> Moment created

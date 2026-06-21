@@ -95,12 +95,13 @@ Result:
 Next:
 
 Keep Build 29 as the current QA baseline. Continue gathering a few more
-real-device uploads before declaring Direct Upload fully stable. The next major
-upload task is Resume Draft failure handling: if a restored `localVideoUri` is
-not reusable, fail quickly and ask the rider to select the video again. Do not
-let Resume Draft spend a long time in upload. Pre-upload video optimization
-similar to Instagram/TikTok is recorded as a later TODO, after Direct Upload
-stability is confirmed.
+real-device uploads before declaring Direct Upload fully stable. Local Draft
+Resume has been removed from the Part 1 path because long-lived `file://`
+video URI reuse is not reliable enough. The current choice is upload-screen
+waiting with clear step-based progress. Future draft work should be
+server/upload-target based. Pre-upload video optimization similar to
+Instagram/TikTok is recorded as a later TODO, after Direct Upload stability is
+confirmed.
 
 Build 28 save point, 2026-06-21:
 
@@ -497,16 +498,17 @@ remotely and verified with an empty `upload_targets` table before the next
 build. Server tracking remains best-effort and should not break upload if
 tracking fails.
 
-Draft Upload Flow decision:
+Upload Draft decision:
 
-Local Draft Upload Flow is implemented as the first P1 upload-work layer. It
-models selected upload work before it becomes a server-side Moment:
+Local Draft Resume is removed from the current P1 upload path. The app still
+uses a short-lived in-memory `UploadDraft` while the Upload screen is open, but
+it no longer persists selected local videos for app re-entry.
 
 ```text
 video selected
--> local draft created
--> app can close
--> continue previous draft / start new
+-> in-memory upload draft
+-> UploadScreen stays open
+-> step-based upload progress
 -> signed/direct upload
 -> finalize
 -> Moment/AnalysisJob
@@ -514,20 +516,20 @@ video selected
 
 Implementation status:
 
-- `UploadDraft` is local-only and persisted in AsyncStorage.
+- `UploadDraft` is local-only and in-memory for the active Upload screen.
 - Video selection creates a draft without creating a remote Moment.
-- App re-entry prompts the rider to continue the previous upload or start a new
-  one.
-- `UploadScreen` can render from the stored draft.
-- Upload success clears the draft.
-- Upload failure stores `upload_failed` and keeps retry possible.
+- App re-entry no longer prompts the rider to resume a previous local draft.
+- `UploadScreen` renders from the current selected video / in-memory draft.
+- Upload success clears the draft and closes the Upload screen.
+- Upload failure keeps retry possible within the current screen.
 
 The concepts remain separate: Draft is user work in progress, signed/direct
 upload is the transport method, finalize turns uploaded media into a Moment,
 and Moment means the server has durable input and can analyze. Orphan cleanup
-automation remains unimplemented. Future multi-user design should account for
-future `userId`, stronger user-scoped Storage policies, ownership validation,
-and cleanup automation.
+automation remains unimplemented. Future multi-user draft design should be
+server-side upload-session based and should account for future `userId`,
+stronger user-scoped Storage policies, ownership validation, and cleanup
+automation.
 
 Next stage:
 

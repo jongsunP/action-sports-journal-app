@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -28,15 +27,14 @@ import {
   uploadDraftSourceVideoDirectly,
 } from './uploadDraftDirectUpload';
 import {
-  clearUploadDraft,
   createUploadDraftFromVideo,
-  getVideoFromUploadDraft,
-  loadUploadDraft,
-  saveUploadDraft,
-  updateUploadDraft,
   type UploadDraft,
-  type UploadDraftStatus,
 } from './uploadDraftStorage';
+import {
+  buildUploadProgress,
+  type UploadProgressStage,
+  type UploadProgressState,
+} from './uploadProgress';
 
 const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
 
@@ -85,6 +83,8 @@ export function useUploadMoment({
     null,
   );
   const [uploadDraft, setUploadDraft] = useState<UploadDraft | null>(null);
+  const [uploadProgress, setUploadProgress] =
+    useState<UploadProgressState | null>(null);
   const [selectedVideoThumbnailUri, setSelectedVideoThumbnailUri] = useState<
     string | null
   >(null);
@@ -102,61 +102,6 @@ export function useUploadMoment({
     [isPreparingSelectedVideoThumbnail, isUploadingSession, selectedVideo, uploadDraft],
   );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    void (async () => {
-      const storedDraft = await loadUploadDraft();
-
-      if (!isMounted || !storedDraft) {
-        return;
-      }
-
-      Alert.alert(
-        '이전 업로드를 이어서 하시겠습니까?',
-        '아직 업로드하지 않은 영상 초안이 있습니다.',
-        [
-          {
-            text: '새로 시작하기',
-            style: 'destructive',
-            onPress: () => {
-              void clearUploadDraft();
-              if (!isMounted) {
-                return;
-              }
-              setUploadDraft(null);
-              setSelectedVideo(null);
-              selectedVideoThumbnailUriRef.current = null;
-              setSelectedVideoThumbnailUri(null);
-              setIsComposerOpen(false);
-            },
-          },
-          {
-            text: '이어서 하기',
-            onPress: () => {
-              if (!isMounted) {
-                return;
-              }
-              const restoredVideo = getVideoFromUploadDraft(storedDraft);
-              setUploadDraft(storedDraft);
-              setSelectedVideo(restoredVideo);
-              selectedVideoThumbnailUriRef.current =
-                storedDraft.localThumbnailUri ?? null;
-              setSelectedVideoThumbnailUri(
-                storedDraft.localThumbnailUri ?? null,
-              );
-              setIsComposerOpen(true);
-            },
-          },
-        ],
-      );
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const closeUploadSheet = () => {
     if (isUploadingSession) {
       return;
@@ -167,6 +112,8 @@ export function useUploadMoment({
     selectedVideoThumbnailUriRef.current = null;
     setSelectedVideoThumbnailUri(null);
     setIsPreparingSelectedVideoThumbnail(false);
+    setUploadDraft(null);
+    setUploadProgress(null);
   };
 
   const createThumbnailForSession = async (
@@ -216,14 +163,6 @@ export function useUploadMoment({
                 ...currentDraft,
                 localThumbnailUri: imageUri,
                 updatedAt: new Date().toISOString(),
-              }
-            : currentDraft,
-        );
-        void updateUploadDraft((currentDraft) =>
-          currentDraft.draftId === draftId
-            ? {
-                ...currentDraft,
-                localThumbnailUri: imageUri,
               }
             : currentDraft,
         );
@@ -285,7 +224,6 @@ export function useUploadMoment({
 
     setSelectedVideo(nextVideo);
     setUploadDraft(nextDraft);
-    void saveUploadDraft(nextDraft);
     void prepareSelectedVideoThumbnail(nextVideo, nextDraft.draftId);
 
     return true;
@@ -303,7 +241,11 @@ export function useUploadMoment({
     }
   };
 
-  const persistUploadDraftStatus = async (status: UploadDraftStatus) => {
+  const setUploadProgressStage = (stage: UploadProgressStage) => {
+    setUploadProgress(buildUploadProgress(stage));
+  };
+
+  const setUploadDraftStatus = (status: UploadDraft['status']) => {
     setUploadDraft((currentDraft) =>
       currentDraft
         ? {
@@ -313,11 +255,10 @@ export function useUploadMoment({
           }
         : currentDraft,
     );
-    await updateUploadDraft({ status });
   };
 
   const handleAddSession = () => {
-    const videoForUpload = selectedVideo ?? draftVideoFromUploadDraft(uploadDraft);
+    const videoForUpload = selectedVideo;
 
     if (
       !activityGroupId ||
@@ -331,6 +272,7 @@ export function useUploadMoment({
 
     isUploadingSessionRef.current = true;
     setIsUploadingSession(true);
+    setUploadProgress(buildUploadProgress('preparing'));
 
     const now = new Date().toISOString();
     const nextSession: Session = {
@@ -361,19 +303,19 @@ export function useUploadMoment({
       let usedUploadFallback = false;
 
       try {
-        await persistUploadDraftStatus('uploading');
+        setUploadDraftStatus('uploading');
 
         if (!hasConfiguredSupabaseMoments()) {
           await extractEvidence(nextSession, {
             openSheet: false,
             videoOverride: videoForUpload,
           });
-          await clearUploadDraft();
           setUploadDraft(null);
           setSelectedVideo(null);
           selectedVideoThumbnailUriRef.current = null;
           setSelectedVideoThumbnailUri(null);
           setIsComposerOpen(false);
+          setUploadProgress(null);
           return;
         }
 
@@ -387,11 +329,13 @@ export function useUploadMoment({
 
         let storedMoment = await createMomentFromDirectUpload({
           draft: uploadDraft,
+          onProgress: setUploadProgressStage,
           session: nextSession,
         });
 
         if (!storedMoment) {
           usedUploadFallback = true;
+          setUploadProgressStage('fallback_upload');
           storedMoment = await withUploadTimeout(
             createMomentFromSourceVideo(nextSession, videoForUpload),
             MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS,
@@ -409,7 +353,7 @@ export function useUploadMoment({
           setSessions((current) =>
             current.filter((session) => session.id !== nextSession.id),
           );
-          await persistUploadDraftStatus('upload_failed');
+          setUploadDraftStatus('upload_failed');
           Alert.alert(
             '영상 업로드에 실패했습니다',
             '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
@@ -418,6 +362,7 @@ export function useUploadMoment({
         }
 
         setRemoteMomentIdForSession(nextSession.id, storedMoment.momentId);
+        setUploadProgressStage('requesting_analysis');
 
         const nextMomentStatus =
           storedMoment.analysisJobStatus === 'processing' ||
@@ -435,12 +380,12 @@ export function useUploadMoment({
         });
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
-        await clearUploadDraft();
         setUploadDraft(null);
         setSelectedVideo(null);
         selectedVideoThumbnailUriRef.current = null;
         setSelectedVideoThumbnailUri(null);
         setIsComposerOpen(false);
+        setUploadProgress(null);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'unknown';
@@ -456,7 +401,7 @@ export function useUploadMoment({
         setSessions((current) =>
           current.filter((session) => session.id !== nextSession.id),
         );
-        await persistUploadDraftStatus('upload_failed');
+        setUploadDraftStatus('upload_failed');
         console.warn(
           'Stored Moment source upload failed:',
           errorMessage,
@@ -464,7 +409,7 @@ export function useUploadMoment({
         if (isLocalVideoAccessFailure(errorMessage)) {
           Alert.alert(
             '영상 파일을 다시 선택해 주세요',
-            '이전 업로드 초안의 영상 파일에 다시 접근하지 못했습니다. 새로 시작하기를 눌러 영상을 다시 선택해주세요.',
+            '선택한 영상 파일에 다시 접근하지 못했습니다. 영상을 다시 선택한 뒤 업로드해주세요.',
           );
         } else {
           Alert.alert(
@@ -475,6 +420,11 @@ export function useUploadMoment({
       } finally {
         isUploadingSessionRef.current = false;
         setIsUploadingSession(false);
+        setUploadProgress((currentProgress) =>
+          currentProgress?.stage === 'requesting_analysis'
+            ? null
+            : currentProgress,
+        );
       }
     })();
   };
@@ -490,11 +440,8 @@ export function useUploadMoment({
     isUploadingSession,
     selectedVideo,
     uploadDraft,
+    uploadProgress,
   };
-}
-
-function draftVideoFromUploadDraft(draft: UploadDraft | null) {
-  return draft ? getVideoFromUploadDraft(draft) : null;
 }
 
 function isLocalVideoAccessFailure(message: string) {
@@ -508,9 +455,11 @@ function isLocalVideoAccessFailure(message: string) {
 
 async function createMomentFromDirectUpload({
   draft,
+  onProgress,
   session,
 }: {
   draft: UploadDraft | null;
+  onProgress: (stage: UploadProgressStage) => void;
   session: Session;
 }) {
   if (!draft) {
@@ -518,7 +467,9 @@ async function createMomentFromDirectUpload({
   }
 
   try {
-    const uploadTarget = await uploadDraftSourceVideoDirectly(draft);
+    const uploadTarget = await uploadDraftSourceVideoDirectly(draft, {
+      onProgress,
+    });
 
     if (!uploadTarget) {
       console.info('[upload_timing]', {
@@ -540,7 +491,9 @@ async function createMomentFromDirectUpload({
       storagePath: uploadTarget.storagePath,
     };
 
-    return await finalizeUploadedDraftSource(uploadedDraft, session);
+    return await finalizeUploadedDraftSource(uploadedDraft, session, {
+      onProgress,
+    });
   } catch (error) {
     console.info('[upload_timing]', {
       draftId: draft.draftId,

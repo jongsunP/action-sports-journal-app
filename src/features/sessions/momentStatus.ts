@@ -53,7 +53,7 @@ export function getRetryEligibility({
   if (momentStatus === 'upload_failed') {
     return {
       canRetry: true,
-      reason: '이전 업로드가 완료되지 않았습니다.',
+      reason: '업로드가 완료되지 않았습니다.',
     };
   }
 

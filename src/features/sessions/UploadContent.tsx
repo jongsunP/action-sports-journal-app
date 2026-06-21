@@ -15,6 +15,7 @@ import {
   getVideoFromUploadDraft,
   type UploadDraft,
 } from './uploadDraftStorage';
+import type { UploadProgressState } from './uploadProgress';
 
 type HomeScreenStyles = Record<string, any>;
 
@@ -29,6 +30,7 @@ export type UploadContentProps = {
   selectedVideo: SessionVideoAsset | null;
   styles: HomeScreenStyles;
   uploadDraft?: UploadDraft | null;
+  uploadProgress?: UploadProgressState | null;
 };
 
 export function UploadContent({
@@ -42,6 +44,7 @@ export function UploadContent({
   selectedVideo,
   styles,
   uploadDraft,
+  uploadProgress,
 }: UploadContentProps) {
   const visibleVideo =
     selectedVideo ?? (uploadDraft ? getVideoFromUploadDraft(uploadDraft) : null);
@@ -109,10 +112,11 @@ export function UploadContent({
           {isSubmitting ? (
             <View style={styles.uploadSubmittingPanel}>
               <Text style={styles.uploadSubmittingTitle}>
-                영상을 서버에 업로드하고 있습니다.
+                {uploadProgress?.label ?? '영상을 서버에 업로드하고 있습니다.'}
               </Text>
               <Text style={styles.uploadSubmittingHint}>
-                업로드가 완료되면 분석은 서버에서 계속됩니다.
+                {uploadProgress?.detail ??
+                  '업로드가 완료되면 분석은 서버에서 계속됩니다.'}
               </Text>
             </View>
           ) : isPreparingThumbnail ? (
@@ -176,10 +180,30 @@ export function UploadContent({
             <View style={styles.uploadBlockingCard}>
               <ActivityIndicator color="#f8fafc" size="large" />
               <Text style={styles.uploadBlockingTitle}>
-                영상을 업로드하고 있습니다.
+                {uploadProgress?.label ?? '영상을 업로드하고 있습니다.'}
               </Text>
+              {uploadProgress ? (
+                <View style={styles.uploadProgressTrack}>
+                  <View
+                    style={[
+                      styles.uploadProgressFill,
+                      {
+                        width: `${Math.round(
+                          (uploadProgress.index / uploadProgress.total) * 100,
+                        )}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              ) : null}
+              {uploadProgress ? (
+                <Text style={styles.uploadBlockingStep}>
+                  {uploadProgress.index} / {uploadProgress.total}
+                </Text>
+              ) : null}
               <Text style={styles.uploadBlockingText}>
-                업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.
+                {uploadProgress?.detail ??
+                  '업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.'}
               </Text>
               <Text style={styles.uploadBlockingText}>
                 업로드가 완료되면 분석은 서버에서 계속됩니다.

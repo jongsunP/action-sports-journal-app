@@ -7,21 +7,22 @@ import {
 } from '../../services/moments';
 import type { Session } from '../../types';
 import {
-  clearUploadDraft,
   getVideoFromUploadDraft,
-  updateUploadDraft,
   type UploadDraft,
 } from './uploadDraftStorage';
+import type { UploadProgressHandler } from './uploadProgress';
 
 export async function uploadDraftSourceVideoDirectly(
   draft: UploadDraft,
+  options?: {
+    onProgress?: UploadProgressHandler;
+  },
 ): Promise<VideoUploadTarget | undefined> {
   const video = getVideoFromUploadDraft(draft);
   let uploadTarget: VideoUploadTarget | undefined;
 
-  await updateUploadDraft({ status: 'uploading' });
-
   try {
+    options?.onProgress?.('creating_target');
     uploadTarget = await requestUploadTarget({
       draftId: draft.draftId,
       fileName: draft.fileName,
@@ -31,31 +32,14 @@ export async function uploadDraftSourceVideoDirectly(
     });
 
     if (!uploadTarget) {
-      await updateUploadDraft({ status: 'upload_failed' });
       return undefined;
     }
 
-    await updateUploadDraft({
-      uploadId: uploadTarget.uploadId,
-      storageProvider: uploadTarget.provider,
-      storageBucket: uploadTarget.bucket,
-      storagePath: uploadTarget.storagePath,
-    });
-
+    options?.onProgress?.('uploading_video');
     await uploadVideoToSignedTarget(uploadTarget, video);
-
-    await updateUploadDraft({
-      status: 'uploaded',
-      uploadedAt: new Date().toISOString(),
-      uploadId: uploadTarget.uploadId,
-      storageProvider: uploadTarget.provider,
-      storageBucket: uploadTarget.bucket,
-      storagePath: uploadTarget.storagePath,
-    });
 
     return uploadTarget;
   } catch (error) {
-    await updateUploadDraft({ status: 'upload_failed' });
     if (uploadTarget) {
       void reportUploadTargetFailure({
         reason: error instanceof Error ? error.message : 'unknown',
@@ -72,6 +56,9 @@ export async function uploadDraftSourceVideoDirectly(
 export async function finalizeUploadedDraftSource(
   draft: UploadDraft,
   session: Session,
+  options?: {
+    onProgress?: UploadProgressHandler;
+  },
 ) {
   if (
     draft.status !== 'uploaded' ||
@@ -87,6 +74,7 @@ export async function finalizeUploadedDraftSource(
   let finalizedMoment;
 
   try {
+    options?.onProgress?.('finalizing_upload');
     finalizedMoment = await finalizeUploadedSourceVideo({
       draftId: draft.draftId,
       uploadId: draft.uploadId,
@@ -106,10 +94,6 @@ export async function finalizeUploadedDraftSource(
       videoUriScheme: video.uri.split(':', 1)[0],
     });
     throw error;
-  }
-
-  if (finalizedMoment) {
-    await clearUploadDraft();
   }
 
   return finalizedMoment;

@@ -71,6 +71,7 @@ export function UploadScreen({ navigation }: UploadScreenProps) {
       selectedVideo={runtimeState.selectedVideo}
       styles={runtimeState.styles}
       uploadDraft={runtimeState.uploadDraft}
+      uploadProgress={runtimeState.uploadProgress}
     />
   );
 }
