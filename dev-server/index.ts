@@ -626,6 +626,58 @@ app.post(
 );
 
 app.post(
+  "/api/moments/from-uploaded-source",
+  analysisRateLimit,
+  async (request, response) => {
+    try {
+      const client = getSupabaseServerClient();
+
+      if (!client) {
+        response.status(503).json({
+          error: "Supabase service role env is not configured.",
+        });
+        return;
+      }
+
+      const result = await createStoredMomentFromUploadedSource({
+        client,
+        body: request.body,
+      });
+      const queuedJob = result.queuedJob;
+
+      if (queuedJob?.status === "queued") {
+        setImmediate(() => {
+          void processQueuedEvidenceAnalysisJobFromStorage({
+            analysisJobId: queuedJob.id,
+            metadata: queuedJob.metadata,
+            storedVideo: result.storedVideo,
+          });
+        });
+      }
+
+      response.json({
+        momentId: result.momentId,
+        status: "queued",
+        storageProvider: result.storedVideo.provider,
+        storageBucket: result.storedVideo.bucket,
+        storagePath: result.storedVideo.path,
+        analysisJobId: queuedJob?.id,
+        analysisJobStatus: queuedJob?.status,
+        analysisStarted: queuedJob?.status === "queued",
+        uploadedAt: result.uploadedAt,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Uploaded source finalize failed.";
+      console.error("Uploaded source finalize failed:", message);
+      response.status(500).json({ error: message });
+    }
+  },
+);
+
+app.post(
   "/api/moments/:momentId/analyze-stored-video",
   analysisRateLimit,
   async (request, response) => {
@@ -3539,6 +3591,147 @@ async function createStoredMomentFromSourceVideo({
   }
 }
 
+async function createStoredMomentFromUploadedSource({
+  body,
+  client,
+}: {
+  body: Record<string, unknown>;
+  client: SupabaseServerClient;
+}) {
+  const uploadId = getField(body?.uploadId, "");
+  const storageBucket = getField(body?.storageBucket, "");
+  const storagePath = getField(body?.storagePath, "");
+  const provider =
+    nullableString(body?.storageProvider) ?? sourceVideoStorageProvider;
+  const mimeType = nullableString(body?.mimeType);
+  const expectedFileSize = Number(body?.fileSize);
+
+  if (!isUuid(uploadId)) {
+    throw new Error("Invalid uploadId.");
+  }
+
+  if (provider !== sourceVideoStorageProvider) {
+    throw new Error("Invalid storage provider.");
+  }
+
+  if (storageBucket !== sourceVideoStorageBucket) {
+    throw new Error("Invalid storage bucket.");
+  }
+
+  if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
+    throw new Error("Unsupported or missing video type.");
+  }
+
+  const userId = await getOrCreateDefaultSupabaseUser();
+  const expectedPrefix = `users/${userId}/uploads/${uploadId}/source`;
+
+  if (!storagePath.startsWith(expectedPrefix)) {
+    throw new Error("Storage path does not match the upload target.");
+  }
+
+  const storedVideo = {
+    provider,
+    bucket: storageBucket,
+    path: storagePath,
+  };
+  const storedObjectStatus = await inspectStoredVideoObject(storedVideo);
+
+  if (storedObjectStatus === "missing") {
+    throw new Error("Uploaded source video object was not found.");
+  }
+
+  const uploadedFile = await downloadStoredVideoForEvidence(storedVideo);
+
+  if (
+    Number.isFinite(expectedFileSize) &&
+    expectedFileSize > 0 &&
+    uploadedFile.size !== expectedFileSize
+  ) {
+    throw new Error("Uploaded source video size does not match the draft.");
+  }
+
+  if (uploadedFile.size > geminiMaxVideoBytes) {
+    throw new Error(
+      `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
+    );
+  }
+
+  const momentId = randomUUID();
+  const now = new Date().toISOString();
+  const sessionId = getField(body?.sessionId, "");
+  const durationMs = Number(body?.durationMs);
+  const occurredAt = getField(body?.occurredAt, now);
+  const momentPayload = {
+    id: momentId,
+    user_id: userId,
+    session_id: isUuid(sessionId) ? sessionId : null,
+    activity_group_id: getField(body?.activityGroupId, "wakeboard"),
+    title: nullableString(body?.title),
+    notes: nullableString(body?.notes),
+    status: "queued",
+    source: "standalone_app",
+    occurred_at: occurredAt,
+    source_video_uri: nullableString(body?.sourceVideoUri),
+    thumbnail_uri: nullableString(body?.thumbnailUri),
+    file_name:
+      nullableString(body?.fileName) ?? basename(storagePath) ?? "source.mov",
+    mime_type: mimeType,
+    file_size: uploadedFile.size,
+    duration_ms: Number.isFinite(durationMs) ? durationMs : null,
+    source_video_storage_provider: provider,
+    source_video_storage_bucket: storageBucket,
+    source_video_storage_path: storagePath,
+    source_video_storage_uploaded_at: now,
+    source_video_storage_status: "uploaded",
+  };
+
+  const { error: momentInsertError } = await client
+    .from("moments")
+    .insert(momentPayload);
+
+  if (momentInsertError) {
+    throw new Error(
+      `Failed to insert uploaded-source Moment: ${momentInsertError.message}`,
+    );
+  }
+
+  try {
+    const queuedJob = await createQueuedEvidenceAnalysisJob({
+      userId,
+      momentId,
+    });
+
+    if (queuedJob) {
+      await updateAnalysisJobStoredVideoInput({
+        client,
+        analysisJobId: queuedJob.id,
+        storedVideo,
+      });
+    }
+
+    return {
+      momentId,
+      uploadedAt: now,
+      storedVideo,
+      queuedJob: queuedJob
+        ? {
+            ...queuedJob,
+            metadata: buildStoredMomentSessionMetadata({
+              moment: momentPayload,
+              momentId,
+            }),
+          }
+        : undefined,
+    };
+  } catch (error) {
+    await deleteMomentRowsAfterFailedUploadedFinalize({
+      client,
+      momentId,
+    });
+    throw error;
+  }
+}
+
 async function removeStoredVideoAfterFailedMomentCreate({
   client,
   path,
@@ -3554,6 +3747,38 @@ async function removeStoredVideoAfterFailedMomentCreate({
     console.warn(
       "Failed to remove source video after Moment create failure:",
       error.message,
+    );
+  }
+}
+
+async function deleteMomentRowsAfterFailedUploadedFinalize({
+  client,
+  momentId,
+}: {
+  client: SupabaseServerClient;
+  momentId: string;
+}) {
+  const { error: jobDeleteError } = await client
+    .from("analysis_jobs")
+    .delete()
+    .eq("moment_id", momentId);
+
+  if (jobDeleteError) {
+    console.warn(
+      "Failed to remove analysis jobs after uploaded-source finalize failure:",
+      jobDeleteError.message,
+    );
+  }
+
+  const { error: momentDeleteError } = await client
+    .from("moments")
+    .delete()
+    .eq("id", momentId);
+
+  if (momentDeleteError) {
+    console.warn(
+      "Failed to remove Moment after uploaded-source finalize failure:",
+      momentDeleteError.message,
     );
   }
 }

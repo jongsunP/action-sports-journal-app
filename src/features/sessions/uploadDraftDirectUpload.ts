@@ -1,9 +1,12 @@
 import {
+  finalizeUploadedSourceVideo,
   requestUploadTarget,
   uploadVideoToSignedTarget,
   type VideoUploadTarget,
 } from '../../services/moments';
+import type { Session } from '../../types';
 import {
+  clearUploadDraft,
   getVideoFromUploadDraft,
   updateUploadDraft,
   type UploadDraft,
@@ -53,4 +56,37 @@ export async function uploadDraftSourceVideoDirectly(
     await updateUploadDraft({ status: 'upload_failed' });
     throw error;
   }
+}
+
+export async function finalizeUploadedDraftSource(
+  draft: UploadDraft,
+  session: Session,
+) {
+  if (
+    draft.status !== 'uploaded' ||
+    !draft.uploadId ||
+    !draft.storageProvider ||
+    !draft.storageBucket ||
+    !draft.storagePath
+  ) {
+    throw new Error('Upload draft is not ready to finalize.');
+  }
+
+  const video = getVideoFromUploadDraft(draft);
+  const finalizedMoment = await finalizeUploadedSourceVideo({
+    draftId: draft.draftId,
+    uploadId: draft.uploadId,
+    storageProvider: draft.storageProvider,
+    storageBucket: draft.storageBucket,
+    storagePath: draft.storagePath,
+    session,
+    video,
+    thumbnailUri: draft.localThumbnailUri,
+  });
+
+  if (finalizedMoment) {
+    await clearUploadDraft();
+  }
+
+  return finalizedMoment;
 }
