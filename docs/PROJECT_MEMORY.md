@@ -553,9 +553,10 @@ the existing multipart upload-first path.
 Upload target tracking is prepared through `supabase/phase10_upload_targets.sql`.
 The table tracks `issued -> uploaded -> finalized` and `failed` states. Orphan
 candidates are old rows in `issued`, `uploaded`, or `failed`. Automatic cleanup
-is not implemented yet. The phase10 migration has not been applied remotely,
-and server tracking is best-effort so missing migration does not break upload.
-Before the next build/device QA, decide whether to apply phase10 to Supabase.
+is not implemented yet. The phase10 migration has been applied remotely and
+verified with `upload_targets` count at 0 before the next build. Server
+tracking remains best-effort so upload should not fail solely because tracking
+has an issue.
 
 Draft Upload Flow architecture decision:
 

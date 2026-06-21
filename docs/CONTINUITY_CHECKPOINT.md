@@ -358,8 +358,9 @@ The previous Render multipart upload-first path remains as fallback through
 Upload target tracking is prepared through `supabase/phase10_upload_targets.sql`.
 Lifecycle states are `issued`, `uploaded`, `finalized`, and `failed`. Orphan
 candidates are old `issued`, `uploaded`, or `failed` rows. Automatic deletion
-is not implemented. The phase10 migration is not applied remotely yet; tracking
-is best-effort so a missing table should not block upload.
+is not implemented. The phase10 migration is applied remotely and verified with
+an empty `upload_targets` table before the next build. Tracking is best-effort
+so upload should not fail solely because tracking has an issue.
 
 Draft Upload Flow decision:
 

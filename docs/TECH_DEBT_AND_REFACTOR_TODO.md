@@ -358,17 +358,16 @@ issued
 
 Failures are recorded as `failed`. Orphan candidates are old rows in `issued`,
 `uploaded`, or `failed`. Automatic deletion is intentionally not implemented
-yet. The phase10 migration has not been applied remotely yet. Server tracking
-is best-effort so a missing table logs a warning and should not block upload.
+yet. The phase10 migration is applied remotely and verified with an empty
+`upload_targets` table before the next build. Server tracking is best-effort so
+tracking issues should log a warning and should not block upload.
 
 Recommended order:
 
-1. Decide whether to apply `supabase/phase10_upload_targets.sql` before the
-   next build/device QA.
-2. If applied, verify `issued -> uploaded -> finalized` tracking.
+1. Verify `issued -> uploaded -> finalized` tracking during device QA.
+2. Keep multipart fallback until direct path is validated repeatedly.
 3. Run device QA for direct upload + finalize.
-4. Keep multipart fallback until direct path is validated repeatedly.
-5. Add cleanup automation only after orphan candidates are observable.
+4. Add cleanup automation only after orphan candidates are observable.
 
 ### Draft Upload Flow Architecture
 
@@ -456,7 +455,7 @@ Remaining risks:
 - local video URI persistence after app relaunch needs verification,
 - Draft and remote Moment boundaries can become confusing,
 - signed/direct upload and finalize need device QA,
-- phase10 upload target tracking needs remote migration before full tracking,
+- phase10 upload target tracking needs device QA before full confidence,
 - orphan cleanup automation is still missing,
 - retry behavior after `upload_failed` needs real-device QA.
 
@@ -466,7 +465,7 @@ Recommended order:
 2. Verify draft resume prompt after app restart.
 3. Verify `upload_failed` retry behavior.
 4. Collect upload timing data.
-5. Apply and verify phase10 tracking if proceeding to direct upload QA.
+5. Verify phase10 tracking during direct upload QA.
 6. Implement orphan cleanup.
 7. Strengthen ownership during Auth/RLS work.
 

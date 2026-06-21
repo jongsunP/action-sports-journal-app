@@ -424,9 +424,10 @@ the direct path fails.
 Upload target tracking is prepared in `supabase/phase10_upload_targets.sql`.
 The target lifecycle is `issued -> uploaded -> finalized`, with `failed` for
 finalize/create failures. Orphan candidates are old `issued`, `uploaded`, or
-`failed` rows. Automatic deletion is not implemented. The migration is not yet
-applied remotely; server tracking is best-effort and should not break upload if
-the table is missing.
+`failed` rows. Automatic deletion is not implemented. The migration is applied
+remotely and verified with an empty `upload_targets` table before the next
+build. Server tracking remains best-effort and should not break upload if
+tracking fails.
 
 Draft Upload Flow decision:
 

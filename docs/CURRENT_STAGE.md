@@ -279,9 +279,9 @@ The Render multipart relay remains as fallback through
 app can still use the previous upload-first path.
 
 Upload target tracking is prepared through `supabase/phase10_upload_targets.sql`
-but is not yet applied to remote Supabase. Server tracking is best-effort: a
-missing `upload_targets` table should warn, not block upload. Before the next
-build/device QA, decide whether to apply phase10 remotely.
+and is applied to remote Supabase. The `upload_targets` table was verified at
+0 rows before the next build. Server tracking is best-effort: tracking issues
+should warn, not block upload.
 
 Draft Upload Flow decision:
 
