@@ -47,6 +47,47 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## Build 28 Save Point - 2026-06-21
+
+Current QA build:
+
+```text
+buildNumber: 28
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0e95c278-e3d3-4c04-bebf-b16f163f0b9a
+latest build commit: 773680c chore: prepare upload fallback qa build
+```
+
+The current goal remains Level 1 upload experience completion before AI
+Calibration. Build 28 contains the upload route, local Draft Upload Flow,
+direct-upload target/finalize path, upload target tracking, delete blocking
+overlay, Detail header spacing fix, and edge-only Detail swipe tuning.
+
+Important QA finding: direct upload is not yet the successful path. The latest
+instrumented QA showed `upload_targets.status=failed` with
+`reason=Uploaded source video size does not match the draft` at finalize. The
+actual successful upload path remains Render multipart fallback, which stores
+the source under `moments/{momentId}/source.mov`. This is acceptable as a
+fallback, but direct upload should not be considered validated yet.
+
+Current decision: keep fallback multipart reliable and user-facing while direct
+upload is diagnosed. Direct upload failure must not become a user upload
+failure. The app should record `upload_targets.failure_reason`, then attempt
+fallback multipart. Build 28 restored fallback timeout to 30 seconds and made
+the failure report non-blocking so fallback is not delayed by diagnostics.
+
+Next starting point:
+
+1. Install Build 28 on the iPhone.
+2. Upload one real video without deleting DB rows.
+3. Check whether the user sees success through fallback.
+4. Inspect latest `upload_targets.failure_reason` and latest Moment storage
+   path.
+5. If direct upload still fails with size mismatch, investigate RN/Expo signed
+   upload body handling before further UX work.
+
+Do not clear QA data by default. DB count should be reported only unless the
+user explicitly asks to reset data.
+
 Confirmed deployment state:
 
 - Standalone iPhone app works through EAS preview/internal distribution.

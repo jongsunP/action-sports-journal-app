@@ -39,6 +39,22 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
+Build 28 save point, 2026-06-21:
+
+- Latest preview/internal buildNumber is `28`.
+- EAS Build URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0e95c278-e3d3-4c04-bebf-b16f163f0b9a`.
+- Latest build commit is `773680c chore: prepare upload fallback qa build`.
+- Build 28 should be treated as the current handoff build even if QA reveals
+  more upload issues.
+- Direct upload is instrumented but not validated. Latest evidence indicates
+  direct upload/finalize fails with a source video size mismatch and the app
+  must rely on multipart fallback.
+- Multipart fallback is intentionally retained and restored to a 30 second
+  timeout. Direct failure reporting is non-blocking so fallback can proceed.
+- Next session should verify Build 28 on the physical iPhone, preserve DB rows,
+  and inspect `upload_targets.failure_reason` plus latest Moment storage path.
+
 Current refactor/TODO backlog:
 
 ```text

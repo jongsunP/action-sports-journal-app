@@ -16,6 +16,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 Update on 2026-06-20, Analysis-first Product Strategy:
 
+Build 28 save point, 2026-06-21:
+
+- Current preview/internal QA build is buildNumber `28`.
+- Build URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0e95c278-e3d3-4c04-bebf-b16f163f0b9a`.
+- Build 28 is a Level 1 upload UX follow-up build, not an AI Calibration build.
+- It includes edge-only Detail swipe behavior, Detail header spacing cleanup,
+  delete blocking overlay, upload diagnostics, direct upload failure reporting,
+  and restored 30 second multipart fallback timeout.
+- Direct upload remains unvalidated. The latest diagnostic failure was
+  finalize size mismatch: Storage object size did not match the draft file
+  size. Keep Render multipart fallback as the reliable user path.
+- Next QA should use one real iPhone upload, preserve DB rows, and inspect the
+  latest `upload_targets` and Moment path afterward.
+
 Current refactor backlog:
 
 ```text

@@ -53,6 +53,25 @@ continuity as well as technical continuity:
 
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 
+Build 28 save point, 2026-06-21:
+
+- Latest QA build is buildNumber `28`.
+- EAS Build URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0e95c278-e3d3-4c04-bebf-b16f163f0b9a`.
+- Latest build commit is `773680c chore: prepare upload fallback qa build`.
+- Build 28 includes UploadScreen, local UploadDraft restore, direct upload
+  target/finalize/tracking, delete blocking overlay, Detail top-spacing fix,
+  and edge-only Detail swipe tuning.
+- Direct upload is not validated. The latest diagnostic row reached
+  `upload_targets.status=failed` during finalize with `Uploaded source video
+  size does not match the draft`.
+- The successful production path is still multipart fallback through Render.
+  This fallback must remain reliable until direct upload is fixed.
+- Do not treat direct upload failure as user upload failure. The app should log
+  failure to `upload_targets.failure_reason`, then attempt fallback.
+- Next session should install Build 28, upload one real video, and compare
+  latest `upload_targets` with latest Moment storage path.
+
 Current refactor/TODO source of truth:
 
 ```text

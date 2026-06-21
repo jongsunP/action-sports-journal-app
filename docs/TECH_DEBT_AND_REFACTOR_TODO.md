@@ -26,6 +26,43 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Build 28 Upload QA Handoff - 2026-06-21
+
+Build 28 is the current QA handoff build:
+
+```text
+buildNumber: 28
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0e95c278-e3d3-4c04-bebf-b16f163f0b9a
+build commit: 773680c chore: prepare upload fallback qa build
+```
+
+Current upload architecture:
+
+- Local Draft Upload Flow exists and restores a selected video draft.
+- UploadScreen is route-backed.
+- The app attempts direct upload target -> signed upload -> finalize.
+- Multipart fallback through Render remains the reliable user path.
+- `upload_targets` tracks issued/uploaded/finalized/failed best-effort rows.
+
+Current unresolved issue:
+
+- Direct upload is still failing in QA.
+- Latest diagnostic failure reached finalize and recorded
+  `Uploaded source video size does not match the draft`.
+- This points toward RN/Expo signed-upload file body handling rather than a
+  missing endpoint.
+- Do not remove fallback or treat direct upload failure as user upload failure.
+
+Next technical investigation:
+
+1. Install Build 28 and upload one real video on iPhone.
+2. Check if fallback succeeds and the rider sees completed analysis.
+3. Inspect latest `upload_targets.status`, `failure_reason`,
+   `uploaded_at/finalized_at`, and latest Moment `source_video_storage_path`.
+4. If direct upload keeps failing with size mismatch, evaluate an
+   `expo-file-system` upload approach or temporarily make multipart fallback
+   the explicit default while direct upload remains a P1 architecture task.
+
 Current product priority:
 
 The immediate priority is not AI result accuracy. It is making the core
