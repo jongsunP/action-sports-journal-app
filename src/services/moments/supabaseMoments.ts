@@ -71,6 +71,12 @@ export type VideoUploadTarget = {
   durationMs?: number;
 };
 
+export type SignedUploadProgress = {
+  percent?: number;
+  totalBytesExpectedToSend?: number;
+  totalBytesSent: number;
+};
+
 export type FinalizeUploadedSourceVideoInput = {
   draftId: string;
   uploadId: string;
@@ -203,6 +209,9 @@ export async function requestUploadTarget(
 export async function uploadVideoToSignedTarget(
   target: VideoUploadTarget,
   video: SessionVideoAsset,
+  options?: {
+    onUploadProgress?: (progress: SignedUploadProgress) => void;
+  },
 ) {
   if (!target.signedUploadUrl) {
     throw new Error('Signed upload target did not include a signed URL.');
@@ -252,19 +261,39 @@ export async function uploadVideoToSignedTarget(
     );
   }
 
+  const uploadOptions = {
+    headers: {
+      'cache-control': 'max-age=3600',
+      'content-type': contentType,
+      'x-upsert': 'false',
+    },
+    httpMethod: 'PUT' as const,
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+  };
+  const uploadTask = FileSystem.createUploadTask(
+    target.signedUploadUrl,
+    video.uri,
+    uploadOptions,
+    ({ totalBytesExpectedToSend, totalBytesSent }) => {
+      options?.onUploadProgress?.({
+        percent: calculateUploadPercent({
+          totalBytesExpectedToSend,
+          totalBytesSent,
+        }),
+        totalBytesExpectedToSend,
+        totalBytesSent,
+      });
+    },
+  );
   const uploadResult = await withTimeout(
-    FileSystem.uploadAsync(target.signedUploadUrl, video.uri, {
-      headers: {
-        'cache-control': 'max-age=3600',
-        'content-type': contentType,
-        'x-upsert': 'false',
-      },
-      httpMethod: 'PUT',
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-    }),
+    uploadTask.uploadAsync(),
     SIGNED_UPLOAD_REQUEST_TIMEOUT_MS,
     'Timed out while uploading source video to signed target.',
   );
+
+  if (!uploadResult) {
+    throw new Error('Signed source video upload did not return a result.');
+  }
 
   if (uploadResult.status < 200 || uploadResult.status >= 300) {
     throw new Error(
@@ -281,6 +310,25 @@ export async function uploadVideoToSignedTarget(
   });
 
   return uploadResult;
+}
+
+function calculateUploadPercent({
+  totalBytesExpectedToSend,
+  totalBytesSent,
+}: {
+  totalBytesExpectedToSend: number;
+  totalBytesSent: number;
+}) {
+  if (
+    !Number.isFinite(totalBytesExpectedToSend) ||
+    totalBytesExpectedToSend <= 0 ||
+    !Number.isFinite(totalBytesSent) ||
+    totalBytesSent < 0
+  ) {
+    return undefined;
+  }
+
+  return (totalBytesSent / totalBytesExpectedToSend) * 100;
 }
 
 export async function reportUploadTargetFailure({

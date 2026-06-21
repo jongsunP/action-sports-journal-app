@@ -1,4 +1,10 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { Alert } from 'react-native';
 
 import { hasConfiguredSupabaseMoments, listMoments } from '../../services/moments';
@@ -35,11 +41,17 @@ type UseBootSyncParams = {
 };
 
 const REMOTE_MOMENT_SYNC_TIMEOUT_MS = 8000;
+export type RemoteMomentSyncStatus =
+  | 'completed'
+  | 'failed'
+  | 'loading'
+  | 'not_configured'
+  | 'timeout'
+  | 'waiting_for_storage';
 
 export function useBootSync({
   initialGroupId,
   normalizeRestoredSession,
-  remoteMomentIdsBySessionId,
   setAnalysisBySessionId,
   setGeminiEvidenceBySessionId,
   setOpenAiBenchmarkBySessionId,
@@ -51,9 +63,11 @@ export function useBootSync({
   setVideosBySessionId,
   syncRemoteMoments,
 }: UseBootSyncParams) {
+  const isRemoteMomentSyncConfigured = hasConfiguredSupabaseMoments();
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
-  const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] = useState(
-    !hasConfiguredSupabaseMoments(),
+  const [remoteMomentSyncStatus, setRemoteMomentSyncStatus] =
+    useState<RemoteMomentSyncStatus>(
+      isRemoteMomentSyncConfigured ? 'waiting_for_storage' : 'not_configured',
   );
 
   useEffect(() => {
@@ -116,8 +130,8 @@ export function useBootSync({
   useEffect(() => {
     if (
       !isStorageLoaded ||
-      isRemoteMomentSyncLoaded ||
-      !hasConfiguredSupabaseMoments()
+      remoteMomentSyncStatus !== 'waiting_for_storage' ||
+      !isRemoteMomentSyncConfigured
     ) {
       return;
     }
@@ -125,6 +139,8 @@ export function useBootSync({
     let isMounted = true;
 
     async function loadRemoteMoments() {
+      setRemoteMomentSyncStatus('loading');
+
       try {
         const remoteMoments = await listMomentsWithTimeout();
 
@@ -133,15 +149,17 @@ export function useBootSync({
         }
 
         syncRemoteMoments(remoteMoments);
+        setRemoteMomentSyncStatus('completed');
       } catch (error) {
+        if (isMounted) {
+          setRemoteMomentSyncStatus(
+            isRemoteMomentSyncTimeout(error) ? 'timeout' : 'failed',
+          );
+        }
         console.warn(
           'Supabase moment list failed:',
           error instanceof Error ? error.message : 'Unknown error',
         );
-      } finally {
-        if (isMounted) {
-          setIsRemoteMomentSyncLoaded(true);
-        }
       }
     }
 
@@ -151,19 +169,42 @@ export function useBootSync({
       isMounted = false;
     };
   }, [
-    isRemoteMomentSyncLoaded,
     isStorageLoaded,
-    remoteMomentIdsBySessionId,
+    isRemoteMomentSyncConfigured,
+    remoteMomentSyncStatus,
     syncRemoteMoments,
   ]);
+
+  const isRemoteMomentSyncLoaded =
+    !isRemoteMomentSyncConfigured ||
+    remoteMomentSyncStatus === 'completed' ||
+    remoteMomentSyncStatus === 'failed' ||
+    remoteMomentSyncStatus === 'timeout';
+  const hasCompletedInitialRemoteMomentSync =
+    !isRemoteMomentSyncConfigured || remoteMomentSyncStatus === 'completed';
+  const markRemoteMomentSyncCompleted = useCallback(() => {
+    setRemoteMomentSyncStatus('completed');
+  }, []);
 
   return {
     isLoadingInitialMoments:
       !isStorageLoaded ||
-      (hasConfiguredSupabaseMoments() && !isRemoteMomentSyncLoaded),
+      (isRemoteMomentSyncConfigured && remoteMomentSyncStatus === 'loading') ||
+      remoteMomentSyncStatus === 'waiting_for_storage',
+    isInitialRemoteMomentSyncPending:
+      isRemoteMomentSyncConfigured && !hasCompletedInitialRemoteMomentSync,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    markRemoteMomentSyncCompleted,
+    remoteMomentSyncStatus,
   };
+}
+
+function isRemoteMomentSyncTimeout(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().includes('timed out')
+  );
 }
 
 function restorePersistedSessionMaps({

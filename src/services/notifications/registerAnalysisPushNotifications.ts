@@ -3,6 +3,8 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { requestAnalysisNotificationRefresh } from './analysisNotificationRefreshEvents';
+
 type RegisterPushTokenResponse = {
   ok?: unknown;
 };
@@ -23,7 +25,14 @@ Notifications.setNotificationHandler({
   }),
 });
 
+let notificationResponseSubscription:
+  | ReturnType<typeof Notifications.addNotificationResponseReceivedListener>
+  | undefined;
+let lastHandledNotificationResponseId: string | undefined;
+
 export async function registerForAnalysisPushNotifications() {
+  registerAnalysisNotificationResponseRefresh();
+
   if (!pushTokenEndpoint) {
     return {
       registered: false,
@@ -88,4 +97,44 @@ export async function registerForAnalysisPushNotifications() {
   return {
     registered: data.ok === true,
   };
+}
+
+function registerAnalysisNotificationResponseRefresh() {
+  if (!notificationResponseSubscription) {
+    notificationResponseSubscription =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        handleNotificationResponseRefresh(
+          response.notification.request.identifier,
+          'notification_response',
+        );
+      });
+  }
+
+  try {
+    const lastResponse = Notifications.getLastNotificationResponse();
+
+    if (lastResponse) {
+      handleNotificationResponseRefresh(
+        lastResponse.notification.request.identifier,
+        'last_notification_response',
+      );
+    }
+  } catch (error) {
+    console.warn(
+      'Last notification response lookup failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+  }
+}
+
+function handleNotificationResponseRefresh(
+  notificationRequestId: string,
+  source: 'last_notification_response' | 'notification_response',
+) {
+  if (lastHandledNotificationResponseId === notificationRequestId) {
+    return;
+  }
+
+  lastHandledNotificationResponseId = notificationRequestId;
+  requestAnalysisNotificationRefresh(source);
 }

@@ -21,6 +21,10 @@ import {
   getConfiguredAiEndpoints,
   hasConfiguredGeminiEvidenceEndpoint,
 } from '../../services/ai';
+import {
+  getLatestAnalysisNotificationRefreshRequest,
+  subscribeToAnalysisNotificationRefresh,
+} from '../../services/notifications/analysisNotificationRefreshEvents';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import {
   hasConfiguredSupabaseMoments,
@@ -77,6 +81,9 @@ export function HomeScreen() {
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
   const [activeTab, setActiveTab] = useState<AppTabId>('home');
+  const [isRemoteRefreshActive, setIsRemoteRefreshActive] = useState(false);
+  const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
+  const isRefreshingRemoteMomentsRef = useRef(false);
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -135,9 +142,12 @@ export function HomeScreen() {
   });
 
   const {
+    isInitialRemoteMomentSyncPending,
     isLoadingInitialMoments,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    markRemoteMomentSyncCompleted,
+    remoteMomentSyncStatus,
   } = useBootSync({
     initialGroupId: ACTIVE_WAKEBOARD_GROUP_ID,
     normalizeRestoredSession,
@@ -153,6 +163,49 @@ export function HomeScreen() {
     setVideosBySessionId,
     syncRemoteMoments,
   });
+  const isSessionListLoading =
+    isLoadingInitialMoments || isInitialRemoteMomentSyncPending;
+
+  const refreshRemoteMoments = useCallback(
+    async (reason: 'foreground' | 'initial_retry' | 'push_response') => {
+      if (
+        !isStorageLoaded ||
+        !isRemoteMomentSyncLoaded ||
+        !hasConfiguredSupabaseMoments() ||
+        isRefreshingRemoteMomentsRef.current
+      ) {
+        return;
+      }
+
+      isRefreshingRemoteMomentsRef.current = true;
+      setIsRemoteRefreshActive(true);
+
+      try {
+        const remoteMoments = await listMomentsWithTimeout();
+        syncRemoteMoments(remoteMoments);
+        markRemoteMomentSyncCompleted();
+        console.info('[moment_sync]', {
+          event: 'remote_moments_refreshed',
+          reason,
+          remoteMomentCount: remoteMoments.length,
+        });
+      } catch (error) {
+        console.warn(
+          'Supabase moment refresh failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      } finally {
+        isRefreshingRemoteMomentsRef.current = false;
+        setIsRemoteRefreshActive(false);
+      }
+    },
+    [
+      isRemoteMomentSyncLoaded,
+      isStorageLoaded,
+      markRemoteMomentSyncCompleted,
+      syncRemoteMoments,
+    ],
+  );
 
   useEffect(() => {
     if (!isStorageLoaded) {
@@ -235,32 +288,6 @@ export function HomeScreen() {
   ]);
 
   useEffect(() => {
-    if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
-      return;
-    }
-
-    let isRefreshing = false;
-
-    const refreshRemoteMoments = async () => {
-      if (isRefreshing) {
-        return;
-      }
-
-      isRefreshing = true;
-
-      try {
-        const remoteMoments = await listMomentsWithTimeout();
-        syncRemoteMoments(remoteMoments);
-      } catch (error) {
-        console.warn(
-          'Supabase moment foreground refresh failed:',
-          error instanceof Error ? error.message : 'Unknown error',
-        );
-      } finally {
-        isRefreshing = false;
-      }
-    };
-
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       const previousAppState = appStateRef.current;
       appStateRef.current = nextAppState;
@@ -269,14 +296,50 @@ export function HomeScreen() {
         nextAppState === 'active' &&
         (previousAppState === 'background' || previousAppState === 'inactive')
       ) {
-        void refreshRemoteMoments();
+        void refreshRemoteMoments('foreground');
       }
     });
 
     return () => {
       subscription.remove();
     };
-  }, [isRemoteMomentSyncLoaded, isStorageLoaded, syncRemoteMoments]);
+  }, [refreshRemoteMoments]);
+
+  useEffect(() => {
+    if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
+      return;
+    }
+
+    const handleNotificationRefresh = (
+      request: ReturnType<typeof getLatestAnalysisNotificationRefreshRequest>,
+    ) => {
+      if (!request) {
+        return;
+      }
+
+      if (handledNotificationRefreshRequestIdRef.current === request.id) {
+        return;
+      }
+
+      handledNotificationRefreshRequestIdRef.current = request.id;
+      void refreshRemoteMoments('push_response');
+    };
+
+    handleNotificationRefresh(getLatestAnalysisNotificationRefreshRequest());
+
+    return subscribeToAnalysisNotificationRefresh(handleNotificationRefresh);
+  }, [isRemoteMomentSyncLoaded, isStorageLoaded, refreshRemoteMoments]);
+
+  useEffect(() => {
+    if (
+      remoteMomentSyncStatus !== 'timeout' &&
+      remoteMomentSyncStatus !== 'failed'
+    ) {
+      return;
+    }
+
+    void refreshRemoteMoments('initial_retry');
+  }, [refreshRemoteMoments, remoteMomentSyncStatus]);
 
   const selectedGroup =
     mockActivityGroups.find((group) => group.id === ACTIVE_WAKEBOARD_GROUP_ID) ??
@@ -503,7 +566,7 @@ export function HomeScreen() {
         <VideoArchiveList
           formatShortSessionDate={formatShortSessionDate}
           getVideoArchiveDescription={getVideoArchiveDescription}
-          isLoading={isLoadingInitialMoments}
+          isLoading={isSessionListLoading}
           onOpenSession={openEvidenceSheet}
           sessions={homeSessionSummaries}
           styles={styles}
@@ -535,6 +598,15 @@ export function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {isRemoteRefreshActive ? (
+            <View style={styles.syncStatusPill}>
+              <Text style={styles.syncStatusText}>
+                {isInitialRemoteMomentSyncPending
+                  ? '기록 동기화 중'
+                  : '결과 동기화 중'}
+              </Text>
+            </View>
+          ) : null}
           {activeTab === 'home' ? (
             <>
           <View style={styles.header}>
@@ -572,7 +644,7 @@ export function HomeScreen() {
 
           <PrimaryInsightCard
             formatShortSessionDate={formatShortSessionDate}
-            isLoading={isLoadingInitialMoments}
+            isLoading={isSessionListLoading}
             onOpenSession={openEvidenceSheet}
             styles={styles}
             summary={primaryInsightSummary}
@@ -585,7 +657,7 @@ export function HomeScreen() {
             </View>
             <RecentSessionsRail
               formatShortSessionDate={formatShortSessionDate}
-              isLoading={isLoadingInitialMoments}
+              isLoading={isSessionListLoading}
               onOpenSession={openEvidenceSheet}
               sessions={recentSessionSummaries}
               styles={styles}
@@ -654,6 +726,23 @@ const styles = StyleSheet.create({
     paddingBottom: 124,
     paddingHorizontal: 0,
     paddingTop: 6,
+  },
+  syncStatusPill: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+    borderColor: 'rgba(56, 189, 248, 0.28)',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  syncStatusText: {
+    color: '#bae6fd',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    lineHeight: 16,
   },
   bottomTabBar: {
     alignItems: 'center',
@@ -1297,6 +1386,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#38bdf8',
     borderRadius: 999,
     height: '100%',
+  },
+  uploadProgressPercent: {
+    color: '#e0f2fe',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0,
+    lineHeight: 18,
   },
   uploadProgressTrack: {
     backgroundColor: 'rgba(148, 163, 184, 0.24)',

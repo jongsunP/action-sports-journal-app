@@ -241,8 +241,11 @@ export function useUploadMoment({
     }
   };
 
-  const setUploadProgressStage = (stage: UploadProgressStage) => {
-    setUploadProgress(buildUploadProgress(stage));
+  const setUploadProgressStage = (
+    stage: UploadProgressStage,
+    percent?: number,
+  ) => {
+    setUploadProgress(buildUploadProgress(stage, percent));
   };
 
   const setUploadDraftStatus = (status: UploadDraft['status']) => {
@@ -459,7 +462,7 @@ async function createMomentFromDirectUpload({
   session,
 }: {
   draft: UploadDraft | null;
-  onProgress: (stage: UploadProgressStage) => void;
+  onProgress: (stage: UploadProgressStage, percent?: number) => void;
   session: Session;
 }) {
   if (!draft) {

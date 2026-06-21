@@ -36,7 +36,11 @@ export async function uploadDraftSourceVideoDirectly(
     }
 
     options?.onProgress?.('uploading_video');
-    await uploadVideoToSignedTarget(uploadTarget, video);
+    await uploadVideoToSignedTarget(uploadTarget, video, {
+      onUploadProgress: ({ percent }) => {
+        options?.onProgress?.('uploading_video', percent);
+      },
+    });
 
     return uploadTarget;
   } catch (error) {

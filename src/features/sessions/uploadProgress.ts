@@ -8,58 +8,68 @@ export type UploadProgressStage =
 
 export type UploadProgressState = {
   detail: string;
-  index: number;
   label: string;
+  percent?: number;
   stage: UploadProgressStage;
-  total: number;
 };
 
-export type UploadProgressHandler = (stage: UploadProgressStage) => void;
+export type UploadProgressHandler = (
+  stage: UploadProgressStage,
+  percent?: number,
+) => void;
 
 const UPLOAD_PROGRESS_COPY: Record<
   UploadProgressStage,
-  { detail: string; index: number; label: string }
+  { detail: string; label: string }
 > = {
   preparing: {
-    detail: '선택한 영상을 확인하고 있습니다.',
-    index: 1,
-    label: '준비 중',
+    detail: '선택한 영상을 확인하고 업로드를 준비하고 있습니다.',
+    label: '업로드 준비 중',
   },
   creating_target: {
-    detail: '안전한 업로드 경로를 준비하고 있습니다.',
-    index: 2,
-    label: '업로드 대상 생성 중',
+    detail: '영상을 보낼 안전한 경로를 준비하고 있습니다.',
+    label: '업로드 준비 중',
   },
   uploading_video: {
-    detail: '원본 영상을 서버 저장소로 전송하고 있습니다.',
-    index: 3,
-    label: '영상 업로드 중',
+    detail: '원본 영상을 전송하고 있습니다.',
+    label: '영상 전송 중',
   },
   finalizing_upload: {
     detail: '업로드된 영상을 확인하고 분석을 준비하고 있습니다.',
-    index: 4,
     label: '업로드 확인 중',
   },
   requesting_analysis: {
-    detail: '분석 요청을 등록하고 있습니다.',
-    index: 5,
-    label: '분석 요청 중',
+    detail: '서버에서 분석을 계속할 수 있도록 요청을 등록하고 있습니다.',
+    label: '분석 준비 중',
   },
   fallback_upload: {
-    detail: '안정 경로로 다시 업로드하고 있습니다.',
-    index: 3,
-    label: '영상 업로드 중',
+    detail: '네트워크 상태에 맞춰 업로드를 다시 시도하고 있습니다.',
+    label: '업로드를 다시 시도하고 있습니다',
   },
 };
 
-const UPLOAD_PROGRESS_TOTAL = 5;
-
 export function buildUploadProgress(
   stage: UploadProgressStage,
+  percent?: number,
 ): UploadProgressState {
   return {
     ...UPLOAD_PROGRESS_COPY[stage],
+    percent: normalizeUploadPercent(stage, percent),
     stage,
-    total: UPLOAD_PROGRESS_TOTAL,
   };
+}
+
+function normalizeUploadPercent(
+  stage: UploadProgressStage,
+  percent?: number,
+) {
+  if (
+    stage !== 'uploading_video' ||
+    typeof percent !== 'number' ||
+    !Number.isFinite(percent)
+  ) {
+    return undefined;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(percent)));
 }

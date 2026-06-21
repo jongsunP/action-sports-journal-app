@@ -49,6 +49,13 @@ export function UploadContent({
   const visibleVideo =
     selectedVideo ?? (uploadDraft ? getVideoFromUploadDraft(uploadDraft) : null);
   const hasUploadFailed = uploadDraft?.status === 'upload_failed';
+  const uploadPercentLabel =
+    typeof uploadProgress?.percent === 'number'
+      ? `${uploadProgress.percent}%`
+      : undefined;
+  const uploadTitle = uploadPercentLabel
+    ? `${uploadProgress?.label ?? '영상 전송 중'} ${uploadPercentLabel}`
+    : uploadProgress?.label;
 
   return (
     <SafeAreaView style={styles.uploadSheetBackdrop}>
@@ -112,7 +119,7 @@ export function UploadContent({
           {isSubmitting ? (
             <View style={styles.uploadSubmittingPanel}>
               <Text style={styles.uploadSubmittingTitle}>
-                {uploadProgress?.label ?? '영상을 서버에 업로드하고 있습니다.'}
+                {uploadTitle ?? '영상을 서버에 업로드하고 있습니다.'}
               </Text>
               <Text style={styles.uploadSubmittingHint}>
                 {uploadProgress?.detail ??
@@ -180,25 +187,23 @@ export function UploadContent({
             <View style={styles.uploadBlockingCard}>
               <ActivityIndicator color="#f8fafc" size="large" />
               <Text style={styles.uploadBlockingTitle}>
-                {uploadProgress?.label ?? '영상을 업로드하고 있습니다.'}
+                {uploadTitle ?? '영상을 업로드하고 있습니다.'}
               </Text>
-              {uploadProgress ? (
+              {typeof uploadProgress?.percent === 'number' ? (
                 <View style={styles.uploadProgressTrack}>
                   <View
                     style={[
                       styles.uploadProgressFill,
                       {
-                        width: `${Math.round(
-                          (uploadProgress.index / uploadProgress.total) * 100,
-                        )}%`,
+                        width: `${uploadProgress.percent}%`,
                       },
                     ]}
                   />
                 </View>
               ) : null}
-              {uploadProgress ? (
-                <Text style={styles.uploadBlockingStep}>
-                  {uploadProgress.index} / {uploadProgress.total}
+              {uploadPercentLabel ? (
+                <Text style={styles.uploadProgressPercent}>
+                  {uploadPercentLabel}
                 </Text>
               ) : null}
               <Text style={styles.uploadBlockingText}>
