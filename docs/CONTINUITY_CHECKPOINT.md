@@ -55,6 +55,57 @@ Build 28 save point, 2026-06-21:
 - Next session should verify Build 28 on the physical iPhone, preserve DB rows,
   and inspect `upload_targets.failure_reason` plus latest Moment storage path.
 
+Build 29 Direct Upload checkpoint, 2026-06-21:
+
+Problem:
+
+Direct Upload was the intended architecture, but Build 28 showed a finalize
+failure caused by a 0 byte Storage object. The server compared the expected
+draft file size with the actual downloaded Storage object size and rejected the
+upload before Moment creation.
+
+Cause:
+
+The root cause was the client upload body path: `fetch(file://...).blob()` plus
+Supabase `uploadToSignedUrl` did not reliably upload the real MOV bytes in
+RN/Expo. The draft metadata and server validation were acting as useful guards,
+not as the broken part.
+
+Decision:
+
+Do not switch the product back to multipart as the default. Keep Direct Upload,
+keep multipart fallback, and replace the unstable body upload mechanism with a
+native file upload path.
+
+Implementation:
+
+- Added direct `expo-file-system` dependency.
+- Direct Upload uses `FileSystem.getInfoAsync` to validate local file
+  existence and size before upload.
+- Direct Upload uses `FileSystem.uploadAsync` with `PUT` and
+  `BINARY_CONTENT` against the signed upload URL.
+- Finalize mismatch messages include `expected` and `actual` sizes.
+
+Result:
+
+- Latest upload on Build 29 reached `upload_targets.status=finalized`.
+- `uploaded_at` and `finalized_at` were recorded.
+- Latest Moment used `users/.../uploads/{uploadId}/source.mov`, confirming the
+  Direct Upload path rather than multipart fallback.
+- Moment, AnalysisJob, EvidenceResult, Push, restore, and source cleanup all
+  worked.
+- A roughly 15.8 MB / 8 second MOV took about 8-10 seconds to upload/finalize,
+  which is acceptable for now.
+
+Insight:
+
+Direct Upload is no longer blocked by the 0 byte object bug, but it should be
+validated with several more real-device uploads. The next high-priority UX
+issue is Resume Draft: restored local URIs may expire or become inaccessible,
+so the app should detect that quickly and route the rider to "select again"
+instead of waiting through upload timeouts. Pre-upload video optimization is a
+future investigation, not current implementation work.
+
 Current refactor/TODO backlog:
 
 ```text

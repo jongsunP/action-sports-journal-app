@@ -16,6 +16,68 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 Update on 2026-06-20, Analysis-first Product Strategy:
 
+Build 29 Direct Upload checkpoint, 2026-06-21:
+
+Problem:
+
+Build 28 proved that the upload architecture was structurally close, but Direct
+Upload could create a 0 byte Storage object. The app then reached finalize and
+failed with a source video size mismatch before Moment creation.
+
+Cause:
+
+The failing path used `fetch(file://...).blob()` with Supabase
+`uploadToSignedUrl`. In RN/Expo this combination did not reliably send the real
+MOV file body. `draft.fileSize` and server finalize validation were not the
+root problem; the Storage object itself was empty.
+
+Investigation:
+
+The latest failing `upload_targets` row had a normal draft size, no
+`uploaded_at`, no `finalized_at`, and a Storage object that downloaded as
+0 bytes. The server finalize check compared the expected draft size against the
+actual downloaded Storage object size and correctly rejected the upload.
+
+Decision:
+
+Keep Direct Upload as the intended product path. Do not make multipart the
+default workaround. Replace only the unstable file-body upload mechanism while
+keeping `upload_targets`, finalize, and multipart fallback.
+
+Implementation:
+
+- Build 29 uses `expo-file-system/legacy`.
+- The app checks the local source file with `FileSystem.getInfoAsync`.
+- The app rejects 0 byte or size-mismatched local files before signed upload.
+- The app uploads the actual file body to `signedUploadUrl` with
+  `FileSystem.uploadAsync(..., httpMethod: "PUT", BINARY_CONTENT)`.
+- Finalize size mismatch errors now include `expected` and `actual` sizes.
+
+Result:
+
+- Build 29 EAS URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/16f8d05e-d375-4539-b9fa-1addbffb0227`.
+- Latest Build 29 QA upload reached `upload_targets.status=finalized`.
+- `uploaded_at` and `finalized_at` were recorded.
+- The new Moment used an `uploads/{uploadId}` Storage path, confirming Direct
+  Upload rather than multipart fallback.
+- Moment, AnalysisJob, and EvidenceResult were created and completed.
+- Push and result restore remained normal.
+- The source object was cleaned up after analysis (`source_video_storage_status
+  = deleted`).
+- A roughly 15.8 MB / 8 second MOV took about 8-10 seconds to upload/finalize.
+  Treat this as acceptable for now, not a bug.
+
+Insight:
+
+The current Level 1 upload experience is now functionally sound for a real
+single-video flow. The next major product risk is Resume Draft behavior:
+restored local file URIs may not be reusable after app restart, and they must
+fail quickly into "select the video again" rather than making the rider wait.
+Pre-upload video optimization, such as Instagram/TikTok-style re-encoding or
+analysis proxy generation, is recorded as a later final-product investigation,
+not current priority.
+
 Build 28 save point, 2026-06-21:
 
 - Current preview/internal QA build is buildNumber `28`.

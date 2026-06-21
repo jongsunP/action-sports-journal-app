@@ -26,42 +26,68 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
-## Build 28 Upload QA Handoff - 2026-06-21
+## Build 29 Direct Upload Case Study - 2026-06-21
 
-Build 28 is the current QA handoff build:
+Build 29 is the current upload architecture QA build:
 
 ```text
-buildNumber: 28
-EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0e95c278-e3d3-4c04-bebf-b16f163f0b9a
-build commit: 773680c chore: prepare upload fallback qa build
+buildNumber: 29
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/16f8d05e-d375-4539-b9fa-1addbffb0227
+build commit: 3e4b26b fix: upload signed source files with file system
 ```
 
-Current upload architecture:
+Problem:
 
-- Local Draft Upload Flow exists and restores a selected video draft.
-- UploadScreen is route-backed.
-- The app attempts direct upload target -> signed upload -> finalize.
-- Multipart fallback through Render remains the reliable user path.
-- `upload_targets` tracks issued/uploaded/finalized/failed best-effort rows.
+Build 28 reached the correct Direct Upload architecture but failed at finalize.
+The Storage object produced by signed upload downloaded as 0 bytes, while the
+draft file size was a normal MOV size. The server rejected it with source video
+size mismatch before creating a Moment.
 
-Current unresolved issue:
+Cause:
 
-- Direct upload is still failing in QA.
-- Latest diagnostic failure reached finalize and recorded
-  `Uploaded source video size does not match the draft`.
-- This points toward RN/Expo signed-upload file body handling rather than a
-  missing endpoint.
-- Do not remove fallback or treat direct upload failure as user upload failure.
+The unstable point was the client file body: RN/Expo `fetch(file://...).blob()`
+combined with Supabase `uploadToSignedUrl` did not reliably upload the actual
+MOV bytes. `draft.fileSize` and finalize validation were useful guards, not the
+broken pieces.
 
-Next technical investigation:
+Investigation:
 
-1. Install Build 28 and upload one real video on iPhone.
-2. Check if fallback succeeds and the rider sees completed analysis.
-3. Inspect latest `upload_targets.status`, `failure_reason`,
-   `uploaded_at/finalized_at`, and latest Moment `source_video_storage_path`.
-4. If direct upload keeps failing with size mismatch, evaluate an
-   `expo-file-system` upload approach or temporarily make multipart fallback
-   the explicit default while direct upload remains a P1 architecture task.
+The team compared `upload_targets.file_size`, downloaded Storage object size,
+Moment Storage path, and finalize status. Failed targets showed `failed` with
+no `uploaded_at` or `finalized_at`; the object was present but 0 bytes.
+
+Decision:
+
+Do not abandon Direct Upload and do not make multipart the default workaround.
+Use a native file upload path while preserving multipart fallback.
+
+Implementation:
+
+- Add `expo-file-system`.
+- Check the local file with `FileSystem.getInfoAsync`.
+- Fail before signed upload if the local file is missing, 0 bytes, or does not
+  match the draft file size.
+- Upload the real file body with `FileSystem.uploadAsync` to the signed URL
+  using `PUT` and `BINARY_CONTENT`.
+- Include `expected` and `actual` byte counts in finalize mismatch errors.
+
+Result:
+
+- Build 29 real-device QA confirmed `upload_targets.status=finalized`.
+- `uploaded_at` and `finalized_at` were recorded.
+- The latest Moment Storage path used `uploads/{uploadId}`, confirming Direct
+  Upload instead of multipart fallback.
+- Moment, AnalysisJob, EvidenceResult, Push, restore, and source cleanup all
+  worked.
+- A roughly 15.8 MB / 8 second MOV took about 8-10 seconds to upload/finalize.
+  Treat this as acceptable for now.
+
+Next:
+
+Validate Direct Upload with several more real-device uploads. The next urgent
+UX task is Resume Draft failure handling: restored `localVideoUri` values may
+not remain accessible after app restart and should fail quickly into "select
+the video again" rather than waiting through upload timeouts.
 
 Current product priority:
 
@@ -306,8 +332,9 @@ native-stack gesture fails on device.
 
 Current judgment:
 
-The current Render multipart relay is working for Build 23 QA. The app uploads
-to:
+Direct Upload is now the intended default path and was validated once in Build
+29. The current Render multipart relay remains as fallback, not the preferred
+product path. Multipart still uploads to:
 
 ```text
 app
@@ -319,7 +346,7 @@ app
 -> Gemini analysis
 ```
 
-Build 23 real-device QA validated the surrounding product flow:
+Build 23 real-device QA validated the surrounding fallback product flow:
 
 - upload-first structure works,
 - blocking Upload Overlay felt natural,
@@ -330,9 +357,10 @@ Build 23 real-device QA validated the surrounding product flow:
 
 Decision:
 
-Signed/direct upload is implemented in code as the default path while keeping
-the current Render multipart relay as fallback. Build/device QA still needs to
-validate this path before treating it as product-stable.
+Signed/direct upload is implemented as the default path. Build 29 proved the
+`issued -> uploaded -> finalized` happy path once after switching from
+`fetch(file://).blob()` to `FileSystem.uploadAsync`. Keep multipart fallback
+until repeated device QA confirms the Direct path is stable.
 
 Implemented shape:
 
@@ -401,10 +429,45 @@ tracking issues should log a warning and should not block upload.
 
 Recommended order:
 
-1. Verify `issued -> uploaded -> finalized` tracking during device QA.
+1. Repeat `issued -> uploaded -> finalized` tracking during device QA.
 2. Keep multipart fallback until direct path is validated repeatedly.
-3. Run device QA for direct upload + finalize.
+3. Record upload timing and path for several file sizes.
 4. Add cleanup automation only after orphan candidates are observable.
+
+### Pre-upload Video Optimization Review
+
+Status:
+
+This is a future product/architecture investigation, not an active bug fix.
+Build 29 QA showed that Direct Upload can work end-to-end. A roughly 15.8 MB /
+8 second MOV took about 8-10 seconds to upload/finalize, then Gemini analysis
+continued server-side. Treat that as acceptable for now, not as a regression.
+
+Why this matters later:
+
+Action Sports Journal's core action is video upload -> AI analysis. Even if the
+current Direct Upload path is stable, the product should eventually evaluate
+Instagram/TikTok-style client-side upload optimization so riders do not feel
+blocked by large source videos.
+
+Investigation items:
+
+- whether client-side re-encoding before upload is practical,
+- resolution downscale strategies,
+- bitrate optimization strategies,
+- thumbnail and proxy-video generation,
+- keeping the original locally while uploading a lighter analysis copy,
+- whether a lightweight analysis copy harms Gemini evidence extraction quality,
+- Expo / React Native implementation options,
+- expected size reduction and upload-time savings by file size and duration.
+
+Important guardrails:
+
+- Do not implement this before Direct Upload stability is confirmed over
+  repeated real-device QA.
+- Do not add quick MVP compression that silently harms analysis quality.
+- Evaluate AI accuracy impact together with UX speed impact.
+- Keep this as a final-product investigation, not a temporary workaround.
 
 ### Draft Upload Flow Architecture
 

@@ -53,6 +53,55 @@ continuity as well as technical continuity:
 
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 
+Build 29 Direct Upload checkpoint, 2026-06-21:
+
+Problem -> Cause -> Decision:
+
+Build 28 showed that Direct Upload could create a 0 byte Storage object and
+then fail finalize with `Uploaded source video size does not match the draft`.
+The issue was not `draft.fileSize` or the server validation itself. The
+unstable point was RN/Expo `fetch(file://...).blob()` combined with Supabase
+`uploadToSignedUrl`, which did not reliably upload the real MOV file body.
+The decision was to keep Direct Upload as the intended product path and replace
+only the file upload mechanism, while retaining multipart fallback.
+
+Implementation:
+
+- `src/services/moments/supabaseMoments.ts` now uses
+  `expo-file-system/legacy`.
+- Direct Upload checks the local file with `FileSystem.getInfoAsync`.
+- The app blocks signed upload if the local file is missing, 0 bytes, or a
+  different size from the draft metadata.
+- The actual file is uploaded to the signed URL with
+  `FileSystem.uploadAsync(..., httpMethod: "PUT", BINARY_CONTENT)`.
+- `dev-server/index.ts` now includes expected/actual sizes in finalize mismatch
+  errors.
+
+Result:
+
+- Latest commit: `3e4b26b fix: upload signed source files with file system`.
+- Build 29 URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/16f8d05e-d375-4539-b9fa-1addbffb0227`.
+- Build 29 real-device QA confirmed Direct Upload success:
+  `upload_targets.status=finalized`, `uploaded_at` present, `finalized_at`
+  present, and the latest Moment Storage path used `uploads/{uploadId}` rather
+  than `moments/{momentId}`.
+- Moment, AnalysisJob, and EvidenceResult were created and completed.
+- Push and result restore remained normal.
+- The temporary source video was deleted after analysis.
+- The upload/finalize wait for a roughly 15.8 MB / 8 second MOV was about
+  8-10 seconds. This is acceptable for now.
+
+Next:
+
+Keep Build 29 as the current QA baseline. Continue gathering a few more
+real-device uploads before declaring Direct Upload fully stable. The next major
+upload task is Resume Draft failure handling: if a restored `localVideoUri` is
+not reusable, fail quickly and ask the rider to select the video again. Do not
+let Resume Draft spend a long time in upload. Pre-upload video optimization
+similar to Instagram/TikTok is recorded as a later TODO, after Direct Upload
+stability is confirmed.
+
 Build 28 save point, 2026-06-21:
 
 - Latest QA build is buildNumber `28`.
