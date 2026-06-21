@@ -24,7 +24,6 @@ import {
   type SessionVideoAsset,
 } from '../../services/ai';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
-import { mockSessions } from './mockSessions';
 import {
   createSessionVideoThumbnail,
   hasConfiguredVideoThumbnailEndpoint,
@@ -64,10 +63,10 @@ import {
   type PersistedSessionState,
 } from './sessionStorage';
 import { useSyncRemoteMoments } from './useSyncRemoteMoments';
+import { useSessionRepository } from './useSessionRepository';
 
 import type {
   AnalysisResult,
-  GeminiEvidenceResult,
   MomentStatus,
   PersistedMomentStatus,
   Session,
@@ -91,7 +90,28 @@ export function HomeScreen() {
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
   const [activeTab, setActiveTab] = useState<AppTabId>('home');
-  const [sessions, setSessions] = useState<Session[]>(mockSessions);
+  const {
+    analysisBySessionId,
+    geminiEvidenceBySessionId,
+    openAiBenchmarkBySessionId,
+    remoteMomentIdsBySessionId,
+    removeSessionLocally: removeSessionDataLocally,
+    sessions,
+    setAnalysisBySessionId,
+    setGeminiEvidenceBySessionId,
+    setOpenAiBenchmarkBySessionId,
+    setRemoteMomentIdForSession,
+    setRemoteMomentIdsBySessionId,
+    setSessions,
+    setThumbnailForSession,
+    setThumbnailsBySessionId,
+    setUserConfirmedTrickBySessionId,
+    setVideoForSession,
+    setVideosBySessionId,
+    thumbnailsBySessionId,
+    userConfirmedTrickBySessionId,
+    videosBySessionId,
+  } = useSessionRepository();
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isUploadingSession, setIsUploadingSession] = useState(false);
   const isUploadingSessionRef = useRef(false);
@@ -108,28 +128,8 @@ export function HomeScreen() {
     isPreparingSelectedVideoThumbnail,
     setIsPreparingSelectedVideoThumbnail,
   ] = useState(false);
-  const [videosBySessionId, setVideosBySessionId] = useState<
-    Record<string, SessionVideoAsset>
-  >({});
-  const [analysisBySessionId, setAnalysisBySessionId] = useState<
-    Record<string, AnalysisResult>
-  >({});
-  const [openAiBenchmarkBySessionId, setOpenAiBenchmarkBySessionId] = useState<
-    Record<string, AnalysisResult>
-  >({});
-  const [geminiEvidenceBySessionId, setGeminiEvidenceBySessionId] = useState<
-    Record<string, GeminiEvidenceResult>
-  >({});
   const [deletingSessionIds, setDeletingSessionIds] = useState<
     Record<string, boolean>
-  >({});
-  const [userConfirmedTrickBySessionId, setUserConfirmedTrickBySessionId] =
-    useState<Record<string, string>>({});
-  const [thumbnailsBySessionId, setThumbnailsBySessionId] = useState<
-    Record<string, string>
-  >({});
-  const [remoteMomentIdsBySessionId, setRemoteMomentIdsBySessionId] = useState<
-    Record<string, string>
   >({});
   const [extractingEvidenceBySessionId, setExtractingEvidenceBySessionId] =
     useState<Record<string, boolean>>({});
@@ -489,20 +489,13 @@ export function HomeScreen() {
     !isPreparingSelectedVideoThumbnail;
 
   const removeSessionLocally = useCallback((sessionId: string) => {
-    setSessions((current) => current.filter((item) => item.id !== sessionId));
-    setVideosBySessionId((current) => removeRecordKey(current, sessionId));
-    setAnalysisBySessionId((current) => removeRecordKey(current, sessionId));
-    setGeminiEvidenceBySessionId((current) => removeRecordKey(current, sessionId));
-    setUserConfirmedTrickBySessionId((current) => removeRecordKey(current, sessionId));
-    setOpenAiBenchmarkBySessionId((current) => removeRecordKey(current, sessionId));
-    setThumbnailsBySessionId((current) => removeRecordKey(current, sessionId));
-    setRemoteMomentIdsBySessionId((current) => removeRecordKey(current, sessionId));
+    removeSessionDataLocally(sessionId);
 
     if (selectedSessionId === sessionId) {
       setSelectedSessionId(null);
       setPlayingVideoSessionId(null);
     }
-  }, [selectedSessionId]);
+  }, [removeSessionDataLocally, selectedSessionId]);
 
   if (isLoadingInitialMoments) {
     return (
@@ -625,18 +618,12 @@ export function HomeScreen() {
 
     setSessions((current) => [nextSession, ...current]);
 
-    setVideosBySessionId((current) => ({
-      ...current,
-      [nextSession.id]: videoForUpload,
-    }));
+    setVideoForSession(nextSession.id, videoForUpload);
     const preparedThumbnailUri =
       selectedVideoThumbnailUriRef.current ?? selectedVideoThumbnailUri;
 
     if (preparedThumbnailUri) {
-      setThumbnailsBySessionId((current) => ({
-        ...current,
-        [nextSession.id]: preparedThumbnailUri,
-      }));
+      setThumbnailForSession(nextSession.id, preparedThumbnailUri);
     } else {
       createThumbnailForSession(nextSession.id, videoForUpload);
     }
@@ -685,10 +672,7 @@ export function HomeScreen() {
           return;
         }
 
-        setRemoteMomentIdsBySessionId((current) => ({
-          ...current,
-          [nextSession.id]: storedMoment.momentId,
-        }));
+        setRemoteMomentIdForSession(nextSession.id, storedMoment.momentId);
 
         const nextMomentStatus =
           storedMoment.analysisJobStatus === 'processing' ||
@@ -744,10 +728,7 @@ export function HomeScreen() {
     try {
       const imageUri = await createSessionVideoThumbnail(video);
 
-      setThumbnailsBySessionId((current) => ({
-        ...current,
-        [sessionId]: imageUri,
-      }));
+      setThumbnailForSession(sessionId, imageUri);
     } catch {
       // Thumbnail generation is best-effort. The feed keeps its visual fallback.
     }
@@ -3194,12 +3175,6 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 });
-
-function removeRecordKey<T>(record: Record<string, T>, key: string) {
-  const { [key]: _removed, ...remaining } = record;
-
-  return remaining;
-}
 
 async function listMomentsWithTimeout() {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
