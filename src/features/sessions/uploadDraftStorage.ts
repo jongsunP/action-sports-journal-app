@@ -8,6 +8,7 @@ export type UploadDraftStatus =
   | 'selected'
   | 'ready_to_upload'
   | 'uploading'
+  | 'uploaded'
   | 'upload_failed';
 
 export type UploadDraft = {
@@ -21,6 +22,11 @@ export type UploadDraft = {
   createdAt: string;
   updatedAt: string;
   status: UploadDraftStatus;
+  uploadId?: string;
+  storageProvider?: string;
+  storageBucket?: string;
+  storagePath?: string;
+  uploadedAt?: string;
 };
 
 export function createUploadDraftFromVideo(
@@ -144,6 +150,11 @@ function parseUploadDraft(value: unknown): UploadDraft | null {
     createdAt: draft.createdAt,
     updatedAt: draft.updatedAt,
     status: draft.status,
+    uploadId: normalizeOptionalString(draft.uploadId),
+    storageProvider: normalizeOptionalString(draft.storageProvider),
+    storageBucket: normalizeOptionalString(draft.storageBucket),
+    storagePath: normalizeOptionalString(draft.storagePath),
+    uploadedAt: normalizeOptionalString(draft.uploadedAt),
   };
 }
 
@@ -152,6 +163,7 @@ function isUploadDraftStatus(value: unknown): value is UploadDraftStatus {
     value === 'selected' ||
     value === 'ready_to_upload' ||
     value === 'uploading' ||
+    value === 'uploaded' ||
     value === 'upload_failed'
   );
 }

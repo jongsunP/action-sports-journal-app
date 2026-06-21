@@ -7,6 +7,7 @@ import type {
   Session,
 } from '../../types';
 import type { SessionVideoAsset } from '../ai';
+import { supabase } from '../supabase/client';
 
 type CreateMomentResponse = {
   momentId?: unknown;
@@ -175,6 +176,37 @@ export async function requestUploadTarget(
     fileSize: asNumber(data.fileSize),
     durationMs: asNumber(data.durationMs),
   };
+}
+
+export async function uploadVideoToSignedTarget(
+  target: VideoUploadTarget,
+  video: SessionVideoAsset,
+) {
+  if (!supabase) {
+    throw new Error('Supabase client is not configured.');
+  }
+
+  const { data, error } = await supabase.storage
+    .from(target.bucket)
+    .uploadToSignedUrl(
+      target.storagePath,
+      target.signedUploadToken,
+      {
+        uri: video.uri,
+        name: video.fileName ?? `${target.uploadId}.mov`,
+        type: video.mimeType ?? target.mimeType ?? 'video/quicktime',
+      } as unknown as Blob,
+      {
+        contentType: video.mimeType ?? target.mimeType ?? 'video/quicktime',
+        upsert: false,
+      },
+    );
+
+  if (error) {
+    throw new Error(`Signed source video upload failed: ${error.message}`);
+  }
+
+  return data;
 }
 
 export async function insertMoment(session: Session, video?: SessionVideoAsset | null) {
