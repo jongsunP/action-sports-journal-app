@@ -246,6 +246,23 @@ Risks if done too early:
 
 Do not patch gestures repeatedly without first deciding the screen model.
 
+Route-backed first pass update:
+
+`MomentDetailScreen` now exists behind React Navigation native stack, while
+`MomentDetailContent` is shared with the legacy modal wrapper. The Detail route
+explicitly enables horizontal iOS gestures, full-screen gesture handling, and a
+transparent native header so the route can behave more like an app-native iOS
+screen.
+
+Remaining QA note:
+
+Simulator-based touch verification was inconclusive after the route option
+update: button navigation worked, but automated drag input did not reliably
+trigger either horizontal swipe back or ordinary vertical scroll. Treat native
+swipe back as requiring physical-device QA before calling the Detail route
+transition fully complete. Do not add another custom gesture layer unless the
+native-stack gesture fails on device.
+
 ### Signed / Direct Upload Architecture
 
 Current judgment:
