@@ -40,7 +40,23 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="MomentDetail" component={MomentDetailScreen} />
+          <Stack.Screen
+            name="MomentDetail"
+            component={MomentDetailScreen}
+            options={{
+              animation: 'slide_from_right',
+              animationMatchesGesture: true,
+              fullScreenGestureEnabled: true,
+              gestureEnabled: true,
+              gestureDirection: 'horizontal',
+              gestureResponseDistance: { start: 80 },
+              headerBackVisible: false,
+              headerShown: true,
+              headerTransparent: true,
+              headerTitle: '',
+              presentation: 'card',
+            }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar backgroundColor="#0b0d12" style="light" />
