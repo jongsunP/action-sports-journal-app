@@ -85,9 +85,10 @@ order:
 
 Upload structure includes upload-first behavior, signed/direct upload
 evaluation, progress feasibility, blocking overlay, and timing logs. Mobile
-screen structure includes reducing `HomeScreen` modal/conditional-rendering
-ownership and evaluating UploadScreen, MomentDetailScreen, React Navigation, or
-Expo Router. App-native return behavior includes native stack swipe back, Push
+screen structure now includes route-backed `MomentDetailScreen` and
+`UploadScreen`. `UploadContent` was extracted from the old `UploadSheet` body,
+so the route can later host Draft Upload Flow without changing the current
+upload-first semantics. App-native return behavior includes native stack swipe back, Push
 tap to Moment Detail, and foreground/background restore.
 
 AI Calibration for toeside/heelside, Back Roll, and other trick-name accuracy
@@ -363,8 +364,8 @@ progress percentage, or concurrent users become recurring issues.
 Draft Upload Flow decision:
 
 Draft Upload Flow is useful for a more app-native Level 1 upload experience,
-but it is not implemented now. Keep it as P1 structure backlog after Build 23
-QA stabilizes:
+but it is not implemented now. `UploadScreen` is the new foundation for the
+future Draft screen; keep Draft itself as the next P1 structure backlog item:
 
 ```text
 video selected

@@ -136,6 +136,10 @@ Immediate focus:
 - Upload screen remains open until source video upload completes.
 - The app now warns users not to close the app during the upload phase.
 - The upload screen closes only after upload succeeds and server-side analysis is accepted.
+- Upload UI has been split into reusable `UploadContent` and a route-backed
+  `UploadScreen`. The current route shape is `Home -> Upload -> MomentDetail`.
+  This is the first structural step toward Draft Upload Flow, while preserving
+  the existing upload-first behavior.
 - Render + Supabase validation confirmed that fileless requests return 400 without creating rows.
 - Normal upload validation confirmed `source_video_storage_uploaded_at -> moment.created_at -> analysis_jobs.queued_at` ordering.
 - QA policy remains: do not auto-reset DB after builds; report counts only unless the Founder explicitly requests deletion.
@@ -569,12 +573,13 @@ select video
 -> Moment and AnalysisJob
 ```
 
-Do not implement this immediately. Keep Build 23 upload-first QA stable first.
-Draft is not a remote Moment. Draft is the user's selected upload work in
-progress; signed/direct upload is how the Draft's video reaches Storage;
-finalize is what turns the uploaded Draft into a server-side Moment and
-AnalysisJob. Future design should reserve `draftId`, `uploadId`, future
-`userId`, Storage path ownership, and orphan cleanup, with a path shape like
+Do not implement Draft/signed upload in the UploadScreen transition commit. The
+UploadScreen route now gives Draft a natural future home, but Draft is still
+not a remote Moment. Draft is the user's selected upload work in progress;
+signed/direct upload is how the Draft's video reaches Storage; finalize is what
+turns the uploaded Draft into a server-side Moment and AnalysisJob. Future
+design should reserve `draftId`, `uploadId`, future `userId`, Storage path
+ownership, and orphan cleanup, with a path shape like
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Validated product decisions:

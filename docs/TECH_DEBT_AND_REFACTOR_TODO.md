@@ -42,8 +42,10 @@ order:
 
 Upload structure includes the upload-first flow, signed/direct upload
 evaluation, upload progress feasibility, blocking overlay, and timing logs.
-Screen structure includes reducing Home-owned modal/conditional rendering and
-evaluating UploadScreen, MomentDetailScreen, React Navigation, or Expo Router.
+Screen structure now includes route-backed `MomentDetailScreen` and
+`UploadScreen`; `UploadContent` was extracted from the old `UploadSheet` body
+so the route can become the future Draft screen without changing upload-first
+semantics.
 App-native return flows include native stack swipe back, Push tap to the
 relevant Moment Detail, and foreground/background restore behavior. UX
 stabilization includes Boot Loading, Upload, Delete, Empty/Error states, and
@@ -367,9 +369,10 @@ previous upload work or start a new one.
 
 Current decision:
 
-Do not implement Draft Upload Flow immediately. Build 23 upload-first behavior,
-blocking overlay, restore, and Push should remain the active QA focus. Keep
-Draft Upload Flow as a P1 structure backlog item.
+Do not implement Draft Upload Flow in the UploadScreen transition commit.
+Build 23 upload-first behavior, blocking overlay, restore, and Push should
+remain the active QA focus. Keep Draft Upload Flow as the next P1 structure
+backlog item.
 
 Concept boundaries:
 
@@ -416,7 +419,7 @@ users/{userId}/uploads/{uploadId}/source.mov
 Risks if implemented too early:
 
 - increases `HomeScreen` complexity,
-- may add more conditional rendering before UploadScreen exists,
+- may add more conditional rendering if it bypasses the new UploadScreen route,
 - local video URI persistence after app relaunch needs verification,
 - Draft and remote Moment boundaries can become confusing,
 - could destabilize the just-validated upload-first path.
@@ -425,7 +428,7 @@ Recommended order:
 
 1. Continue Build 23 QA.
 2. Collect upload timing data.
-3. Clarify UploadScreen / DetailScreen structure.
+3. Validate the UploadScreen route on device without changing upload semantics.
 4. Finalize Draft Upload Flow design.
 5. Implement local-only Draft persistence.
 6. Implement signed/direct upload and finalize endpoint.

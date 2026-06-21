@@ -96,9 +96,10 @@ video feel like a complete mobile app flow. Prioritize:
 
 This means upload-first behavior, signed/direct upload evaluation, progress
 feasibility, blocking overlay, and timing logs come before prompt/evidence
-tuning. Home-owned modal/conditional rendering should be reduced later through
-UploadScreen / MomentDetailScreen planning, with React Navigation or Expo
-Router evaluated when the route model is clear. AI Calibration for
+tuning. Home-owned modal/conditional rendering is being reduced through
+route-backed screens: `MomentDetailScreen` exists, and `UploadScreen` now wraps
+the extracted `UploadContent` while preserving the existing upload-first flow.
+AI Calibration for
 toeside/heelside, Back Roll, and other trick-name accuracy should wait until
 the mobile app loop itself feels stable.
 
@@ -440,8 +441,8 @@ video selected
 -> Moment/AnalysisJob
 ```
 
-Do not implement Draft now. It should wait until Build 23 upload-first QA is
-stable and UploadScreen / DetailScreen direction is clearer. Keep the concepts
+Do not implement Draft in the UploadScreen transition commit. `UploadScreen`
+now gives Draft a route-backed home for the next step, but the concepts remain
 separate: Draft is user work in progress, signed/direct upload is the transport
 method, finalize turns uploaded media into a Moment, and Moment means the
 server has durable input and can analyze. Future multi-user design should

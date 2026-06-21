@@ -178,9 +178,11 @@ Prioritize in this order:
 
 Upload work includes the upload-first structure, signed/direct upload
 evaluation, upload progress feasibility, blocking overlay, and timing logs.
-Screen-structure work includes reducing Home-owned modal/conditional rendering
-and evaluating UploadScreen, MomentDetailScreen, React Navigation, or Expo
-Router. App-native behavior includes native stack swipe back, Push tap to the
+Screen-structure work now includes route-backed screens: `MomentDetailScreen`
+and `UploadScreen` exist, with `UploadContent` extracted from the old
+`UploadSheet` body. This reduces Home-owned modal/conditional rendering while
+keeping the existing upload-first behavior. App-native behavior includes native
+stack swipe back, Push tap to the
 relevant Moment Detail, and foreground/background restore flow.
 
 AI Calibration remains important, but it starts after these mobile app
@@ -279,8 +281,9 @@ item, but wait for 5-10 paired timing samples before implementing.
 
 Draft Upload Flow decision:
 
-Draft Upload Flow is also P1 structure backlog, but not a Build 23 code task.
-It is the app-like layer above signed/direct upload:
+Draft Upload Flow is also P1 structure backlog. `UploadScreen` is now the
+route-backed foundation for it, but Draft itself is not implemented yet. It is
+the app-like layer above signed/direct upload:
 
 ```text
 select video
