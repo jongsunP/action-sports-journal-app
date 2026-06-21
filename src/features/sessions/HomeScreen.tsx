@@ -59,6 +59,7 @@ import { listMomentsWithTimeout, useBootSync } from './useBootSync';
 import { useAnalysisRealtimeSync } from './useAnalysisRealtimeSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
+import { resolveLocalSessionIdForRemoteMoment } from './sessionMerge';
 import { useMomentDetail } from './useMomentDetail';
 import { useSyncRemoteMoments } from './useSyncRemoteMoments';
 import { useSessionRepository } from './useSessionRepository';
@@ -69,6 +70,7 @@ import type {
   Session,
 } from '../../types';
 import type { RootStackParamList } from '../../navigation/types';
+import type { RemoteMomentRecord } from '../../services/moments';
 
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
@@ -78,6 +80,10 @@ type RemoteRefreshReason =
   | 'initial_retry'
   | 'push_response'
   | 'realtime';
+type AnalysisCompletionNotice = {
+  sessionId: string;
+  title: string;
+};
 
 export function HomeScreen() {
   const navigation =
@@ -91,6 +97,8 @@ export function HomeScreen() {
   const [isRemoteRefreshActive, setIsRemoteRefreshActive] = useState(false);
   const [remoteRefreshReason, setRemoteRefreshReason] =
     useState<RemoteRefreshReason | null>(null);
+  const [analysisCompletionNotice, setAnalysisCompletionNotice] =
+    useState<AnalysisCompletionNotice | null>(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
   const {
@@ -117,6 +125,8 @@ export function HomeScreen() {
   } = useSessionRepository();
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const didNavigateToUploadRef = useRef(false);
+  const pendingRealtimeCompletionNoticeRef =
+    useRef<AnalysisCompletionNotice | null>(null);
   const selectMomentDetailRef = useRef<(sessionId: string) => void>(() => {});
   const {
     extractingEvidenceBySessionId,
@@ -192,8 +202,16 @@ export function HomeScreen() {
 
       try {
         const remoteMoments = await listMomentsWithTimeout();
+        const completedRealtimeSession = findNewRealtimeCompletedSession({
+          remoteMomentIdsBySessionId,
+          remoteMoments,
+          sessions,
+        });
         syncRemoteMoments(remoteMoments);
         markRemoteMomentSyncCompleted();
+        if (reason === 'realtime') {
+          pendingRealtimeCompletionNoticeRef.current = completedRealtimeSession;
+        }
         console.info('[moment_sync]', {
           event: 'remote_moments_refreshed',
           reason,
@@ -214,6 +232,8 @@ export function HomeScreen() {
       isRemoteMomentSyncLoaded,
       isStorageLoaded,
       markRemoteMomentSyncCompleted,
+      remoteMomentIdsBySessionId,
+      sessions,
       syncRemoteMoments,
     ],
   );
@@ -263,6 +283,39 @@ export function HomeScreen() {
     userConfirmedTrickBySessionId,
     videosBySessionId,
   ]);
+
+  useEffect(() => {
+    const pendingNotice = pendingRealtimeCompletionNoticeRef.current;
+
+    if (!pendingNotice) {
+      return;
+    }
+
+    const completedSession = sessions.find(
+      (session) =>
+        session.id === pendingNotice.sessionId &&
+        session.momentStatus === 'completed',
+    );
+
+    if (!completedSession) {
+      return;
+    }
+
+    pendingRealtimeCompletionNoticeRef.current = null;
+    setAnalysisCompletionNotice(pendingNotice);
+  }, [sessions]);
+
+  useEffect(() => {
+    if (!analysisCompletionNotice) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setAnalysisCompletionNotice(null);
+    }, 4_500);
+
+    return () => clearTimeout(timeoutId);
+  }, [analysisCompletionNotice]);
 
   useEffect(() => {
     if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
@@ -576,6 +629,22 @@ export function HomeScreen() {
     }
   };
 
+  const handleOpenAnalysisCompletionNotice = () => {
+    if (!analysisCompletionNotice) {
+      return;
+    }
+
+    const session = sessions.find(
+      (item) => item.id === analysisCompletionNotice.sessionId,
+    );
+
+    setAnalysisCompletionNotice(null);
+
+    if (session) {
+      openEvidenceSheet(session);
+    }
+  };
+
   const handleOpenProfile = () => {
     Alert.alert(
       '마이페이지',
@@ -715,6 +784,27 @@ export function HomeScreen() {
           </View>
         </View>
       ) : null}
+      {analysisCompletionNotice ? (
+        <Pressable
+          accessibilityLabel="완료된 분석 결과 열기"
+          accessibilityRole="button"
+          onPress={handleOpenAnalysisCompletionNotice}
+          style={({ pressed }) => [
+            styles.analysisCompleteBanner,
+            pressed ? styles.buttonPressed : undefined,
+          ]}
+        >
+          <View style={styles.analysisCompleteIcon}>
+            <Text style={styles.analysisCompleteIconText}>✓</Text>
+          </View>
+          <View style={styles.analysisCompleteBody}>
+            <Text style={styles.analysisCompleteTitle}>분석이 완료되었습니다</Text>
+            <Text style={styles.analysisCompleteText} numberOfLines={1}>
+              {analysisCompletionNotice.title} 결과를 확인해보세요.
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -728,6 +818,44 @@ function normalizeRestoredSession(session: Session): Session {
     ...session,
     momentStatus: 'upload_failed',
   };
+}
+
+function findNewRealtimeCompletedSession({
+  remoteMomentIdsBySessionId,
+  remoteMoments,
+  sessions,
+}: {
+  remoteMomentIdsBySessionId: Record<string, string>;
+  remoteMoments: RemoteMomentRecord[];
+  sessions: Session[];
+}): AnalysisCompletionNotice | null {
+  for (const remoteMoment of remoteMoments) {
+    const isRemoteCompleted =
+      remoteMoment.session.momentStatus === 'completed' ||
+      remoteMoment.evidence?.status === 'completed';
+
+    if (!isRemoteCompleted) {
+      continue;
+    }
+
+    const sessionId = resolveLocalSessionIdForRemoteMoment(
+      remoteMoment,
+      remoteMomentIdsBySessionId,
+      sessions,
+    );
+    const localSession = sessions.find((session) => session.id === sessionId);
+
+    if (!localSession || localSession.momentStatus === 'completed') {
+      continue;
+    }
+
+    return {
+      sessionId,
+      title: localSession.title?.trim() || '방금 업로드한 영상',
+    };
+  }
+
+  return null;
 }
 
 const styles = StyleSheet.create({
@@ -802,6 +930,56 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  analysisCompleteBanner: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 18, 24, 0.96)',
+    borderColor: 'rgba(34, 197, 94, 0.34)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    left: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    position: 'absolute',
+    right: 16,
+    shadowColor: '#000',
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.26,
+    shadowRadius: 20,
+    top: Platform.OS === 'ios' ? 58 : 28,
+    zIndex: 40,
+  },
+  analysisCompleteIcon: {
+    alignItems: 'center',
+    backgroundColor: '#22c55e',
+    borderRadius: 999,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  analysisCompleteIconText: {
+    color: '#052e16',
+    fontSize: 16,
+    fontWeight: '900',
+    lineHeight: 20,
+  },
+  analysisCompleteBody: {
+    flex: 1,
+  },
+  analysisCompleteTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
+  analysisCompleteText: {
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+    marginTop: 2,
   },
   bottomTabBar: {
     alignItems: 'center',
