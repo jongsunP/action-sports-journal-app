@@ -7,7 +7,7 @@ import type {
   Session,
 } from '../../types';
 import type { SessionVideoAsset } from '../ai';
-import { supabase } from '../supabase/client';
+import * as FileSystem from 'expo-file-system/legacy';
 
 type CreateMomentResponse = {
   momentId?: unknown;
@@ -204,75 +204,83 @@ export async function uploadVideoToSignedTarget(
   target: VideoUploadTarget,
   video: SessionVideoAsset,
 ) {
-  if (!supabase) {
-    throw new Error('Supabase client is not configured.');
+  if (!target.signedUploadUrl) {
+    throw new Error('Signed upload target did not include a signed URL.');
   }
 
-  const fileResponse = await withTimeout(
-    fetch(video.uri),
+  const fileInfo = await withTimeout(
+    FileSystem.getInfoAsync(video.uri),
     SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS,
-    'Timed out while reading source video for signed upload.',
+    'Timed out while checking source video for signed upload.',
   );
 
-  if (!fileResponse.ok) {
-    throw new Error(
-      `Failed to read source video for signed upload: ${fileResponse.status}`,
-    );
+  if (!fileInfo.exists) {
+    throw new Error('Source video file was not found for signed upload.');
   }
 
-  const fileBody = await withTimeout(
-    fileResponse.blob(),
-    SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS,
-    'Timed out while creating signed upload file body.',
-  );
   const contentType = video.mimeType ?? target.mimeType ?? 'video/quicktime';
-  const fileBodySize =
-    typeof fileBody.size === 'number' && Number.isFinite(fileBody.size)
-      ? fileBody.size
+  const localFileSize =
+    typeof fileInfo.size === 'number' && Number.isFinite(fileInfo.size)
+      ? fileInfo.size
       : undefined;
+  const expectedFileSize =
+    typeof video.fileSize === 'number' && Number.isFinite(video.fileSize)
+      ? video.fileSize
+      : target.fileSize;
 
   console.info('[upload_timing]', {
-    blobSize: fileBodySize,
-    blobType: fileBody.type,
-    event: 'direct_upload_file_body',
+    expectedFileSize,
+    event: 'direct_upload_file_info',
+    localFileSize,
     storagePath: target.storagePath,
     uploadId: target.uploadId,
     videoUriScheme: video.uri.split(':', 1)[0],
   });
 
-  if (!fileBodySize || fileBodySize <= 0) {
-    throw new Error('Signed upload file body is empty.');
+  if (!localFileSize || localFileSize <= 0) {
+    throw new Error('Signed upload source file is empty.');
   }
 
-  const { data, error } = await withTimeout(
-    supabase.storage
-      .from(target.bucket)
-      .uploadToSignedUrl(
-        target.storagePath,
-        target.signedUploadToken,
-        fileBody,
-        {
-          contentType,
-          upsert: false,
-        },
-      ),
+  if (
+    typeof expectedFileSize === 'number' &&
+    Number.isFinite(expectedFileSize) &&
+    expectedFileSize > 0 &&
+    localFileSize !== expectedFileSize
+  ) {
+    throw new Error(
+      `Signed upload source file size mismatch before upload. expected=${expectedFileSize}; actual=${localFileSize}`,
+    );
+  }
+
+  const uploadResult = await withTimeout(
+    FileSystem.uploadAsync(target.signedUploadUrl, video.uri, {
+      headers: {
+        'cache-control': 'max-age=3600',
+        'content-type': contentType,
+        'x-upsert': 'false',
+      },
+      httpMethod: 'PUT',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    }),
     SIGNED_UPLOAD_REQUEST_TIMEOUT_MS,
     'Timed out while uploading source video to signed target.',
   );
 
-  if (error) {
-    throw new Error(`Signed source video upload failed: ${error.message}`);
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    throw new Error(
+      `Signed source video upload failed with ${uploadResult.status}: ${uploadResult.body}`,
+    );
   }
 
   console.info('[upload_timing]', {
     event: 'direct_upload_success',
-    fullPath: data.fullPath,
-    path: data.path,
+    localFileSize,
+    responseStatus: uploadResult.status,
     storagePath: target.storagePath,
     uploadId: target.uploadId,
   });
 
-  return data;
+  return uploadResult;
 }
 
 export async function reportUploadTargetFailure({

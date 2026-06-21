@@ -3732,7 +3732,9 @@ async function createStoredMomentFromUploadedSource({
     expectedFileSize > 0 &&
     uploadedFile.size !== expectedFileSize
   ) {
-    throw new Error("Uploaded source video size does not match the draft.");
+    throw new Error(
+      `Uploaded source video size does not match the draft. expected=${expectedFileSize}; actual=${uploadedFile.size}`,
+    );
   }
 
   if (uploadedFile.size > geminiMaxVideoBytes) {
