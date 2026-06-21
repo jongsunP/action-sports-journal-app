@@ -143,21 +143,53 @@ for cross-device history.
 
 Problem:
 
-The Detail screen currently mixes modal and page behavior. The earlier
+The app does not currently use a navigation stack. `App.tsx` renders
+`HomeScreen` directly, and React Navigation / Expo Router are not installed or
+used.
+
+Current screen structure:
+
+- Upload is `UploadSheet`, opened from `HomeScreen` through `isComposerOpen`.
+- Detail is `MomentDetailModal`, opened from `HomeScreen` through
+  `selectedSessionId`.
+- Both are modal/conditional-rendering flows owned by `HomeScreen`, not real
+  stack screens.
+
+The Detail screen therefore mixes modal and page behavior. The earlier
 edge-swipe dismiss worked mechanically but felt unnatural because the screen
 does not behave like a true iOS navigation route.
 
 Decision:
 
-Keep the current close/back button and deletion UX stable for now. Later,
-evaluate whether Moment Detail should become a router-backed screen rather than
-a modal-like overlay.
+Do not convert to a navigation stack during the Build 22 QA cycle. Keep the
+current close/back button, upload overlay, and deletion UX stable while
+upload-first behavior is validated.
+
+Longer term, Detail should likely become the first route-backed screen because
+it unlocks the highest-value UX improvements:
+
+- native iOS swipe back
+- more natural Detail gestures
+- Push deep link to a specific Moment Detail
+- clearer separation from HomeScreen state
 
 Future candidates:
 
-- iOS route-style back gesture.
-- Modal swipe-down dismiss if the Detail screen becomes a true sheet/modal.
-- Better media-first header behavior.
+- Keep current structure and validate Upload overlay first.
+- Split HomeScreen state ownership before moving screens.
+- Move `MomentDetailModal` toward `MomentDetailScreen` first.
+- Connect Push tap / deep link to the route-backed Moment Detail.
+- Move Upload toward `UploadScreen` later.
+- Evaluate React Navigation or Expo Router after the route model is clear.
+
+Risks if done too early:
+
+- breaking upload-first flow
+- breaking remote Moment sync
+- breaking deletion sync
+- breaking thumbnail fallback
+- breaking Push restore / future deep link behavior
+- expanding QA scope before Build 22 upload-first validation
 
 Do not patch gestures repeatedly without first deciding the screen model.
 

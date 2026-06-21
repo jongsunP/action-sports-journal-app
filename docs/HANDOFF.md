@@ -320,8 +320,12 @@ Included status:
 - Build 19/20 validated durable analysis, Push, completed restore, deletion
   sync, app boot loading, thumbnail fallback, and delete feedback remain part of
   the baseline.
-- Detail edge-swipe dismiss remains paused. Revisit this later in a broader
-  Detail navigation UX pass.
+- Navigation stack investigation: the app currently renders `HomeScreen`
+  directly from `App.tsx`; Upload is an `isComposerOpen`-driven `UploadSheet`
+  modal, and Detail is a `selectedSessionId`-driven `MomentDetailModal`.
+  React Navigation / Expo Router are not in use.
+- Detail edge-swipe dismiss remains paused. Detail should likely become the
+  first route-backed screen later, but not before Build 22 upload-first QA.
 
 Next session QA checklist:
 
@@ -347,6 +351,14 @@ Next stage:
 Install Build 22 and run device QA. Verify upload-first behavior, interrupted
 upload handling, completed result restore, Push delivery, thumbnail fallback,
 and delete feedback before starting new implementation work.
+
+Navigation refactor direction:
+
+Keep the current modal/conditional-rendering structure during Build 22 QA.
+Later, split HomeScreen state ownership, move Detail toward a route-backed
+`MomentDetailScreen`, connect Push deep link to Moment Detail, then consider
+moving Upload to an `UploadScreen`. Evaluate React Navigation or Expo Router
+only after the screen model is clear.
 
 Durable analysis design:
 

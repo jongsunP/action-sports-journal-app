@@ -166,6 +166,11 @@ Deferred:
 - Detail edge-swipe dismiss. The first implementation worked mechanically but
   felt unnatural in the current full-screen detail structure, so it is paused
   until a later Detail navigation/gesture pass.
+- Navigation stack conversion. Current structure is `App.tsx -> HomeScreen`;
+  Upload is an `isComposerOpen` modal and Detail is a `selectedSessionId`
+  modal. Do not convert during Build 22 QA. Later, move Detail to a route-backed
+  screen first, then connect Push deep link, then consider Upload screen
+  extraction.
 - AI accuracy issues such as toeside/heelside calibration remain in the
   Calibration stage, not in this Build 22 UX handoff.
 

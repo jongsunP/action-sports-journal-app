@@ -262,6 +262,10 @@ Explicitly deferred:
 
 - Detail gesture dismiss. The edge-swipe experiment is paused because it felt
   awkward in the current full-screen Detail layout.
+- Navigation stack conversion. The app currently renders `HomeScreen` directly;
+  Upload is an `isComposerOpen` modal and Detail is a `selectedSessionId`
+  modal. React Navigation / Expo Router are not in use. Convert later only
+  after Build 22 upload-first QA, starting with Detail as a route-backed screen.
 - AI accuracy/calibration questions such as toeside vs heelside. These belong
   to the Calibration stage after real examples accumulate.
 
