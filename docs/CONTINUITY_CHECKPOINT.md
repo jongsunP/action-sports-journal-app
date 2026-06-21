@@ -289,6 +289,30 @@ upload handling, completed result restore, Push delivery, thumbnail fallback,
 delete feedback, and analysis waiting copy. Do not auto-clear DB data before or
 after the QA unless explicitly requested.
 
+Build 23 continuity update:
+
+Build 23 is now the active real-device QA baseline. The first pass is broadly
+successful:
+
+- Boot Loading is not fixed-time decoration. It waits for local restore and
+  `/api/moments` sync, with an 8 second timeout.
+- Upload Overlay felt natural and clearly communicated that source upload must
+  finish before server-side analysis can continue independently.
+- A roughly 18.25 MB, 9 second test video produced a perceived 5-8 second
+  upload wait.
+- Directional timing: about 5.2 seconds from upload start estimate to server
+  file/storage flow entry, about 3.9 seconds for server Storage/Moment creation
+  work, about 1 second or less for job queue/start, and about 50.7 seconds for
+  Gemini `started_at -> completed_at`.
+- Push was received, perceived as more than 1 minute and less than 3 minutes.
+- Result restore worked.
+- Delete was not tested in this pass.
+
+Next session should continue Build 23 QA, not reset DB data, and collect paired
+iPhone `[upload_timing]` logs plus Render Dashboard `[source_video_timing]`
+logs. Progress bar work is not mandatory until repeated timing samples show it
+is needed.
+
 Durable pipeline reference:
 
 ```text

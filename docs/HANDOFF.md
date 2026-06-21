@@ -356,11 +356,35 @@ review. During build reports, report counts only:
 `moments`, `analysis_jobs`, `evidence_results`, and `device_push_tokens`.
 Delete only when the Founder explicitly requests reset/initialization.
 
+Build 23 real-device QA update:
+
+Build 23's first real-device UX pass is broadly successful. Boot Loading is
+confirmed to be based on local restore plus `/api/moments` remote sync, with an
+8 second timeout; it is not a fixed loading splash. The blocking Upload Overlay
+felt natural and made the upload-before-analysis phase understandable. The
+tested upload was about 18.25 MB and about 9 seconds long, with a perceived
+upload wait of about 5-8 seconds.
+
+Directional timing from the latest QA row:
+
+- Upload start estimate to server file/storage flow entry: about 5.2 seconds.
+- Server Storage/Moment creation side: about 3.9 seconds.
+- Job queue/start: within roughly 1 second.
+- Gemini `started_at -> completed_at`: about 50.7 seconds.
+- Push was received, perceived as arriving after more than 1 minute and before
+  3 minutes.
+- Result restore worked.
+- Delete was intentionally not tested so QA data/logs could remain available.
+
+Progress percentage is not required immediately. The next timing step is to
+capture paired iPhone `[upload_timing]` logs and Render Dashboard
+`[source_video_timing]` logs before changing upload architecture.
+
 Next stage:
 
-Install Build 22 and run device QA. Verify upload-first behavior, interrupted
-upload handling, completed result restore, Push delivery, thumbnail fallback,
-and delete feedback before starting new implementation work.
+Continue Build 23 device QA. Verify more real uploads, collect timing logs,
+keep DB data, and avoid code changes until repeated bottleneck or UX patterns
+are visible.
 
 Navigation refactor direction:
 

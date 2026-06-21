@@ -472,6 +472,31 @@ allowed to accumulate. Do not auto-clear QA data after builds. By default keep
 analysis-time measurement, calibration, and real usage pattern review. Only
 delete QA data when the Founder explicitly requests "초기화" or "DB 비우기".
 
+Build 23 real-device UX QA:
+
+Build 23 passed the first real-device UX check. Boot Loading felt natural and is
+confirmed to be data-readiness based, not a fixed decorative delay: Home waits
+for local restore plus `/api/moments` remote sync, with an 8 second fail-open
+timeout. The Upload Overlay also felt natural; the full-screen blocking state
+made it clear that upload is separate from server-owned analysis.
+
+The latest QA sample was about 18.25 MB and about 9 seconds long. Directional
+timing from the DB and user observation:
+
+- Upload start estimate to server file/storage flow entry: about 5.2 seconds.
+- Server Storage/Moment creation side: about 3.9 seconds.
+- Job queue/start: within roughly 1 second.
+- Gemini `started_at -> completed_at`: about 50.7 seconds.
+- Push was received; the perceived arrival was more than 1 minute and less than
+  3 minutes.
+- Result restore worked.
+- Delete was intentionally not tested in this QA pass.
+
+These numbers are not yet enough to justify upload architecture changes or a
+progress bar. For exact bottleneck analysis, capture paired iPhone
+`[upload_timing]` logs and Render Dashboard `[source_video_timing]` logs. Keep
+Build 23 QA running and keep code changes paused until more samples accumulate.
+
 Validated product decisions:
 
 - Large real thumbnails improve perceived product quality.

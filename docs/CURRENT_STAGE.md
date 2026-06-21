@@ -198,6 +198,31 @@ handling, completed result restore, Push delivery, thumbnail fallback, delete
 feedback, and analysis waiting copy on the device.
 ```
 
+Build 23 QA status:
+
+Build 23 is now the active QA baseline. The first real-device pass was
+successful at the UX/product-flow level:
+
+- Boot Loading felt natural and is confirmed to wait for local restore plus
+  `/api/moments` remote sync, with an 8 second timeout.
+- Upload Overlay felt natural and clearly blocked the UI while source upload
+  was still in progress.
+- The latest QA sample was about 18.25 MB and about 9 seconds long.
+- User-perceived upload wait was about 5-8 seconds.
+- Directional timing suggests about 5.2 seconds before server file/storage flow
+  entry, about 3.9 seconds around server Storage/Moment creation, job queue and
+  start within about 1 second, and Gemini analysis around 50.7 seconds.
+- Push was received after more than 1 minute and before 3 minutes by user
+  perception.
+- Result restore worked.
+- Delete was not tested in this pass.
+
+Current decision:
+
+Do not implement a progress bar or upload architecture change yet. Continue
+Build 23 QA, preserve QA rows, and collect iPhone `[upload_timing]` plus Render
+Dashboard `[source_video_timing]` logs before making the next change.
+
 Durable analysis reference:
 
 ```text

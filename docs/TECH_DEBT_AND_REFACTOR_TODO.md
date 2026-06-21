@@ -317,6 +317,26 @@ Derived measurements:
 - Job creation time: `analysis_job_queued.elapsedMs - moment_inserted.elapsedMs`.
 - Server response overhead: `response_sent.elapsedMs - analysis_job_queued.elapsedMs`.
 
+Build 23 QA timing note:
+
+The first Build 23 real-device QA pass produced useful directional estimates,
+but not final bottleneck proof. The tested video was about 18.25 MB and about 9
+seconds long. User-perceived upload wait was about 5-8 seconds. DB timestamps
+and user observation suggest:
+
+- Upload start estimate to server file/storage flow entry: about 5.2 seconds.
+- Server Storage/Moment creation work: about 3.9 seconds.
+- Job queue/start: within roughly 1 second.
+- Gemini `started_at -> completed_at`: about 50.7 seconds.
+- Push was received after more than 1 minute and before 3 minutes by user
+  perception.
+
+This is enough to say the Build 23 Upload Overlay is acceptable for now. It is
+not enough to add a progress bar, switch to direct upload, or redesign the
+upload architecture. Before making those changes, collect the actual iPhone
+`[upload_timing]` and Render Dashboard `[source_video_timing]` lines for the
+same upload.
+
 QA procedure:
 
 1. Use a physical iPhone, not simulator upload, unless explicitly requested.
