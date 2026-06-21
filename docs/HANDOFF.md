@@ -404,26 +404,29 @@ capture paired iPhone `[upload_timing]` logs and Render Dashboard
 
 Signed/direct upload architecture decision:
 
-Do not switch away from the current Render multipart relay yet. Build 23 QA
-shows the current path is good enough to keep testing:
+Signed/direct upload is now implemented in code as the default upload path,
+with Render multipart retained as fallback:
 
 ```text
 app
--> Render /api/moments/from-source-video multipart
--> Render file receive
--> Supabase Storage upload by Render
--> Moment
--> AnalysisJob
--> Gemini
+-> POST /api/video-upload-targets
+-> Supabase signed direct upload
+-> POST /api/moments/from-uploaded-source
+-> Storage object verification
+-> Moment/AnalysisJob
+-> Gemini analysis
 ```
 
-Because file upload is the core action of the product, signed/direct upload
-stays P1 architecture backlog. The future shape should be upload target request
--> signed upload URL -> app direct upload to Supabase Storage -> finalize
-endpoint -> Storage object verification -> Moment/AnalysisJob creation. It
-should be triggered by repeated evidence: larger 25-50 MB+ files, frequent
-10s+ upload waits, Render bandwidth/memory pressure, upload failures, product
-need for progress percentage, or multi-user/concurrent upload QA.
+The legacy `POST /api/moments/from-source-video` path remains available. The
+app first attempts direct upload + finalize, then falls back to multipart if
+the direct path fails.
+
+Upload target tracking is prepared in `supabase/phase10_upload_targets.sql`.
+The target lifecycle is `issued -> uploaded -> finalized`, with `failed` for
+finalize/create failures. Orphan candidates are old `issued`, `uploaded`, or
+`failed` rows. Automatic deletion is not implemented. The migration is not yet
+applied remotely; server tracking is best-effort and should not break upload if
+the table is missing.
 
 Draft Upload Flow decision:
 
@@ -435,7 +438,8 @@ video selected
 -> local draft created
 -> app can close
 -> continue previous draft / start new
--> current upload-first Render multipart upload
+-> signed/direct upload
+-> finalize
 -> Moment/AnalysisJob
 ```
 
@@ -450,11 +454,11 @@ Implementation status:
 - Upload failure stores `upload_failed` and keeps retry possible.
 
 The concepts remain separate: Draft is user work in progress, signed/direct
-upload is the future transport method, finalize will later turn uploaded media
-into a Moment, and Moment means the server has durable input and can analyze.
-Signed/direct upload, finalize endpoint, and orphan cleanup are still
-unimplemented. Future multi-user design should account for `uploadId`, future
-`userId`, user-scoped Storage paths, ownership validation, and orphan cleanup.
+upload is the transport method, finalize turns uploaded media into a Moment,
+and Moment means the server has durable input and can analyze. Orphan cleanup
+automation remains unimplemented. Future multi-user design should account for
+future `userId`, stronger user-scoped Storage policies, ownership validation,
+and cleanup automation.
 
 Next stage:
 

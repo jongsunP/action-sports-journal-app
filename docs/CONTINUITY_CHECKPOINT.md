@@ -340,26 +340,26 @@ is needed.
 
 Signed/direct upload architecture decision:
 
-The current Render multipart relay remains active for Build 23 QA. It is
-working well enough for the current stage:
+Signed/direct upload is implemented in code as the default upload path:
 
 ```text
 app
--> Render /api/moments/from-source-video multipart
--> Render receives file
--> Render uploads to Supabase Storage
--> Moment created
--> AnalysisJob created
--> Gemini analysis
+-> POST /api/video-upload-targets
+-> Supabase signed direct upload
+-> POST /api/moments/from-uploaded-source
+-> Storage verification
+-> Moment and AnalysisJob
+-> Gemini analysis starts
 ```
 
-Do not implement signed/direct upload immediately. Keep it as a P1 architecture
-backlog item because video upload is the core product action. The future
-candidate shape is upload target request -> signed upload URL -> app direct
-Storage upload -> finalize endpoint -> Storage verification -> Moment and
-AnalysisJob creation. Revisit after 5-10 paired timing samples or if larger
-files, 10s+ upload waits, Render bandwidth/memory pressure, upload failures,
-progress percentage, or concurrent users become recurring issues.
+The previous Render multipart upload-first path remains as fallback through
+`POST /api/moments/from-source-video`.
+
+Upload target tracking is prepared through `supabase/phase10_upload_targets.sql`.
+Lifecycle states are `issued`, `uploaded`, `finalized`, and `failed`. Orphan
+candidates are old `issued`, `uploaded`, or `failed` rows. Automatic deletion
+is not implemented. The phase10 migration is not applied remotely yet; tracking
+is best-effort so a missing table should not block upload.
 
 Draft Upload Flow decision:
 
@@ -371,7 +371,8 @@ video selected
 -> local draft
 -> app can close
 -> continue previous draft / start new
--> current upload-first Render multipart upload
+-> signed/direct upload
+-> finalize
 -> Moment and AnalysisJob
 ```
 
@@ -386,11 +387,10 @@ Current behavior:
 - Upload failure stores `upload_failed` and keeps retry possible.
 
 Concept boundary: Draft is the user's selected upload work; signed/direct
-upload is the future transport; finalize later turns uploaded media into a
-server-side Moment; Moment means durable input exists and analysis can start.
-Signed/direct upload, finalize endpoint, and orphan cleanup remain
-unimplemented. Future multi-user design should consider `uploadId`, future
-`userId`, Storage path ownership, orphan cleanup, and path shape
+upload is the transport; finalize turns uploaded media into a server-side
+Moment; Moment means durable input exists and analysis can start. Orphan
+cleanup automation remains unimplemented. Future multi-user design should
+consider future `userId`, Storage path ownership, orphan cleanup, and path shape
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Durable pipeline reference:

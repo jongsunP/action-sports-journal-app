@@ -293,12 +293,11 @@ Build 23 real-device QA validated the surrounding product flow:
 
 Decision:
 
-Do not implement signed/direct upload immediately. Keep the current path for
-Build 23 QA and collect more timing data first. However, because video upload
-is the product's core action, signed/direct upload remains a P1 architecture
-backlog item.
+Signed/direct upload is implemented in code as the default path while keeping
+the current Render multipart relay as fallback. Build/device QA still needs to
+validate this path before treating it as product-stable.
 
-Long-term recommended shape:
+Implemented shape:
 
 ```text
 app
@@ -327,9 +326,8 @@ Advantages:
 - better matches video upload as a core product capability,
 - creates a cleaner path toward resumable upload later.
 
-Required design before implementation:
+Remaining requirements:
 
-- finalize endpoint,
 - orphan object cleanup for uploaded-but-not-finalized files,
 - user ownership and path validation,
 - file size and content type limits,
@@ -338,7 +336,7 @@ Required design before implementation:
 
 Switching criteria:
 
-Revisit signed/direct upload if any of these repeat:
+Revisit and harden signed/direct upload if any of these repeat:
 
 - 25-50 MB+ videos become common,
 - upload wait is frequently over 10 seconds,
@@ -347,15 +345,30 @@ Revisit signed/direct upload if any of these repeat:
 - progress percentage becomes product-critical,
 - multi-user or concurrent upload QA starts.
 
+Current tracking state:
+
+`supabase/phase10_upload_targets.sql` adds `upload_targets` for target
+lifecycle tracking:
+
+```text
+issued
+-> uploaded
+-> finalized
+```
+
+Failures are recorded as `failed`. Orphan candidates are old rows in `issued`,
+`uploaded`, or `failed`. Automatic deletion is intentionally not implemented
+yet. The phase10 migration has not been applied remotely yet. Server tracking
+is best-effort so a missing table logs a warning and should not block upload.
+
 Recommended order:
 
-1. Continue Build 23 QA.
-2. Collect 5-10 paired iPhone `[upload_timing]` and Render
-   `[source_video_timing]` samples.
-3. Compare upload time by file size.
-4. Finalize signed/direct upload design only after repeated evidence.
-5. Implement `POST /api/video-upload-targets` and
-   `POST /api/moments/from-uploaded-source` if the criteria are met.
+1. Decide whether to apply `supabase/phase10_upload_targets.sql` before the
+   next build/device QA.
+2. If applied, verify `issued -> uploaded -> finalized` tracking.
+3. Run device QA for direct upload + finalize.
+4. Keep multipart fallback until direct path is validated repeatedly.
+5. Add cleanup automation only after orphan candidates are observable.
 
 ### Draft Upload Flow Architecture
 
@@ -404,19 +417,18 @@ select video
 -> create local draft
 -> app can close
 -> app re-entry offers continue previous draft / start new
--> current upload-first Render multipart upload
+-> signed/direct upload
+-> finalize endpoint
 -> Moment created
 -> AnalysisJob created
 -> Gemini analysis starts
 ```
 
-Future long-term flow after signed/direct upload:
+Fallback flow:
 
 ```text
 local draft
--> request upload target
--> signed/direct upload
--> finalize endpoint
+-> Render multipart /api/moments/from-source-video
 -> Moment created
 -> AnalysisJob created
 -> Gemini analysis starts
@@ -443,7 +455,9 @@ Remaining risks:
 
 - local video URI persistence after app relaunch needs verification,
 - Draft and remote Moment boundaries can become confusing,
-- signed/direct upload and finalize still need ownership and cleanup design,
+- signed/direct upload and finalize need device QA,
+- phase10 upload target tracking needs remote migration before full tracking,
+- orphan cleanup automation is still missing,
 - retry behavior after `upload_failed` needs real-device QA.
 
 Recommended order:
@@ -452,8 +466,7 @@ Recommended order:
 2. Verify draft resume prompt after app restart.
 3. Verify `upload_failed` retry behavior.
 4. Collect upload timing data.
-5. Implement signed/direct upload and finalize endpoint only after criteria are
-   met.
+5. Apply and verify phase10 tracking if proceeding to direct upload QA.
 6. Implement orphan cleanup.
 7. Strengthen ownership during Auth/RLS work.
 

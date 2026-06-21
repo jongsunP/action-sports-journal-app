@@ -533,29 +533,29 @@ Build 23 QA running and keep code changes paused until more samples accumulate.
 
 Signed/direct upload architecture decision:
 
-The current Render multipart relay remains the active implementation:
+Signed/direct upload is implemented in code as the default app upload path,
+with Render multipart relay retained as fallback:
 
 ```text
 app
--> Render /api/moments/from-source-video multipart
--> Render receives file
--> Render uploads to Supabase Storage
--> Moment created
--> AnalysisJob created
--> Gemini analysis
+-> POST /api/video-upload-targets
+-> Supabase signed direct upload
+-> POST /api/moments/from-uploaded-source
+-> Render verifies Storage object
+-> Moment/AnalysisJob created
+-> Gemini analysis starts
 ```
 
-This is acceptable for Build 23 QA because upload-first behavior, blocking
-Upload Overlay, Push, and restore all passed the first real-device check.
-However, video upload is the core product action. Keep signed/direct upload as
-a P1 architecture backlog item, not a progress-bar-only enhancement. The
-long-term shape is upload target request -> signed upload URL -> direct
-Supabase Storage upload -> finalize endpoint -> Moment/AnalysisJob creation.
+The legacy `POST /api/moments/from-source-video` multipart path remains in
+place as fallback. If direct upload or finalize fails, the app falls back to
+the existing multipart upload-first path.
 
-Do not switch immediately. Revisit if 25-50 MB+ videos become common, upload
-waits over 10 seconds repeat, Render memory/bandwidth becomes a bottleneck,
-upload failures increase, progress percentage becomes product-critical, or
-multi-user/concurrent upload QA starts.
+Upload target tracking is prepared through `supabase/phase10_upload_targets.sql`.
+The table tracks `issued -> uploaded -> finalized` and `failed` states. Orphan
+candidates are old rows in `issued`, `uploaded`, or `failed`. Automatic cleanup
+is not implemented yet. The phase10 migration has not been applied remotely,
+and server tracking is best-effort so missing migration does not break upload.
+Before the next build/device QA, decide whether to apply phase10 to Supabase.
 
 Draft Upload Flow architecture decision:
 
@@ -567,7 +567,8 @@ select video
 -> local draft
 -> app can close
 -> continue previous draft / start new
--> current upload-first Render multipart upload
+-> signed/direct upload
+-> finalize
 -> Moment and AnalysisJob
 ```
 
@@ -585,10 +586,9 @@ Implementation status:
 - Failed upload stores `upload_failed` and keeps the draft retryable.
 
 Draft is still not a remote Moment. A Moment is created only after the source
-video reaches the current upload-first backend path. Signed/direct upload,
-finalize endpoint, and orphan cleanup remain unimplemented. Future design
-should reserve `uploadId`, future `userId`, Storage path ownership, and orphan
-cleanup, with a path shape like
+video reaches durable Storage and finalize succeeds. Orphan cleanup remains
+unimplemented. Future design should strengthen `uploadId`, future `userId`,
+Storage path ownership, and cleanup, with a path shape like
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Validated product decisions:

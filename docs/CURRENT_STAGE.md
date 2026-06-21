@@ -262,22 +262,26 @@ Dashboard `[source_video_timing]` logs before making the next change.
 
 Signed/direct upload decision:
 
-The active Build 23 path remains Render multipart relay:
+Signed/direct upload is implemented in code as the default upload path:
 
 ```text
 app
--> Render /api/moments/from-source-video
--> Render receives file
--> Render uploads to Supabase Storage
+-> POST /api/video-upload-targets
+-> Supabase signed direct upload
+-> POST /api/moments/from-uploaded-source
+-> Render verifies Storage object
 -> Moment/AnalysisJob
 -> Gemini
 ```
 
-This is acceptable for the current single-user QA stage. Signed/direct upload
-is still the likely long-term upload architecture because it reduces Render
-file relay load, scales better for larger/concurrent uploads, and improves the
-path toward progress or resumable upload. Keep it as a P1 architecture backlog
-item, but wait for 5-10 paired timing samples before implementing.
+The Render multipart relay remains as fallback through
+`POST /api/moments/from-source-video`. If direct upload or finalize fails, the
+app can still use the previous upload-first path.
+
+Upload target tracking is prepared through `supabase/phase10_upload_targets.sql`
+but is not yet applied to remote Supabase. Server tracking is best-effort: a
+missing `upload_targets` table should warn, not block upload. Before the next
+build/device QA, decide whether to apply phase10 remotely.
 
 Draft Upload Flow decision:
 
@@ -288,7 +292,8 @@ transport:
 select video
 -> local draft
 -> resume previous draft / start new
--> current upload-first Render multipart upload
+-> signed/direct upload
+-> finalize
 -> Moment/AnalysisJob
 ```
 
@@ -303,9 +308,9 @@ Current implementation:
 
 Do not create remote Moments for Drafts. A Draft is local selected upload work;
 a Moment is created only after upload makes the video analysis-ready.
-Signed/direct upload, finalize endpoint, and orphan cleanup are not implemented
-yet. Future design should include `uploadId`, future `userId`, Storage path
-ownership, orphan cleanup, and a path convention like
+Signed/direct upload and finalize are implemented, while orphan cleanup
+automation is not. Future design should include future `userId`, stronger
+Storage path ownership, orphan cleanup, and a path convention like
 `users/{userId}/uploads/{uploadId}/source.mov`.
 
 Durable analysis reference:
