@@ -32,7 +32,6 @@ import {
   createMomentFromSourceVideo,
   deleteMoment,
   hasConfiguredSupabaseMoments,
-  listMoments,
   updateMomentStatus,
   uploadMomentSourceVideo,
 } from '../../services/moments';
@@ -58,10 +57,10 @@ import {
   getVideoAssetFromSession,
 } from './sessionFormatters';
 import {
-  loadPersistedSessionState,
   savePersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
+import { listMomentsWithTimeout, useBootSync } from './useBootSync';
 import { useSyncRemoteMoments } from './useSyncRemoteMoments';
 import { useSessionRepository } from './useSessionRepository';
 
@@ -75,7 +74,6 @@ import type {
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
-const REMOTE_MOMENT_SYNC_TIMEOUT_MS = 8000;
 const PERSISTED_MOMENT_STATUSES: ReadonlySet<MomentStatus> = new Set([
   'queued',
   'processing',
@@ -137,10 +135,6 @@ export function HomeScreen() {
   const [playingVideoSessionId, setPlayingVideoSessionId] = useState<string | null>(
     null,
   );
-  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
-  const [isRemoteMomentSyncLoaded, setIsRemoteMomentSyncLoaded] = useState(
-    !hasConfiguredSupabaseMoments(),
-  );
 
   const syncRemoteMoments = useSyncRemoteMoments({
     remoteMomentIdsBySessionId,
@@ -152,86 +146,25 @@ export function HomeScreen() {
     setVideosBySessionId,
   });
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadPersistedSessions() {
-      try {
-        const parsed = await loadPersistedSessionState();
-
-        if (!parsed || !isMounted) {
-          return;
-        }
-
-        if (Array.isArray(parsed.sessions)) {
-          setSessions(parsed.sessions.map(normalizeRestoredSession));
-        }
-
-        setSelectedGroupId(ACTIVE_WAKEBOARD_GROUP_ID);
-
-        if (parsed.videosBySessionId && typeof parsed.videosBySessionId === 'object') {
-          setVideosBySessionId(parsed.videosBySessionId);
-        }
-
-        if (
-          parsed.analysisBySessionId &&
-          typeof parsed.analysisBySessionId === 'object'
-        ) {
-          setAnalysisBySessionId(parsed.analysisBySessionId);
-        }
-
-        if (
-          parsed.openAiBenchmarkBySessionId &&
-          typeof parsed.openAiBenchmarkBySessionId === 'object'
-        ) {
-          setOpenAiBenchmarkBySessionId(parsed.openAiBenchmarkBySessionId);
-        }
-
-        if (
-          parsed.geminiEvidenceBySessionId &&
-          typeof parsed.geminiEvidenceBySessionId === 'object'
-        ) {
-          setGeminiEvidenceBySessionId(parsed.geminiEvidenceBySessionId);
-        }
-
-        if (
-          parsed.userConfirmedTrickBySessionId &&
-          typeof parsed.userConfirmedTrickBySessionId === 'object'
-        ) {
-          setUserConfirmedTrickBySessionId(parsed.userConfirmedTrickBySessionId);
-        }
-
-        if (
-          parsed.thumbnailsBySessionId &&
-          typeof parsed.thumbnailsBySessionId === 'object'
-        ) {
-          setThumbnailsBySessionId(parsed.thumbnailsBySessionId);
-        }
-
-        if (
-          parsed.remoteMomentIdsBySessionId &&
-          typeof parsed.remoteMomentIdsBySessionId === 'object'
-        ) {
-          setRemoteMomentIdsBySessionId(parsed.remoteMomentIdsBySessionId);
-        }
-      } catch {
-        Alert.alert(
-          '기록을 불러오지 못했습니다',
-          '앱은 기본 라이딩 기록으로 계속 실행됩니다.',
-        );
-      } finally {
-        if (isMounted) {
-          setIsStorageLoaded(true);
-        }
-      }
-    }
-
-    loadPersistedSessions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const {
+    isLoadingInitialMoments,
+    isRemoteMomentSyncLoaded,
+    isStorageLoaded,
+  } = useBootSync({
+    initialGroupId: ACTIVE_WAKEBOARD_GROUP_ID,
+    normalizeRestoredSession,
+    remoteMomentIdsBySessionId,
+    setAnalysisBySessionId,
+    setGeminiEvidenceBySessionId,
+    setOpenAiBenchmarkBySessionId,
+    setRemoteMomentIdsBySessionId,
+    setSelectedGroupId,
+    setSessions,
+    setThumbnailsBySessionId,
+    setUserConfirmedTrickBySessionId,
+    setVideosBySessionId,
+    syncRemoteMoments,
+  });
 
   useEffect(() => {
     if (!isStorageLoaded) {
@@ -267,50 +200,6 @@ export function HomeScreen() {
     thumbnailsBySessionId,
     userConfirmedTrickBySessionId,
     videosBySessionId,
-  ]);
-
-  useEffect(() => {
-    if (
-      !isStorageLoaded ||
-      isRemoteMomentSyncLoaded ||
-      !hasConfiguredSupabaseMoments()
-    ) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadRemoteMoments() {
-      try {
-        const remoteMoments = await listMomentsWithTimeout();
-
-        if (!isMounted) {
-          return;
-        }
-
-        syncRemoteMoments(remoteMoments);
-      } catch (error) {
-        console.warn(
-          'Supabase moment list failed:',
-          error instanceof Error ? error.message : 'Unknown error',
-        );
-      } finally {
-        if (isMounted) {
-          setIsRemoteMomentSyncLoaded(true);
-        }
-      }
-    }
-
-    void loadRemoteMoments();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    isRemoteMomentSyncLoaded,
-    isStorageLoaded,
-    remoteMomentIdsBySessionId,
-    syncRemoteMoments,
   ]);
 
   useEffect(() => {
@@ -412,9 +301,6 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
-  const isLoadingInitialMoments =
-    !isStorageLoaded ||
-    (hasConfiguredSupabaseMoments() && !isRemoteMomentSyncLoaded);
   const homeSessionSummaries = useMemo(
     () =>
       visibleSessions.map((session) => {
@@ -3175,25 +3061,6 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 });
-
-async function listMomentsWithTimeout() {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    return await Promise.race([
-      listMoments(),
-      new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error('Remote moment sync timed out.'));
-        }, REMOTE_MOMENT_SYNC_TIMEOUT_MS);
-      }),
-    ]);
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  }
-}
 
 function createLocalSessionId() {
   const randomUuid = globalThis.crypto?.randomUUID?.();
