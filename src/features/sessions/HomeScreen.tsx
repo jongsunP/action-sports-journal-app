@@ -373,6 +373,10 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
+  const shouldBlockForRemoteRefresh =
+    isRemoteRefreshActive &&
+    (remoteRefreshReason === 'initial_retry' ||
+      remoteRefreshReason === 'push_response');
   const syncBlockingCopy =
     remoteRefreshReason === 'initial_retry' || isInitialRemoteMomentSyncPending
       ? {
@@ -700,7 +704,7 @@ export function HomeScreen() {
         onChangeTab={setActiveTab}
         styles={styles}
       />
-      {isRemoteRefreshActive ? (
+      {shouldBlockForRemoteRefresh ? (
         <View accessibilityRole="progressbar" style={styles.syncBlockingOverlay}>
           <View style={styles.syncBlockingCard}>
             <ActivityIndicator color="#f8fafc" size="large" />
