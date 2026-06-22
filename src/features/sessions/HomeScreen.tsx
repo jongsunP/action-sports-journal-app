@@ -100,6 +100,17 @@ type RemoteMomentFirstPage = {
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
 
+function getNextPendingRemoteRefreshReason(
+  currentReason: RemoteRefreshReason | null,
+  nextReason: RemoteRefreshReason,
+) {
+  if (currentReason === 'upload_success' || nextReason === 'upload_success') {
+    return 'upload_success';
+  }
+
+  return nextReason;
+}
+
 export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
@@ -133,6 +144,7 @@ export function HomeScreen() {
   >(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
+  const pendingRemoteRefreshReasonRef = useRef<RemoteRefreshReason | null>(null);
   const hasAppliedBootVideoArchivePageRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
   const didTriggerSwipeHapticRef = useRef(false);
@@ -269,56 +281,82 @@ export function HomeScreen() {
       if (
         !isStorageLoaded ||
         !isRemoteMomentSyncLoaded ||
-        !hasConfiguredSupabaseMoments() ||
-        isRefreshingRemoteMomentsRef.current
+        !hasConfiguredSupabaseMoments()
       ) {
         return;
       }
 
-      if (reason === 'push_response') {
-        const completedBootSyncAt = completedBootSyncAtRef.current;
-        const shouldSkipRecentBootRefresh =
-          completedBootSyncAt !== null &&
-          Date.now() - completedBootSyncAt <= PUSH_RESPONSE_BOOT_DEDUPE_MS;
-
-        if (shouldSkipRecentBootRefresh) {
-          console.info('[moment_sync]', {
-            event: 'remote_moments_refresh_skipped',
-            reason,
-            skippedBecause: 'recent_boot_sync',
-          });
-          return;
-        }
+      if (isRefreshingRemoteMomentsRef.current) {
+        pendingRemoteRefreshReasonRef.current = getNextPendingRemoteRefreshReason(
+          pendingRemoteRefreshReasonRef.current,
+          reason,
+        );
+        console.info('[moment_sync]', {
+          event: 'remote_moments_refresh_queued',
+          reason,
+          pendingReason: pendingRemoteRefreshReasonRef.current,
+        });
+        return;
       }
 
       isRefreshingRemoteMomentsRef.current = true;
+      let nextRefreshReason: RemoteRefreshReason | null = reason;
 
       try {
-        const remoteMomentPage = await listMomentPageWithTimeout({
-          limit: MOMENT_LIST_PAGE_SIZE,
-        });
-        const remoteMoments = remoteMomentPage.moments;
-        const completedRealtimeSession = findNewRealtimeCompletedSession({
-          remoteMomentIdsBySessionId,
-          remoteMoments,
-          sessions,
-        });
-        syncRemoteMoments(remoteMoments);
-        markRemoteMomentSyncCompleted();
-        if (reason === 'realtime') {
-          pendingRealtimeCompletionNoticeRef.current = completedRealtimeSession;
+        while (nextRefreshReason) {
+          const currentReason = nextRefreshReason;
+          nextRefreshReason = null;
+
+          if (currentReason === 'push_response') {
+            const completedBootSyncAt = completedBootSyncAtRef.current;
+            const shouldSkipRecentBootRefresh =
+              completedBootSyncAt !== null &&
+              Date.now() - completedBootSyncAt <= PUSH_RESPONSE_BOOT_DEDUPE_MS;
+
+            if (shouldSkipRecentBootRefresh) {
+              console.info('[moment_sync]', {
+                event: 'remote_moments_refresh_skipped',
+                reason: currentReason,
+                skippedBecause: 'recent_boot_sync',
+              });
+              nextRefreshReason = pendingRemoteRefreshReasonRef.current;
+              pendingRemoteRefreshReasonRef.current = null;
+              continue;
+            }
+          }
+
+          try {
+            const remoteMomentPage = await listMomentPageWithTimeout({
+              limit: MOMENT_LIST_PAGE_SIZE,
+            });
+            const remoteMoments = remoteMomentPage.moments;
+            const completedRealtimeSession = findNewRealtimeCompletedSession({
+              remoteMomentIdsBySessionId,
+              remoteMoments,
+              sessions,
+            });
+            syncRemoteMoments(remoteMoments);
+            markRemoteMomentSyncCompleted();
+            if (currentReason === 'realtime') {
+              pendingRealtimeCompletionNoticeRef.current =
+                completedRealtimeSession;
+            }
+            applyVideoArchiveFirstPage(remoteMomentPage);
+            console.info('[moment_sync]', {
+              event: 'remote_moments_refreshed',
+              reason: currentReason,
+              remoteMomentCount: remoteMoments.length,
+            });
+          } catch (error) {
+            console.warn(
+              'Supabase moment refresh failed:',
+              error instanceof Error ? error.message : 'Unknown error',
+            );
+          }
+
+          nextRefreshReason = pendingRemoteRefreshReasonRef.current;
+          pendingRemoteRefreshReasonRef.current = null;
         }
-        applyVideoArchiveFirstPage(remoteMomentPage);
-        console.info('[moment_sync]', {
-          event: 'remote_moments_refreshed',
-          reason,
-          remoteMomentCount: remoteMoments.length,
-        });
-      } catch (error) {
-        console.warn(
-          'Supabase moment refresh failed:',
-          error instanceof Error ? error.message : 'Unknown error',
-        );
       } finally {
         isRefreshingRemoteMomentsRef.current = false;
       }
@@ -800,11 +838,15 @@ export function HomeScreen() {
   } = useUploadMoment({
     activityGroupId: selectedGroup?.id,
     extractEvidence: handleExtractEvidence,
-    setActiveTab,
     setRemoteMomentIdForSession,
     setSessions,
     setThumbnailForSession,
     setVideoForSession,
+    activateTab: (tabId) => {
+      handleChangeTab(tabId, {
+        skipHaptic: true,
+      });
+    },
     onUploadSuccess: () => {
       void refreshRemoteMoments('upload_success');
     },

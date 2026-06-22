@@ -50,7 +50,7 @@ type UseUploadMomentParams = {
     session: Session,
     options?: ExtractEvidenceOptions,
   ) => Promise<void>;
-  setActiveTab: (tabId: AppTabId) => void;
+  activateTab: (tabId: AppTabId) => void;
   setRemoteMomentIdForSession: (
     sessionId: string,
     remoteMomentId: string,
@@ -67,8 +67,8 @@ type UseUploadMomentParams = {
 
 export function useUploadMoment({
   activityGroupId,
+  activateTab,
   extractEvidence,
-  setActiveTab,
   setRemoteMomentIdForSession,
   setSessions,
   setThumbnailForSession,
@@ -302,7 +302,7 @@ export function useUploadMoment({
     } else {
       createThumbnailForSession(nextSession.id, videoForUpload);
     }
-    setActiveTab('video');
+    activateTab('video');
     void (async () => {
       let uploadStartedAt: number | undefined;
       let usedUploadFallback = false;
