@@ -231,11 +231,38 @@ Build 43 QA record:
 
 Part 2 entry priority:
 
-1. Compression / pre-upload video optimization.
+1. Compression measurement / benchmark.
 2. Auth / Ownership.
-3. Unread Analysis Badge.
-4. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
-5. Push Deep Link.
+3. Compression MVP apply-or-defer decision.
+4. Unread Analysis Badge.
+5. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
+6. Push Deep Link.
+
+Compression measurement / benchmark record:
+
+- Problem: ASJ uploads original video bytes today. That is correct for quality,
+  but it can become expensive and slow as users upload more action-sports
+  footage.
+- Cause: current Direct Upload uses local file validation plus
+  `FileSystem.uploadAsync` to send the selected file unchanged. No encode,
+  bitrate reduction, resolution downscale, or proxy generation exists.
+- Options: keep original-only, client compression, server compression, or
+  hybrid.
+- Decision: Compression is needed as a product investigation, but it should not
+  be applied before measurement and AI quality comparison.
+- Result to collect first: file size, duration, upload time, finalize time, and
+  original-vs-compressed AI result deltas.
+- Compression guardrails:
+  - keep small/short videos original when the savings are not worth quality
+    risk;
+  - try conservative compression only for larger videos;
+  - avoid excessive frame-rate reduction;
+  - use a 1080p-oriented optimization candidate before lower-quality presets.
+- AI quality comparison must cover edge load, approach, board angle, rope
+  tension, pop, rotation axis, landing, and trick identification.
+- Priority implication: run Compression measurement/benchmark before Auth if
+  it is only instrumentation and analysis; defer production Compression MVP
+  until the quality tradeoff is known, likely around Auth / Ownership work.
 
 Build 41/42 FlatList failure decision record:
 

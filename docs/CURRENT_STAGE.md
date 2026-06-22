@@ -191,11 +191,36 @@ Part 2 entry checkpoint:
 - Result: Build 43 QA passed launch, Home, Video, Pager/Haptic, Upload,
   Push/Realtime, and deletion.
 - Remaining TODO priority:
-  1. Compression / pre-upload video optimization.
+  1. Compression measurement / benchmark.
   2. Auth / Ownership.
-  3. Unread Analysis Badge.
-  4. Infinite Scroll re-attempt in a safer prototype.
-  5. Push Deep Link.
+  3. Compression MVP apply-or-defer decision.
+  4. Unread Analysis Badge.
+  5. Infinite Scroll re-attempt in a safer prototype.
+  6. Push Deep Link.
+
+Compression measurement / benchmark decision:
+
+- Problem: current uploads send the original selected video bytes. This works,
+  but long-term upload time, mobile network use, and Supabase Storage cost can
+  become user-facing and operational bottlenecks.
+- Cause: there is no pre-upload encode, resize, bitrate optimization, or
+  compression step. Metadata is collected, but the media body is unchanged.
+- Options: upload original only; compress on the client before upload; compress
+  on the server after upload; or use a hybrid strategy.
+- Decision: Compression is likely necessary, but do not apply it immediately.
+  First measure upload behavior and compare AI output on original versus
+  compressed copies.
+- Result expected before implementation: record file size, video duration,
+  upload time, finalize time, and AI analysis differences.
+- Compression principles:
+  - small/short videos may stay original;
+  - only large videos should enter conservative compression candidates;
+  - do not aggressively reduce frame rate;
+  - start with a conservative 1080p optimization candidate.
+- AI quality comparison must include edge load, approach, board angle, rope
+  tension, pop, rotation axis, landing, and trick identification.
+- Remaining TODO: design and run a measurement/benchmark pass before deciding
+  whether Compression MVP ships before or after Auth / Ownership.
 
 Failure cases to preserve:
 

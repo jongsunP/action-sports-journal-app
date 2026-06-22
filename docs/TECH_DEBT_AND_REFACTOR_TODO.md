@@ -159,11 +159,12 @@ Priority:
 
 The Part 2 priority order is currently:
 
-1. Compression / pre-upload video optimization.
+1. Compression measurement / benchmark.
 2. Auth / Ownership.
-3. Unread Analysis Badge.
-4. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
-5. Push Deep Link.
+3. Compression MVP apply-or-defer decision.
+4. Unread Analysis Badge.
+5. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
+6. Push Deep Link.
 
 Infinite Scroll is still architecturally important before a large public
 archive, but it should not displace upload stability, ownership, or visible
@@ -191,6 +192,76 @@ Cursor Pagination rationale:
 - Decision: cursor pagination with `occurred_at desc` plus `id desc`.
 - Result: better stability under inserts/deletes and future filters than
   offset-based paging.
+
+## Part 2 P2 - Video Compression / Upload Optimization
+
+Problem:
+
+Current upload sends the original selected video bytes. This preserves analysis
+quality, but it can increase upload time, mobile network use, Supabase Storage
+cost, and user friction as ASJ grows.
+
+Cause:
+
+Direct Upload validates the local file and sends it through
+`FileSystem.uploadAsync` as binary content. The app records metadata such as
+file size, MIME type, and duration, but it does not re-encode, resize, compress,
+or generate a separate analysis proxy before upload.
+
+Options:
+
+- Keep original-only upload.
+- Compress before upload on device.
+- Upload original first and compress on the server.
+- Use a hybrid: only large videos get conservative client optimization, while
+  the server can later generate playback/share proxies.
+
+Decision:
+
+Compression is likely needed, but do not implement it before measurement and
+benchmarking. Action-sports AI analysis depends on visual details such as edge
+load, board angle, rope tension, pop, rotation axis, and landing. A quick
+compression MVP could reduce upload cost while silently harming evidence
+quality.
+
+Measurement requirements:
+
+- Upload file size.
+- Video duration.
+- Upload time.
+- Finalize time.
+- Original versus compressed AI result comparison.
+
+Compression guardrails:
+
+- Small or short videos may stay original.
+- Large videos are the first compression candidates.
+- Do not aggressively lower frame rate.
+- Start with a conservative 1080p optimization candidate.
+
+AI quality comparison:
+
+- edge load
+- approach
+- board angle
+- rope tension
+- pop
+- rotation axis
+- landing
+- trick identification
+
+Recommended order:
+
+1. Add or collect measurement for current uploads.
+2. Define conservative compression presets without enabling them by default.
+3. Run original-vs-compressed AI benchmark on representative clips.
+4. Decide whether Compression MVP should ship before, alongside, or after Auth
+   / Ownership.
+
+Priority:
+
+Compression measurement and benchmark should happen early in Part 2. Production
+Compression MVP should wait until the quality tradeoff is known.
 
 ## Build 29 Direct Upload Case Study - 2026-06-21
 

@@ -199,11 +199,38 @@ Build 43 stable baseline:
 
 Part 2 priority order from this handoff:
 
-1. Compression / pre-upload video optimization.
+1. Compression measurement / benchmark.
 2. Auth / Ownership.
-3. Unread Analysis Badge.
-4. Infinite Scroll re-attempt after FlatList/PagerView isolation.
-5. Push Deep Link.
+3. Compression MVP apply-or-defer decision.
+4. Unread Analysis Badge.
+5. Infinite Scroll re-attempt after FlatList/PagerView isolation.
+6. Push Deep Link.
+
+Compression handoff:
+
+- Problem: upload currently sends the original selected video unchanged.
+- Cause: Direct Upload validates local file size and uploads bytes through
+  `FileSystem.uploadAsync`, but there is no encode/compression pipeline.
+- Options: keep original-only upload; add client-side compression; add
+  server-side compression; or use a hybrid where large videos get conservative
+  client optimization and the server can later generate proxy media.
+- Decision: do not implement Compression yet. Start with measurement and AI
+  benchmark because wakeboarding analysis depends on small visual details.
+- Result needed before implementation:
+  - upload file size;
+  - video duration;
+  - upload time;
+  - finalize time;
+  - original versus compressed AI result comparison.
+- Candidate policy:
+  - small/short videos can stay original;
+  - large videos are candidates for conservative compression;
+  - avoid aggressive frame-rate reduction;
+  - test a 1080p-oriented conservative preset first.
+- AI comparison fields: edge load, approach, board angle, rope tension, pop,
+  rotation axis, landing, and trick identification.
+- Next handoff action: create a benchmark plan or instrumentation pass before
+  deciding whether to ship Compression MVP.
 
 Failure records:
 
