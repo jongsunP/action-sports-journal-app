@@ -84,6 +84,7 @@ const ENABLE_INTERNAL_DEBUG_VIEWER =
 type RemoteRefreshReason =
   | 'foreground'
   | 'initial_retry'
+  | 'upload_success'
   | 'push_response'
   | 'realtime';
 type AnalysisCompletionNotice = {
@@ -804,6 +805,9 @@ export function HomeScreen() {
     setSessions,
     setThumbnailForSession,
     setVideoForSession,
+    onUploadSuccess: () => {
+      void refreshRemoteMoments('upload_success');
+    },
     updateLocalMomentStatus,
   });
 

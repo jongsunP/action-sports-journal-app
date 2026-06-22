@@ -58,6 +58,7 @@ type UseUploadMomentParams = {
   setSessions: Dispatch<SetStateAction<Session[]>>;
   setThumbnailForSession: (sessionId: string, thumbnailUri: string) => void;
   setVideoForSession: (sessionId: string, video: SessionVideoAsset) => void;
+  onUploadSuccess?: () => void;
   updateLocalMomentStatus: (
     sessionId: string,
     momentStatus: Session['momentStatus'],
@@ -72,6 +73,7 @@ export function useUploadMoment({
   setSessions,
   setThumbnailForSession,
   setVideoForSession,
+  onUploadSuccess,
   updateLocalMomentStatus,
 }: UseUploadMomentParams) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -383,6 +385,7 @@ export function useUploadMoment({
         });
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
+        onUploadSuccess?.();
         setUploadDraft(null);
         setSelectedVideo(null);
         selectedVideoThumbnailUriRef.current = null;
