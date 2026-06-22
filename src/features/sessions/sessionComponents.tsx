@@ -1,5 +1,7 @@
-import { useRef } from 'react';
+import { useRef, type ReactElement } from 'react';
 import {
+  ActivityIndicator,
+  FlatList,
   type GestureResponderEvent,
   Image,
   Modal,
@@ -394,14 +396,22 @@ export function PrimaryInsightCard({
 export function VideoArchiveList({
   formatShortSessionDate,
   getVideoArchiveDescription,
+  hasMore = false,
+  header,
   isLoading = false,
+  isLoadingMore = false,
+  onEndReached,
   onOpenSession,
   sessions,
   styles,
 }: {
   formatShortSessionDate: (value: string) => string;
   getVideoArchiveDescription: (session: Session) => string;
+  hasMore?: boolean;
+  header?: ReactElement | null;
   isLoading?: boolean;
+  isLoadingMore?: boolean;
+  onEndReached?: () => void;
   onOpenSession: (session: Session) => void;
   sessions: SessionSummary[];
   styles: HomeScreenStyles;
@@ -446,70 +456,93 @@ export function VideoArchiveList({
     onOpenSession(session);
   };
 
-  if (sessions.length === 0) {
-    return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>
-          {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
-        </Text>
-        <Text style={styles.emptyText}>
-          {isLoading
-            ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
-            : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
-        </Text>
-      </View>
-    );
-  }
+  const renderSessionRow = ({ item }: { item: SessionSummary }) => {
+    const { card, momentStatus, session } = item;
 
-  return (
-    <View style={styles.videoArchiveList}>
-      {sessions.map(({ card, momentStatus, session }) => (
-        <Pressable
-          accessibilityRole="button"
-          key={session.id}
-          onPress={() => handleRowPress(session)}
-          onTouchMove={handleRowTouchMove}
-          onTouchStart={handleRowTouchStart}
-          pressRetentionOffset={{ bottom: 4, left: 8, right: 8, top: 4 }}
-          style={({ pressed }) => [
-            styles.videoArchiveRow,
-            pressed ? styles.sessionRowPressed : undefined,
-          ]}
-        >
-          <View style={styles.videoArchiveThumb}>
-            {card.thumbnailUri ? (
-              <Image
-                resizeMode="cover"
-                source={{ uri: card.thumbnailUri }}
-                style={styles.recentThumbImage}
-              />
-            ) : (
-              <View style={styles.recentThumbFallback}>
-                <Text style={styles.recentThumbFallbackText}>
-                  {session.videoUri ? 'CLIP' : 'NOTE'}
-                </Text>
-              </View>
-            )}
-            <View style={styles.mediaStatusDotOverlay}>
-              <MomentStatusDot status={momentStatus} />
-            </View>
-          </View>
-          <View style={styles.videoArchiveBody}>
-            <View style={styles.videoArchiveMetaRow}>
-              <Text style={styles.recentDate} numberOfLines={1}>
-                {formatShortSessionDate(session.occurredAt)}
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => handleRowPress(session)}
+        onTouchMove={handleRowTouchMove}
+        onTouchStart={handleRowTouchStart}
+        pressRetentionOffset={{ bottom: 4, left: 8, right: 8, top: 4 }}
+        style={({ pressed }) => [
+          styles.videoArchiveRow,
+          pressed ? styles.sessionRowPressed : undefined,
+        ]}
+      >
+        <View style={styles.videoArchiveThumb}>
+          {card.thumbnailUri ? (
+            <Image
+              resizeMode="cover"
+              source={{ uri: card.thumbnailUri }}
+              style={styles.recentThumbImage}
+            />
+          ) : (
+            <View style={styles.recentThumbFallback}>
+              <Text style={styles.recentThumbFallbackText}>
+                {session.videoUri ? 'CLIP' : 'NOTE'}
               </Text>
             </View>
-            <Text style={styles.timelineTitle} numberOfLines={1}>
-              {card.momentTitle}
-            </Text>
-            <Text style={styles.videoArchiveDescription} numberOfLines={2}>
-              {session.notes ?? getVideoArchiveDescription(session)}
+          )}
+          <View style={styles.mediaStatusDotOverlay}>
+            <MomentStatusDot status={momentStatus} />
+          </View>
+        </View>
+        <View style={styles.videoArchiveBody}>
+          <View style={styles.videoArchiveMetaRow}>
+            <Text style={styles.recentDate} numberOfLines={1}>
+              {formatShortSessionDate(session.occurredAt)}
             </Text>
           </View>
-        </Pressable>
-      ))}
-    </View>
+          <Text style={styles.timelineTitle} numberOfLines={1}>
+            {card.momentTitle}
+          </Text>
+          <Text style={styles.videoArchiveDescription} numberOfLines={2}>
+            {session.notes ?? getVideoArchiveDescription(session)}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  };
+
+  return (
+    <FlatList
+      contentContainerStyle={styles.videoArchiveListContent}
+      data={sessions}
+      initialNumToRender={8}
+      ItemSeparatorComponent={() => (
+        <View style={styles.videoArchiveSeparator} />
+      )}
+      keyExtractor={({ session }) => session.id}
+      ListEmptyComponent={
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>
+            {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
+          </Text>
+          <Text style={styles.emptyText}>
+            {isLoading
+              ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
+              : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
+          </Text>
+        </View>
+      }
+      ListFooterComponent={
+        isLoadingMore ? (
+          <View style={styles.videoArchiveFooter}>
+            <ActivityIndicator color="#9ca3af" />
+          </View>
+        ) : null
+      }
+      ListHeaderComponent={header}
+      maxToRenderPerBatch={8}
+      onEndReached={hasMore && !isLoadingMore ? onEndReached : undefined}
+      onEndReachedThreshold={0.5}
+      renderItem={renderSessionRow}
+      showsVerticalScrollIndicator={false}
+      updateCellsBatchingPeriod={80}
+      windowSize={5}
+    />
   );
 }
 

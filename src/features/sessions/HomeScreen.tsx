@@ -111,6 +111,13 @@ export function HomeScreen() {
     useState<RemoteRefreshReason | null>(null);
   const [analysisCompletionNotice, setAnalysisCompletionNotice] =
     useState<AnalysisCompletionNotice | null>(null);
+  const [hasMoreVideoMoments, setHasMoreVideoMoments] = useState(false);
+  const [hasMountedVideoTab, setHasMountedVideoTab] = useState(false);
+  const [isLoadingMoreVideoMoments, setIsLoadingMoreVideoMoments] =
+    useState(false);
+  const [videoMomentsNextCursor, setVideoMomentsNextCursor] = useState<
+    string | null
+  >(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
@@ -179,6 +186,7 @@ export function HomeScreen() {
     isLoadingInitialMoments,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    initialRemoteMomentPageInfo,
     markRemoteMomentSyncCompleted,
     remoteMomentSyncStatus,
   } = useBootSync({
@@ -198,6 +206,20 @@ export function HomeScreen() {
   });
   const isSessionListLoading =
     isLoadingInitialMoments || isInitialRemoteMomentSyncPending;
+
+  useEffect(() => {
+    setHasMoreVideoMoments(initialRemoteMomentPageInfo.hasMore);
+    setVideoMomentsNextCursor(initialRemoteMomentPageInfo.nextCursor);
+  }, [
+    initialRemoteMomentPageInfo.hasMore,
+    initialRemoteMomentPageInfo.nextCursor,
+  ]);
+
+  useEffect(() => {
+    if (activeTab === 'video') {
+      setHasMountedVideoTab(true);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (
@@ -523,7 +545,43 @@ export function HomeScreen() {
       : {
           body: '방금 완료된 분석 결과를 불러오는 중입니다.',
           title: '결과를 동기화하고 있습니다',
-        };
+      };
+  const handleLoadMoreVideoMoments = useCallback(() => {
+    if (
+      !hasMoreVideoMoments ||
+      !videoMomentsNextCursor ||
+      isLoadingMoreVideoMoments ||
+      !hasConfiguredSupabaseMoments()
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreVideoMoments(true);
+
+    listMomentPageWithTimeout({
+      cursor: videoMomentsNextCursor,
+      limit: MOMENT_LIST_PAGE_SIZE,
+    })
+      .then((remoteMomentPage) => {
+        syncRemoteMoments(remoteMomentPage.moments);
+        setHasMoreVideoMoments(remoteMomentPage.hasMore);
+        setVideoMomentsNextCursor(remoteMomentPage.nextCursor);
+      })
+      .catch((error) => {
+        console.warn(
+          'Supabase moment pagination failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      })
+      .finally(() => {
+        setIsLoadingMoreVideoMoments(false);
+      });
+  }, [
+    hasMoreVideoMoments,
+    isLoadingMoreVideoMoments,
+    syncRemoteMoments,
+    videoMomentsNextCursor,
+  ]);
   const homeSessionSummaries = useMemo(
     () =>
       visibleSessions.map((session) => {
@@ -795,7 +853,7 @@ export function HomeScreen() {
     </>
   );
 
-  const renderVideoTab = () => (
+  const renderVideoArchiveHeader = () => (
     <>
       <View style={styles.tabPageHeader}>
         <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
@@ -810,16 +868,23 @@ export function HomeScreen() {
           <Text style={styles.sectionLabel}>세션 아카이브</Text>
           <Text style={styles.sectionHint}>VIDEO</Text>
         </View>
-        <VideoArchiveList
-          formatShortSessionDate={formatShortSessionDate}
-          getVideoArchiveDescription={getVideoArchiveDescription}
-          isLoading={isSessionListLoading}
-          onOpenSession={openEvidenceSheet}
-          sessions={homeSessionSummaries}
-          styles={styles}
-        />
       </View>
     </>
+  );
+
+  const renderVideoTab = () => (
+    <VideoArchiveList
+      formatShortSessionDate={formatShortSessionDate}
+      getVideoArchiveDescription={getVideoArchiveDescription}
+      hasMore={hasMoreVideoMoments}
+      header={renderVideoArchiveHeader()}
+      isLoading={isSessionListLoading}
+      isLoadingMore={isLoadingMoreVideoMoments}
+      onEndReached={handleLoadMoreVideoMoments}
+      onOpenSession={openEvidenceSheet}
+      sessions={homeSessionSummaries}
+      styles={styles}
+    />
   );
 
   const renderFlowTab = () => (
@@ -833,19 +898,25 @@ export function HomeScreen() {
     route,
   }: {
     route: { key: AppTabId; title: string };
-  }) => (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      {route.key === 'home'
-        ? renderHomeTab()
-        : route.key === 'video'
-          ? renderVideoTab()
-          : renderFlowTab()}
-    </ScrollView>
-  );
+  }) => {
+    if (route.key === 'video') {
+      if (!hasMountedVideoTab && activeTab !== 'video') {
+        return <View style={styles.pagerLazyPlaceholder} />;
+      }
+
+      return renderVideoTab();
+    }
+
+    return (
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {route.key === 'home' ? renderHomeTab() : renderFlowTab()}
+      </ScrollView>
+    );
+  };
 
   return (
     <SafeAreaView
@@ -865,6 +936,8 @@ export function HomeScreen() {
           onSwipeStart={handlePagerSwipeStart}
           renderScene={renderPagerScene}
           renderTabBar={() => null}
+          lazy={({ route }) => route.key === 'video'}
+          lazyPreloadDistance={0}
           style={styles.pager}
           swipeEnabled
         />
@@ -990,6 +1063,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pager: {
+    flex: 1,
+  },
+  pagerLazyPlaceholder: {
     flex: 1,
   },
   scrollContent: {
