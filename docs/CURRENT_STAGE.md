@@ -106,21 +106,38 @@ ASJ's product idea remains original while the UX borrows a proven user learning
 model. Route-backed Bottom Tabs plus Stack remains a later structural
 refactor, not a blocker for adopting the current pager skeleton.
 
+Decision record:
+
+- Problem: Instagram-inflow users may expect major surfaces to feel like a
+  continuous swipeable app, not separate developer-defined screens.
+- Cause: Home, Video, and Growth are different information surfaces, but the
+  user acquisition model depends on Instagram-learned interaction patterns.
+- Options: keep Bottom Tabs only; use a full Instagram-style pager; or keep
+  Bottom Tabs while adding horizontal swipe between the main surfaces.
+- Decision: adopt Bottom Tab + Swipe coexistence for Part 1. Keep haptic
+  feedback because real-device QA made tab changes feel intentional.
+- Result: Pager, Bottom Tabs, and Haptic were positive in QA and remain in the
+  stable Build 43 baseline.
+- Remaining TODO: later evaluate route-backed Bottom Tabs plus Stack for Push
+  deep links, tab state restore, ShareResult routes, and clearer screen
+  lifecycles.
+
 Part 2 P1 pagination / infinite scroll target:
 
 The next structural step should prepare the Moment archive for scale before
 date filters, trick filters, and growth views make the dataset larger. The
-current `/api/moments` implementation returns the full list, and Home / Video
-both derive their surfaces from that complete response. That is acceptable for
-small QA data, but not for hundreds or thousands of Moments.
+server list API now has cursor pagination groundwork, but the Video archive UI
+is intentionally back on the stable `ScrollView + map()` rendering path after
+Build 41/42 launch crashes. Treat Build 43 as the current stability baseline.
 
 Decision:
 
 - Use cursor pagination as the final list architecture.
 - Do not use offset pagination as the primary structure.
 - Home should use only the latest N Moments needed for dashboard sections.
-- Video should become the cursor-paginated archive surface with `FlatList` and
-  infinite scroll.
+- Video should eventually become the cursor-paginated archive surface with
+  infinite scroll, but the first `FlatList` attempt inside the TabView/PagerView
+  scene is paused.
 - Detail can keep using the selected Moment payload now, while leaving room for
   a future `/api/moments/:id` style single-Moment fetch for Push deep links and
   restore.
@@ -129,8 +146,10 @@ Implementation order:
 
 1. Add cursor/limit support to `/api/moments`.
 2. Extend the app `listMoments` API to accept cursor options.
-3. Convert Video from `ScrollView + map()` to `FlatList`.
-4. Add `onEndReached` infinite scroll.
+3. Keep the stable Video `ScrollView + map()` UI until the launch-crash cause
+   is isolated.
+4. Re-attempt infinite scroll in a safer structure: lazy-mounted scene,
+   route-backed Bottom Tabs, or a bounded prototype branch.
 5. Revisit Boot, Foreground, Push, and Realtime refresh policy so they do not
    require whole-list refetches.
 
@@ -141,6 +160,51 @@ Risks:
   downgraded even when only the first page is loaded.
 - Future date/trick filters must be server-side query filters, not client-side
   filtering over a full in-memory archive.
+- Build 41 and Build 42 crashed immediately on launch after the Video
+  `FlatList` scene was introduced. Removing `removeClippedSubviews` alone did
+  not fix it, so the root suspicion is the mounted `FlatList` scene interacting
+  with TabView/PagerView or render-time assumptions in that scene.
+
+Build 43 stable baseline:
+
+- `2665062 fix: rollback video archive flatlist scene`
+- `2a8249b chore: prepare video archive launch hotfix build`
+- Build URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/80e56cb7-385e-47a7-ba57-2e0dd2613562`
+- QA result: launch crash resolved; Home, Video, Pager/Haptic, Upload,
+  Push/Realtime, and deletion all passed.
+- Keep server cursor API, `listMomentsPage`, and Boot first-page policy.
+- Keep Video infinite scroll UI deferred until the scene architecture is
+  re-tested safely.
+
+Part 2 entry checkpoint:
+
+- Problem: Build 41/42 showed that the archive scalability work can destabilize
+  launch when UI virtualization is combined with the current pager scene.
+- Cause: The root stack was not captured, but `FlatList` inside the mounted
+  TabView/PagerView scene is the strongest suspect. The prop-only Build 42
+  fix did not resolve launch crash.
+- Options: rollback all pagination; rollback only the Video `FlatList` scene;
+  or keep shipping a crashing build while investigating.
+- Decision: keep cursor API/helper groundwork and rollback only Video infinite
+  scroll UI. Build 43 is the current stable baseline.
+- Result: Build 43 QA passed launch, Home, Video, Pager/Haptic, Upload,
+  Push/Realtime, and deletion.
+- Remaining TODO priority:
+  1. Compression / pre-upload video optimization.
+  2. Auth / Ownership.
+  3. Unread Analysis Badge.
+  4. Infinite Scroll re-attempt in a safer prototype.
+  5. Push Deep Link.
+
+Failure cases to preserve:
+
+- Network outage QA: Build 40 upload failure was not a Pager/Haptic regression.
+  The device was offline; failure messaging, fallback attempt, final alert, and
+  recovery after network restoration behaved correctly.
+- FlatList crash QA: Build 41 crashed on launch after Video `FlatList` /
+  infinite scroll. Build 42 removed `removeClippedSubviews` but still crashed.
+  Build 43 rollback confirmed the stable path.
 
 Update on 2026-06-20, Analysis-first Product Strategy:
 

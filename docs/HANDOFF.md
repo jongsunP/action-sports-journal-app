@@ -141,18 +141,34 @@ adoption is not the final route architecture: later Home / Video / Growth
 should still be evaluated as real Bottom Tab Navigator routes for Push deep
 links, tab state restore, ShareResult screens, and screen lifecycle management.
 
+Part 1 navigation handoff:
+
+- Problem: Bottom Tabs alone did not fully capture the Instagram-learned
+  navigation feel that likely users may bring into ASJ.
+- Cause: ASJ depends on Instagram inflow and sharing, while Home / Video /
+  Growth are top-level surfaces users may treat as adjacent screens.
+- Options: keep Bottom Tabs only; switch to pager-only; combine Bottom Tabs and
+  horizontal swipe.
+- Decision: adopt Bottom Tab + Swipe coexistence for the Part 1 skeleton.
+- Result: real-device QA was positive; Pager/Haptic remain in Build 43.
+- Remaining TODO: move to route-backed Bottom Tabs plus Stack later if Push
+  deep links, tab state restore, or ShareResult routes need stronger route
+  semantics.
+
 Part 2 P1 handoff - Pagination / Infinite Scroll:
 
-Do not scale the current full-list Moment fetch. `/api/moments` currently
-returns all Moments, and the app derives Home and Video from the complete
-response. The next Part 2 structural task is to design and implement cursor
-pagination before the archive grows.
+Do not scale the app around a permanent full-list Moment fetch. Cursor
+pagination groundwork is now present in the server/app list layer, but the
+Video infinite scroll UI is deliberately deferred after Build 41/42 launch
+crashes.
 
 Recommended architecture:
 
 - Cursor pagination for `/api/moments`.
 - Home uses the latest N Moments for dashboard sections.
-- Video is the archive surface and should use `FlatList` with infinite scroll.
+- Video remains on the stable `ScrollView + map()` surface for now.
+- Video should re-attempt infinite scroll only after isolating the
+  TabView/PagerView plus virtualized-list launch crash.
 - Detail can continue using selected list payloads now, but should not block a
   later single-Moment fetch for Push deep links or direct restore.
 
@@ -161,13 +177,51 @@ Recommended implementation order:
 1. Add server `limit` / `cursor` query support and return `nextCursor` /
    `hasMore`.
 2. Extend the app `listMoments` wrapper to accept pagination options.
-3. Convert Video archive rendering from `ScrollView + map()` to `FlatList`.
-4. Add `onEndReached` page loading.
+3. Keep Build 43 as the stable archive UI baseline.
+4. Re-test infinite scroll in a controlled branch using lazy scene mount,
+   route-backed Bottom Tabs, or another safer containment strategy.
 5. Reconcile Boot, Foreground, Push response, and Realtime refresh behavior so
    only the needed page or Moment is refreshed.
 
 Do not implement date filters, trick filters, growth summaries, or route-backed
 tab conversion as part of the first pagination pass.
+
+Build 43 stable baseline:
+
+- Build 41 introduced pagination plus Video `FlatList` / infinite scroll and
+  crashed immediately on launch.
+- Build 42 removed `removeClippedSubviews`, but still crashed on launch.
+- Build 43 rolled back only the Video archive `FlatList` scene to
+  `ScrollView + map()` while preserving cursor API/helper groundwork.
+- Build 43 QA passed: launch, Home, Video, Pager/Haptic, Upload,
+  Push/Realtime, and deletion.
+- Treat `2a8249b` / buildNumber `43` as the current stable handoff point.
+
+Part 2 priority order from this handoff:
+
+1. Compression / pre-upload video optimization.
+2. Auth / Ownership.
+3. Unread Analysis Badge.
+4. Infinite Scroll re-attempt after FlatList/PagerView isolation.
+5. Push Deep Link.
+
+Failure records:
+
+- Network outage QA:
+  - Problem: upload looked broken in Build 40.
+  - Cause: the test device was offline.
+  - Decision: record as network-failure QA, not a Pager/Haptic or upload
+    regression.
+  - Result: failure alert/retry path was exercised and normal upload recovered
+    after network restoration.
+- FlatList launch crash:
+  - Problem: Build 41 and Build 42 crashed immediately on launch.
+  - Cause: suspected `FlatList` mounted inside TabView/PagerView scene.
+  - Decision: rollback only the Video `FlatList` scene, preserving cursor
+    API/helper work.
+  - Result: Build 43 became the stable baseline.
+  - TODO: retry infinite scroll through lazy mount, route-backed tabs, FlashList
+    prototype, or another isolated device-QA path.
 
 Build 29 Direct Upload checkpoint, 2026-06-21:
 

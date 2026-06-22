@@ -135,13 +135,25 @@ complete the final navigation architecture: route-backed Bottom Tabs plus Stack
 remains a later structural refactor for Push deep links, tab state restore,
 screen lifecycle separation, and future ShareResult routes.
 
+Pager decision record:
+
+- Problem: Instagram-inflow users may perceive Home / Video / Growth as
+  adjacent app surfaces rather than strictly separate tabs.
+- Cause: ASJ is a journal/analysis app, but its acquisition and sharing loop is
+  Instagram-heavy.
+- Options: Bottom Tabs only; full pager-only navigation; Bottom Tabs plus
+  horizontal swipe.
+- Decision: adopt Bottom Tabs plus horizontal swipe after real-device prototype
+  QA. Keep light haptic feedback on tab transitions.
+- Result: Build 43 keeps Pager/Haptic as part of the stable baseline.
+- TODO: route-backed Bottom Tabs plus Stack remains future architecture work.
+
 Part 2 P1 pagination / infinite scroll starting point:
 
-The current app still treats `/api/moments` as a full-list endpoint. Boot,
-Foreground, Push response, Realtime refresh, Home summaries, and Video archive
-all assume that a complete Moment list can be fetched and merged. This is a
-reasonable internal QA shortcut, but it is not the target structure for a
-long-lived journal with hundreds or thousands of sessions.
+Cursor pagination has started at the server/app API layer, but the Video
+archive rendering path is intentionally back on the stable Build 40-style
+`ScrollView + map()` implementation. Build 43 is the current stability
+checkpoint after the FlatList launch-crash rollback.
 
 Adopt this direction for the next design/implementation step:
 
@@ -149,7 +161,9 @@ Adopt this direction for the next design/implementation step:
   `nextCursor`, and `hasMore`.
 - The stable cursor should be based on `occurred_at desc` plus `id desc`.
 - Home should render from the latest N Moments, not from the whole archive.
-- Video should be the archive view, using `FlatList` and infinite scroll.
+- Video should be the archive view, but infinite scroll UI should not be
+  retried in the current mounted TabView/PagerView scene without a dedicated
+  prototype.
 - Detail should keep working from the selected Moment payload, but a later
   single-Moment read path should be possible for Push deep links and restore.
 
@@ -157,8 +171,9 @@ Implementation order:
 
 1. Server cursor response.
 2. App list API options.
-3. Video `FlatList`.
-4. Infinite scroll.
+3. Keep Build 43 stable Video rendering.
+4. Prototype infinite scroll with lazy mount, route-backed tabs, or another
+   structure that avoids the launch crash.
 5. Refresh policy update for Boot / Foreground / Push / Realtime.
 
 Main risks:
@@ -166,6 +181,50 @@ Main risks:
 - Realtime and Push should not force a full archive reload after pagination.
 - Merge logic must preserve remote completed state even with partial pages.
 - Future date and trick filters should be server-side filters.
+- Build 41/42 indicate that `FlatList` inside the current pager scene may be a
+  native launch-crash risk. Do not reintroduce it directly on master without
+  device QA.
+
+Build 43 QA result:
+
+- Launch crash resolved.
+- Home, Video, Pager/Haptic, Upload, Push/Realtime, and deletion passed.
+- Server cursor API/helper and Boot first-page policy remain.
+- Video infinite scroll UI remains deferred.
+
+Part 2 entry priority:
+
+1. Compression / pre-upload video optimization.
+2. Auth / Ownership.
+3. Unread Analysis Badge.
+4. Infinite Scroll re-attempt after isolating FlatList/PagerView crash risk.
+5. Push Deep Link.
+
+Decision records to carry forward:
+
+- Cursor Pagination:
+  - Problem: hundreds/thousands of Moments cannot rely on full-list reads.
+  - Cause: date filters, trick filters, and growth history require stable
+    ordered archive access.
+  - Options: offset pagination, cursor pagination, or full-list client
+    filtering.
+  - Decision: cursor pagination based on `occurred_at desc` plus `id desc`.
+  - Result: server/app cursor groundwork remains in Build 43.
+  - TODO: UI infinite scroll is deferred until the archive scene is safe.
+- FlatList Crash:
+  - Problem: Build 41/42 crashed immediately on launch.
+  - Cause: suspected `FlatList` scene inside TabView/PagerView; exact native
+    stack was not captured.
+  - Options: full pagination rollback, prop-only fix, or UI-scene rollback.
+  - Decision: rollback only Video `FlatList` scene.
+  - Result: Build 43 launch passed.
+  - TODO: retry only in isolated prototype or safer route structure.
+- Network Outage QA:
+  - Problem: Build 40 looked like an upload regression.
+  - Cause: physical device network was unavailable.
+  - Decision: classify as network-failure QA, not Pager regression.
+  - Result: app showed retry/failure messaging and recovered after network
+    restoration.
 
 Build 28 save point, 2026-06-21:
 

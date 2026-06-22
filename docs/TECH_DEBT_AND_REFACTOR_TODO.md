@@ -97,11 +97,10 @@ Part 2 TODOs:
 
 Problem:
 
-`/api/moments` currently returns the full Moment list. Home summaries, Video
-archive rendering, Boot Sync, Foreground Refresh, Push response refresh, and
-Realtime refresh all assume that fetching the complete archive is acceptable.
-This works for small QA datasets, but it will not scale to hundreds or
-thousands of sessions.
+The Moment archive still needs a scalable UI path. Cursor pagination groundwork
+exists, but the first Video `FlatList` / infinite scroll implementation caused
+launch crashes in Build 41 and Build 42, so Build 43 rolled back only the
+Video archive scene to `ScrollView + map()`.
 
 Target architecture:
 
@@ -110,8 +109,8 @@ Target architecture:
   `occurred_at desc` plus `id desc`.
 - Home should read or derive only the latest N Moments needed for dashboard
   sections.
-- Video should become the paginated archive with `FlatList` and
-  `onEndReached`.
+- Video should eventually become a paginated archive, but do not reintroduce a
+  mounted `FlatList` scene inside the current pager without isolated QA.
 - Detail should keep using the selected Moment payload initially, while leaving
   room for a future single-Moment fetch.
 
@@ -120,8 +119,13 @@ Implementation order:
 1. Add `limit` and `cursor` support to `/api/moments`.
 2. Return `nextCursor` and `hasMore`.
 3. Extend the app `listMoments` wrapper with pagination options.
-4. Convert Video archive from `ScrollView + map()` to `FlatList`.
-5. Add infinite scroll loading state and page append behavior.
+4. Keep Build 43 stable Video rendering while the crash cause is investigated.
+5. Re-attempt infinite scroll through one of these safer paths:
+   - lazy-mount the Video scene after first render;
+   - move Video to route-backed Bottom Tabs before retrying;
+   - prototype FlashList or FlatList outside the pager scene;
+   - keep `ScrollView` and use server pagination only for refresh/search
+     boundaries until the archive size forces a virtualized list.
 6. Update refresh policy:
    - Boot loads the first page.
    - Foreground refreshes the first page silently.
@@ -139,11 +143,54 @@ Risks:
 - Future date and trick filters should be implemented as server-side query
   filters, not client-side filtering over all Moments.
 
+Build 43 stability note:
+
+- Build 41: pagination plus Video `FlatList` / infinite scroll launched and the
+  app crashed immediately.
+- Build 42: removed `removeClippedSubviews`, but launch crash remained.
+- Build 43: rolled back the Video `FlatList` scene to `ScrollView + map()`;
+  server cursor API/helper and Boot first-page policy stayed in place.
+- Build 43 QA passed launch, Home, Video, Pager/Haptic, Upload,
+  Push/Realtime, and deletion.
+- Treat infinite scroll as Part 2 follow-up, not as part of the current stable
+  baseline.
+
 Priority:
 
-This is not required for the current small QA dataset, but it should be a Part
-2 P1 architecture task before date filters, trick filters, or growth archive
-features are added.
+The Part 2 priority order is currently:
+
+1. Compression / pre-upload video optimization.
+2. Auth / Ownership.
+3. Unread Analysis Badge.
+4. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
+5. Push Deep Link.
+
+Infinite Scroll is still architecturally important before a large public
+archive, but it should not displace upload stability, ownership, or visible
+analysis-state clarity while Build 43 is the active stable baseline.
+
+Decision record:
+
+- Problem: Moment archive scale requires pagination, but the first UI
+  virtualization attempt destabilized launch.
+- Cause: suspected `FlatList` scene mounted inside TabView/PagerView; exact
+  stack unavailable.
+- Options: full rollback, keep crashing baseline, or keep cursor API while
+  rolling back only the risky UI scene.
+- Decision: keep cursor API/helper and rollback Video `FlatList` UI.
+- Result: Build 43 passed QA and is the stable Part 2 entry baseline.
+- TODO: retry through lazy mount, route-backed tabs, FlashList prototype, or
+  ScrollView-plus-server-pagination boundaries.
+
+Cursor Pagination rationale:
+
+- Problem: full-list reads will not scale to hundreds/thousands of Moments.
+- Cause: future date/trick filters and growth history require stable server
+  ordering and queryable windows.
+- Options: offset, cursor, or full-list client filtering.
+- Decision: cursor pagination with `occurred_at desc` plus `id desc`.
+- Result: better stability under inserts/deletes and future filters than
+  offset-based paging.
 
 ## Build 29 Direct Upload Case Study - 2026-06-21
 
