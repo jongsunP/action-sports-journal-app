@@ -70,6 +70,8 @@ Decision:
 - Build 53 QA resolved the Auth/Part 2 blocker: upload success now triggers an
   explicit `/api/moments` first-page refresh, Home and Video converge, and tab
   active state stays synchronized.
+- Build 54 QA confirmed the polling-free version: active app completion updated
+  through Realtime/refetch without tapping the Push notification.
 - `Video = Server Archive Source` remains the rule. Do not revert Video to the
   full global sessions cache.
 - Main sync paths are upload-success invalidate/refetch, Realtime Broadcast,
@@ -91,12 +93,25 @@ Implementation:
 - The app treats `moment_updated` as an invalidation trigger only and refetches
   `/api/moments`; event payloads are not merged directly.
 - The remaining queued/processing interval polling was removed.
+- Home = Global Session Cache, Video = Server Archive Source, Detail = Cache +
+  Server context.
 
 Next:
 
 Before Auth, keep sync changes scoped. If more lifecycle transitions are added
 later, they should reuse the same `moment_updated` invalidation pattern while
-keeping `/api/moments` as the source of truth.
+keeping `/api/moments` as the source of truth. After Auth, move the public MVP
+Realtime channel to a private/user-scoped channel.
+
+Finalize latency note:
+
+The next upload-experience investigation is not AI latency. It is the short
+post-upload wait after Direct Upload reaches 100%. The current finalize path
+waits for Render to validate the Storage object, download the uploaded source
+video, compare file size, create the Moment, create the AnalysisJob, and mark
+the upload target finalized. The likely optimization is to avoid downloading
+the full source video during finalize if reliable Storage metadata can verify
+size/content type.
 
 ## Part 1 Upload Experience Closeout - 2026-06-22
 

@@ -50,11 +50,12 @@ converge across Home and Video before user ownership work begins.
 
 Decision:
 
-Build 53 QA passed the state-sync blocker. The app now treats upload success as
-a mutation success that explicitly invalidates/refetches `/api/moments` first
-page. That first page updates the global session cache and the Video Archive
-first-page source. Tab activation no longer calls a raw setter from upload
-flow; it goes through the same helper that updates both state and ref.
+Build 53 QA passed the state-sync blocker. Build 54 confirmed the polling-free
+version. The app now treats upload success as a mutation success that
+explicitly invalidates/refetches `/api/moments` first page. That first page
+updates the global session cache and the Video Archive first-page source. Tab
+activation no longer calls a raw setter from upload flow; it goes through the
+same helper that updates both state and ref.
 
 Current rule:
 
@@ -68,8 +69,11 @@ Current rule:
 
 Next starting point:
 
-Commit the polling removal, then proceed toward Auth / Ownership. Keep
-`moment_updated` payloads as refresh triggers rather than direct state merges.
+Auth / Ownership can start after this checkpoint. Keep `moment_updated`
+payloads as refresh triggers rather than direct state merges. After Auth, move
+Realtime to a private/user-scoped channel. Before changing upload architecture
+again, note that finalize currently waits on server-side Storage
+inspect/download/size validation before it returns to the app.
 
 ## Part 1 Upload Experience Closeout - 2026-06-22
 

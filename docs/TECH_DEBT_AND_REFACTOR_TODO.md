@@ -67,7 +67,48 @@ Part 1 state sync model if it fires for:
 
 The app should treat `moment_updated` as an invalidation trigger only. It
 should not merge event payloads directly; `/api/moments` remains the source of
-truth. After Auth, move this public MVP channel to a scoped/private channel.
+truth. Build 54 confirmed active app completion without polling. After Auth,
+move this public MVP channel to a scoped/private channel.
+
+## Direct Upload Finalize Latency - 2026-06-23
+
+Problem:
+
+Users can understand Gemini taking about a minute, but the wait after the
+Direct Upload byte progress reaches 100% still feels like an extra backend
+pause. This is not the AI inference phase; it is the finalize phase before the
+app receives the server Moment/AnalysisJob response.
+
+Current flow:
+
+1. App uploads the video directly to Supabase Storage.
+2. App calls `POST /api/moments/from-uploaded-source`.
+3. Render validates provider/bucket/path/mime type.
+4. Render inspects the Storage object.
+5. Render downloads the uploaded source video from Storage.
+6. Render compares downloaded file size with the draft file size.
+7. Render creates the Moment.
+8. Render creates and links the AnalysisJob.
+9. Render marks `upload_targets.status=finalized`.
+10. Render responds to the app.
+
+Likely bottleneck:
+
+The full Storage download/arrayBuffer during finalize is the most suspicious
+2-4 second cost. It is code structure, not primarily AI latency. Render plan and
+network distance can amplify it, but the backend currently asks Storage for the
+whole source video before responding.
+
+Recommended investigation:
+
+- Check whether Supabase Storage metadata can provide reliable object size and
+  content type without downloading the object.
+- If metadata is reliable, make finalize perform metadata validation only,
+  create Moment/AnalysisJob, and return faster.
+- Move the full video download to the asynchronous analysis worker path, where
+  it is already expected that the server needs video bytes for Gemini.
+- Keep client API shape stable if possible; this should likely be a backend-only
+  optimization.
 
 ## Part 1 Upload Experience Closeout - 2026-06-22
 

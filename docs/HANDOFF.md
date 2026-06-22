@@ -63,11 +63,12 @@ solution.
 
 Decision:
 
-Build 53 QA passed this blocker. Upload success now behaves like a mutation
-success: it explicitly refreshes `/api/moments` first page. That first page is
-merged into the global session cache and also replaces the Video Archive
-first-page source. Tab selection is routed through a helper so `activeTab` and
-`activeTabRef` stay in sync.
+Build 53 QA passed this blocker, and Build 54 confirmed the polling-free
+version. Upload success now behaves like a mutation success: it explicitly
+refreshes `/api/moments` first page. That first page is merged into the global
+session cache and also replaces the Video Archive first-page source. Tab
+selection is routed through a helper so `activeTab` and `activeTabRef` stay in
+sync.
 
 Current implementation status:
 
@@ -78,12 +79,25 @@ Current implementation status:
 - Active moment polling has been removed.
 - `moment_updated` Broadcast now covers queued/processing/completed/failed
   status transitions as a refetch trigger.
+- Build 54 QA confirmed active app completion without polling.
+- Home = Global Session Cache; Video = Server Archive Source; Detail = Cache +
+  Server context.
 
 Next:
 
-Do not start Auth or Compression until this polling removal is committed.
+Auth / Ownership is the next major workstream. Do not start Compression yet.
 `moment_updated` should remain a trigger for `/api/moments` refresh rather than
-a direct state merge payload.
+a direct state merge payload. After Auth, convert the public Realtime Broadcast
+channel to private/user-scoped Realtime.
+
+Finalize latency note:
+
+After Direct Upload reaches 100%, the app still waits for
+`/api/moments/from-uploaded-source`. Render currently inspects the Storage
+object and downloads the uploaded source video to verify size before creating
+the Moment and AnalysisJob. This is likely the perceived 2-4 second finalize
+wait. A future optimization should check whether reliable Storage metadata can
+replace the full download in finalize.
 
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 

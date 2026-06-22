@@ -26,10 +26,11 @@ policy before Auth / Part 2 could begin.
 
 Decision:
 
-Build 53 QA resolved the blocker. Upload success now invalidates/refetches
-`/api/moments` first page, then applies the same remote first page to both
-global sessions and Video Archive first-page source. Tab activation now uses a
-single helper path so `activeTab` and `activeTabRef` stay synchronized.
+Build 53 QA resolved the blocker, and Build 54 confirmed the polling-free
+version. Upload success now invalidates/refetches `/api/moments` first page,
+then applies the same remote first page to both global sessions and Video
+Archive first-page source. Tab activation now uses a single helper path so
+`activeTab` and `activeTabRef` stay synchronized.
 
 Current sync policy:
 
@@ -40,12 +41,27 @@ Current sync policy:
   `moment_updated` Broadcast plus the existing refresh paths.
 - Video remains a Server Archive Source; do not use all global sessions as the
   Video source.
+- Home = Global Session Cache, Video = Server Archive Source, Detail = Cache +
+  Server context.
 
 Next:
 
 Auth remains the next major product/architecture topic. The state sync blocker
 is now resolved without active polling: `moment_updated` is a refresh trigger,
-and `/api/moments` remains source of truth.
+and `/api/moments` remains source of truth. After Auth, convert the current
+public Realtime Broadcast channel to a private/user-scoped channel.
+
+Finalize latency investigation, 2026-06-23:
+
+Direct Upload itself is working, but the app still waits after byte upload
+reaches 100%. Current finalize is synchronous: the app calls
+`POST /api/moments/from-uploaded-source`; Render validates the upload target,
+inspects the Storage object, downloads the uploaded source video, compares the
+downloaded file size with the draft size, creates the Moment, creates/links the
+AnalysisJob, marks the upload target finalized, then returns. The Storage
+download/arrayBuffer step is the likely 2-4 second perceived wait after upload
+completion. Investigate replacing full download validation with reliable
+Storage metadata validation if Supabase can provide object size/content type.
 
 Part 1 Upload Experience closeout, 2026-06-22:
 
