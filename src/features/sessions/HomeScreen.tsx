@@ -93,7 +93,7 @@ type AnalysisCompletionNotice = {
 };
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
-const MOMENT_LIST_PAGE_SIZE = 30;
+const MOMENT_LIST_PAGE_SIZE = 5;
 
 export function HomeScreen() {
   const navigation =
