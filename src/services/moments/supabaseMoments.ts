@@ -138,6 +138,7 @@ const uploadTargetsEndpoint = analysisEndpoint?.replace(
 );
 const SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS = 5000;
 const SIGNED_UPLOAD_REQUEST_TIMEOUT_MS = 8000;
+const UPLOADED_SOURCE_FINALIZE_TIMEOUT_MS = 18000;
 
 export type ReportUploadTargetFailureInput = {
   uploadId: string;
@@ -393,64 +394,84 @@ export async function finalizeUploadedSourceVideo(
     return undefined;
   }
 
-  const response = await fetch(`${momentsEndpoint}/from-uploaded-source`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      draftId: input.draftId,
-      uploadId: input.uploadId,
-      storageProvider: input.storageProvider,
-      storageBucket: input.storageBucket,
-      storagePath: input.storagePath,
-      sessionId: input.session.id,
-      activityGroupId: input.session.activityGroupId,
-      title: input.session.title ?? null,
-      notes: input.session.notes ?? null,
-      occurredAt: input.session.occurredAt,
-      sourceVideoUri: input.session.videoUri ?? input.video?.uri ?? null,
-      thumbnailUri: input.thumbnailUri ?? null,
-      fileName: input.video?.fileName ?? null,
-      mimeType: input.video?.mimeType ?? null,
-      fileSize: input.video?.fileSize ?? null,
-      durationMs:
-        typeof input.video?.duration === 'number' &&
-        Number.isFinite(input.video.duration)
-          ? Math.round(input.video.duration)
-          : null,
-    }),
-  });
+  const abortController = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  if (!response.ok) {
-    const message = await readRemoteErrorMessage(response);
+  try {
+    timeoutId = setTimeout(() => {
+      abortController.abort();
+    }, UPLOADED_SOURCE_FINALIZE_TIMEOUT_MS);
 
-    throw new Error(
-      message ?? `Uploaded source finalize failed with ${response.status}`,
-    );
+    const response = await fetch(`${momentsEndpoint}/from-uploaded-source`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: abortController.signal,
+      body: JSON.stringify({
+        draftId: input.draftId,
+        uploadId: input.uploadId,
+        storageProvider: input.storageProvider,
+        storageBucket: input.storageBucket,
+        storagePath: input.storagePath,
+        sessionId: input.session.id,
+        activityGroupId: input.session.activityGroupId,
+        title: input.session.title ?? null,
+        notes: input.session.notes ?? null,
+        occurredAt: input.session.occurredAt,
+        sourceVideoUri: input.session.videoUri ?? input.video?.uri ?? null,
+        thumbnailUri: input.thumbnailUri ?? null,
+        fileName: input.video?.fileName ?? null,
+        mimeType: input.video?.mimeType ?? null,
+        fileSize: input.video?.fileSize ?? null,
+        durationMs:
+          typeof input.video?.duration === 'number' &&
+          Number.isFinite(input.video.duration)
+            ? Math.round(input.video.duration)
+            : null,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await readRemoteErrorMessage(response);
+
+      throw new Error(
+        message ?? `Uploaded source finalize failed with ${response.status}`,
+      );
+    }
+
+    const data = (await response.json()) as UploadMomentSourceVideoResponse &
+      CreateMomentResponse;
+    const momentId = asString(data.momentId);
+    const storageProvider = asString(data.storageProvider);
+    const storageBucket = asString(data.storageBucket);
+    const storagePath = asString(data.storagePath);
+
+    if (!momentId || !storageProvider || !storageBucket || !storagePath) {
+      throw new Error('Uploaded source finalize returned invalid data.');
+    }
+
+    return {
+      momentId,
+      storageProvider,
+      storageBucket,
+      storagePath,
+      analysisJobId: asString(data.analysisJobId),
+      analysisJobStatus: asQueuedAnalysisJobStatus(data.analysisJobStatus),
+      analysisStarted: data.analysisStarted === true,
+      uploadedAt: asString(data.uploadedAt),
+    };
+  } catch (error) {
+    if (abortController.signal.aborted) {
+      throw new Error('Uploaded source finalize timed out.');
+    }
+
+    throw error;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
-
-  const data = (await response.json()) as UploadMomentSourceVideoResponse &
-    CreateMomentResponse;
-  const momentId = asString(data.momentId);
-  const storageProvider = asString(data.storageProvider);
-  const storageBucket = asString(data.storageBucket);
-  const storagePath = asString(data.storagePath);
-
-  if (!momentId || !storageProvider || !storageBucket || !storagePath) {
-    throw new Error('Uploaded source finalize returned invalid data.');
-  }
-
-  return {
-    momentId,
-    storageProvider,
-    storageBucket,
-    storagePath,
-    analysisJobId: asString(data.analysisJobId),
-    analysisJobStatus: asQueuedAnalysisJobStatus(data.analysisJobStatus),
-    analysisStarted: data.analysisStarted === true,
-    uploadedAt: asString(data.uploadedAt),
-  };
 }
 
 export async function insertMoment(session: Session, video?: SessionVideoAsset | null) {

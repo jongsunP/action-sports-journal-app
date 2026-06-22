@@ -90,7 +90,7 @@ export async function finalizeUploadedDraftSource(
       thumbnailUri: draft.localThumbnailUri,
     });
   } catch (error) {
-    void reportUploadTargetFailure({
+    await reportUploadTargetFailure({
       reason: error instanceof Error ? error.message : 'unknown',
       stage: 'finalize',
       storagePath: draft.storagePath,

@@ -109,6 +109,8 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sourceVideoStorageProvider = "supabase";
 const sourceVideoStorageBucket = "moment-videos";
 const realtimeAnalysisChannel = "analysis-updates";
+const uploadedSourceStorageInspectTimeoutMs = 5_000;
+const uploadedSourceStorageDownloadTimeoutMs = 12_000;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const appEnv = process.env.APP_ENV ?? "development";
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
@@ -3772,138 +3774,156 @@ async function createStoredMomentFromUploadedSource({
     throw new Error("Invalid uploadId.");
   }
 
-  if (provider !== sourceVideoStorageProvider) {
-    throw new Error("Invalid storage provider.");
-  }
-
-  if (storageBucket !== sourceVideoStorageBucket) {
-    throw new Error("Invalid storage bucket.");
-  }
-
-  if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
-    throw new Error("Unsupported or missing video type.");
-  }
-
-  const userId = await getOrCreateDefaultSupabaseUser();
-  const expectedPrefix = `users/${userId}/uploads/${uploadId}/source`;
-
-  if (!storagePath.startsWith(expectedPrefix)) {
-    throw new Error("Storage path does not match the upload target.");
-  }
-
-  const storedVideo = {
-    provider,
-    bucket: storageBucket,
-    path: storagePath,
-  };
-  const storedObjectStatus = await inspectStoredVideoObject(storedVideo);
-
-  if (storedObjectStatus === "missing") {
-    throw new Error("Uploaded source video object was not found.");
-  }
-
-  const uploadedFile = await downloadStoredVideoForEvidence(storedVideo);
-
-  if (
-    Number.isFinite(expectedFileSize) &&
-    expectedFileSize > 0 &&
-    uploadedFile.size !== expectedFileSize
-  ) {
-    throw new Error(
-      `Uploaded source video size does not match the draft. expected=${expectedFileSize}; actual=${uploadedFile.size}`,
-    );
-  }
-
-  if (uploadedFile.size > geminiMaxVideoBytes) {
-    throw new Error(
-      `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
-    );
-  }
-
-  await updateUploadTargetStatus({
-    client,
-    status: "uploaded",
-    uploadId,
-  });
-
-  const momentId = randomUUID();
-  const now = new Date().toISOString();
-  const sessionId = getField(body?.sessionId, "");
-  const durationMs = Number(body?.durationMs);
-  const occurredAt = getField(body?.occurredAt, now);
-  const momentPayload = {
-    id: momentId,
-    user_id: userId,
-    session_id: isUuid(sessionId) ? sessionId : null,
-    activity_group_id: getField(body?.activityGroupId, "wakeboard"),
-    title: nullableString(body?.title),
-    notes: nullableString(body?.notes),
-    status: "queued",
-    source: "standalone_app",
-    occurred_at: occurredAt,
-    source_video_uri: nullableString(body?.sourceVideoUri),
-    thumbnail_uri: nullableString(body?.thumbnailUri),
-    file_name:
-      nullableString(body?.fileName) ?? basename(storagePath) ?? "source.mov",
-    mime_type: mimeType,
-    file_size: uploadedFile.size,
-    duration_ms: Number.isFinite(durationMs) ? durationMs : null,
-    source_video_storage_provider: provider,
-    source_video_storage_bucket: storageBucket,
-    source_video_storage_path: storagePath,
-    source_video_storage_uploaded_at: now,
-    source_video_storage_status: "uploaded",
-  };
-
-  const { error: momentInsertError } = await client
-    .from("moments")
-    .insert(momentPayload);
-
-  if (momentInsertError) {
-    throw new Error(
-      `Failed to insert uploaded-source Moment: ${momentInsertError.message}`,
-    );
-  }
-
   try {
-    const queuedJob = await createQueuedEvidenceAnalysisJob({
-      userId,
-      momentId,
-    });
+    if (provider !== sourceVideoStorageProvider) {
+      throw new Error("Invalid storage provider.");
+    }
 
-    if (queuedJob) {
-      await updateAnalysisJobStoredVideoInput({
-        client,
-        analysisJobId: queuedJob.id,
-        storedVideo,
-      });
+    if (storageBucket !== sourceVideoStorageBucket) {
+      throw new Error("Invalid storage bucket.");
+    }
+
+    if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
+      throw new Error("Unsupported or missing video type.");
+    }
+
+    const userId = await getOrCreateDefaultSupabaseUser();
+    const expectedPrefix = `users/${userId}/uploads/${uploadId}/source`;
+
+    if (!storagePath.startsWith(expectedPrefix)) {
+      throw new Error("Storage path does not match the upload target.");
+    }
+
+    const storedVideo = {
+      provider,
+      bucket: storageBucket,
+      path: storagePath,
+    };
+    const storedObjectStatus = await withTimeout(
+      inspectStoredVideoObject(storedVideo),
+      uploadedSourceStorageInspectTimeoutMs,
+      "Timed out while inspecting uploaded source video.",
+    );
+
+    if (storedObjectStatus === "missing") {
+      throw new Error("Uploaded source video object was not found.");
+    }
+
+    const uploadedFile = await withTimeout(
+      downloadStoredVideoForEvidence(storedVideo),
+      uploadedSourceStorageDownloadTimeoutMs,
+      "Timed out while downloading uploaded source video.",
+    );
+
+    if (
+      Number.isFinite(expectedFileSize) &&
+      expectedFileSize > 0 &&
+      uploadedFile.size !== expectedFileSize
+    ) {
+      throw new Error(
+        `Uploaded source video size does not match the draft. expected=${expectedFileSize}; actual=${uploadedFile.size}`,
+      );
+    }
+
+    if (uploadedFile.size > geminiMaxVideoBytes) {
+      throw new Error(
+        `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
+      );
     }
 
     await updateUploadTargetStatus({
       client,
-      status: "finalized",
+      status: "uploaded",
       uploadId,
     });
 
-    return {
-      momentId,
-      uploadedAt: now,
-      storedVideo,
-      queuedJob: queuedJob
-        ? {
-            ...queuedJob,
-            metadata: buildStoredMomentSessionMetadata({
-              moment: momentPayload,
-              momentId,
-            }),
-          }
-        : undefined,
+    const momentId = randomUUID();
+    const now = new Date().toISOString();
+    const sessionId = getField(body?.sessionId, "");
+    const durationMs = Number(body?.durationMs);
+    const occurredAt = getField(body?.occurredAt, now);
+    const momentPayload = {
+      id: momentId,
+      user_id: userId,
+      session_id: isUuid(sessionId) ? sessionId : null,
+      activity_group_id: getField(body?.activityGroupId, "wakeboard"),
+      title: nullableString(body?.title),
+      notes: nullableString(body?.notes),
+      status: "queued",
+      source: "standalone_app",
+      occurred_at: occurredAt,
+      source_video_uri: nullableString(body?.sourceVideoUri),
+      thumbnail_uri: nullableString(body?.thumbnailUri),
+      file_name:
+        nullableString(body?.fileName) ?? basename(storagePath) ?? "source.mov",
+      mime_type: mimeType,
+      file_size: uploadedFile.size,
+      duration_ms: Number.isFinite(durationMs) ? durationMs : null,
+      source_video_storage_provider: provider,
+      source_video_storage_bucket: storageBucket,
+      source_video_storage_path: storagePath,
+      source_video_storage_uploaded_at: now,
+      source_video_storage_status: "uploaded",
     };
+
+    const { error: momentInsertError } = await client
+      .from("moments")
+      .insert(momentPayload);
+
+    if (momentInsertError) {
+      throw new Error(
+        `Failed to insert uploaded-source Moment: ${momentInsertError.message}`,
+      );
+    }
+
+    try {
+      const queuedJob = await createQueuedEvidenceAnalysisJob({
+        userId,
+        momentId,
+      });
+
+      if (queuedJob) {
+        await updateAnalysisJobStoredVideoInput({
+          client,
+          analysisJobId: queuedJob.id,
+          storedVideo,
+        });
+      }
+
+      await updateUploadTargetStatus({
+        client,
+        status: "finalized",
+        uploadId,
+      });
+
+      return {
+        momentId,
+        uploadedAt: now,
+        storedVideo,
+        queuedJob: queuedJob
+          ? {
+              ...queuedJob,
+              metadata: buildStoredMomentSessionMetadata({
+                moment: momentPayload,
+                momentId,
+              }),
+            }
+          : undefined,
+      };
+    } catch (error) {
+      await deleteMomentRowsAfterFailedUploadedFinalize({
+        client,
+        momentId,
+      });
+      await updateUploadTargetStatus({
+        client,
+        failureReason: error instanceof Error ? error.message : "unknown",
+        status: "failed",
+        uploadId,
+      });
+      throw error;
+    }
   } catch (error) {
-    await deleteMomentRowsAfterFailedUploadedFinalize({
-      client,
-      momentId,
-    });
     await updateUploadTargetStatus({
       client,
       failureReason: error instanceof Error ? error.message : "unknown",
