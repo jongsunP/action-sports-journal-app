@@ -47,6 +47,35 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## 2026-06-23 Part 1 Final Wrap-Up / Build 55
+
+Part 1 Upload Experience is now closed for single-user internal QA. The current
+final build marker is Build 55. Build 55 is not a new feature validation build;
+it preserves the Build 54 state-sync behavior and adds Direct Upload
+finalize/fallback diagnostics so the next suspicious upload can be traced from
+logs.
+
+Case summary:
+
+- Problem: DB state alone could show `upload_targets.status=finalized` while
+  the final Moment appeared to use a multipart-style `moments/{momentId}`
+  Storage path.
+- Why it mattered: without app/server path logs, the team could only infer
+  whether direct finalize succeeded, returned an unexpected shape, or fell back
+  afterward.
+- Decision: do not change logic at the end of Part 1; add observability only.
+- Result: Build 55 includes server `uploaded_source_finalize_response_sent`
+  and app `direct_finalize_success`, direct failure/skip, `fallback_started`,
+  and `fallback_success` logs.
+
+Next main work:
+
+Auth / Ownership is the next workstream. After Auth, convert public MVP
+Realtime Broadcast to private/user-scoped Realtime. Then prioritize Thumbnail
+Persistence for cross-device/reinstall previews. AI Calibration and Compression
+Measurement remain follow-up workstreams after ownership and storage boundaries
+are clearer.
+
 ## 2026-06-23 State Sync / Polling Removal Decision
 
 Problem:

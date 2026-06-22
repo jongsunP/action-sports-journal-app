@@ -51,6 +51,37 @@ continuity as well as technical continuity:
 
 ## Current Status
 
+Part 1 final wrap-up checkpoint, 2026-06-23:
+
+Part 1 Upload Experience is complete for the current single-user internal QA
+scope. Build 55 is the latest prepared build and should be treated as a
+diagnostics build, not as a feature expansion. It includes the Build 54
+state-sync baseline plus Direct Upload finalize/fallback observation logs.
+
+Build 55 records:
+
+- Render finalize response boundary:
+  `uploaded_source_finalize_response_sent`.
+- App direct finalize success:
+  `direct_finalize_success`.
+- App direct skip/failure/empty-result paths before fallback.
+- Multipart fallback start/success:
+  `fallback_started`, `fallback_success`.
+
+Use Build 55 if a future upload again appears to produce a finalized
+`upload_targets` row while the final Moment path looks like multipart fallback.
+The next investigation should compare Render `upload_timing` logs with the app
+`upload_timing` sequence before changing upload logic again.
+
+Next main workstream:
+
+Start Auth / Ownership next. Do not start Compression or AI Calibration first.
+After Auth, convert the current public MVP Realtime Broadcast channel into a
+private/user-scoped channel. Then address Thumbnail Persistence so stored
+analysis results keep a visual preview after reinstall/new build. AI
+Calibration and Compression Measurement remain follow-up work after ownership
+and storage boundaries are clearer.
+
 State Sync / Video Archive Source checkpoint, 2026-06-23:
 
 Problem:

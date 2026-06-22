@@ -14,6 +14,36 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Part 1 final wrap-up checkpoint, 2026-06-23:
+
+Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the
+current final wrap-up build. It is not a new feature validation build; it exists
+to carry Direct Upload finalize/fallback diagnostics into the installed app and
+Render logs. The added observation points are:
+
+- server `uploaded_source_finalize_response_sent`;
+- app `direct_finalize_success`;
+- app direct failure/skip markers before fallback;
+- app `fallback_started` and `fallback_success`.
+
+Current product baseline:
+
+- Direct Upload + multipart fallback remains the upload architecture.
+- `/api/moments` remains the source of truth for result sync.
+- Build 54 validated polling-free state convergence through
+  `upload_success`, `moment_updated` Realtime, Push response, and foreground
+  refresh.
+- Build 55 preserves that behavior and only improves observability if a future
+  upload appears to finalize directly and then also fall back.
+
+Next starting point:
+
+Auth / Ownership is the next main workstream. After Auth, move the current
+public Realtime Broadcast channel to private/user-scoped Realtime. After that,
+prioritize Thumbnail Persistence so reinstall/new-build experiences keep
+cross-device previews. AI Calibration and Compression Measurement remain later
+workstreams after the app foundation is owned and scoped.
+
 State Sync / Pagination graduation checkpoint, 2026-06-23:
 
 Problem:

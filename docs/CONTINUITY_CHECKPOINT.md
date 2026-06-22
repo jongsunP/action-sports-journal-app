@@ -39,6 +39,37 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
+## 2026-06-23 Part 1 Final Wrap-Up / Build 55
+
+Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the
+current final wrap-up build. Its purpose is not to validate a new user-facing
+feature; it packages Direct Upload finalize/fallback diagnostics so the next
+unexpected upload path can be explained from logs instead of inferred from DB
+state alone.
+
+Build 55 includes:
+
+- server `uploaded_source_finalize_response_sent` log before
+  `/api/moments/from-uploaded-source` responds;
+- app `direct_finalize_success`;
+- app direct skip/failure/empty-result markers with `fallback_will_run`;
+- app `fallback_started` and `fallback_success`.
+
+Current baseline:
+
+- Part 1 feature/UX/state-sync foundation is stable enough to stop Part 1.
+- Build 54 is the behavioral validation baseline for polling-free sync.
+- Build 55 is the observability wrap-up build for Direct Upload diagnostics.
+- Do not treat Build 55 as a reason to restart upload architecture work unless
+  the new logs prove a concrete issue.
+
+Next starting point:
+
+Begin Auth / Ownership. After Auth, convert Realtime Broadcast to
+private/user-scoped channels. Then handle Thumbnail Persistence. AI
+Calibration and Compression Measurement are later workstreams, not the first
+post-Part-1 step.
+
 ## 2026-06-23 State Sync / Polling Removal Checkpoint
 
 Problem:

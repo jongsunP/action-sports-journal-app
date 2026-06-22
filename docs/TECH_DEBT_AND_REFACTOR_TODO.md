@@ -26,6 +26,39 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Part 1 Final Wrap-Up / Build 55 Diagnostics - 2026-06-23
+
+Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the
+current wrap-up build and should be treated as a diagnostics build, not as a
+new feature build.
+
+What Build 55 adds:
+
+- Render log before `/api/moments/from-uploaded-source` response:
+  `uploaded_source_finalize_response_sent`.
+- App log after direct finalize response parsing:
+  `direct_finalize_success`.
+- App direct skip/failure/empty-result markers that state fallback will run.
+- App multipart fallback boundary logs:
+  `fallback_started` and `fallback_success`.
+
+Why this exists:
+
+Recent investigation found cases where `upload_targets` reached `finalized`
+but the final Moment path appeared to be multipart-style. The code path was not
+changed at closeout because the product baseline is otherwise stable. Instead,
+Build 55 creates enough telemetry to determine whether direct finalize really
+returned successfully, whether the FE interpreted it correctly, and whether
+fallback still ran.
+
+Next TODO order:
+
+1. Auth / Ownership.
+2. Private/user-scoped Realtime after Auth.
+3. Thumbnail Persistence.
+4. AI Calibration.
+5. Compression Measurement / upload optimization.
+
 ## State Sync / Polling Removal - 2026-06-23
 
 Problem:
