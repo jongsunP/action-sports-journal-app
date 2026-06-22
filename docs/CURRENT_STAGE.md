@@ -106,6 +106,42 @@ ASJ's product idea remains original while the UX borrows a proven user learning
 model. Route-backed Bottom Tabs plus Stack remains a later structural
 refactor, not a blocker for adopting the current pager skeleton.
 
+Part 2 P1 pagination / infinite scroll target:
+
+The next structural step should prepare the Moment archive for scale before
+date filters, trick filters, and growth views make the dataset larger. The
+current `/api/moments` implementation returns the full list, and Home / Video
+both derive their surfaces from that complete response. That is acceptable for
+small QA data, but not for hundreds or thousands of Moments.
+
+Decision:
+
+- Use cursor pagination as the final list architecture.
+- Do not use offset pagination as the primary structure.
+- Home should use only the latest N Moments needed for dashboard sections.
+- Video should become the cursor-paginated archive surface with `FlatList` and
+  infinite scroll.
+- Detail can keep using the selected Moment payload now, while leaving room for
+  a future `/api/moments/:id` style single-Moment fetch for Push deep links and
+  restore.
+
+Implementation order:
+
+1. Add cursor/limit support to `/api/moments`.
+2. Extend the app `listMoments` API to accept cursor options.
+3. Convert Video from `ScrollView + map()` to `FlatList`.
+4. Add `onEndReached` infinite scroll.
+5. Revisit Boot, Foreground, Push, and Realtime refresh policy so they do not
+   require whole-list refetches.
+
+Risks:
+
+- Push and Realtime currently depend on whole-list refresh behavior.
+- Local/remote merge rules must keep completed remote Moments from being
+  downgraded even when only the first page is loaded.
+- Future date/trick filters must be server-side query filters, not client-side
+  filtering over a full in-memory archive.
+
 Update on 2026-06-20, Analysis-first Product Strategy:
 
 Build 29 Direct Upload checkpoint, 2026-06-21:

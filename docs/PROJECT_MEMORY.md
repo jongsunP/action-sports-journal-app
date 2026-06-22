@@ -162,6 +162,43 @@ state. A later DB read-only check also showed a successful Build 40 direct
 upload target finalized and the related Moment completed with a Gemini evidence
 result.
 
+Part 2 P1 Pagination / Infinite Scroll design:
+
+The current `/api/moments` path returns the full Moment list, and the app builds
+Home and Video surfaces from that full in-memory set. This is acceptable for
+small internal QA data, but it is not the long-term structure for hundreds or
+thousands of riding sessions.
+
+Decision:
+
+- Use cursor pagination, not offset pagination.
+- Cursor should be based on `occurred_at desc` plus `id desc` for stable order.
+- Home should load or derive only the latest N Moments needed for dashboard
+  sections.
+- Video should become the archive surface backed by cursor pagination,
+  `FlatList`, and infinite scroll.
+- Detail can keep using list payload data for now, but the structure should
+  allow a future single-Moment fetch for Push deep links, restore, and direct
+  navigation.
+
+Recommended implementation order:
+
+1. Add cursor parameters and `nextCursor` / `hasMore` to `/api/moments`.
+2. Extend the app list API to accept `{ limit, cursor }`.
+3. Convert Video from `ScrollView + map()` to `FlatList`.
+4. Add `onEndReached` infinite scroll for Video.
+5. Rework refresh policy so Boot/Foreground refresh the first page, Push can
+   refresh or fetch the target Moment, and Realtime upserts or refreshes only
+   the affected first-page state.
+
+Risks:
+
+- Realtime and Push currently rely on whole-list refresh semantics.
+- Local/remote merge must keep completed Moment precedence while only part of
+  the list is loaded.
+- Future date and trick filters should be server-query filters, not client-side
+  filtering over a full list.
+
 ## Build 28 Save Point - 2026-06-21
 
 Current QA build:

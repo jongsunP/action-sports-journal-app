@@ -93,6 +93,58 @@ Part 2 TODOs:
 7. Source cleanup monitoring and retry policy.
 8. AI Calibration after upload experience remains stable.
 
+## Part 2 P1 - Moment List Pagination / Infinite Scroll
+
+Problem:
+
+`/api/moments` currently returns the full Moment list. Home summaries, Video
+archive rendering, Boot Sync, Foreground Refresh, Push response refresh, and
+Realtime refresh all assume that fetching the complete archive is acceptable.
+This works for small QA datasets, but it will not scale to hundreds or
+thousands of sessions.
+
+Target architecture:
+
+- Use cursor pagination for Moment list reads.
+- Base the cursor on stable descending archive order:
+  `occurred_at desc` plus `id desc`.
+- Home should read or derive only the latest N Moments needed for dashboard
+  sections.
+- Video should become the paginated archive with `FlatList` and
+  `onEndReached`.
+- Detail should keep using the selected Moment payload initially, while leaving
+  room for a future single-Moment fetch.
+
+Implementation order:
+
+1. Add `limit` and `cursor` support to `/api/moments`.
+2. Return `nextCursor` and `hasMore`.
+3. Extend the app `listMoments` wrapper with pagination options.
+4. Convert Video archive from `ScrollView + map()` to `FlatList`.
+5. Add infinite scroll loading state and page append behavior.
+6. Update refresh policy:
+   - Boot loads the first page.
+   - Foreground refreshes the first page silently.
+   - Push response can refresh/fetch the target Moment instead of the entire
+     archive.
+   - Realtime completion should upsert the affected Moment or refresh the first
+     page, not force a full archive reload.
+
+Risks:
+
+- Partial pages can expose merge bugs that whole-list refresh currently hides.
+- Completed remote state must still win over local queued/processing state.
+- Deletion can create gaps in the loaded page and may require a follow-up page
+  fill.
+- Future date and trick filters should be implemented as server-side query
+  filters, not client-side filtering over all Moments.
+
+Priority:
+
+This is not required for the current small QA dataset, but it should be a Part
+2 P1 architecture task before date filters, trick filters, or growth archive
+features are added.
+
 ## Build 29 Direct Upload Case Study - 2026-06-21
 
 Build 29 is the current upload architecture QA build:

@@ -141,6 +141,34 @@ adoption is not the final route architecture: later Home / Video / Growth
 should still be evaluated as real Bottom Tab Navigator routes for Push deep
 links, tab state restore, ShareResult screens, and screen lifecycle management.
 
+Part 2 P1 handoff - Pagination / Infinite Scroll:
+
+Do not scale the current full-list Moment fetch. `/api/moments` currently
+returns all Moments, and the app derives Home and Video from the complete
+response. The next Part 2 structural task is to design and implement cursor
+pagination before the archive grows.
+
+Recommended architecture:
+
+- Cursor pagination for `/api/moments`.
+- Home uses the latest N Moments for dashboard sections.
+- Video is the archive surface and should use `FlatList` with infinite scroll.
+- Detail can continue using selected list payloads now, but should not block a
+  later single-Moment fetch for Push deep links or direct restore.
+
+Recommended implementation order:
+
+1. Add server `limit` / `cursor` query support and return `nextCursor` /
+   `hasMore`.
+2. Extend the app `listMoments` wrapper to accept pagination options.
+3. Convert Video archive rendering from `ScrollView + map()` to `FlatList`.
+4. Add `onEndReached` page loading.
+5. Reconcile Boot, Foreground, Push response, and Realtime refresh behavior so
+   only the needed page or Moment is refreshed.
+
+Do not implement date filters, trick filters, growth summaries, or route-backed
+tab conversion as part of the first pagination pass.
+
 Build 29 Direct Upload checkpoint, 2026-06-21:
 
 Problem -> Cause -> Decision:

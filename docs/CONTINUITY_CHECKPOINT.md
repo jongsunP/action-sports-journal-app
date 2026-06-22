@@ -135,6 +135,38 @@ complete the final navigation architecture: route-backed Bottom Tabs plus Stack
 remains a later structural refactor for Push deep links, tab state restore,
 screen lifecycle separation, and future ShareResult routes.
 
+Part 2 P1 pagination / infinite scroll starting point:
+
+The current app still treats `/api/moments` as a full-list endpoint. Boot,
+Foreground, Push response, Realtime refresh, Home summaries, and Video archive
+all assume that a complete Moment list can be fetched and merged. This is a
+reasonable internal QA shortcut, but it is not the target structure for a
+long-lived journal with hundreds or thousands of sessions.
+
+Adopt this direction for the next design/implementation step:
+
+- `/api/moments` should move to cursor pagination with `limit`, `cursor`,
+  `nextCursor`, and `hasMore`.
+- The stable cursor should be based on `occurred_at desc` plus `id desc`.
+- Home should render from the latest N Moments, not from the whole archive.
+- Video should be the archive view, using `FlatList` and infinite scroll.
+- Detail should keep working from the selected Moment payload, but a later
+  single-Moment read path should be possible for Push deep links and restore.
+
+Implementation order:
+
+1. Server cursor response.
+2. App list API options.
+3. Video `FlatList`.
+4. Infinite scroll.
+5. Refresh policy update for Boot / Foreground / Push / Realtime.
+
+Main risks:
+
+- Realtime and Push should not force a full archive reload after pagination.
+- Merge logic must preserve remote completed state even with partial pages.
+- Future date and trick filters should be server-side filters.
+
 Build 28 save point, 2026-06-21:
 
 - Latest preview/internal buildNumber is `28`.
