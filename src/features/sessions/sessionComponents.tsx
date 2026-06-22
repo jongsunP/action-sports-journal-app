@@ -417,6 +417,7 @@ export function VideoArchiveList({
   styles: HomeScreenStyles;
 }) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const hasUserScrolledRef = useRef(false);
   const shouldCancelPressRef = useRef(false);
 
   const handleRowTouchStart = (event: GestureResponderEvent) => {
@@ -454,6 +455,18 @@ export function VideoArchiveList({
     }
 
     onOpenSession(session);
+  };
+
+  const handleEndReached = () => {
+    if (!hasUserScrolledRef.current || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    onEndReached?.();
+  };
+
+  const handleMomentumScrollBegin = () => {
+    hasUserScrolledRef.current = true;
   };
 
   const renderSessionRow = ({ item }: { item: SessionSummary }) => {
@@ -536,8 +549,9 @@ export function VideoArchiveList({
       }
       ListHeaderComponent={header}
       maxToRenderPerBatch={8}
-      onEndReached={hasMore && !isLoadingMore ? onEndReached : undefined}
-      onEndReachedThreshold={0.5}
+      onEndReached={handleEndReached}
+      onEndReachedThreshold={0.25}
+      onMomentumScrollBegin={handleMomentumScrollBegin}
       renderItem={renderSessionRow}
       showsVerticalScrollIndicator={false}
       updateCellsBatchingPeriod={80}
