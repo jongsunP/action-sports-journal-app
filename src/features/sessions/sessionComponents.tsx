@@ -542,7 +542,6 @@ export function VideoArchiveList({
       ListHeaderComponent={header}
       onEndReached={hasMore && !isLoadingMore ? onEndReached : undefined}
       onEndReachedThreshold={0.6}
-      removeClippedSubviews
       renderItem={renderSessionRow}
       showsVerticalScrollIndicator={false}
       windowSize={7}
