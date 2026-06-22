@@ -15,8 +15,10 @@ import {
   StyleSheet,
   Text,
   useColorScheme,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { TabView } from 'react-native-tab-view';
 
 import {
   getConfiguredAiEndpoints,
@@ -34,6 +36,7 @@ import {
   getMomentStatus,
 } from './momentStatus';
 import {
+  APP_TABS,
   type AppTabId,
   BottomNavigation,
   FlowPlaceholderTab,
@@ -90,6 +93,7 @@ const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
+  const layout = useWindowDimensions();
   const colorScheme = useColorScheme();
   const prefersDarkMode = colorScheme === 'dark';
   const [selectedGroupId, setSelectedGroupId] = useState(
@@ -446,6 +450,21 @@ export function HomeScreen() {
   const selectedGroup =
     mockActivityGroups.find((group) => group.id === ACTIVE_WAKEBOARD_GROUP_ID) ??
     mockActivityGroups[0];
+  const pagerRoutes = useMemo(
+    () => APP_TABS.map((tab) => ({ key: tab.id, title: tab.label })),
+    [],
+  );
+  const activeTabIndex = Math.max(
+    0,
+    pagerRoutes.findIndex((route) => route.key === activeTab),
+  );
+  const handlePagerIndexChange = (index: number) => {
+    const nextRoute = pagerRoutes[index];
+
+    if (nextRoute) {
+      setActiveTab(nextRoute.key);
+    }
+  };
 
   const visibleSessions = useMemo(
     () =>
@@ -678,6 +697,65 @@ export function HomeScreen() {
     );
   };
 
+  const renderHomeTab = () => (
+    <>
+      <View style={styles.header}>
+        <Pressable
+          accessibilityLabel="영상 업로드"
+          accessibilityRole="button"
+          onPress={handleOpenUploadSheet}
+          style={({ pressed }) => [
+            styles.headerAddButton,
+            pressed ? styles.buttonPressed : undefined,
+          ]}
+        >
+          <Text style={styles.headerAddText}>＋</Text>
+        </Pressable>
+        <View style={styles.headerTitleBlock}>
+          <Text style={styles.kicker}>Riding Journal</Text>
+          <Text style={styles.title}>오늘의 라이딩 저널</Text>
+          <Text style={styles.headerMeta}>
+            {visibleSessions.length}개 세션
+            {latestAnalysisLabel ? ` · 최근 분석 ${latestAnalysisLabel}` : ''}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityLabel="마이페이지 열기"
+          accessibilityRole="button"
+          onPress={handleOpenProfile}
+          style={({ pressed }) => [
+            styles.headerMenuButton,
+            pressed ? styles.buttonPressed : undefined,
+          ]}
+        >
+          <Text style={styles.headerMenuText}>☰</Text>
+        </Pressable>
+      </View>
+
+      <PrimaryInsightCard
+        formatShortSessionDate={formatShortSessionDate}
+        isLoading={isSessionListLoading}
+        onOpenSession={openEvidenceSheet}
+        styles={styles}
+        summary={primaryInsightSummary}
+      />
+
+      <View style={styles.section}>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionLabel}>최근 세션</Text>
+          <Text style={styles.sectionHint}>RECENT</Text>
+        </View>
+        <RecentSessionsRail
+          formatShortSessionDate={formatShortSessionDate}
+          isLoading={isSessionListLoading}
+          onOpenSession={openEvidenceSheet}
+          sessions={recentSessionSummaries}
+          styles={styles}
+        />
+      </View>
+    </>
+  );
+
   const renderVideoTab = () => (
     <>
       <View style={styles.tabPageHeader}>
@@ -712,6 +790,24 @@ export function HomeScreen() {
     />
   );
 
+  const renderPagerScene = ({
+    route,
+  }: {
+    route: { key: AppTabId; title: string };
+  }) => (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {route.key === 'home'
+        ? renderHomeTab()
+        : route.key === 'video'
+          ? renderVideoTab()
+          : renderFlowTab()}
+    </ScrollView>
+  );
+
   return (
     <SafeAreaView
       style={[
@@ -723,75 +819,15 @@ export function HomeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {activeTab === 'home' ? (
-            <>
-          <View style={styles.header}>
-            <Pressable
-              accessibilityLabel="영상 업로드"
-              accessibilityRole="button"
-              onPress={handleOpenUploadSheet}
-              style={({ pressed }) => [
-                styles.headerAddButton,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Text style={styles.headerAddText}>＋</Text>
-            </Pressable>
-            <View style={styles.headerTitleBlock}>
-              <Text style={styles.kicker}>Riding Journal</Text>
-              <Text style={styles.title}>오늘의 라이딩 저널</Text>
-              <Text style={styles.headerMeta}>
-                {visibleSessions.length}개 세션
-                {latestAnalysisLabel ? ` · 최근 분석 ${latestAnalysisLabel}` : ''}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityLabel="마이페이지 열기"
-              accessibilityRole="button"
-              onPress={handleOpenProfile}
-              style={({ pressed }) => [
-                styles.headerMenuButton,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Text style={styles.headerMenuText}>☰</Text>
-            </Pressable>
-          </View>
-
-          <PrimaryInsightCard
-            formatShortSessionDate={formatShortSessionDate}
-            isLoading={isSessionListLoading}
-            onOpenSession={openEvidenceSheet}
-            styles={styles}
-            summary={primaryInsightSummary}
-          />
-
-          <View style={styles.section}>
-            <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionLabel}>최근 세션</Text>
-              <Text style={styles.sectionHint}>RECENT</Text>
-            </View>
-            <RecentSessionsRail
-              formatShortSessionDate={formatShortSessionDate}
-              isLoading={isSessionListLoading}
-              onOpenSession={openEvidenceSheet}
-              sessions={recentSessionSummaries}
-              styles={styles}
-            />
-          </View>
-
-            </>
-          ) : activeTab === 'video' ? (
-            renderVideoTab()
-          ) : (
-            renderFlowTab()
-          )}
-        </ScrollView>
+        <TabView
+          initialLayout={{ width: layout.width }}
+          navigationState={{ index: activeTabIndex, routes: pagerRoutes }}
+          onIndexChange={handlePagerIndexChange}
+          renderScene={renderPagerScene}
+          renderTabBar={() => null}
+          style={styles.pager}
+          swipeEnabled
+        />
       </KeyboardAvoidingView>
       <BottomNavigation
         activeTab={activeTab}
@@ -911,6 +947,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   keyboardView: {
+    flex: 1,
+  },
+  pager: {
     flex: 1,
   },
   scrollContent: {
