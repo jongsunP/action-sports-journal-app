@@ -177,6 +177,40 @@ Build 43 stable baseline:
 - Keep Video infinite scroll UI deferred until the scene architecture is
   re-tested safely.
 
+Build 48 pagination graduation QA in progress:
+
+- Problem: Cursor pagination worked at the API level, but user-visible
+  infinite scroll was hard to verify because Video originally rendered from the
+  same global merged `sessions` cache as Home.
+- Cause: local restore, remote refresh, upload optimistic state, Realtime, and
+  Push refresh all merged into one `sessions` array. That is useful for Home
+  and Detail, but it hides whether Video is loading page 1, page 2, and page 3
+  as a server archive.
+- Options: treat the split as QA-only instrumentation, or recognize a product
+  architecture boundary between dashboard cache and archive source.
+- Decision: adopt the boundary as a long-term structure:
+  - Home = Global Session Cache.
+  - Video = Server Archive Source.
+  - Detail = Cache + Server.
+- Result: Video Archive now owns paged order through `videoArchiveSessionIds`,
+  `videoArchiveNextCursor`, `hasMoreVideoArchiveMoments`, and
+  `isLoadingMoreVideoArchiveMoments`. Global sessions remain the cache/detail
+  source. Build 48 is the graduation QA build for this structure.
+- Build 48 URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/f4f6fde7-1d5f-490a-94bc-ac29e25b3c29`
+- Graduation condition:
+  - user confirms `20 -> 40 -> 60` on a physical iPhone;
+  - duplicate IDs = 0;
+  - missing IDs = 0;
+  - `occurred_at desc` plus `id desc` order remains stable;
+  - Upload, Push, Realtime, Detail, and deletion remain normal.
+- QA seed:
+  - runId `pg-grad-20260622-182901`;
+  - cleanup executed after Build 48 seed QA;
+  - deleted rows: 99;
+  - post-cleanup matched rows: 0;
+  - no `analysis_jobs`, `evidence_results`, or `upload_targets` impact.
+
 Part 2 entry checkpoint:
 
 - Problem: Build 41/42 showed that the archive scalability work can destabilize
@@ -190,13 +224,11 @@ Part 2 entry checkpoint:
   scroll UI. Build 43 is the current stable baseline.
 - Result: Build 43 QA passed launch, Home, Video, Pager/Haptic, Upload,
   Push/Realtime, and deletion.
-- Remaining TODO priority:
-  1. Compression measurement / benchmark.
-  2. Auth / Ownership.
-  3. Compression MVP apply-or-defer decision.
-  4. Unread Analysis Badge.
-  5. Infinite Scroll re-attempt in a safer prototype.
-  6. Push Deep Link.
+- Remaining TODO priority after pagination graduation:
+  1. Auth / Ownership.
+  2. Compression measurement / benchmark.
+  3. Unread Analysis Badge.
+  4. Push Deep Link.
 
 Compression measurement / benchmark decision:
 

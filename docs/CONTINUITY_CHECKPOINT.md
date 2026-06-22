@@ -192,13 +192,43 @@ Build 43 QA result:
 - Server cursor API/helper and Boot first-page policy remain.
 - Video infinite scroll UI remains deferred.
 
-Part 2 entry priority:
+Build 48 pagination graduation checkpoint:
 
-1. Compression / pre-upload video optimization.
-2. Auth / Ownership.
+- Build 41/42 proved that archive pagination work needs device QA before
+  adoption. Build 43 restored stability. Build 48 is now the graduation
+  candidate after reintroducing infinite scroll through a safer lazy-mounted
+  Video scene and a separated Video Archive Source.
+- Important discovery:
+  - Home should not be treated as the same data source as Video.
+  - Home = Global Session Cache for dashboard/active state.
+  - Video = Server Archive Source for ordered cursor pages.
+  - Detail = Cache + Server, with a future single-Moment fetch still planned.
+- Discovery path:
+  - Problem: pagination could not be clearly seen on device.
+  - Cause: local persisted sessions and remote page data were merged into the
+    same visible Video list.
+  - Options: add QA-only filtering, or formalize an archive-specific source.
+  - Decision: formalize the Video Archive Source direction.
+  - Result: Build 48 is being tested for first-entry spinner, page size 20,
+    and `20 -> 40 -> 60` append behavior.
+- Graduation condition:
+  - no duplicate rows;
+  - no missing rows;
+  - stable order by `occurred_at desc` plus `id desc`;
+  - Upload, Push, Realtime, Detail, and deletion unaffected.
+- QA seed:
+  - runId `pg-grad-20260622-182901`;
+  - cleanup executed after Build 48 seed QA;
+  - deleted rows: 99;
+  - post-cleanup matched rows: 0;
+  - child rows for `analysis_jobs`, `evidence_results`, and `upload_targets` stayed 0.
+
+Part 2 priority after pagination graduation:
+
+1. Auth / Ownership.
+2. Compression Measurement.
 3. Unread Analysis Badge.
-4. Infinite Scroll re-attempt after isolating FlatList/PagerView crash risk.
-5. Push Deep Link.
+4. Push Deep Link.
 
 Decision records to carry forward:
 

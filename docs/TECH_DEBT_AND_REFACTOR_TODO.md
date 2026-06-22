@@ -155,20 +155,48 @@ Build 43 stability note:
 - Treat infinite scroll as Part 2 follow-up, not as part of the current stable
   baseline.
 
-Priority:
+Build 48 pagination graduation note:
 
-The Part 2 priority order is currently:
+The infinite scroll work has been re-attempted in
+`prototype/video-infinite-scroll-safe` and should now be evaluated as Video
+Archive Source work, not QA-only code.
 
-1. Compression measurement / benchmark.
-2. Auth / Ownership.
-3. Compression MVP apply-or-defer decision.
-4. Unread Analysis Badge.
-5. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
-6. Push Deep Link.
+- Build 48 uses page size 20.
+- Video first-entry loading shows a spinner instead of an empty-feeling screen.
+- Video owns archive paged order through `videoArchiveSessionIds` and cursor
+  state.
+- Global sessions remain the cache/detail source for Home, Upload, Push,
+  Realtime, and Detail.
 
-Infinite Scroll is still architecturally important before a large public
-archive, but it should not displace upload stability, ownership, or visible
-analysis-state clarity while Build 43 is the active stable baseline.
+Architecture decision:
+
+- Home = Global Session Cache.
+- Video = Server Archive Source.
+- Detail = Cache + Server.
+
+Graduation condition:
+
+- Physical iPhone confirms `20 -> 40 -> 60`.
+- Duplicate IDs = 0.
+- Missing IDs = 0.
+- Stable order by `occurred_at desc` plus `id desc`.
+- Upload, Push, Realtime, Detail, and deletion remain unaffected.
+
+Remaining technical debt after graduation:
+
+- Extract Video Archive Source into a dedicated hook only after graduation QA,
+  not before.
+- Keep date/trick filters server-side when they are introduced.
+- Add single-Moment fetch support before Push deep link becomes product work.
+
+Priority after pagination graduation:
+
+The Part 2 priority order should become:
+
+1. Auth / Ownership.
+2. Compression Measurement.
+3. Unread Analysis Badge.
+4. Push Deep Link.
 
 Decision record:
 

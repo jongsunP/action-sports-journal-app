@@ -229,14 +229,58 @@ Build 43 QA record:
   Push/Realtime, and deletion are normal.
 - Classify Video infinite scroll UI as deferred, not shipped.
 
-Part 2 entry priority:
+Build 48 pagination graduation record:
 
-1. Compression measurement / benchmark.
-2. Auth / Ownership.
-3. Compression MVP apply-or-defer decision.
-4. Unread Analysis Badge.
-5. Infinite Scroll re-attempt after FlatList/PagerView crash isolation.
-6. Push Deep Link.
+Build 48 is the current Pagination graduation candidate on
+`prototype/video-infinite-scroll-safe`.
+
+```text
+feature commit: 6e0f761 feat: finalize video archive source and pagination ux
+build commit: 8f38aa5 chore: prepare pagination graduation build
+buildNumber: 48
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/f4f6fde7-1d5f-490a-94bc-ac29e25b3c29
+```
+
+Architecture discovery:
+
+- Previous assumption: Video could use the same global merged sessions list as
+  Home.
+- Problem: pagination was not visually obvious because local persisted sessions
+  and remote paged data were mixed.
+- Cause: local restore, upload optimistic state, remote refresh, Push, and
+  Realtime all merge into global sessions.
+- Options: create QA-only filtering, or treat Video Archive as a separate
+  product source.
+- Decision: Video Archive Source separation is a long-term structure, not just
+  QA code.
+- Resulting model:
+  - Home = Global Session Cache.
+  - Video = Server Archive Source.
+  - Detail = Cache + Server.
+
+Graduation criteria:
+
+- Physical iPhone confirms `20 -> 40 -> 60` while scrolling.
+- Duplicate IDs = 0.
+- Missing IDs = 0.
+- Sort remains stable by `occurred_at desc` plus `id desc`.
+- Upload, Push, Realtime, Detail, and deletion remain normal.
+
+QA seed status:
+
+- runId `pg-grad-20260622-182901`.
+- Cleanup was executed after Build 48 seed QA.
+- Deleted rows: 99.
+- Post-cleanup matched rows: 0.
+- Child rows stayed 0 for `analysis_jobs`, `evidence_results`, and
+  `upload_targets`.
+
+Part 2 priority after pagination graduation:
+
+1. Auth / Ownership.
+2. Compression Measurement.
+3. Unread Analysis Badge.
+4. Push Deep Link.
 
 Compression measurement / benchmark record:
 

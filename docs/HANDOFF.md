@@ -197,14 +197,49 @@ Build 43 stable baseline:
   Push/Realtime, and deletion.
 - Treat `2a8249b` / buildNumber `43` as the current stable handoff point.
 
-Part 2 priority order from this handoff:
+Build 48 pagination graduation QA:
 
-1. Compression measurement / benchmark.
-2. Auth / Ownership.
-3. Compression MVP apply-or-defer decision.
-4. Unread Analysis Badge.
-5. Infinite Scroll re-attempt after FlatList/PagerView isolation.
-6. Push Deep Link.
+Build 43 remains the stable rollback baseline, but the current pagination
+graduation candidate is Build 48 on `prototype/video-infinite-scroll-safe`.
+This build should be evaluated as the first real Video Archive Source build,
+not as QA-only instrumentation.
+
+```text
+feature commit: 6e0f761 feat: finalize video archive source and pagination ux
+build commit: 8f38aa5 chore: prepare pagination graduation build
+buildNumber: 48
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/f4f6fde7-1d5f-490a-94bc-ac29e25b3c29
+```
+
+Architecture discovery:
+
+- Previous assumption: Video can render from the same global merged `sessions`
+  source as Home.
+- Discovery: Video is an archive, while Home is a dashboard/cache surface.
+- Decision:
+  - Home = Global Session Cache.
+  - Video = Server Archive Source.
+  - Detail = Cache + Server.
+- Result: Video owns paged order via archive-specific state while global
+  sessions remain the cache/detail source.
+
+Pagination graduation condition:
+
+- Physical iPhone confirms `20 -> 40 -> 60` as the user scrolls.
+- Duplicate IDs = 0.
+- Missing IDs = 0.
+- Stable order remains `occurred_at desc` plus `id desc`.
+- Upload, Push, Realtime, Detail, and deletion continue to pass.
+- QA seed runId `pg-grad-20260622-182901` was cleaned up after the
+  graduation seed QA cycle: 99 rows deleted, 0 rows remain, and child rows for
+  `analysis_jobs`, `evidence_results`, and `upload_targets` stayed 0.
+
+Part 2 priority order after pagination graduation:
+
+1. Auth / Ownership.
+2. Compression Measurement.
+3. Unread Analysis Badge.
+4. Push Deep Link.
 
 Compression handoff:
 
