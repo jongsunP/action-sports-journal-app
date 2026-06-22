@@ -842,7 +842,63 @@ app.post(
   },
 );
 
-app.get("/api/moments", async (_request, response) => {
+const DEFAULT_MOMENT_LIST_LIMIT = 30;
+const MAX_MOMENT_LIST_LIMIT = 100;
+
+function parseMomentListLimit(value: unknown) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_MOMENT_LIST_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_MOMENT_LIST_LIMIT);
+}
+
+function encodeMomentCursor(moment: Record<string, unknown>) {
+  const occurredAt =
+    typeof moment.occurred_at === "string" ? moment.occurred_at : null;
+  const id = typeof moment.id === "string" ? moment.id : null;
+
+  if (!occurredAt || !id) {
+    return null;
+  }
+
+  return Buffer.from(
+    JSON.stringify({ occurredAt, id }),
+    "utf8",
+  )
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function decodeMomentCursor(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(
+      Buffer.from(normalized, "base64").toString("utf8"),
+    );
+    const occurredAt =
+      typeof decoded.occurredAt === "string" ? decoded.occurredAt : null;
+    const id = typeof decoded.id === "string" ? decoded.id : null;
+
+    if (!occurredAt || !id) {
+      return null;
+    }
+
+    return { occurredAt, id };
+  } catch {
+    return null;
+  }
+}
+
+app.get("/api/moments", async (request, response) => {
   try {
     const client = getSupabaseServerClient();
 
@@ -855,8 +911,10 @@ app.get("/api/moments", async (_request, response) => {
 
     const userId = await getOrCreateDefaultSupabaseUser();
     await cleanupStaleAnalysisJobs({ client, userId });
+    const limit = parseMomentListLimit(request.query.limit);
+    const cursor = decodeMomentCursor(request.query.cursor);
 
-    const { data: moments, error: momentsError } = await client
+    let momentsQuery = client
       .from("moments")
       .select(
         [
@@ -885,7 +943,17 @@ app.get("/api/moments", async (_request, response) => {
         ].join(","),
       )
       .eq("user_id", userId)
-      .order("occurred_at", { ascending: false });
+      .order("occurred_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit + 1);
+
+    if (cursor) {
+      momentsQuery = momentsQuery.or(
+        `occurred_at.lt.${cursor.occurredAt},and(occurred_at.eq.${cursor.occurredAt},id.lt.${cursor.id})`,
+      );
+    }
+
+    const { data: moments, error: momentsError } = await momentsQuery;
 
     if (momentsError) {
       throw new Error(`Failed to list moments: ${momentsError.message}`);
@@ -981,9 +1049,17 @@ app.get("/api/moments", async (_request, response) => {
     const visibleMomentRows = momentRows.filter(
       (moment) => !isIncompleteQueuedMomentListRow(moment),
     );
+    const pageMomentRows = visibleMomentRows.slice(0, limit);
+    const hasMoreRows = momentRows.length > limit || visibleMomentRows.length > limit;
+    const nextCursor =
+      hasMoreRows && pageMomentRows.length > 0
+        ? encodeMomentCursor(pageMomentRows[pageMomentRows.length - 1])
+        : null;
 
     response.json({
-      moments: visibleMomentRows.map((moment) => ({
+      hasMore: Boolean(nextCursor),
+      nextCursor,
+      moments: pageMomentRows.map((moment) => ({
         id: moment.id,
         sessionId: moment.session_id,
         activityGroupId: moment.activity_group_id,

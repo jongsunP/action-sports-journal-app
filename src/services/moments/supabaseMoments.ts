@@ -111,7 +111,20 @@ type RemoteErrorResponse = {
 };
 
 type RemoteMomentListResponse = {
+  hasMore?: unknown;
   moments?: unknown;
+  nextCursor?: unknown;
+};
+
+export type ListMomentsOptions = {
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type RemoteMomentPage = {
+  hasMore: boolean;
+  moments: RemoteMomentRecord[];
+  nextCursor: string | null;
 };
 
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
@@ -645,12 +658,31 @@ export async function deleteMoment(momentId: string) {
   };
 }
 
-export async function listMoments() {
+export async function listMomentsPage(
+  options: ListMomentsOptions = {},
+): Promise<RemoteMomentPage> {
   if (!momentsEndpoint) {
-    return [];
+    return {
+      hasMore: false,
+      moments: [],
+      nextCursor: null,
+    };
   }
 
-  const response = await fetch(momentsEndpoint);
+  const query = new URLSearchParams();
+
+  if (typeof options.limit === 'number' && Number.isFinite(options.limit)) {
+    query.set('limit', String(Math.max(1, Math.round(options.limit))));
+  }
+
+  if (options.cursor) {
+    query.set('cursor', options.cursor);
+  }
+
+  const url = query.toString()
+    ? `${momentsEndpoint}?${query.toString()}`
+    : momentsEndpoint;
+  const response = await fetch(url);
 
   if (!response.ok) {
     const message = await readRemoteErrorMessage(response);
@@ -661,12 +693,26 @@ export async function listMoments() {
   const data = (await response.json()) as RemoteMomentListResponse;
 
   if (!Array.isArray(data.moments)) {
-    return [];
+    return {
+      hasMore: false,
+      moments: [],
+      nextCursor: null,
+    };
   }
 
-  return data.moments
-    .map(normalizeRemoteMoment)
-    .filter((moment): moment is RemoteMomentRecord => Boolean(moment));
+  return {
+    hasMore: data.hasMore === true,
+    moments: data.moments
+      .map(normalizeRemoteMoment)
+      .filter((moment): moment is RemoteMomentRecord => Boolean(moment)),
+    nextCursor: asString(data.nextCursor) ?? null,
+  };
+}
+
+export async function listMoments(options: ListMomentsOptions = {}) {
+  const page = await listMomentsPage(options);
+
+  return page.moments;
 }
 
 async function readRemoteErrorMessage(response: Response) {

@@ -8,7 +8,11 @@ import {
 } from 'react';
 import { Alert } from 'react-native';
 
-import { hasConfiguredSupabaseMoments, listMoments } from '../../services/moments';
+import {
+  hasConfiguredSupabaseMoments,
+  listMomentsPage,
+  type ListMomentsOptions,
+} from '../../services/moments';
 import type { SessionVideoAsset } from '../../services/ai';
 import type { RemoteMomentRecord } from '../../services/moments';
 import type { AnalysisResult, GeminiEvidenceResult, Session } from '../../types';
@@ -49,6 +53,10 @@ export type RemoteMomentSyncStatus =
   | 'not_configured'
   | 'timeout'
   | 'waiting_for_storage';
+export type RemoteMomentPageInfo = {
+  hasMore: boolean;
+  nextCursor: string | null;
+};
 
 export function useBootSync({
   initialGroupId,
@@ -65,6 +73,11 @@ export function useBootSync({
   syncRemoteMoments,
 }: UseBootSyncParams) {
   const isRemoteMomentSyncConfigured = hasConfiguredSupabaseMoments();
+  const [initialRemoteMomentPageInfo, setInitialRemoteMomentPageInfo] =
+    useState<RemoteMomentPageInfo>({
+      hasMore: false,
+      nextCursor: null,
+    });
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [remoteMomentSyncStatus, setRemoteMomentSyncStatus] =
     useState<RemoteMomentSyncStatus>(
@@ -145,13 +158,17 @@ export function useBootSync({
       setRemoteMomentSyncStatus('loading');
 
       try {
-        const remoteMoments = await listMomentsWithTimeout();
+        const remoteMomentPage = await listMomentPageWithTimeout();
 
         if (!isMounted) {
           return;
         }
 
-        syncRemoteMoments(remoteMoments);
+        syncRemoteMoments(remoteMomentPage.moments);
+        setInitialRemoteMomentPageInfo({
+          hasMore: remoteMomentPage.hasMore,
+          nextCursor: remoteMomentPage.nextCursor,
+        });
         setRemoteMomentSyncStatus('completed');
       } catch (error) {
         if (isMounted) {
@@ -197,6 +214,7 @@ export function useBootSync({
       isRemoteMomentSyncConfigured && !hasCompletedInitialRemoteMomentSync,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    initialRemoteMomentPageInfo,
     markRemoteMomentSyncCompleted,
     remoteMomentSyncStatus,
   };
@@ -284,11 +302,19 @@ function restorePersistedSessionMaps({
 }
 
 export async function listMomentsWithTimeout() {
+  const page = await listMomentPageWithTimeout();
+
+  return page.moments;
+}
+
+export async function listMomentPageWithTimeout(
+  options: ListMomentsOptions = {},
+) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
     return await Promise.race([
-      listMoments(),
+      listMomentsPage(options),
       new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new Error('Remote moment sync timed out.'));
