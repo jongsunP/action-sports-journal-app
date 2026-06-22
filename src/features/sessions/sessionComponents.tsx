@@ -530,6 +530,7 @@ export function VideoArchiveList({
       keyExtractor={({ session }) => session.id}
       ListEmptyComponent={
         <View style={styles.emptyState}>
+          {isLoading ? <ActivityIndicator color="#9ca3af" /> : null}
           <Text style={styles.emptyTitle}>
             {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
           </Text>
