@@ -23,6 +23,7 @@ import {
 
 type UseBootSyncParams = {
   initialGroupId: string;
+  initialRemoteMomentPageLimit?: number;
   normalizeRestoredSession: (session: Session) => Session;
   remoteMomentIdsBySessionId: Record<string, string>;
   setAnalysisBySessionId: Dispatch<SetStateAction<Record<string, AnalysisResult>>>;
@@ -60,6 +61,7 @@ export type RemoteMomentPageInfo = {
 
 export function useBootSync({
   initialGroupId,
+  initialRemoteMomentPageLimit,
   normalizeRestoredSession,
   setAnalysisBySessionId,
   setGeminiEvidenceBySessionId,
@@ -78,6 +80,11 @@ export function useBootSync({
       hasMore: false,
       nextCursor: null,
     });
+  const [initialRemoteMoments, setInitialRemoteMoments] = useState<
+    RemoteMomentRecord[]
+  >([]);
+  const [hasInitialRemoteMomentPage, setHasInitialRemoteMomentPage] =
+    useState(false);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [remoteMomentSyncStatus, setRemoteMomentSyncStatus] =
     useState<RemoteMomentSyncStatus>(
@@ -158,17 +165,21 @@ export function useBootSync({
       setRemoteMomentSyncStatus('loading');
 
       try {
-        const remoteMomentPage = await listMomentPageWithTimeout();
+        const remoteMomentPage = await listMomentPageWithTimeout({
+          limit: initialRemoteMomentPageLimit,
+        });
 
         if (!isMounted) {
           return;
         }
 
         syncRemoteMoments(remoteMomentPage.moments);
+        setInitialRemoteMoments(remoteMomentPage.moments);
         setInitialRemoteMomentPageInfo({
           hasMore: remoteMomentPage.hasMore,
           nextCursor: remoteMomentPage.nextCursor,
         });
+        setHasInitialRemoteMomentPage(true);
         setRemoteMomentSyncStatus('completed');
       } catch (error) {
         if (isMounted) {
@@ -191,6 +202,7 @@ export function useBootSync({
   }, [
     isStorageLoaded,
     isRemoteMomentSyncConfigured,
+    initialRemoteMomentPageLimit,
     syncRemoteMoments,
   ]);
 
@@ -212,8 +224,10 @@ export function useBootSync({
       remoteMomentSyncStatus === 'waiting_for_storage',
     isInitialRemoteMomentSyncPending:
       isRemoteMomentSyncConfigured && !hasCompletedInitialRemoteMomentSync,
+    hasInitialRemoteMomentPage,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    initialRemoteMoments,
     initialRemoteMomentPageInfo,
     markRemoteMomentSyncCompleted,
     remoteMomentSyncStatus,

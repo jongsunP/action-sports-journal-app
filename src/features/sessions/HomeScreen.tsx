@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import {
-  ActivityIndicator,
   Alert,
   AppState,
   type AppStateStatus,
@@ -106,9 +105,6 @@ export function HomeScreen() {
   );
   const [activeTab, setActiveTab] = useState<AppTabId>('home');
   const activeTabRef = useRef<AppTabId>('home');
-  const [isRemoteRefreshActive, setIsRemoteRefreshActive] = useState(false);
-  const [remoteRefreshReason, setRemoteRefreshReason] =
-    useState<RemoteRefreshReason | null>(null);
   const [analysisCompletionNotice, setAnalysisCompletionNotice] =
     useState<AnalysisCompletionNotice | null>(null);
   // Video Archive owns paged order. Global sessions remain cache/detail source.
@@ -131,6 +127,7 @@ export function HomeScreen() {
   >(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
+  const hasAppliedBootVideoArchivePageRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
   const didTriggerSwipeHapticRef = useRef(false);
   const {
@@ -193,14 +190,18 @@ export function HomeScreen() {
   });
 
   const {
+    hasInitialRemoteMomentPage,
     isInitialRemoteMomentSyncPending,
     isLoadingInitialMoments,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    initialRemoteMomentPageInfo,
+    initialRemoteMoments,
     markRemoteMomentSyncCompleted,
     remoteMomentSyncStatus,
   } = useBootSync({
     initialGroupId: ACTIVE_WAKEBOARD_GROUP_ID,
+    initialRemoteMomentPageLimit: MOMENT_LIST_PAGE_SIZE,
     normalizeRestoredSession,
     remoteMomentIdsBySessionId,
     setAnalysisBySessionId,
@@ -260,8 +261,6 @@ export function HomeScreen() {
       }
 
       isRefreshingRemoteMomentsRef.current = true;
-      setRemoteRefreshReason(reason);
-      setIsRemoteRefreshActive(true);
 
       try {
         const remoteMomentPage = await listMomentPageWithTimeout({
@@ -290,8 +289,6 @@ export function HomeScreen() {
         );
       } finally {
         isRefreshingRemoteMomentsRef.current = false;
-        setIsRemoteRefreshActive(false);
-        setRemoteRefreshReason(null);
       }
     },
     [
@@ -536,18 +533,6 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
-  const shouldBlockForRemoteRefresh =
-    isRemoteRefreshActive && remoteRefreshReason === 'initial_retry';
-  const syncBlockingCopy =
-    remoteRefreshReason === 'initial_retry' || isInitialRemoteMomentSyncPending
-      ? {
-          body: '최신 활동을 불러오는 중입니다.',
-          title: '기록을 동기화하고 있습니다',
-        }
-      : {
-          body: '방금 완료된 분석 결과를 불러오는 중입니다.',
-          title: '결과를 동기화하고 있습니다',
-      };
   const getSessionIdsForRemoteMoments = useCallback(
     (remoteMoments: RemoteMomentRecord[]) =>
       remoteMoments.map((remoteMoment) =>
@@ -556,9 +541,35 @@ export function HomeScreen() {
           remoteMomentIdsBySessionId,
           sessions,
         ),
-      ),
+    ),
     [remoteMomentIdsBySessionId, sessions],
   );
+  useEffect(() => {
+    if (
+      hasAppliedBootVideoArchivePageRef.current ||
+      hasLoadedVideoArchiveFirstPage ||
+      !hasInitialRemoteMomentPage ||
+      remoteMomentSyncStatus !== 'completed'
+    ) {
+      return;
+    }
+
+    const sessionIds = getSessionIdsForRemoteMoments(initialRemoteMoments);
+
+    hasAppliedBootVideoArchivePageRef.current = true;
+    setVideoArchiveSessionIds(Array.from(new Set(sessionIds)));
+    setHasMoreVideoArchiveMoments(initialRemoteMomentPageInfo.hasMore);
+    setVideoArchiveNextCursor(initialRemoteMomentPageInfo.nextCursor);
+    setHasLoadedVideoArchiveFirstPage(true);
+  }, [
+    getSessionIdsForRemoteMoments,
+    hasInitialRemoteMomentPage,
+    hasLoadedVideoArchiveFirstPage,
+    initialRemoteMomentPageInfo.hasMore,
+    initialRemoteMomentPageInfo.nextCursor,
+    initialRemoteMoments,
+    remoteMomentSyncStatus,
+  ]);
   const appendVideoArchiveSessionIds = useCallback((sessionIds: string[]) => {
     setVideoArchiveSessionIds((current) => {
       const next = [...current];
@@ -1062,17 +1073,6 @@ export function HomeScreen() {
         onChangeTab={handleChangeTab}
         styles={styles}
       />
-      {shouldBlockForRemoteRefresh ? (
-        <View accessibilityRole="progressbar" style={styles.syncBlockingOverlay}>
-          <View style={styles.syncBlockingCard}>
-            <ActivityIndicator color="#f8fafc" size="large" />
-            <Text style={styles.syncBlockingTitle}>{syncBlockingCopy.title}</Text>
-            <Text style={styles.syncBlockingText}>
-              {syncBlockingCopy.body}
-            </Text>
-          </View>
-        </View>
-      ) : null}
       {analysisCompletionNotice ? (
         <Pressable
           accessibilityLabel="완료된 분석 결과 열기"
@@ -1186,45 +1186,6 @@ const styles = StyleSheet.create({
     paddingBottom: 124,
     paddingHorizontal: 0,
     paddingTop: 6,
-  },
-  syncBlockingOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(5, 5, 7, 0.72)',
-    bottom: 0,
-    justifyContent: 'center',
-    left: 0,
-    paddingHorizontal: 28,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 30,
-  },
-  syncBlockingCard: {
-    alignItems: 'center',
-    backgroundColor: '#101218',
-    borderColor: 'rgba(125, 211, 252, 0.34)',
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 10,
-    maxWidth: 320,
-    paddingHorizontal: 22,
-    paddingVertical: 24,
-    width: '100%',
-  },
-  syncBlockingTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    lineHeight: 22,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  syncBlockingText: {
-    color: '#bae6fd',
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
-    textAlign: 'center',
   },
   analysisCompleteBanner: {
     alignItems: 'center',
