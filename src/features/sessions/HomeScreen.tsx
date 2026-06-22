@@ -90,6 +90,11 @@ type AnalysisCompletionNotice = {
   sessionId: string;
   title: string;
 };
+type RemoteMomentFirstPage = {
+  moments: RemoteMomentRecord[];
+  hasMore: boolean;
+  nextCursor: string | null;
+};
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
@@ -218,6 +223,31 @@ export function HomeScreen() {
   const isSessionListLoading =
     isLoadingInitialMoments || isInitialRemoteMomentSyncPending;
 
+  const getSessionIdsForRemoteMoments = useCallback(
+    (remoteMoments: RemoteMomentRecord[]) =>
+      remoteMoments.map((remoteMoment) =>
+        resolveLocalSessionIdForRemoteMoment(
+          remoteMoment,
+          remoteMomentIdsBySessionId,
+          sessions,
+        ),
+    ),
+    [remoteMomentIdsBySessionId, sessions],
+  );
+  const applyVideoArchiveFirstPage = useCallback(
+    (remoteMomentPage: RemoteMomentFirstPage) => {
+      const sessionIds = getSessionIdsForRemoteMoments(
+        remoteMomentPage.moments,
+      );
+
+      setVideoArchiveSessionIds(Array.from(new Set(sessionIds)));
+      setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
+      setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
+      setHasLoadedVideoArchiveFirstPage(true);
+    },
+    [getSessionIdsForRemoteMoments],
+  );
+
   useEffect(() => {
     if (activeTab === 'video') {
       setHasMountedVideoTab(true);
@@ -277,6 +307,7 @@ export function HomeScreen() {
         if (reason === 'realtime') {
           pendingRealtimeCompletionNoticeRef.current = completedRealtimeSession;
         }
+        applyVideoArchiveFirstPage(remoteMomentPage);
         console.info('[moment_sync]', {
           event: 'remote_moments_refreshed',
           reason,
@@ -294,6 +325,7 @@ export function HomeScreen() {
     [
       isRemoteMomentSyncLoaded,
       isStorageLoaded,
+      applyVideoArchiveFirstPage,
       markRemoteMomentSyncCompleted,
       remoteMomentIdsBySessionId,
       sessions,
@@ -405,6 +437,7 @@ export function HomeScreen() {
         .then((remoteMomentPage) => {
           if (isMounted) {
             syncRemoteMoments(remoteMomentPage.moments);
+            applyVideoArchiveFirstPage(remoteMomentPage);
           }
         })
         .catch((error) => {
@@ -422,6 +455,7 @@ export function HomeScreen() {
   }, [
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    applyVideoArchiveFirstPage,
     sessions,
     syncRemoteMoments,
   ]);
@@ -533,17 +567,6 @@ export function HomeScreen() {
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
     [sessions, selectedGroup?.id],
   );
-  const getSessionIdsForRemoteMoments = useCallback(
-    (remoteMoments: RemoteMomentRecord[]) =>
-      remoteMoments.map((remoteMoment) =>
-        resolveLocalSessionIdForRemoteMoment(
-          remoteMoment,
-          remoteMomentIdsBySessionId,
-          sessions,
-        ),
-    ),
-    [remoteMomentIdsBySessionId, sessions],
-  );
   useEffect(() => {
     if (
       hasAppliedBootVideoArchivePageRef.current ||
@@ -554,15 +577,14 @@ export function HomeScreen() {
       return;
     }
 
-    const sessionIds = getSessionIdsForRemoteMoments(initialRemoteMoments);
-
     hasAppliedBootVideoArchivePageRef.current = true;
-    setVideoArchiveSessionIds(Array.from(new Set(sessionIds)));
-    setHasMoreVideoArchiveMoments(initialRemoteMomentPageInfo.hasMore);
-    setVideoArchiveNextCursor(initialRemoteMomentPageInfo.nextCursor);
-    setHasLoadedVideoArchiveFirstPage(true);
+    applyVideoArchiveFirstPage({
+      moments: initialRemoteMoments,
+      hasMore: initialRemoteMomentPageInfo.hasMore,
+      nextCursor: initialRemoteMomentPageInfo.nextCursor,
+    });
   }, [
-    getSessionIdsForRemoteMoments,
+    applyVideoArchiveFirstPage,
     hasInitialRemoteMomentPage,
     hasLoadedVideoArchiveFirstPage,
     initialRemoteMomentPageInfo.hasMore,
@@ -600,15 +622,8 @@ export function HomeScreen() {
       limit: MOMENT_LIST_PAGE_SIZE,
     })
       .then((remoteMomentPage) => {
-        const sessionIds = getSessionIdsForRemoteMoments(
-          remoteMomentPage.moments,
-        );
-
         syncRemoteMoments(remoteMomentPage.moments);
-        setVideoArchiveSessionIds(Array.from(new Set(sessionIds)));
-        setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
-        setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
-        setHasLoadedVideoArchiveFirstPage(true);
+        applyVideoArchiveFirstPage(remoteMomentPage);
       })
       .catch((error) => {
         console.warn(
@@ -620,7 +635,7 @@ export function HomeScreen() {
         setIsLoadingVideoArchiveInitialPage(false);
       });
   }, [
-    getSessionIdsForRemoteMoments,
+    applyVideoArchiveFirstPage,
     hasLoadedVideoArchiveFirstPage,
     isLoadingVideoArchiveInitialPage,
     syncRemoteMoments,
