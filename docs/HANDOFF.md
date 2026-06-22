@@ -75,15 +75,15 @@ Current implementation status:
 - Video Archive Source is accepted.
 - `upload_success` invalidate/refetch is accepted.
 - Push / Realtime / foreground remain event/fallback refresh paths.
-- Active moment polling remains only as fallback for queued/processing jobs.
-- `uploading` is not a polling trigger.
+- Active moment polling has been removed.
+- `moment_updated` Broadcast now covers queued/processing/completed/failed
+  status transitions as a refetch trigger.
 
 Next:
 
-Do not start Auth or Compression before this polling fallback reduction is
-committed. For full polling removal later, prefer one server Broadcast event
-such as `moment_updated` that triggers a `/api/moments` refresh rather than
-merging event payloads directly.
+Do not start Auth or Compression until this polling removal is committed.
+`moment_updated` should remain a trigger for `/api/moments` refresh rather than
+a direct state merge payload.
 
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 

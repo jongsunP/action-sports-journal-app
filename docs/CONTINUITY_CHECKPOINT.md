@@ -39,7 +39,7 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
-## 2026-06-23 State Sync / Polling Fallback Checkpoint
+## 2026-06-23 State Sync / Polling Removal Checkpoint
 
 Problem:
 
@@ -62,14 +62,14 @@ Current rule:
 - Video = Server Archive Source.
 - Detail = Cache + Server context.
 - Main sync = upload_success, Realtime, Push response, foreground refresh.
-- Polling = fallback only for queued/processing states, not for uploading.
+- Polling = removed from active Moment sync.
+- `moment_updated` Broadcast = queued/processing/completed/failed refresh
+  trigger.
 
 Next starting point:
 
-Commit the polling fallback reduction, then proceed toward Auth / Ownership.
-If polling removal is desired later, add a Render/Supabase Broadcast event such
-as `moment_updated` for create/status/delete transitions and keep payloads as
-refresh triggers rather than direct state merges.
+Commit the polling removal, then proceed toward Auth / Ownership. Keep
+`moment_updated` payloads as refresh triggers rather than direct state merges.
 
 ## Part 1 Upload Experience Closeout - 2026-06-22
 

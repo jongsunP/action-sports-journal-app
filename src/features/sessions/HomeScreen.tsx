@@ -452,56 +452,6 @@ export function HomeScreen() {
   }, [analysisCompletionNotice]);
 
   useEffect(() => {
-    if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
-      return;
-    }
-
-    // Main sync is explicit invalidation after upload success, Realtime,
-    // Push response, and foreground refresh. This interval is only a fallback
-    // for queued/processing jobs when those event paths are missed.
-    const hasActiveMoment = sessions.some(
-      (session) =>
-        session.momentStatus === 'queued' ||
-        session.momentStatus === 'processing',
-    );
-
-    if (!hasActiveMoment) {
-      return;
-    }
-
-    let isMounted = true;
-
-    const intervalId = setInterval(() => {
-      listMomentPageWithTimeout({
-        limit: MOMENT_LIST_PAGE_SIZE,
-      })
-        .then((remoteMomentPage) => {
-          if (isMounted) {
-            syncRemoteMoments(remoteMomentPage.moments);
-            applyVideoArchiveFirstPage(remoteMomentPage);
-          }
-        })
-        .catch((error) => {
-          console.warn(
-            'Supabase moment polling failed:',
-            error instanceof Error ? error.message : 'Unknown error',
-          );
-        });
-    }, 5000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(intervalId);
-    };
-  }, [
-    isRemoteMomentSyncLoaded,
-    isStorageLoaded,
-    applyVideoArchiveFirstPage,
-    sessions,
-    syncRemoteMoments,
-  ]);
-
-  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       const previousAppState = appStateRef.current;
       appStateRef.current = nextAppState;

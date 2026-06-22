@@ -47,7 +47,7 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
-## 2026-06-23 State Sync / Polling Fallback Decision
+## 2026-06-23 State Sync / Polling Removal Decision
 
 Problem:
 
@@ -74,8 +74,8 @@ Decision:
   full global sessions cache.
 - Main sync paths are upload-success invalidate/refetch, Realtime Broadcast,
   Push response, and foreground refresh.
-- Active moment polling is now fallback only. It must not be treated as the
-  product's main synchronization strategy.
+- Active moment polling has been removed. Polling must not be treated as the
+  product's main or fallback synchronization strategy for Part 1.
 
 Implementation:
 
@@ -86,15 +86,17 @@ Implementation:
   `activeTabRef`, preventing stale indicator state.
 - Refresh requests that arrive during an in-flight refresh are queued instead
   of dropped, with `upload_success` taking priority.
-- Polling no longer runs for `uploading`; it is limited to queued/processing
-  server-side analysis states.
+- Render now emits a best-effort `moment_updated` Broadcast for Moment
+  creation/queued, processing, completed, and failed transitions.
+- The app treats `moment_updated` as an invalidation trigger only and refetches
+  `/api/moments`; event payloads are not merged directly.
+- The remaining queued/processing interval polling was removed.
 
 Next:
 
-Before Auth, keep sync changes scoped. If polling is removed later, first add a
-server Broadcast event such as `moment_updated` that fires for Moment creation,
-queued/processing/completed/failed transitions, and deletion, while keeping
-`/api/moments` as the source of truth.
+Before Auth, keep sync changes scoped. If more lifecycle transitions are added
+later, they should reuse the same `moment_updated` invalidation pattern while
+keeping `/api/moments` as the source of truth.
 
 ## Part 1 Upload Experience Closeout - 2026-06-22
 

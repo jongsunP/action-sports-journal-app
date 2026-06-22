@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabase/client';
 
 const ANALYSIS_REALTIME_CHANNEL = 'analysis-updates';
 const ANALYSIS_COMPLETED_EVENT = 'analysis_completed';
+const MOMENT_UPDATED_EVENT = 'moment_updated';
 const REALTIME_REFRESH_DEBOUNCE_MS = 350;
 
 type AnalysisCompletedPayload = {
@@ -28,8 +29,10 @@ export function useAnalysisRealtimeSync({
     onAnalysisCompletedRef.current = onAnalysisCompleted;
   }, [onAnalysisCompleted]);
 
-  const scheduleRefresh = useCallback((payload: AnalysisCompletedPayload) => {
-    if (payload.status && payload.status !== 'completed') {
+  const scheduleRefresh = useCallback((payload: AnalysisCompletedPayload, options?: {
+    completedOnly?: boolean;
+  }) => {
+    if (options?.completedOnly && payload.status && payload.status !== 'completed') {
       return;
     }
 
@@ -81,6 +84,16 @@ export function useAnalysisRealtimeSync({
             event: 'analysis_realtime_received',
             momentId: payload.momentId,
             analysisJobId: payload.analysisJobId,
+          });
+          scheduleRefresh(payload, { completedOnly: true });
+        })
+        .on('broadcast', { event: MOMENT_UPDATED_EVENT }, (message) => {
+          const payload = normalizeAnalysisCompletedPayload(message);
+          console.info('[moment_sync]', {
+            event: 'moment_updated_realtime_received',
+            momentId: payload.momentId,
+            analysisJobId: payload.analysisJobId,
+            status: payload.status,
           });
           scheduleRefresh(payload);
         });

@@ -26,7 +26,7 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
-## State Sync / Polling Fallback - 2026-06-23
+## State Sync / Polling Removal - 2026-06-23
 
 Problem:
 
@@ -37,35 +37,37 @@ policy before Auth / Ownership work.
 
 Decision:
 
-Build 53 establishes the current policy:
+Build 53 established the invalidation policy, and the follow-up removed the
+remaining active Moment polling:
 
 - Upload success is the primary invalidation point and refetches
   `/api/moments` first page.
 - The first page updates global sessions and Video Archive first-page source.
 - Realtime, Push response, and foreground refresh are event/fallback refresh
   paths.
-- Active moment polling is fallback only.
-- Polling should not watch `uploading`; upload success owns that transition.
+- Active moment polling is removed.
+- `moment_updated` Broadcast covers queued/processing/completed/failed status
+  transitions as a refetch trigger.
 
 Current fallback:
 
-Polling remains for `queued` and `processing` to recover from missed Realtime,
-missed Push response, or foreground edge cases. Keep the current 5 second
-interval until another real-device QA pass confirms the event paths are stable.
+Foreground refresh and Push response remain the non-Realtime fallbacks. The app
+does not run interval polling for queued/processing Moments.
 
-Future removal path:
+Realtime event shape:
 
-A single server Broadcast event named `moment_updated` is likely enough if it
-fires for:
+A single server Broadcast event named `moment_updated` is enough for the current
+Part 1 state sync model if it fires for:
 
 - Moment created/finalized after upload.
 - Analysis queued/processing/completed/failed.
-- Moment deleted.
+- Moment deleted should use the same pattern when delete-specific realtime
+  feedback becomes necessary; current delete UX already removes local state
+  after the server delete succeeds.
 
 The app should treat `moment_updated` as an invalidation trigger only. It
 should not merge event payloads directly; `/api/moments` remains the source of
-truth. After `moment_updated` is reliable, consider increasing the polling
-interval or removing fallback polling entirely.
+truth. After Auth, move this public MVP channel to a scoped/private channel.
 
 ## Part 1 Upload Experience Closeout - 2026-06-22
 

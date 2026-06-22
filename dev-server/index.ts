@@ -3547,6 +3547,12 @@ async function createQueuedEvidenceAnalysisJob({
     );
   }
 
+  void broadcastMomentUpdated({
+    momentId,
+    analysisJobId: data.id as string,
+    status: completedEvidenceResultId ? "completed" : "queued",
+  });
+
   return {
     id: data.id as string,
     status: data.status as "queued",
@@ -4713,6 +4719,12 @@ async function markEvidenceAnalysisJobProcessing(analysisJobId: string) {
     );
   }
 
+  void broadcastMomentUpdated({
+    momentId: data.moment_id as string,
+    analysisJobId,
+    status: completedEvidenceResultId ? "completed" : "processing",
+  });
+
   return {
     id: data.id as string,
     momentId: data.moment_id as string,
@@ -4769,6 +4781,12 @@ async function markEvidenceAnalysisJobFailed({
   if (momentError) {
     console.error(`Failed to mark moment failed: ${momentError.message}`);
   }
+
+  void broadcastMomentUpdated({
+    momentId,
+    analysisJobId,
+    status: completedEvidenceResultId ? "completed" : "failed",
+  });
 }
 
 async function runGeminiEvidenceExtraction({
@@ -4996,6 +5014,12 @@ async function runGeminiEvidenceExtraction({
         analysisJobId: persistence.analysisJobId,
       });
     }
+
+    void broadcastMomentUpdated({
+      momentId: persistence.momentId,
+      analysisJobId: persistence.analysisJobId,
+      status: normalizedEvidence.parseFailed ? "failed" : "completed",
+    });
   }
 
   try {
@@ -5192,6 +5216,69 @@ async function broadcastAnalysisCompleted({
     } catch (error) {
       console.warn(
         "Failed to remove realtime broadcast channel:",
+        error instanceof Error ? error.message : "unknown realtime cleanup error",
+      );
+    }
+  }
+}
+
+async function broadcastMomentUpdated({
+  momentId,
+  analysisJobId,
+  status,
+}: {
+  momentId: string;
+  analysisJobId?: string;
+  status: "queued" | "processing" | "completed" | "failed";
+}) {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    return;
+  }
+
+  const channel = client.channel(realtimeAnalysisChannel, {
+    config: {
+      broadcast: {
+        ack: true,
+        self: false,
+      },
+    },
+  });
+
+  try {
+    const realtimeStatus = await channel.send(
+      {
+        type: "broadcast",
+        event: "moment_updated",
+        payload: {
+          momentId,
+          analysisJobId,
+          status,
+        },
+      },
+      { timeout: 5_000 },
+    );
+
+    if (realtimeStatus !== "ok") {
+      console.warn("Moment update realtime broadcast was not acknowledged:", {
+        realtimeStatus,
+        momentId,
+        analysisJobId,
+        status,
+      });
+    }
+  } catch (error) {
+    console.warn(
+      "Moment update realtime broadcast failed:",
+      error instanceof Error ? error.message : "unknown realtime error",
+    );
+  } finally {
+    try {
+      await client.removeChannel(channel);
+    } catch (error) {
+      console.warn(
+        "Failed to remove moment update realtime channel:",
         error instanceof Error ? error.message : "unknown realtime cleanup error",
       );
     }

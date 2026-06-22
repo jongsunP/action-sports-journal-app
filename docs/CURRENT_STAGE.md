@@ -36,16 +36,16 @@ Current sync policy:
 - POST/finalize upload success is the primary invalidation point.
 - Realtime Broadcast, Push response, and foreground refresh are event/fallback
   refresh paths.
-- Active moment polling is fallback only and no longer watches `uploading`.
+- Active moment polling has been removed; queued/processing updates now rely on
+  `moment_updated` Broadcast plus the existing refresh paths.
 - Video remains a Server Archive Source; do not use all global sessions as the
   Video source.
 
 Next:
 
-Auth remains the next major product/architecture topic, but do not start it
-until the polling fallback reduction is committed and documented. Long-term
-polling removal should use a server Broadcast event such as `moment_updated`
-and continue to treat `/api/moments` as source of truth.
+Auth remains the next major product/architecture topic. The state sync blocker
+is now resolved without active polling: `moment_updated` is a refresh trigger,
+and `/api/moments` remains source of truth.
 
 Part 1 Upload Experience closeout, 2026-06-22:
 
