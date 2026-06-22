@@ -1,7 +1,5 @@
 import { useRef } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
   type GestureResponderEvent,
   Image,
   Modal,
@@ -11,7 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import type { ReactElement } from 'react';
 
 import {
   getMomentStatusLabel,
@@ -397,22 +394,14 @@ export function PrimaryInsightCard({
 export function VideoArchiveList({
   formatShortSessionDate,
   getVideoArchiveDescription,
-  hasMore = false,
-  header,
   isLoading = false,
-  isLoadingMore = false,
-  onEndReached,
   onOpenSession,
   sessions,
   styles,
 }: {
   formatShortSessionDate: (value: string) => string;
   getVideoArchiveDescription: (session: Session) => string;
-  hasMore?: boolean;
-  header?: ReactElement | null;
   isLoading?: boolean;
-  isLoadingMore?: boolean;
-  onEndReached?: () => void;
   onOpenSession: (session: Session) => void;
   sessions: SessionSummary[];
   styles: HomeScreenStyles;
@@ -457,95 +446,70 @@ export function VideoArchiveList({
     onOpenSession(session);
   };
 
-  const renderSessionRow = ({
-    item,
-  }: {
-    item: SessionSummary;
-  }) => {
-    const { card, momentStatus, session } = item;
-
+  if (sessions.length === 0) {
     return (
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => handleRowPress(session)}
-        onTouchMove={handleRowTouchMove}
-        onTouchStart={handleRowTouchStart}
-        pressRetentionOffset={{ bottom: 4, left: 8, right: 8, top: 4 }}
-        style={({ pressed }) => [
-          styles.videoArchiveRow,
-          pressed ? styles.sessionRowPressed : undefined,
-        ]}
-      >
-        <View style={styles.videoArchiveThumb}>
-          {card.thumbnailUri ? (
-            <Image
-              resizeMode="cover"
-              source={{ uri: card.thumbnailUri }}
-              style={styles.recentThumbImage}
-            />
-          ) : (
-            <View style={styles.recentThumbFallback}>
-              <Text style={styles.recentThumbFallbackText}>
-                {session.videoUri ? 'CLIP' : 'NOTE'}
-              </Text>
-            </View>
-          )}
-          <View style={styles.mediaStatusDotOverlay}>
-            <MomentStatusDot status={momentStatus} />
-          </View>
-        </View>
-        <View style={styles.videoArchiveBody}>
-          <View style={styles.videoArchiveMetaRow}>
-            <Text style={styles.recentDate} numberOfLines={1}>
-              {formatShortSessionDate(session.occurredAt)}
-            </Text>
-          </View>
-          <Text style={styles.timelineTitle} numberOfLines={1}>
-            {card.momentTitle}
-          </Text>
-          <Text style={styles.videoArchiveDescription} numberOfLines={2}>
-            {session.notes ?? getVideoArchiveDescription(session)}
-          </Text>
-        </View>
-      </Pressable>
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyTitle}>
+          {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
+        </Text>
+        <Text style={styles.emptyText}>
+          {isLoading
+            ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
+            : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
+        </Text>
+      </View>
     );
-  };
+  }
 
   return (
-    <FlatList
-      contentContainerStyle={styles.videoArchiveListContent}
-      data={sessions}
-      initialNumToRender={10}
-      ItemSeparatorComponent={() => (
-        <View style={styles.videoArchiveSeparator} />
-      )}
-      keyExtractor={({ session }) => session.id}
-      ListFooterComponent={
-        isLoadingMore ? (
-          <View style={styles.videoArchiveFooter}>
-            <ActivityIndicator color="#9ca3af" />
+    <View style={styles.videoArchiveList}>
+      {sessions.map(({ card, momentStatus, session }) => (
+        <Pressable
+          accessibilityRole="button"
+          key={session.id}
+          onPress={() => handleRowPress(session)}
+          onTouchMove={handleRowTouchMove}
+          onTouchStart={handleRowTouchStart}
+          pressRetentionOffset={{ bottom: 4, left: 8, right: 8, top: 4 }}
+          style={({ pressed }) => [
+            styles.videoArchiveRow,
+            pressed ? styles.sessionRowPressed : undefined,
+          ]}
+        >
+          <View style={styles.videoArchiveThumb}>
+            {card.thumbnailUri ? (
+              <Image
+                resizeMode="cover"
+                source={{ uri: card.thumbnailUri }}
+                style={styles.recentThumbImage}
+              />
+            ) : (
+              <View style={styles.recentThumbFallback}>
+                <Text style={styles.recentThumbFallbackText}>
+                  {session.videoUri ? 'CLIP' : 'NOTE'}
+                </Text>
+              </View>
+            )}
+            <View style={styles.mediaStatusDotOverlay}>
+              <MomentStatusDot status={momentStatus} />
+            </View>
           </View>
-        ) : null
-      }
-      ListEmptyComponent={
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>
-            {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
-          </Text>
-          <Text style={styles.emptyText}>
-            {isLoading
-              ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
-              : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
-          </Text>
-        </View>
-      }
-      ListHeaderComponent={header}
-      onEndReached={hasMore && !isLoadingMore ? onEndReached : undefined}
-      onEndReachedThreshold={0.6}
-      renderItem={renderSessionRow}
-      showsVerticalScrollIndicator={false}
-      windowSize={7}
-    />
+          <View style={styles.videoArchiveBody}>
+            <View style={styles.videoArchiveMetaRow}>
+              <Text style={styles.recentDate} numberOfLines={1}>
+                {formatShortSessionDate(session.occurredAt)}
+              </Text>
+            </View>
+            <Text style={styles.timelineTitle} numberOfLines={1}>
+              {card.momentTitle}
+            </Text>
+            <Text style={styles.videoArchiveDescription} numberOfLines={2}>
+              {session.notes ?? getVideoArchiveDescription(session)}
+            </Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
