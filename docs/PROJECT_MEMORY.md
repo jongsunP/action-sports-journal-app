@@ -136,6 +136,32 @@ Route-backed Bottom Tabs plus Stack remains a later structural refactor for
 Push deep links, tab state restore, future ShareResult screens, and separate
 screen lifecycles.
 
+Build 40 upload failure QA note - 2026-06-22:
+
+Build 40 initially looked like an upload regression after Pager/Haptic adoption,
+but follow-up QA confirmed the real cause was the physical device being offline.
+The observed flow was:
+
+```text
+network unavailable
+-> upload
+-> app shows upload retry/fallback messaging
+-> final failure alert
+-> network restored
+-> same upload flow succeeds
+-> analysis runs
+-> push notification arrives
+-> completed result restores
+```
+
+This should not be classified as a Build 40 upload bug or Pager/Haptic
+regression. It is a useful real network-failure QA case. It confirmed that
+Direct Upload failure handling, fallback attempt messaging, final failure alert,
+and recovery after network restoration do not crash the app or corrupt Moment
+state. A later DB read-only check also showed a successful Build 40 direct
+upload target finalized and the related Moment completed with a Gemini evidence
+result.
+
 ## Build 28 Save Point - 2026-06-21
 
 Current QA build:
