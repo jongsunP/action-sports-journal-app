@@ -424,6 +424,7 @@ export function VideoArchiveList({
           accessibilityRole="button"
           key={session.id}
           onPress={() => onOpenSession(session)}
+          pressRetentionOffset={{ bottom: 4, left: 8, right: 8, top: 4 }}
           style={({ pressed }) => [
             styles.videoArchiveRow,
             pressed ? styles.sessionRowPressed : undefined,

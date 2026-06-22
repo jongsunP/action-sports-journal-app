@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import {
   ActivityIndicator,
   Alert,
@@ -100,6 +101,7 @@ export function HomeScreen() {
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
   const [activeTab, setActiveTab] = useState<AppTabId>('home');
+  const activeTabRef = useRef<AppTabId>('home');
   const [isRemoteRefreshActive, setIsRemoteRefreshActive] = useState(false);
   const [remoteRefreshReason, setRemoteRefreshReason] =
     useState<RemoteRefreshReason | null>(null);
@@ -458,11 +460,25 @@ export function HomeScreen() {
     0,
     pagerRoutes.findIndex((route) => route.key === activeTab),
   );
+  const triggerTabSelectionHaptic = () => {
+    void Haptics.selectionAsync().catch(() => {
+      // Haptics are optional feedback and should never block navigation.
+    });
+  };
+  const handleChangeTab = (tab: AppTabId) => {
+    if (activeTabRef.current === tab) {
+      return;
+    }
+
+    activeTabRef.current = tab;
+    setActiveTab(tab);
+    triggerTabSelectionHaptic();
+  };
   const handlePagerIndexChange = (index: number) => {
     const nextRoute = pagerRoutes[index];
 
     if (nextRoute) {
-      setActiveTab(nextRoute.key);
+      handleChangeTab(nextRoute.key);
     }
   };
 
@@ -832,7 +848,7 @@ export function HomeScreen() {
       <BottomNavigation
         activeTab={activeTab}
         isDarkMode={prefersDarkMode}
-        onChangeTab={setActiveTab}
+        onChangeTab={handleChangeTab}
         styles={styles}
       />
       {shouldBlockForRemoteRefresh ? (
