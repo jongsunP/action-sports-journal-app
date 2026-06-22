@@ -39,6 +39,38 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
+## 2026-06-23 State Sync / Polling Fallback Checkpoint
+
+Problem:
+
+Build 52 still allowed state to feel inconsistent after upload: Home could show
+the new Moment while Video waited for another event, and tab active indicators
+could become stale. This blocked Auth / Part 2 because upload success must
+converge across Home and Video before user ownership work begins.
+
+Decision:
+
+Build 53 QA passed the state-sync blocker. The app now treats upload success as
+a mutation success that explicitly invalidates/refetches `/api/moments` first
+page. That first page updates the global session cache and the Video Archive
+first-page source. Tab activation no longer calls a raw setter from upload
+flow; it goes through the same helper that updates both state and ref.
+
+Current rule:
+
+- Home = Global Session Cache.
+- Video = Server Archive Source.
+- Detail = Cache + Server context.
+- Main sync = upload_success, Realtime, Push response, foreground refresh.
+- Polling = fallback only for queued/processing states, not for uploading.
+
+Next starting point:
+
+Commit the polling fallback reduction, then proceed toward Auth / Ownership.
+If polling removal is desired later, add a Render/Supabase Broadcast event such
+as `moment_updated` for create/status/delete transitions and keep payloads as
+refresh triggers rather than direct state merges.
+
 ## Part 1 Upload Experience Closeout - 2026-06-22
 
 Problem:

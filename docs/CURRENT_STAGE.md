@@ -14,6 +14,39 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+State Sync / Pagination graduation checkpoint, 2026-06-23:
+
+Problem:
+
+Pagination and Video Archive Source separation made the app more scalable, but
+also exposed a state consistency risk. Home is a global session cache, while
+Video is a server archive source. Build 52 showed that upload success, Push,
+Realtime, foreground refresh, and active tab state needed one invalidation
+policy before Auth / Part 2 could begin.
+
+Decision:
+
+Build 53 QA resolved the blocker. Upload success now invalidates/refetches
+`/api/moments` first page, then applies the same remote first page to both
+global sessions and Video Archive first-page source. Tab activation now uses a
+single helper path so `activeTab` and `activeTabRef` stay synchronized.
+
+Current sync policy:
+
+- POST/finalize upload success is the primary invalidation point.
+- Realtime Broadcast, Push response, and foreground refresh are event/fallback
+  refresh paths.
+- Active moment polling is fallback only and no longer watches `uploading`.
+- Video remains a Server Archive Source; do not use all global sessions as the
+  Video source.
+
+Next:
+
+Auth remains the next major product/architecture topic, but do not start it
+until the polling fallback reduction is committed and documented. Long-term
+polling removal should use a server Broadcast event such as `moment_updated`
+and continue to treat `/api/moments` as source of truth.
+
 Part 1 Upload Experience closeout, 2026-06-22:
 
 Problem:

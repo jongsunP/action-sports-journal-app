@@ -26,6 +26,47 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## State Sync / Polling Fallback - 2026-06-23
+
+Problem:
+
+Once Video became a Server Archive Source, state could not rely on the global
+session cache alone. Build 52 showed that upload success, Push, Realtime,
+foreground refresh, active tab state, and polling needed a clear invalidation
+policy before Auth / Ownership work.
+
+Decision:
+
+Build 53 establishes the current policy:
+
+- Upload success is the primary invalidation point and refetches
+  `/api/moments` first page.
+- The first page updates global sessions and Video Archive first-page source.
+- Realtime, Push response, and foreground refresh are event/fallback refresh
+  paths.
+- Active moment polling is fallback only.
+- Polling should not watch `uploading`; upload success owns that transition.
+
+Current fallback:
+
+Polling remains for `queued` and `processing` to recover from missed Realtime,
+missed Push response, or foreground edge cases. Keep the current 5 second
+interval until another real-device QA pass confirms the event paths are stable.
+
+Future removal path:
+
+A single server Broadcast event named `moment_updated` is likely enough if it
+fires for:
+
+- Moment created/finalized after upload.
+- Analysis queued/processing/completed/failed.
+- Moment deleted.
+
+The app should treat `moment_updated` as an invalidation trigger only. It
+should not merge event payloads directly; `/api/moments` remains the source of
+truth. After `moment_updated` is reliable, consider increasing the polling
+interval or removing fallback polling entirely.
+
 ## Part 1 Upload Experience Closeout - 2026-06-22
 
 Problem:

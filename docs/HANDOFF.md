@@ -51,6 +51,40 @@ continuity as well as technical continuity:
 
 ## Current Status
 
+State Sync / Video Archive Source checkpoint, 2026-06-23:
+
+Problem:
+
+After pagination, Video Archive became a separate server source. Build 52
+confirmed that the remaining blocker was not pagination itself, but state
+invalidation: upload success, Push, Realtime, foreground refresh, and tab
+selection had to converge Home and Video without using polling as the main
+solution.
+
+Decision:
+
+Build 53 QA passed this blocker. Upload success now behaves like a mutation
+success: it explicitly refreshes `/api/moments` first page. That first page is
+merged into the global session cache and also replaces the Video Archive
+first-page source. Tab selection is routed through a helper so `activeTab` and
+`activeTabRef` stay in sync.
+
+Current implementation status:
+
+- Pagination / Infinite Scroll is accepted.
+- Video Archive Source is accepted.
+- `upload_success` invalidate/refetch is accepted.
+- Push / Realtime / foreground remain event/fallback refresh paths.
+- Active moment polling remains only as fallback for queued/processing jobs.
+- `uploading` is not a polling trigger.
+
+Next:
+
+Do not start Auth or Compression before this polling fallback reduction is
+committed. For full polling removal later, prefer one server Broadcast event
+such as `moment_updated` that triggers a `/api/moments` refresh rather than
+merging event payloads directly.
+
 Stage 2 is complete. Stage 3 video-to-analysis prototyping is active.
 
 Part 1 Upload Experience closeout, 2026-06-22:

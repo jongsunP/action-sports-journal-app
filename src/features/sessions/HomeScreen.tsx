@@ -456,9 +456,11 @@ export function HomeScreen() {
       return;
     }
 
+    // Main sync is explicit invalidation after upload success, Realtime,
+    // Push response, and foreground refresh. This interval is only a fallback
+    // for queued/processing jobs when those event paths are missed.
     const hasActiveMoment = sessions.some(
       (session) =>
-        session.momentStatus === 'uploading' ||
         session.momentStatus === 'queued' ||
         session.momentStatus === 'processing',
     );

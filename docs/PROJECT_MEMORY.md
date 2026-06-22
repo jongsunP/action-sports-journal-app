@@ -47,6 +47,55 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## 2026-06-23 State Sync / Polling Fallback Decision
+
+Problem:
+
+After pagination and Video Archive Source separation, Home and Video no longer
+share the same source ownership. Home is the global session cache. Video is the
+server-backed archive source. Build 52 showed that upload success, Push,
+Realtime, foreground refresh, and active tab state all had to be treated as one
+state synchronization architecture, not as separate bug fixes.
+
+Why it mattered:
+
+Auth / Ownership and Part 2 should not start while upload success can leave
+Home, Video, or tab selection in different states. The app must first guarantee
+that one uploaded video converges into the same remote Moment across Home,
+Video, and Detail without relying on polling as the primary mechanism.
+
+Decision:
+
+- Pagination / Infinite Scroll and Video Archive Source are accepted.
+- Build 53 QA resolved the Auth/Part 2 blocker: upload success now triggers an
+  explicit `/api/moments` first-page refresh, Home and Video converge, and tab
+  active state stays synchronized.
+- `Video = Server Archive Source` remains the rule. Do not revert Video to the
+  full global sessions cache.
+- Main sync paths are upload-success invalidate/refetch, Realtime Broadcast,
+  Push response, and foreground refresh.
+- Active moment polling is now fallback only. It must not be treated as the
+  product's main synchronization strategy.
+
+Implementation:
+
+- `upload_success` refresh reason refetches `/api/moments` first page.
+- The same first page merges into global sessions and replaces Video Archive
+  first-page source.
+- Tab navigation now uses a helper that updates both `activeTab` and
+  `activeTabRef`, preventing stale indicator state.
+- Refresh requests that arrive during an in-flight refresh are queued instead
+  of dropped, with `upload_success` taking priority.
+- Polling no longer runs for `uploading`; it is limited to queued/processing
+  server-side analysis states.
+
+Next:
+
+Before Auth, keep sync changes scoped. If polling is removed later, first add a
+server Broadcast event such as `moment_updated` that fires for Moment creation,
+queued/processing/completed/failed transitions, and deletion, while keeping
+`/api/moments` as the source of truth.
+
 ## Part 1 Upload Experience Closeout - 2026-06-22
 
 Problem:
