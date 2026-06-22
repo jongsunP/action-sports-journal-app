@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import {
+  type GestureResponderEvent,
   Image,
   Modal,
   Pressable,
@@ -42,6 +44,8 @@ type SessionSummary = {
   momentStatus?: MomentStatus;
   session: Session;
 };
+
+const HORIZONTAL_PRESS_CANCEL_PX = 10;
 
 export function MomentStatusDot({ status }: { status?: MomentStatus }) {
   if (!status) {
@@ -402,6 +406,46 @@ export function VideoArchiveList({
   sessions: SessionSummary[];
   styles: HomeScreenStyles;
 }) {
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const shouldCancelPressRef = useRef(false);
+
+  const handleRowTouchStart = (event: GestureResponderEvent) => {
+    touchStartRef.current = {
+      x: event.nativeEvent.pageX,
+      y: event.nativeEvent.pageY,
+    };
+    shouldCancelPressRef.current = false;
+  };
+
+  const handleRowTouchMove = (event: GestureResponderEvent) => {
+    const touchStart = touchStartRef.current;
+
+    if (!touchStart) {
+      return;
+    }
+
+    const dx = event.nativeEvent.pageX - touchStart.x;
+    const dy = event.nativeEvent.pageY - touchStart.y;
+    const horizontalDistance = Math.abs(dx);
+    const verticalDistance = Math.abs(dy);
+
+    if (
+      horizontalDistance >= HORIZONTAL_PRESS_CANCEL_PX &&
+      horizontalDistance > verticalDistance
+    ) {
+      shouldCancelPressRef.current = true;
+    }
+  };
+
+  const handleRowPress = (session: Session) => {
+    if (shouldCancelPressRef.current) {
+      shouldCancelPressRef.current = false;
+      return;
+    }
+
+    onOpenSession(session);
+  };
+
   if (sessions.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -423,7 +467,9 @@ export function VideoArchiveList({
         <Pressable
           accessibilityRole="button"
           key={session.id}
-          onPress={() => onOpenSession(session)}
+          onPress={() => handleRowPress(session)}
+          onTouchMove={handleRowTouchMove}
+          onTouchStart={handleRowTouchStart}
           pressRetentionOffset={{ bottom: 4, left: 8, right: 8, top: 4 }}
           style={({ pressed }) => [
             styles.videoArchiveRow,

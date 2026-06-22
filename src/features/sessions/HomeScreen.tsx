@@ -110,6 +110,7 @@ export function HomeScreen() {
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
+  const didTriggerSwipeHapticRef = useRef(false);
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -461,25 +462,38 @@ export function HomeScreen() {
     pagerRoutes.findIndex((route) => route.key === activeTab),
   );
   const triggerTabSelectionHaptic = () => {
-    void Haptics.selectionAsync().catch(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {
       // Haptics are optional feedback and should never block navigation.
     });
   };
-  const handleChangeTab = (tab: AppTabId) => {
+  const handleChangeTab = (
+    tab: AppTabId,
+    options?: { skipHaptic?: boolean },
+  ) => {
     if (activeTabRef.current === tab) {
       return;
     }
 
     activeTabRef.current = tab;
     setActiveTab(tab);
-    triggerTabSelectionHaptic();
+
+    if (!options?.skipHaptic) {
+      triggerTabSelectionHaptic();
+    }
   };
   const handlePagerIndexChange = (index: number) => {
     const nextRoute = pagerRoutes[index];
 
     if (nextRoute) {
-      handleChangeTab(nextRoute.key);
+      handleChangeTab(nextRoute.key, {
+        skipHaptic: didTriggerSwipeHapticRef.current,
+      });
+      didTriggerSwipeHapticRef.current = false;
     }
+  };
+  const handlePagerSwipeStart = () => {
+    didTriggerSwipeHapticRef.current = true;
+    triggerTabSelectionHaptic();
   };
 
   const visibleSessions = useMemo(
@@ -839,6 +853,7 @@ export function HomeScreen() {
           initialLayout={{ width: layout.width }}
           navigationState={{ index: activeTabIndex, routes: pagerRoutes }}
           onIndexChange={handlePagerIndexChange}
+          onSwipeStart={handlePagerSwipeStart}
           renderScene={renderPagerScene}
           renderTabBar={() => null}
           style={styles.pager}
