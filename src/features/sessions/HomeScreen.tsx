@@ -111,11 +111,22 @@ export function HomeScreen() {
     useState<RemoteRefreshReason | null>(null);
   const [analysisCompletionNotice, setAnalysisCompletionNotice] =
     useState<AnalysisCompletionNotice | null>(null);
-  const [hasMoreVideoMoments, setHasMoreVideoMoments] = useState(false);
-  const [hasMountedVideoTab, setHasMountedVideoTab] = useState(false);
-  const [isLoadingMoreVideoMoments, setIsLoadingMoreVideoMoments] =
+  // Video Archive owns paged order. Global sessions remain cache/detail source.
+  const [hasMoreVideoArchiveMoments, setHasMoreVideoArchiveMoments] =
     useState(false);
-  const [videoMomentsNextCursor, setVideoMomentsNextCursor] = useState<
+  const [hasLoadedVideoArchiveFirstPage, setHasLoadedVideoArchiveFirstPage] =
+    useState(false);
+  const [hasMountedVideoTab, setHasMountedVideoTab] = useState(false);
+  const [isLoadingVideoArchiveInitialPage, setIsLoadingVideoArchiveInitialPage] =
+    useState(false);
+  const [
+    isLoadingMoreVideoArchiveMoments,
+    setIsLoadingMoreVideoArchiveMoments,
+  ] = useState(false);
+  const [videoArchiveSessionIds, setVideoArchiveSessionIds] = useState<
+    string[]
+  >([]);
+  const [videoArchiveNextCursor, setVideoArchiveNextCursor] = useState<
     string | null
   >(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
@@ -186,7 +197,6 @@ export function HomeScreen() {
     isLoadingInitialMoments,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
-    initialRemoteMomentPageInfo,
     markRemoteMomentSyncCompleted,
     remoteMomentSyncStatus,
   } = useBootSync({
@@ -206,14 +216,6 @@ export function HomeScreen() {
   });
   const isSessionListLoading =
     isLoadingInitialMoments || isInitialRemoteMomentSyncPending;
-
-  useEffect(() => {
-    setHasMoreVideoMoments(initialRemoteMomentPageInfo.hasMore);
-    setVideoMomentsNextCursor(initialRemoteMomentPageInfo.nextCursor);
-  }, [
-    initialRemoteMomentPageInfo.hasMore,
-    initialRemoteMomentPageInfo.nextCursor,
-  ]);
 
   useEffect(() => {
     if (activeTab === 'video') {
@@ -546,26 +548,116 @@ export function HomeScreen() {
           body: '방금 완료된 분석 결과를 불러오는 중입니다.',
           title: '결과를 동기화하고 있습니다',
       };
-  const handleLoadMoreVideoMoments = useCallback(() => {
+  const getSessionIdsForRemoteMoments = useCallback(
+    (remoteMoments: RemoteMomentRecord[]) =>
+      remoteMoments.map((remoteMoment) =>
+        resolveLocalSessionIdForRemoteMoment(
+          remoteMoment,
+          remoteMomentIdsBySessionId,
+          sessions,
+        ),
+      ),
+    [remoteMomentIdsBySessionId, sessions],
+  );
+  const appendVideoArchiveSessionIds = useCallback((sessionIds: string[]) => {
+    setVideoArchiveSessionIds((current) => {
+      const next = [...current];
+      const seen = new Set(current);
+
+      for (const sessionId of sessionIds) {
+        if (!seen.has(sessionId)) {
+          next.push(sessionId);
+          seen.add(sessionId);
+        }
+      }
+
+      return next;
+    });
+  }, []);
+  const loadInitialVideoArchivePage = useCallback(() => {
     if (
-      !hasMoreVideoMoments ||
-      !videoMomentsNextCursor ||
-      isLoadingMoreVideoMoments ||
+      hasLoadedVideoArchiveFirstPage ||
+      isLoadingVideoArchiveInitialPage ||
       !hasConfiguredSupabaseMoments()
     ) {
       return;
     }
 
-    setIsLoadingMoreVideoMoments(true);
+    setIsLoadingVideoArchiveInitialPage(true);
 
     listMomentPageWithTimeout({
-      cursor: videoMomentsNextCursor,
       limit: MOMENT_LIST_PAGE_SIZE,
     })
       .then((remoteMomentPage) => {
+        const sessionIds = getSessionIdsForRemoteMoments(
+          remoteMomentPage.moments,
+        );
+
         syncRemoteMoments(remoteMomentPage.moments);
-        setHasMoreVideoMoments(remoteMomentPage.hasMore);
-        setVideoMomentsNextCursor(remoteMomentPage.nextCursor);
+        setVideoArchiveSessionIds(Array.from(new Set(sessionIds)));
+        setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
+        setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
+        setHasLoadedVideoArchiveFirstPage(true);
+      })
+      .catch((error) => {
+        console.warn(
+          'Supabase video archive initial page failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      })
+      .finally(() => {
+        setIsLoadingVideoArchiveInitialPage(false);
+      });
+  }, [
+    getSessionIdsForRemoteMoments,
+    hasLoadedVideoArchiveFirstPage,
+    isLoadingVideoArchiveInitialPage,
+    syncRemoteMoments,
+  ]);
+
+  useEffect(() => {
+    if (
+      activeTab !== 'video' ||
+      !isStorageLoaded ||
+      !isRemoteMomentSyncLoaded
+    ) {
+      return;
+    }
+
+    loadInitialVideoArchivePage();
+  }, [
+    activeTab,
+    isRemoteMomentSyncLoaded,
+    isStorageLoaded,
+    loadInitialVideoArchivePage,
+  ]);
+
+  const handleLoadMoreVideoArchiveMoments = useCallback(() => {
+    if (
+      !hasLoadedVideoArchiveFirstPage ||
+      !hasMoreVideoArchiveMoments ||
+      !videoArchiveNextCursor ||
+      isLoadingMoreVideoArchiveMoments ||
+      !hasConfiguredSupabaseMoments()
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreVideoArchiveMoments(true);
+
+    listMomentPageWithTimeout({
+      cursor: videoArchiveNextCursor,
+      limit: MOMENT_LIST_PAGE_SIZE,
+    })
+      .then((remoteMomentPage) => {
+        const sessionIds = getSessionIdsForRemoteMoments(
+          remoteMomentPage.moments,
+        );
+
+        syncRemoteMoments(remoteMomentPage.moments);
+        appendVideoArchiveSessionIds(sessionIds);
+        setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
+        setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       })
       .catch((error) => {
         console.warn(
@@ -574,13 +666,16 @@ export function HomeScreen() {
         );
       })
       .finally(() => {
-        setIsLoadingMoreVideoMoments(false);
+        setIsLoadingMoreVideoArchiveMoments(false);
       });
   }, [
-    hasMoreVideoMoments,
-    isLoadingMoreVideoMoments,
+    appendVideoArchiveSessionIds,
+    getSessionIdsForRemoteMoments,
+    hasLoadedVideoArchiveFirstPage,
+    hasMoreVideoArchiveMoments,
+    isLoadingMoreVideoArchiveMoments,
     syncRemoteMoments,
-    videoMomentsNextCursor,
+    videoArchiveNextCursor,
   ]);
   const homeSessionSummaries = useMemo(
     () =>
@@ -634,6 +729,22 @@ export function HomeScreen() {
     ? formatShortSessionDate(latestCompletedSummary.session.occurredAt)
     : undefined;
   const recentSessionSummaries = homeSessionSummaries.slice(0, 8);
+  const sessionSummaryById = useMemo(
+    () =>
+      new Map(
+        homeSessionSummaries.map((summary) => [summary.session.id, summary]),
+      ),
+    [homeSessionSummaries],
+  );
+  const videoArchiveSessionSummaries = useMemo(
+    () =>
+      videoArchiveSessionIds
+        .map((sessionId) => sessionSummaryById.get(sessionId))
+        .filter((summary): summary is NonNullable<typeof summary> =>
+          Boolean(summary),
+        ),
+    [sessionSummaryById, videoArchiveSessionIds],
+  );
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
 
@@ -859,7 +970,7 @@ export function HomeScreen() {
         <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
         <Text style={styles.title}>영상</Text>
         <Text style={styles.headerMeta}>
-          {visibleSessions.length}개 세션 · 날짜별/기술별 분류 예정
+          {videoArchiveSessionSummaries.length}개 로드됨 · 날짜별/기술별 분류 예정
         </Text>
       </View>
 
@@ -876,13 +987,16 @@ export function HomeScreen() {
     <VideoArchiveList
       formatShortSessionDate={formatShortSessionDate}
       getVideoArchiveDescription={getVideoArchiveDescription}
-      hasMore={hasMoreVideoMoments}
+      hasMore={hasMoreVideoArchiveMoments}
       header={renderVideoArchiveHeader()}
-      isLoading={isSessionListLoading}
-      isLoadingMore={isLoadingMoreVideoMoments}
-      onEndReached={handleLoadMoreVideoMoments}
+      isLoading={
+        isLoadingVideoArchiveInitialPage ||
+        (isSessionListLoading && videoArchiveSessionSummaries.length === 0)
+      }
+      isLoadingMore={isLoadingMoreVideoArchiveMoments}
+      onEndReached={handleLoadMoreVideoArchiveMoments}
       onOpenSession={openEvidenceSheet}
-      sessions={homeSessionSummaries}
+      sessions={videoArchiveSessionSummaries}
       styles={styles}
     />
   );
