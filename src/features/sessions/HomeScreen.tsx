@@ -85,6 +85,8 @@ type AnalysisCompletionNotice = {
   title: string;
 };
 
+const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
+
 export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
@@ -101,6 +103,7 @@ export function HomeScreen() {
     useState<AnalysisCompletionNotice | null>(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
+  const completedBootSyncAtRef = useRef<number | null>(null);
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -185,6 +188,15 @@ export function HomeScreen() {
   const isSessionListLoading =
     isLoadingInitialMoments || isInitialRemoteMomentSyncPending;
 
+  useEffect(() => {
+    if (
+      remoteMomentSyncStatus === 'completed' &&
+      completedBootSyncAtRef.current === null
+    ) {
+      completedBootSyncAtRef.current = Date.now();
+    }
+  }, [remoteMomentSyncStatus]);
+
   const refreshRemoteMoments = useCallback(
     async (reason: RemoteRefreshReason) => {
       if (
@@ -194,6 +206,22 @@ export function HomeScreen() {
         isRefreshingRemoteMomentsRef.current
       ) {
         return;
+      }
+
+      if (reason === 'push_response') {
+        const completedBootSyncAt = completedBootSyncAtRef.current;
+        const shouldSkipRecentBootRefresh =
+          completedBootSyncAt !== null &&
+          Date.now() - completedBootSyncAt <= PUSH_RESPONSE_BOOT_DEDUPE_MS;
+
+        if (shouldSkipRecentBootRefresh) {
+          console.info('[moment_sync]', {
+            event: 'remote_moments_refresh_skipped',
+            reason,
+            skippedBecause: 'recent_boot_sync',
+          });
+          return;
+        }
       }
 
       isRefreshingRemoteMomentsRef.current = true;
@@ -427,9 +455,7 @@ export function HomeScreen() {
     [sessions, selectedGroup?.id],
   );
   const shouldBlockForRemoteRefresh =
-    isRemoteRefreshActive &&
-    (remoteRefreshReason === 'initial_retry' ||
-      remoteRefreshReason === 'push_response');
+    isRemoteRefreshActive && remoteRefreshReason === 'initial_retry';
   const syncBlockingCopy =
     remoteRefreshReason === 'initial_retry' || isInitialRemoteMomentSyncPending
       ? {
