@@ -110,7 +110,6 @@ const sourceVideoStorageProvider = "supabase";
 const sourceVideoStorageBucket = "moment-videos";
 const realtimeAnalysisChannel = "analysis-updates";
 const uploadedSourceStorageInspectTimeoutMs = 5_000;
-const uploadedSourceStorageDownloadTimeoutMs = 12_000;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const appEnv = process.env.APP_ENV ?? "development";
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
@@ -146,6 +145,10 @@ if (appEnv === "preview" && mockAiAnalysisRequested && !mockAiAllowRemote) {
 }
 
 type SupabaseServerClient = ReturnType<typeof createSupabaseClient<any>>;
+type StoredVideoObjectMetadata = {
+  mimeType: string | null;
+  size: number | null;
+};
 
 type LinkedMoment = {
   id: string;
@@ -3805,33 +3808,39 @@ async function createStoredMomentFromUploadedSource({
       bucket: storageBucket,
       path: storagePath,
     };
-    const storedObjectStatus = await withTimeout(
-      inspectStoredVideoObject(storedVideo),
+    const storedObjectMetadata = await withTimeout(
+      inspectStoredVideoMetadata(storedVideo),
       uploadedSourceStorageInspectTimeoutMs,
       "Timed out while inspecting uploaded source video.",
     );
 
-    if (storedObjectStatus === "missing") {
+    if (!storedObjectMetadata) {
       throw new Error("Uploaded source video object was not found.");
     }
 
-    const uploadedFile = await withTimeout(
-      downloadStoredVideoForEvidence(storedVideo),
-      uploadedSourceStorageDownloadTimeoutMs,
-      "Timed out while downloading uploaded source video.",
-    );
+    if (
+      storedObjectMetadata.mimeType &&
+      !allowedVideoMimeTypes.has(storedObjectMetadata.mimeType)
+    ) {
+      throw new Error(
+        `finalize_metadata_mime_type_unsupported: actual=${storedObjectMetadata.mimeType}; storagePath=${storagePath}`,
+      );
+    }
 
     if (
       Number.isFinite(expectedFileSize) &&
       expectedFileSize > 0 &&
-      uploadedFile.size !== expectedFileSize
+      storedObjectMetadata.size !== expectedFileSize
     ) {
       throw new Error(
-        `Uploaded source video size does not match the draft. expected=${expectedFileSize}; actual=${uploadedFile.size}`,
+        `finalize_metadata_size_mismatch: expected=${expectedFileSize}; actual=${storedObjectMetadata.size ?? "unknown"}; storagePath=${storagePath}`,
       );
     }
 
-    if (uploadedFile.size > geminiMaxVideoBytes) {
+    if (
+      typeof storedObjectMetadata.size === "number" &&
+      storedObjectMetadata.size > geminiMaxVideoBytes
+    ) {
       throw new Error(
         `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
       );
@@ -3843,6 +3852,9 @@ async function createStoredMomentFromUploadedSource({
       uploadId,
     });
 
+    const resolvedFileSize =
+      storedObjectMetadata.size ??
+      (Number.isFinite(expectedFileSize) ? expectedFileSize : null);
     const momentId = randomUUID();
     const now = new Date().toISOString();
     const sessionId = getField(body?.sessionId, "");
@@ -3863,7 +3875,7 @@ async function createStoredMomentFromUploadedSource({
       file_name:
         nullableString(body?.fileName) ?? basename(storagePath) ?? "source.mov",
       mime_type: mimeType,
-      file_size: uploadedFile.size,
+      file_size: resolvedFileSize,
       duration_ms: Number.isFinite(durationMs) ? durationMs : null,
       source_video_storage_provider: provider,
       source_video_storage_bucket: storageBucket,
@@ -4622,6 +4634,75 @@ async function inspectStoredVideoObject(
   }
 
   return data?.some((item) => item.name === fileName) ? "exists" : "missing";
+}
+
+async function inspectStoredVideoMetadata(
+  storedVideo: StoredVideoInput,
+): Promise<StoredVideoObjectMetadata | null> {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const { data, error } = await client.storage
+    .from(storedVideo.bucket)
+    .info(storedVideo.path);
+
+  if (error) {
+    const errorRecord = error as unknown as Record<string, unknown>;
+    const status =
+      numberFromStorageMetadata(errorRecord.status) ??
+      numberFromStorageMetadata(errorRecord.statusCode);
+
+    if (status === 404) {
+      return null;
+    }
+
+    throw new Error(
+      `finalize_metadata_inspect_failed: ${error.message}; storagePath=${storedVideo.path}`,
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const fileInfo = data as Record<string, unknown>;
+  const rawMetadata = fileInfo.metadata;
+  const metadata =
+    rawMetadata && typeof rawMetadata === "object"
+      ? (rawMetadata as Record<string, unknown>)
+      : {};
+
+  return {
+    mimeType:
+      nullableString(fileInfo.contentType) ??
+      nullableString(fileInfo.content_type) ??
+      nullableString(metadata.mimetype) ??
+      nullableString(metadata.mimeType) ??
+      nullableString(metadata.contentType) ??
+      nullableString(metadata.content_type),
+    size:
+      numberFromStorageMetadata(fileInfo.size) ??
+      numberFromStorageMetadata(metadata.size) ??
+      numberFromStorageMetadata(metadata.contentLength) ??
+      numberFromStorageMetadata(metadata.content_length),
+  };
+}
+
+function numberFromStorageMetadata(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  return null;
 }
 
 function parseOptionalDate(value: string | null | undefined) {
