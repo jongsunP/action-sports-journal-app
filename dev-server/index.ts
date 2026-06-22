@@ -690,6 +690,15 @@ app.post(
         });
       }
 
+      console.info("[upload_timing]", {
+        analysisJobId: queuedJob?.id,
+        event: "uploaded_source_finalize_response_sent",
+        momentId: result.momentId,
+        response_sent: true,
+        storagePath: result.storedVideo.path,
+        uploadId: getField(request.body?.uploadId, ""),
+      });
+
       response.json({
         momentId: result.momentId,
         status: "queued",

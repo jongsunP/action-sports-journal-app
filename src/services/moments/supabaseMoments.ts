@@ -446,18 +446,29 @@ export async function finalizeUploadedSourceVideo(
     const storageProvider = asString(data.storageProvider);
     const storageBucket = asString(data.storageBucket);
     const storagePath = asString(data.storagePath);
+    const analysisJobId = asString(data.analysisJobId);
+    const analysisJobStatus = asQueuedAnalysisJobStatus(data.analysisJobStatus);
 
     if (!momentId || !storageProvider || !storageBucket || !storagePath) {
       throw new Error('Uploaded source finalize returned invalid data.');
     }
+
+    console.info('[upload_timing]', {
+      analysisJobId,
+      analysisJobStatus,
+      event: 'direct_finalize_success',
+      momentId,
+      storagePath,
+      uploadId: input.uploadId,
+    });
 
     return {
       momentId,
       storageProvider,
       storageBucket,
       storagePath,
-      analysisJobId: asString(data.analysisJobId),
-      analysisJobStatus: asQueuedAnalysisJobStatus(data.analysisJobStatus),
+      analysisJobId,
+      analysisJobStatus,
       analysisStarted: data.analysisStarted === true,
       uploadedAt: asString(data.uploadedAt),
     };

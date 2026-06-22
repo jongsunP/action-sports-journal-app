@@ -341,11 +341,25 @@ export function useUploadMoment({
         if (!storedMoment) {
           usedUploadFallback = true;
           setUploadProgressStage('fallback_upload');
+          console.info('[upload_timing]', {
+            draftId: uploadDraft?.draftId,
+            event: 'fallback_started',
+            localSessionId: nextSession.id,
+            uploadId: uploadDraft?.uploadId,
+          });
           storedMoment = await withUploadTimeout(
             createMomentFromSourceVideo(nextSession, videoForUpload),
             MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS,
             'Multipart fallback upload timed out.',
           );
+          console.info('[upload_timing]', {
+            draftId: uploadDraft?.draftId,
+            event: 'fallback_success',
+            localSessionId: nextSession.id,
+            momentId: storedMoment?.momentId,
+            storagePath: storedMoment?.storagePath,
+            uploadId: uploadDraft?.uploadId,
+          });
         }
 
         if (!storedMoment) {
@@ -469,11 +483,22 @@ async function createMomentFromDirectUpload({
   session: Session;
 }) {
   if (!draft) {
+    console.info('[upload_timing]', {
+      event: 'direct_upload_skipped',
+      fallback_will_run: true,
+      localSessionId: session.id,
+      reason: 'no_draft',
+      stage: 'draft',
+    });
     return undefined;
   }
 
+  let uploadTarget: Awaited<
+    ReturnType<typeof uploadDraftSourceVideoDirectly>
+  >;
+
   try {
-    const uploadTarget = await uploadDraftSourceVideoDirectly(draft, {
+    uploadTarget = await uploadDraftSourceVideoDirectly(draft, {
       onProgress,
     });
 
@@ -481,8 +506,10 @@ async function createMomentFromDirectUpload({
       console.info('[upload_timing]', {
         draftId: draft.draftId,
         event: 'direct_upload_skipped',
+        fallback_will_run: true,
         localSessionId: session.id,
         reason: 'no_upload_target',
+        stage: 'upload_target',
       });
       return undefined;
     }
@@ -497,15 +524,33 @@ async function createMomentFromDirectUpload({
       storagePath: uploadTarget.storagePath,
     };
 
-    return await finalizeUploadedDraftSource(uploadedDraft, session, {
+    const storedMoment = await finalizeUploadedDraftSource(uploadedDraft, session, {
       onProgress,
     });
+
+    if (!storedMoment) {
+      console.info('[upload_timing]', {
+        draftId: draft.draftId,
+        event: 'direct_finalize_empty_result',
+        fallback_will_run: true,
+        localSessionId: session.id,
+        stage: 'finalize',
+        storagePath: uploadTarget.storagePath,
+        uploadId: uploadTarget.uploadId,
+      });
+    }
+
+    return storedMoment;
   } catch (error) {
     console.info('[upload_timing]', {
       draftId: draft.draftId,
       event: 'direct_upload_failure',
+      fallback_will_run: true,
       localSessionId: session.id,
+      stage: uploadTarget ? 'finalize_or_response' : 'direct_upload',
       reason: error instanceof Error ? error.message : 'unknown',
+      storagePath: uploadTarget?.storagePath,
+      uploadId: uploadTarget?.uploadId ?? draft.uploadId,
       videoUriScheme: draft.localVideoUri.split(':', 1)[0],
     });
     console.warn(
