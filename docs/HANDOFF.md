@@ -120,6 +120,27 @@ Remaining risks:
   Part 2 items.
 - AI Calibration is after Part 1, not part of Part 1.
 
+Navigation / Instagram UX decision:
+
+Treat this as part of the Part 1 product skeleton closeout. Instagram inflow
+and sharing are strategically important. After real-device pager prototype QA,
+Home / Video / Growth horizontal swipe is adopted as the Part 1 navigation
+skeleton. Bottom Tabs remain, so users can either tap explicit navigation or
+swipe between the major surfaces.
+
+The product reason is that Instagram-inflow users may not classify Home,
+Video, and Growth as separate developer-defined surfaces; they may simply
+learn that swiping moves to the next major screen. ASJ can be original in
+product concept while using proven interaction models where user learning is
+already strong.
+
+Instagram-style interactions should still be explored first in media-heavy
+zones: Video tab media viewer, previous/next Moment Detail swipe, ShareResult /
+Growth Card preview carousel, and Instagram share outputs. The current pager
+adoption is not the final route architecture: later Home / Video / Growth
+should still be evaluated as real Bottom Tab Navigator routes for Push deep
+links, tab state restore, ShareResult screens, and screen lifecycle management.
+
 Build 29 Direct Upload checkpoint, 2026-06-21:
 
 Problem -> Cause -> Decision:

@@ -397,6 +397,79 @@ swipe back as requiring physical-device QA before calling the Detail route
 transition fully complete. Do not add another custom gesture layer unless the
 native-stack gesture fails on device.
 
+### 4. Navigation / Instagram UX Direction - Part 1 Skeleton Decision
+
+Decision:
+
+Adopt Instagram-style horizontal swipe between Home, Video, and Growth as the
+Part 1 navigation skeleton after real-device prototype QA. Keep Bottom Tabs
+visible as explicit navigation; the adopted behavior is Bottom Tabs plus swipe,
+not swipe-only navigation.
+
+Product structure:
+
+The current accepted implementation uses `react-native-tab-view` inside
+`HomeScreen` while preserving the existing Bottom Tabs. Home, Video, and Growth
+should still eventually become real route-backed Bottom Tab Navigator routes.
+The current pager adoption validates the product feel, not the final routing
+architecture.
+
+What was confirmed:
+
+- Horizontal swipe between Home, Video, and Growth is technically possible.
+- The current structure uses `activeTab` inside `HomeScreen`, so a proper
+  gesture implementation would require structural changes rather than a small
+  visual patch.
+- The common app industry standard for top-level areas is bottom tab button
+  navigation, so Bottom Tabs plus Stack remains the default architecture
+  candidate.
+- Instagram UX is a proven user learning model, not only a taste preference.
+  Instagram-inflow users may perceive horizontal swipe as "the next screen"
+  even when developers classify Home, Video, and Growth as different surfaces.
+- Action Sports Journal still has long-term reason to revisit this because
+  Instagram inflow, sharing, and media-native expectations are important to the
+  product strategy.
+- Home / Video / Growth are not one continuous content surface. Home is a
+  dashboard, Video is an archive, and Growth is a progression surface.
+- ASJ is a record, analysis, and growth app, not primarily a passive media
+  consumption app.
+- ASJ's product idea can be original while still using validated UX patterns
+  where they reduce friction.
+- Real-device QA found the pager feel, haptic feedback, and Video List gesture
+  guard positive enough to adopt the pager skeleton.
+
+Remaining risks:
+
+- Top-level horizontal swipe can conflict with Detail edge-swipe back,
+  vertical scroll, horizontal media rails, and upload-related flows.
+- Video List gesture guards reduce accidental row opens, but should keep being
+  tested with larger data sets.
+- The current implementation is still not paginated and does not use FlatList;
+  data-scale work remains a Part 2 TODO.
+- The current implementation is not yet route-backed Bottom Tabs.
+
+Where Instagram-style interaction belongs:
+
+- Video tab internal media viewer.
+- Previous/next Moment Detail swipe.
+- ShareResult / Growth Card preview carousel.
+- Instagram share outputs and result-card generation.
+
+Part 2+ structure TODO:
+
+- Introduce route-backed Bottom Tabs for Home / Video / Growth.
+- Support Push deep link and tab state restore.
+- Design ShareResult screens as first-class routes.
+- Prototype Instagram-style gestures first in media-heavy surfaces.
+- Add pagination / infinite scroll and FlatList for data-scale safety.
+
+Future experiment:
+
+Future experiments should focus on media-heavy surfaces: Video tab media
+viewer, previous/next Moment Detail swipe, ShareResult / Growth Card preview
+carousel, and Instagram share outputs. Do not use those experiments to reopen
+the Part 1 decision unless real users report navigation confusion.
+
 ### Signed / Direct Upload Architecture
 
 Current judgment:

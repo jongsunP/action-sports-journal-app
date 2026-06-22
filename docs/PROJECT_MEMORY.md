@@ -116,6 +116,26 @@ Part 2 TODOs are server Draft/upload session, upload target/orphan cleanup,
 pre-upload video optimization, Push deep link, Auth/User Ownership, and then AI
 Calibration.
 
+Navigation / Instagram UX decision:
+
+Part 1 also closes with a product skeleton decision: Action Sports Journal
+should value Instagram inflow and sharing. After real-device pager prototype
+QA, Home / Video / Growth horizontal swipe is adopted as the Part 1 navigation
+skeleton. Bottom Tabs remain visible, but swipe is now part of the intended
+main navigation feel.
+
+The product reason is that Instagram-inflow users may experience swipe as a
+learned "next screen" pattern rather than as a strict media-feed behavior.
+ASJ's concept can remain original while the UX borrows proven user learning
+models where they reduce friction.
+
+Instagram-style media interaction should be explored first in bounded
+surfaces: Video tab media viewer, previous/next Moment Detail swipe,
+ShareResult / Growth Card preview carousel, and Instagram share outputs.
+Route-backed Bottom Tabs plus Stack remains a later structural refactor for
+Push deep links, tab state restore, future ShareResult screens, and separate
+screen lifecycles.
+
 ## Build 28 Save Point - 2026-06-21
 
 Current QA build:

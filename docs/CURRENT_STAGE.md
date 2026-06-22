@@ -90,6 +90,22 @@ server-side draft/upload session, upload target/orphan cleanup policy,
 pre-upload video optimization investigation, Push deep link, and Auth/user
 ownership. AI Calibration follows once the app-like upload loop stays stable.
 
+Part 1 navigation / Instagram UX decision:
+
+Action Sports Journal should keep Instagram inflow and sharing as important
+product strategy. After real-device pager prototype QA, Home / Video / Growth
+horizontal swipe is adopted as the Part 1 navigation skeleton. Bottom Tabs
+remain visible, but the main tab surfaces can also be reached through
+Instagram-like horizontal swipe.
+
+Instagram-style interaction is still valuable, but it should be limited to
+media-heavy surfaces: Video tab media viewer, previous/next Moment Detail
+swipe, ShareResult / Growth Card preview carousel, and Instagram share
+outputs. The adopted pager keeps this philosophy at the app skeleton level:
+ASJ's product idea remains original while the UX borrows a proven user learning
+model. Route-backed Bottom Tabs plus Stack remains a later structural
+refactor, not a blocker for adopting the current pager skeleton.
+
 Update on 2026-06-20, Analysis-first Product Strategy:
 
 Build 29 Direct Upload checkpoint, 2026-06-21:
