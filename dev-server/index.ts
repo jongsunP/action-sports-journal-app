@@ -54,6 +54,10 @@ const dailyAnalysisLimit = Math.max(
 );
 const rateLimitWindowMs = readNumberEnv("RATE_LIMIT_WINDOW_MS", 60_000);
 const rateLimitMaxRequests = readNumberEnv("RATE_LIMIT_MAX_REQUESTS", 3);
+const uploadRateLimitMaxRequests = readNumberEnv(
+  "UPLOAD_RATE_LIMIT_MAX_REQUESTS",
+  1_000,
+);
 const staleQueuedAnalysisMs = readNumberEnv(
   "STALE_QUEUED_ANALYSIS_MS",
   15 * 60_000,
@@ -178,6 +182,10 @@ const analysisRateLimit = createRateLimit("analysis", {
   windowMs: rateLimitWindowMs,
   maxRequests: rateLimitMaxRequests,
 });
+const uploadRateLimit = createRateLimit("upload", {
+  windowMs: rateLimitWindowMs,
+  maxRequests: uploadRateLimitMaxRequests,
+});
 const thumbnailRateLimit = createRateLimit("thumbnail", {
   windowMs: rateLimitWindowMs,
   maxRequests: Math.max(rateLimitMaxRequests, 10),
@@ -247,9 +255,13 @@ app.get("/health", (_request, response) => {
       dailyAnalysisLimit,
       rateLimitWindowMs,
       rateLimitMaxRequests,
+      uploadRateLimitMaxRequests,
       rateLimitScope:
-        "Only upload/AI routes are rate limited. Health, moments reads, and status polling are not counted.",
+        "Upload/finalize routes and AI routes are rate limited separately. Health and moments reads are not counted.",
       rateLimitedRoutes: [
+        "POST /api/video-upload-targets",
+        "POST /api/moments/from-uploaded-source",
+        "POST /api/moments/from-source-video",
         "POST /api/analyze-session-video",
         "POST /api/extract-session-evidence",
         "POST /api/benchmarks/openai-wakeboard-video",
@@ -318,7 +330,7 @@ app.post("/api/push-tokens", async (request, response) => {
   }
 });
 
-app.post("/api/video-upload-targets", analysisRateLimit, async (request, response) => {
+app.post("/api/video-upload-targets", uploadRateLimit, async (request, response) => {
   try {
     const client = getSupabaseServerClient();
 
@@ -450,7 +462,7 @@ app.post("/api/video-upload-targets", analysisRateLimit, async (request, respons
 
 app.post(
   "/api/video-upload-targets/:uploadId/failure",
-  analysisRateLimit,
+  uploadRateLimit,
   async (request, response) => {
     try {
       const client = getSupabaseServerClient();
@@ -576,7 +588,7 @@ app.post("/api/moments", async (request, response) => {
 
 app.post(
   "/api/moments/:momentId/source-video",
-  analysisRateLimit,
+  uploadRateLimit,
   upload.single("video"),
   async (request, response) => {
     try {
@@ -651,7 +663,7 @@ app.post(
 
 app.post(
   "/api/moments/from-source-video",
-  analysisRateLimit,
+  uploadRateLimit,
   (_request, response, next) => {
     response.locals.sourceVideoRequestStartedAt = Date.now();
     console.info("[source_video_timing]", {
@@ -765,7 +777,7 @@ app.post(
 
 app.post(
   "/api/moments/from-uploaded-source",
-  analysisRateLimit,
+  uploadRateLimit,
   async (request, response) => {
     try {
       const client = getSupabaseServerClient();
@@ -2747,9 +2759,19 @@ function createRateLimit(
     }
 
     if (bucket.count >= maxRequests) {
+      console.warn("[rate_limit] request blocked", {
+        ip: request.ip ?? "unknown",
+        maxRequests,
+        method: request.method,
+        path: request.path,
+        scope,
+        windowMs,
+      });
       response.status(429).json({
         error:
-          "Server is rate limiting analysis requests. The Moment remains queued; try again shortly.",
+          scope === "upload"
+            ? "Upload requests are temporarily rate limited. Please wait a moment and try again."
+            : "Server is rate limiting analysis requests. The Moment remains queued; try again shortly.",
       });
       return;
     }

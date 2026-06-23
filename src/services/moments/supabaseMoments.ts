@@ -129,6 +129,16 @@ type RemoteErrorResponse = {
   error?: unknown;
 };
 
+export class RemoteRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'RemoteRequestError';
+    this.status = status;
+  }
+}
+
 type RemoteMomentListResponse = {
   hasMore?: unknown;
   moments?: unknown;
@@ -199,8 +209,9 @@ export async function requestUploadTarget(
   if (!response.ok) {
     const message = await readRemoteErrorMessage(response);
 
-    throw new Error(
+    throw new RemoteRequestError(
       message ?? `Upload target creation failed with ${response.status}`,
+      response.status,
     );
   }
 

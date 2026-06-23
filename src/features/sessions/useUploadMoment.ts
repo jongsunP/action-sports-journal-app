@@ -14,6 +14,7 @@ import {
 import {
   createMomentFromSourceVideo,
   hasConfiguredSupabaseMoments,
+  RemoteRequestError,
   type UploadedThumbnailReference,
   type VideoUploadTarget,
 } from '../../services/moments';
@@ -557,6 +558,13 @@ export function useUploadMoment({
               '선택한 영상 파일에 다시 접근하지 못했습니다. 영상을 다시 선택한 뒤 업로드해주세요.',
             title: '영상 파일을 다시 선택해 주세요',
           });
+        } else if (isUploadTargetRateLimitFailure(error)) {
+          showUploadFailureAlertIfActive({
+            localSessionId: nextSession.id,
+            message:
+              '연속 업로드 요청이 잠시 몰렸습니다. 잠깐 기다린 뒤 다시 업로드해주세요.',
+            title: '잠시 후 다시 시도해주세요',
+          });
         } else {
           showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
@@ -699,6 +707,18 @@ async function createMomentFromDirectUpload({
 
     return storedMoment;
   } catch (error) {
+    if (isUploadTargetRateLimitFailure(error)) {
+      console.info('[upload_timing]', {
+        draftId: draft.draftId,
+        event: 'upload_target_rate_limited',
+        fallback_will_run: false,
+        localSessionId: session.id,
+        reason: error instanceof Error ? error.message : 'unknown',
+        stage: 'request_upload_target',
+      });
+      throw error;
+    }
+
     console.info('[upload_timing]', {
       draftId: draft.draftId,
       event: 'direct_upload_failure',
@@ -716,6 +736,10 @@ async function createMomentFromDirectUpload({
     );
     return undefined;
   }
+}
+
+function isUploadTargetRateLimitFailure(error: unknown) {
+  return error instanceof RemoteRequestError && error.status === 429;
 }
 
 function withUploadTimeout<T>(

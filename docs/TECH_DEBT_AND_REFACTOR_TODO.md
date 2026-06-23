@@ -44,6 +44,24 @@ The latest A-processing/B-upload QA found an immediate failure Alert for B while
 server data only showed A completing normally. No distinct B `upload_targets`
 row existed. This points to a pre-target or early client-side failure path.
 
+Policy update:
+
+Upload target issuance should not be the normal place where user-facing
+concurrency is enforced. A rider should be able to upload B while A is already
+processing. Network upload concurrency may still be one at a time, but within
+the allowed product limits target/finalize requests should be accepted. If the
+product later needs an active processing/upload cap, block entry at the upload
+CTA before the user starts an upload, not through a mid-flow 429 Alert.
+
+Implementation note:
+
+Upload/finalize routes use a separate, relaxed upload rate limit from AI
+analysis requests. During upload pipeline QA, target/finalize should be
+effectively non-blocking so consecutive uploads can validate target issuance,
+Storage upload, finalize, and Moment creation without AI-route throttling
+interference. The 429 upload target UX remains only as a defensive fallback,
+not as expected QA behavior.
+
 TODO before Auth:
 
 1. Add clearer pre-target upload failure observability:
@@ -51,9 +69,11 @@ TODO before Auth:
    error message.
 2. Make request-upload-target/local-file-access failures distinguishable from
    recoverable signed upload/finalize failures.
-3. Keep ambiguous uploaded-source recovery behavior separate from terminal
+3. If active upload/processing count limits are needed, design an upload-entry
+   guard before submit instead of relying on server 429s mid-upload.
+4. Keep ambiguous uploaded-source recovery behavior separate from terminal
    local-only failure.
-4. Continue avoiding DB cleanup jobs until upload target semantics are fully
+5. Continue avoiding DB cleanup jobs until upload target semantics are fully
    settled.
 
 ## Part 1 Final Wrap-Up / Build 55 Diagnostics - 2026-06-23
