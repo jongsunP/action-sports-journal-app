@@ -24,6 +24,7 @@ import {
 
 import type { Session } from '../../types';
 import type { AppTabId } from './sessionComponents';
+import type { UploadReconciliationCandidate } from './sessionMerge';
 import {
   finalizeUploadedDraftSource,
   finalizeUploadedDraftSourceFromTarget,
@@ -61,8 +62,17 @@ type UseUploadMomentParams = {
   setSessions: Dispatch<SetStateAction<Session[]>>;
   setThumbnailForSession: (sessionId: string, thumbnailUri: string) => void;
   setVideoForSession: (sessionId: string, video: SessionVideoAsset) => void;
+  onOptimisticUploadContextCreated?: (
+    candidate: UploadReconciliationCandidate,
+  ) => void;
   onOptimisticSessionCreated?: (sessionId: string) => void;
   onOptimisticSessionRejected?: (sessionId: string) => void;
+  onUploadReconciliationCandidateResolved?: (sessionId: string) => void;
+  onUploadReconciliationTargetResolved?: (
+    sessionId: string,
+    uploadTarget: VideoUploadTarget,
+    draftId?: string,
+  ) => void;
   onUploadSuccess?: () => void;
   updateLocalMomentStatus: (
     sessionId: string,
@@ -78,8 +88,11 @@ export function useUploadMoment({
   setSessions,
   setThumbnailForSession,
   setVideoForSession,
+  onOptimisticUploadContextCreated,
   onOptimisticSessionCreated,
   onOptimisticSessionRejected,
+  onUploadReconciliationCandidateResolved,
+  onUploadReconciliationTargetResolved,
   onUploadSuccess,
   updateLocalMomentStatus,
 }: UseUploadMomentParams) {
@@ -302,6 +315,18 @@ export function useUploadMoment({
 
     setSessions((current) => [nextSession, ...current]);
     onOptimisticSessionCreated?.(nextSession.id);
+    onOptimisticUploadContextCreated?.({
+      createdAt: now,
+      draftId: uploadDraft?.draftId,
+      durationMs: videoForUpload.duration,
+      fileName: videoForUpload.fileName,
+      fileSize: videoForUpload.fileSize,
+      localSessionId: nextSession.id,
+      occurredAt: nextSession.occurredAt,
+      sourceVideoUri: videoForUpload.uri,
+      storagePath: uploadDraft?.storagePath,
+      uploadId: uploadDraft?.uploadId,
+    });
 
     setVideoForSession(nextSession.id, videoForUpload);
     const preparedThumbnailUri =
@@ -349,6 +374,11 @@ export function useUploadMoment({
           onDirectUploadTarget: (uploadTarget) => {
             directUploadedTarget = uploadTarget;
             fallbackThumbnailReference = uploadTarget.uploadedThumbnail;
+            onUploadReconciliationTargetResolved?.(
+              nextSession.id,
+              uploadTarget,
+              uploadDraft?.draftId,
+            );
           },
           onProgress: setUploadProgressStage,
           session: nextSession,
@@ -431,6 +461,7 @@ export function useUploadMoment({
             current.filter((session) => session.id !== nextSession.id),
           );
           onOptimisticSessionRejected?.(nextSession.id);
+          onUploadReconciliationCandidateResolved?.(nextSession.id);
           setUploadDraftStatus('upload_failed');
           showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
@@ -442,6 +473,7 @@ export function useUploadMoment({
         }
 
         setRemoteMomentIdForSession(nextSession.id, storedMoment.momentId);
+        onUploadReconciliationCandidateResolved?.(nextSession.id);
         setUploadProgressStage('requesting_analysis');
 
         const nextMomentStatus =
@@ -501,6 +533,7 @@ export function useUploadMoment({
           current.filter((session) => session.id !== nextSession.id),
         );
         onOptimisticSessionRejected?.(nextSession.id);
+        onUploadReconciliationCandidateResolved?.(nextSession.id);
         setUploadDraftStatus('upload_failed');
         setUploadDraft(null);
         setSelectedVideo(null);

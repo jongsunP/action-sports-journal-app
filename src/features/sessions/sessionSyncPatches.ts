@@ -3,38 +3,47 @@ import type { SessionVideoAsset } from '../../services/ai';
 import type { GeminiEvidenceResult, Session } from '../../types';
 import {
   mergeMomentStatus,
-  resolveLocalSessionIdForRemoteMoment,
+  resolveLocalSessionForRemoteMoment,
+  type RemoteMomentSessionResolution,
+  type UploadReconciliationCandidate,
 } from './sessionMerge';
 
 export function buildRemoteMomentSessionIdMap({
   remoteMomentIdsBySessionId,
   remoteMoments,
   sessions,
+  uploadReconciliationCandidatesBySessionId,
 }: {
   remoteMomentIdsBySessionId: Record<string, string>;
   remoteMoments: RemoteMomentRecord[];
   sessions: Session[];
+  uploadReconciliationCandidatesBySessionId?: Record<
+    string,
+    UploadReconciliationCandidate
+  >;
 }) {
   return new Map(
-    remoteMoments.map((moment) => [
-      moment.remoteMomentId,
-      resolveLocalSessionIdForRemoteMoment(
+    remoteMoments.map((moment) => {
+      const resolution = resolveLocalSessionForRemoteMoment(
         moment,
         remoteMomentIdsBySessionId,
         sessions,
-      ),
-    ]),
+        uploadReconciliationCandidatesBySessionId,
+      );
+
+      return [moment.remoteMomentId, resolution] as const;
+    }),
   );
 }
 
 export function applyRemoteSessions({
   current,
   remoteMoments,
-  sessionIdByRemoteMomentId,
+  sessionResolutionByRemoteMomentId,
 }: {
   current: Session[];
   remoteMoments: RemoteMomentRecord[];
-  sessionIdByRemoteMomentId: Map<string, string>;
+  sessionResolutionByRemoteMomentId: Map<string, RemoteMomentSessionResolution>;
 }) {
   const nextSessionsById = new Map(
     current.map((session) => [session.id, session]),
@@ -42,7 +51,8 @@ export function applyRemoteSessions({
 
   for (const remoteMoment of remoteMoments) {
     const sessionId =
-      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      sessionResolutionByRemoteMomentId.get(remoteMoment.remoteMomentId)
+        ?.sessionId ??
       remoteMoment.session.id;
     const existingSession = nextSessionsById.get(sessionId);
 
@@ -67,17 +77,18 @@ export function applyRemoteSessions({
 export function applyRemoteMomentIds({
   current,
   remoteMoments,
-  sessionIdByRemoteMomentId,
+  sessionResolutionByRemoteMomentId,
 }: {
   current: Record<string, string>;
   remoteMoments: RemoteMomentRecord[];
-  sessionIdByRemoteMomentId: Map<string, string>;
+  sessionResolutionByRemoteMomentId: Map<string, RemoteMomentSessionResolution>;
 }) {
   const next = { ...current };
 
   for (const remoteMoment of remoteMoments) {
     const sessionId =
-      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      sessionResolutionByRemoteMomentId.get(remoteMoment.remoteMomentId)
+        ?.sessionId ??
       remoteMoment.session.id;
 
     next[sessionId] = remoteMoment.remoteMomentId;
@@ -89,11 +100,11 @@ export function applyRemoteMomentIds({
 export function applyRemoteVideos({
   current,
   remoteMoments,
-  sessionIdByRemoteMomentId,
+  sessionResolutionByRemoteMomentId,
 }: {
   current: Record<string, SessionVideoAsset>;
   remoteMoments: RemoteMomentRecord[];
-  sessionIdByRemoteMomentId: Map<string, string>;
+  sessionResolutionByRemoteMomentId: Map<string, RemoteMomentSessionResolution>;
 }) {
   const next = { ...current };
 
@@ -103,7 +114,8 @@ export function applyRemoteVideos({
     }
 
     const sessionId =
-      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      sessionResolutionByRemoteMomentId.get(remoteMoment.remoteMomentId)
+        ?.sessionId ??
       remoteMoment.session.id;
 
     next[sessionId] = current[sessionId] ?? remoteMoment.video;
@@ -115,11 +127,11 @@ export function applyRemoteVideos({
 export function applyRemoteEvidence({
   current,
   remoteMoments,
-  sessionIdByRemoteMomentId,
+  sessionResolutionByRemoteMomentId,
 }: {
   current: Record<string, GeminiEvidenceResult>;
   remoteMoments: RemoteMomentRecord[];
-  sessionIdByRemoteMomentId: Map<string, string>;
+  sessionResolutionByRemoteMomentId: Map<string, RemoteMomentSessionResolution>;
 }) {
   const next = { ...current };
 
@@ -129,7 +141,8 @@ export function applyRemoteEvidence({
     }
 
     const sessionId =
-      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      sessionResolutionByRemoteMomentId.get(remoteMoment.remoteMomentId)
+        ?.sessionId ??
       remoteMoment.session.id;
 
     next[sessionId] = {
@@ -144,11 +157,11 @@ export function applyRemoteEvidence({
 export function applyRemoteThumbnails({
   current,
   remoteMoments,
-  sessionIdByRemoteMomentId,
+  sessionResolutionByRemoteMomentId,
 }: {
   current: Record<string, string>;
   remoteMoments: RemoteMomentRecord[];
-  sessionIdByRemoteMomentId: Map<string, string>;
+  sessionResolutionByRemoteMomentId: Map<string, RemoteMomentSessionResolution>;
 }) {
   const next = { ...current };
 
@@ -158,7 +171,8 @@ export function applyRemoteThumbnails({
     }
 
     const sessionId =
-      sessionIdByRemoteMomentId.get(remoteMoment.remoteMomentId) ??
+      sessionResolutionByRemoteMomentId.get(remoteMoment.remoteMomentId)
+        ?.sessionId ??
       remoteMoment.session.id;
 
     next[sessionId] = current[sessionId] ?? remoteMoment.thumbnailUri;

@@ -65,7 +65,10 @@ import {
 import { useAnalysisRealtimeSync } from './useAnalysisRealtimeSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
-import { resolveLocalSessionIdForRemoteMoment } from './sessionMerge';
+import {
+  resolveLocalSessionIdForRemoteMoment,
+  type UploadReconciliationCandidate,
+} from './sessionMerge';
 import { useMomentDetail } from './useMomentDetail';
 import { useSyncRemoteMoments } from './useSyncRemoteMoments';
 import { useSessionRepository } from './useSessionRepository';
@@ -99,6 +102,7 @@ type RemoteMomentFirstPage = {
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
+const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 
 function getNextPendingRemoteRefreshReason(
   currentReason: RemoteRefreshReason | null,
@@ -139,6 +143,10 @@ export function HomeScreen() {
   const [videoArchiveSessionIds, setVideoArchiveSessionIds] = useState<
     string[]
   >([]);
+  const [
+    uploadReconciliationCandidatesBySessionId,
+    setUploadReconciliationCandidatesBySessionId,
+  ] = useState<Record<string, UploadReconciliationCandidate>>({});
   const [videoArchiveNextCursor, setVideoArchiveNextCursor] = useState<
     string | null
   >(null);
@@ -198,9 +206,110 @@ export function HomeScreen() {
   });
   selectMomentDetailRef.current = selectMomentDetail;
 
+  const clearUploadReconciliationCandidate = useCallback(
+    (sessionId: string) => {
+      setUploadReconciliationCandidatesBySessionId((current) => {
+        if (!current[sessionId]) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[sessionId];
+        return next;
+      });
+    },
+    [],
+  );
+  const upsertUploadReconciliationCandidate = useCallback(
+    (candidate: UploadReconciliationCandidate) => {
+      setUploadReconciliationCandidatesBySessionId((current) => ({
+        ...current,
+        [candidate.localSessionId]: candidate,
+      }));
+      console.info('[moment_reconciliation]', {
+        draftId: candidate.draftId,
+        event: 'upload_reconciliation_candidate_created',
+        fileSize: candidate.fileSize,
+        localSessionId: candidate.localSessionId,
+        matched: false,
+        uploadId: candidate.uploadId,
+      });
+    },
+    [],
+  );
+  const markUploadReconciliationCandidateWithTarget = useCallback(
+    (
+      sessionId: string,
+      uploadTarget: {
+        draftId: string;
+        fileSize?: number;
+        durationMs?: number;
+        storagePath: string;
+        uploadId: string;
+      },
+      draftId?: string,
+    ) => {
+      setUploadReconciliationCandidatesBySessionId((current) => {
+        const candidate = current[sessionId];
+
+        if (!candidate) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [sessionId]: {
+            ...candidate,
+            draftId: draftId ?? uploadTarget.draftId ?? candidate.draftId,
+            durationMs: uploadTarget.durationMs ?? candidate.durationMs,
+            fileSize: uploadTarget.fileSize ?? candidate.fileSize,
+            storagePath: uploadTarget.storagePath,
+            uploadId: uploadTarget.uploadId,
+          },
+        };
+      });
+      console.info('[moment_reconciliation]', {
+        draftId: draftId ?? uploadTarget.draftId,
+        event: 'upload_reconciliation_candidate_targeted',
+        localSessionId: sessionId,
+        matched: false,
+        storagePath: uploadTarget.storagePath,
+        uploadId: uploadTarget.uploadId,
+      });
+    },
+    [],
+  );
+  const handleRemoteMomentReconciled = useCallback(
+    ({
+      localSessionId,
+      matchReason,
+      momentId,
+      remoteSessionId,
+    }: {
+      localSessionId: string;
+      matchReason: string;
+      momentId: string;
+      remoteSessionId: string;
+    }) => {
+      pendingVideoArchiveSessionIdsRef.current.delete(localSessionId);
+      clearUploadReconciliationCandidate(localSessionId);
+      console.info('[moment_reconciliation]', {
+        event: 'remote_moment_reconciled',
+        localSessionId,
+        matchReason,
+        matched: true,
+        momentId,
+        remoteSessionId,
+      });
+    },
+    [clearUploadReconciliationCandidate],
+  );
+
   const syncRemoteMoments = useSyncRemoteMoments({
     remoteMomentIdsBySessionId,
     sessions,
+    uploadReconciliationCandidatesBySessionId,
+    onRemoteMomentReconciled: handleRemoteMomentReconciled,
     setGeminiEvidenceBySessionId,
     setRemoteMomentIdsBySessionId,
     setSessions,
@@ -230,6 +339,7 @@ export function HomeScreen() {
     setSelectedGroupId,
     setSessions,
     setThumbnailsBySessionId,
+    setUploadReconciliationCandidatesBySessionId,
     setUserConfirmedTrickBySessionId,
     setVideosBySessionId,
     syncRemoteMoments,
@@ -244,9 +354,87 @@ export function HomeScreen() {
           remoteMoment,
           remoteMomentIdsBySessionId,
           sessions,
+          uploadReconciliationCandidatesBySessionId,
         ),
     ),
-    [remoteMomentIdsBySessionId, sessions],
+    [
+      remoteMomentIdsBySessionId,
+      sessions,
+      uploadReconciliationCandidatesBySessionId,
+    ],
+  );
+  const expireUnmatchedUploadReconciliationCandidates = useCallback(
+    (remoteMoments: RemoteMomentRecord[]) => {
+      const resolvedSessionIds = new Set(
+        getSessionIdsForRemoteMoments(remoteMoments),
+      );
+      const now = Date.now();
+      const expiredSessionIds = Object.values(
+        uploadReconciliationCandidatesBySessionId,
+      )
+        .filter((candidate) => {
+          if (resolvedSessionIds.has(candidate.localSessionId)) {
+            return false;
+          }
+
+          const candidateCreatedAtMs = Date.parse(candidate.createdAt);
+
+          return (
+            Number.isFinite(candidateCreatedAtMs) &&
+            now - candidateCreatedAtMs >= UPLOAD_RECONCILIATION_TTL_MS
+          );
+        })
+        .map((candidate) => candidate.localSessionId);
+
+      if (expiredSessionIds.length === 0) {
+        return;
+      }
+
+      const expiredSessionIdSet = new Set(expiredSessionIds);
+
+      setUploadReconciliationCandidatesBySessionId((current) => {
+        const next = { ...current };
+
+        for (const sessionId of expiredSessionIds) {
+          delete next[sessionId];
+        }
+
+        return next;
+      });
+      setSessions((current) =>
+        current.map((session) =>
+          expiredSessionIdSet.has(session.id) &&
+          !remoteMomentIdsBySessionId[session.id] &&
+          (session.momentStatus === 'uploading' ||
+            session.momentStatus === 'queued' ||
+            session.momentStatus === 'processing')
+            ? {
+                ...session,
+                momentStatus: 'upload_failed',
+                updatedAt: new Date().toISOString(),
+              }
+            : session,
+        ),
+      );
+      setVideoArchiveSessionIds((current) =>
+        current.filter((sessionId) => !expiredSessionIdSet.has(sessionId)),
+      );
+
+      for (const sessionId of expiredSessionIds) {
+        pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
+        console.info('[moment_reconciliation]', {
+          event: 'remote_moment_unmatched',
+          localSessionId: sessionId,
+          matchReason: 'upload_context_ttl_expired',
+          matched: false,
+        });
+      }
+    },
+    [
+      getSessionIdsForRemoteMoments,
+      remoteMomentIdsBySessionId,
+      uploadReconciliationCandidatesBySessionId,
+    ],
   );
   const applyVideoArchiveFirstPage = useCallback(
     (remoteMomentPage: RemoteMomentFirstPage) => {
@@ -269,11 +457,16 @@ export function HomeScreen() {
 
         return Array.from(new Set([...pendingSessionIds, ...sessionIds]));
       });
+      expireUnmatchedUploadReconciliationCandidates(remoteMomentPage.moments);
       setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
       setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       setHasLoadedVideoArchiveFirstPage(true);
     },
-    [getSessionIdsForRemoteMoments, sessions],
+    [
+      expireUnmatchedUploadReconciliationCandidates,
+      getSessionIdsForRemoteMoments,
+      sessions,
+    ],
   );
 
   const addPendingVideoArchiveSession = useCallback((sessionId: string) => {
@@ -427,6 +620,7 @@ export function HomeScreen() {
       userConfirmedTrickBySessionId,
       thumbnailsBySessionId,
       remoteMomentIdsBySessionId,
+      uploadReconciliationCandidatesBySessionId,
     };
 
     savePersistedSessionState(persistedState).catch(() => {
@@ -444,6 +638,7 @@ export function HomeScreen() {
     selectedGroupId,
     sessions,
     thumbnailsBySessionId,
+    uploadReconciliationCandidatesBySessionId,
     userConfirmedTrickBySessionId,
     videosBySessionId,
   ]);
@@ -707,6 +902,7 @@ export function HomeScreen() {
 
         syncRemoteMoments(remoteMomentPage.moments);
         appendVideoArchiveSessionIds(sessionIds);
+        expireUnmatchedUploadReconciliationCandidates(remoteMomentPage.moments);
         setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
         setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       })
@@ -721,6 +917,7 @@ export function HomeScreen() {
       });
   }, [
     appendVideoArchiveSessionIds,
+    expireUnmatchedUploadReconciliationCandidates,
     getSessionIdsForRemoteMoments,
     hasLoadedVideoArchiveFirstPage,
     hasMoreVideoArchiveMoments,
@@ -837,7 +1034,15 @@ export function HomeScreen() {
       void refreshRemoteMoments('upload_success');
     },
     onOptimisticSessionCreated: addPendingVideoArchiveSession,
-    onOptimisticSessionRejected: removePendingVideoArchiveSession,
+    onOptimisticSessionRejected: (sessionId) => {
+      removePendingVideoArchiveSession(sessionId);
+      clearUploadReconciliationCandidate(sessionId);
+    },
+    onOptimisticUploadContextCreated: upsertUploadReconciliationCandidate,
+    onUploadReconciliationCandidateResolved:
+      clearUploadReconciliationCandidate,
+    onUploadReconciliationTargetResolved:
+      markUploadReconciliationCandidateWithTarget,
     updateLocalMomentStatus,
   });
 

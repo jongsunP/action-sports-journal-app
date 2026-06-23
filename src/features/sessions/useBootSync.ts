@@ -20,6 +20,7 @@ import {
   loadPersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
+import type { UploadReconciliationCandidate } from './sessionMerge';
 
 type UseBootSyncParams = {
   initialGroupId: string;
@@ -37,6 +38,9 @@ type UseBootSyncParams = {
   setSelectedGroupId: Dispatch<SetStateAction<string>>;
   setSessions: Dispatch<SetStateAction<Session[]>>;
   setThumbnailsBySessionId: Dispatch<SetStateAction<Record<string, string>>>;
+  setUploadReconciliationCandidatesBySessionId?: Dispatch<
+    SetStateAction<Record<string, UploadReconciliationCandidate>>
+  >;
   setUserConfirmedTrickBySessionId: Dispatch<
     SetStateAction<Record<string, string>>
   >;
@@ -70,6 +74,7 @@ export function useBootSync({
   setSelectedGroupId,
   setSessions,
   setThumbnailsBySessionId,
+  setUploadReconciliationCandidatesBySessionId,
   setUserConfirmedTrickBySessionId,
   setVideosBySessionId,
   syncRemoteMoments,
@@ -115,6 +120,7 @@ export function useBootSync({
           setOpenAiBenchmarkBySessionId,
           setRemoteMomentIdsBySessionId,
           setThumbnailsBySessionId,
+          setUploadReconciliationCandidatesBySessionId,
           setUserConfirmedTrickBySessionId,
           setVideosBySessionId,
         });
@@ -145,6 +151,7 @@ export function useBootSync({
     setSelectedGroupId,
     setSessions,
     setThumbnailsBySessionId,
+    setUploadReconciliationCandidatesBySessionId,
     setUserConfirmedTrickBySessionId,
     setVideosBySessionId,
   ]);
@@ -248,6 +255,7 @@ function restorePersistedSessionMaps({
   setOpenAiBenchmarkBySessionId,
   setRemoteMomentIdsBySessionId,
   setThumbnailsBySessionId,
+  setUploadReconciliationCandidatesBySessionId,
   setUserConfirmedTrickBySessionId,
   setVideosBySessionId,
 }: {
@@ -261,6 +269,9 @@ function restorePersistedSessionMaps({
   >;
   setRemoteMomentIdsBySessionId: Dispatch<SetStateAction<Record<string, string>>>;
   setThumbnailsBySessionId: Dispatch<SetStateAction<Record<string, string>>>;
+  setUploadReconciliationCandidatesBySessionId?: Dispatch<
+    SetStateAction<Record<string, UploadReconciliationCandidate>>
+  >;
   setUserConfirmedTrickBySessionId: Dispatch<
     SetStateAction<Record<string, string>>
   >;
@@ -312,6 +323,15 @@ function restorePersistedSessionMaps({
     typeof parsed.remoteMomentIdsBySessionId === 'object'
   ) {
     setRemoteMomentIdsBySessionId(parsed.remoteMomentIdsBySessionId);
+  }
+
+  if (
+    parsed.uploadReconciliationCandidatesBySessionId &&
+    typeof parsed.uploadReconciliationCandidatesBySessionId === 'object'
+  ) {
+    setUploadReconciliationCandidatesBySessionId?.(
+      parsed.uploadReconciliationCandidatesBySessionId,
+    );
   }
 }
 

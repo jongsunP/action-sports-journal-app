@@ -11,10 +11,21 @@ import {
   applyRemoteVideos,
   buildRemoteMomentSessionIdMap,
 } from './sessionSyncPatches';
+import type { UploadReconciliationCandidate } from './sessionMerge';
 
 type UseSyncRemoteMomentsParams = {
   remoteMomentIdsBySessionId: Record<string, string>;
   sessions: Session[];
+  uploadReconciliationCandidatesBySessionId?: Record<
+    string,
+    UploadReconciliationCandidate
+  >;
+  onRemoteMomentReconciled?: (details: {
+    localSessionId: string;
+    matchReason: string;
+    momentId: string;
+    remoteSessionId: string;
+  }) => void;
   setGeminiEvidenceBySessionId: Dispatch<
     SetStateAction<Record<string, GeminiEvidenceResult>>
   >;
@@ -29,6 +40,8 @@ type UseSyncRemoteMomentsParams = {
 export function useSyncRemoteMoments({
   remoteMomentIdsBySessionId,
   sessions,
+  uploadReconciliationCandidatesBySessionId,
+  onRemoteMomentReconciled,
   setGeminiEvidenceBySessionId,
   setRemoteMomentIdsBySessionId,
   setSessions,
@@ -41,13 +54,43 @@ export function useSyncRemoteMoments({
         remoteMomentIdsBySessionId,
         remoteMoments,
         sessions,
+        uploadReconciliationCandidatesBySessionId,
       });
+
+      for (const remoteMoment of remoteMoments) {
+        const resolution = sessionIdByRemoteMomentId.get(
+          remoteMoment.remoteMomentId,
+        );
+
+        if (!resolution) {
+          continue;
+        }
+
+        console.info('[moment_reconciliation]', {
+          event: 'remote_moment_resolution',
+          localSessionId: resolution.sessionId,
+          matchReason: resolution.matchReason,
+          matched: true,
+          momentId: remoteMoment.remoteMomentId,
+          remoteSessionId: remoteMoment.session.id,
+          replacedRemoteSessionId: resolution.sessionId !== remoteMoment.session.id,
+        });
+
+        if (uploadReconciliationCandidatesBySessionId?.[resolution.sessionId]) {
+          onRemoteMomentReconciled?.({
+            localSessionId: resolution.sessionId,
+            matchReason: resolution.matchReason,
+            momentId: remoteMoment.remoteMomentId,
+            remoteSessionId: remoteMoment.session.id,
+          });
+        }
+      }
 
       setSessions((current) =>
         applyRemoteSessions({
           current,
           remoteMoments,
-          sessionIdByRemoteMomentId,
+          sessionResolutionByRemoteMomentId: sessionIdByRemoteMomentId,
         }),
       );
 
@@ -55,7 +98,7 @@ export function useSyncRemoteMoments({
         applyRemoteMomentIds({
           current,
           remoteMoments,
-          sessionIdByRemoteMomentId,
+          sessionResolutionByRemoteMomentId: sessionIdByRemoteMomentId,
         }),
       );
 
@@ -63,7 +106,7 @@ export function useSyncRemoteMoments({
         applyRemoteVideos({
           current,
           remoteMoments,
-          sessionIdByRemoteMomentId,
+          sessionResolutionByRemoteMomentId: sessionIdByRemoteMomentId,
         }),
       );
 
@@ -71,7 +114,7 @@ export function useSyncRemoteMoments({
         applyRemoteEvidence({
           current,
           remoteMoments,
-          sessionIdByRemoteMomentId,
+          sessionResolutionByRemoteMomentId: sessionIdByRemoteMomentId,
         }),
       );
 
@@ -79,13 +122,15 @@ export function useSyncRemoteMoments({
         applyRemoteThumbnails({
           current,
           remoteMoments,
-          sessionIdByRemoteMomentId,
+          sessionResolutionByRemoteMomentId: sessionIdByRemoteMomentId,
         }),
       );
     },
     [
       remoteMomentIdsBySessionId,
       sessions,
+      uploadReconciliationCandidatesBySessionId,
+      onRemoteMomentReconciled,
       setGeminiEvidenceBySessionId,
       setRemoteMomentIdsBySessionId,
       setSessions,

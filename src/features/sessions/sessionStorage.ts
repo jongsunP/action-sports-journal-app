@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { SessionVideoAsset } from '../../services/ai';
 import type { AnalysisResult, GeminiEvidenceResult, Session } from '../../types';
+import type { UploadReconciliationCandidate } from './sessionMerge';
 
 export const SESSION_STORAGE_KEY = 'action-sports-journal:sessions:v1';
 
@@ -15,6 +16,10 @@ export type PersistedSessionState = {
   userConfirmedTrickBySessionId?: Record<string, string>;
   thumbnailsBySessionId?: Record<string, string>;
   remoteMomentIdsBySessionId?: Record<string, string>;
+  uploadReconciliationCandidatesBySessionId?: Record<
+    string,
+    UploadReconciliationCandidate
+  >;
 };
 
 export async function loadPersistedSessionState() {
