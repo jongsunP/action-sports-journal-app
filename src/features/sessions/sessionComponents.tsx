@@ -1,4 +1,4 @@
-import { useRef, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -59,6 +59,37 @@ export function MomentStatusDot({ status }: { status?: MomentStatus }) {
       accessibilityLabel={getMomentStatusLabel(status)}
       style={[statusDotStyles.dot, getMomentStatusDotStyle(status)]}
     />
+  );
+}
+
+function SessionMediaPreview({
+  hasVideo,
+  styles,
+  thumbnailUri,
+}: {
+  hasVideo: boolean;
+  styles: HomeScreenStyles;
+  thumbnailUri?: string;
+}) {
+  const [didImageFail, setDidImageFail] = useState(false);
+
+  if (thumbnailUri && !didImageFail) {
+    return (
+      <Image
+        onError={() => setDidImageFail(true)}
+        resizeMode="cover"
+        source={{ uri: thumbnailUri }}
+        style={styles.recentThumbImage}
+      />
+    );
+  }
+
+  return (
+    <View style={styles.recentThumbFallback}>
+      <Text style={styles.recentThumbFallbackText}>
+        {hasVideo ? 'CLIP' : 'NOTE'}
+      </Text>
+    </View>
   );
 }
 
@@ -266,19 +297,11 @@ export function RecentSessionsRail({
           ]}
         >
           <View style={styles.recentPreview}>
-            {card.thumbnailUri ? (
-              <Image
-                resizeMode="cover"
-                source={{ uri: card.thumbnailUri }}
-                style={styles.recentThumbImage}
-              />
-            ) : (
-              <View style={styles.recentThumbFallback}>
-                <Text style={styles.recentThumbFallbackText}>
-                  {session.videoUri ? 'CLIP' : 'NOTE'}
-                </Text>
-              </View>
-            )}
+            <SessionMediaPreview
+              hasVideo={Boolean(session.videoUri)}
+              styles={styles}
+              thumbnailUri={card.thumbnailUri}
+            />
             <View style={styles.mediaStatusDotOverlay}>
               <MomentStatusDot status={momentStatus} />
             </View>
@@ -485,19 +508,11 @@ export function VideoArchiveList({
         ]}
       >
         <View style={styles.videoArchiveThumb}>
-          {card.thumbnailUri ? (
-            <Image
-              resizeMode="cover"
-              source={{ uri: card.thumbnailUri }}
-              style={styles.recentThumbImage}
-            />
-          ) : (
-            <View style={styles.recentThumbFallback}>
-              <Text style={styles.recentThumbFallbackText}>
-                {session.videoUri ? 'CLIP' : 'NOTE'}
-              </Text>
-            </View>
-          )}
+          <SessionMediaPreview
+            hasVideo={Boolean(session.videoUri)}
+            styles={styles}
+            thumbnailUri={card.thumbnailUri}
+          />
           <View style={styles.mediaStatusDotOverlay}>
             <MomentStatusDot status={momentStatus} />
           </View>

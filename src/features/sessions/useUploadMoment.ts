@@ -14,6 +14,8 @@ import {
 import {
   createMomentFromSourceVideo,
   hasConfiguredSupabaseMoments,
+  type UploadedThumbnailReference,
+  type VideoUploadTarget,
 } from '../../services/moments';
 import {
   createSessionVideoThumbnail,
@@ -127,7 +129,9 @@ export function useUploadMoment({
     }
 
     try {
-      const imageUri = await createSessionVideoThumbnail(video);
+      const imageUri = await createSessionVideoThumbnail(video, {
+        allowRemoteFallback: false,
+      });
 
       setThumbnailForSession(sessionId, imageUri);
     } catch {
@@ -306,6 +310,7 @@ export function useUploadMoment({
     void (async () => {
       let uploadStartedAt: number | undefined;
       let usedUploadFallback = false;
+      let fallbackThumbnailReference: UploadedThumbnailReference | undefined;
 
       try {
         setUploadDraftStatus('uploading');
@@ -334,6 +339,9 @@ export function useUploadMoment({
 
         let storedMoment = await createMomentFromDirectUpload({
           draft: uploadDraft,
+          onDirectUploadTarget: (uploadTarget) => {
+            fallbackThumbnailReference = uploadTarget.uploadedThumbnail;
+          },
           onProgress: setUploadProgressStage,
           session: nextSession,
         });
@@ -348,7 +356,11 @@ export function useUploadMoment({
             uploadId: uploadDraft?.uploadId,
           });
           storedMoment = await withUploadTimeout(
-            createMomentFromSourceVideo(nextSession, videoForUpload),
+            createMomentFromSourceVideo(nextSession, videoForUpload, {
+              thumbnailStorageProvider: fallbackThumbnailReference?.storageProvider,
+              thumbnailStorageBucket: fallbackThumbnailReference?.storageBucket,
+              thumbnailStoragePath: fallbackThumbnailReference?.storagePath,
+            }),
             MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS,
             'Multipart fallback upload timed out.',
           );
@@ -409,15 +421,33 @@ export function useUploadMoment({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'unknown';
+        const shouldWaitForFallbackSync =
+          usedUploadFallback && isMultipartFallbackAmbiguousFailure(errorMessage);
+
         console.info('[upload_timing]', {
           elapsedMs:
             typeof uploadStartedAt === 'number'
               ? Date.now() - uploadStartedAt
               : undefined,
-          event: 'upload_failure',
+          event: shouldWaitForFallbackSync
+            ? 'fallback_ambiguous_waiting_for_sync'
+            : 'upload_failure',
           localSessionId: nextSession.id,
           reason: errorMessage,
         });
+
+        if (shouldWaitForFallbackSync) {
+          updateLocalMomentStatus(nextSession.id, 'processing');
+          onUploadSuccess?.();
+          setUploadDraft(null);
+          setSelectedVideo(null);
+          selectedVideoThumbnailUriRef.current = null;
+          setSelectedVideoThumbnailUri(null);
+          setIsComposerOpen(false);
+          setUploadProgress(null);
+          return;
+        }
+
         setSessions((current) =>
           current.filter((session) => session.id !== nextSession.id),
         );
@@ -475,10 +505,12 @@ function isLocalVideoAccessFailure(message: string) {
 
 async function createMomentFromDirectUpload({
   draft,
+  onDirectUploadTarget,
   onProgress,
   session,
 }: {
   draft: UploadDraft | null;
+  onDirectUploadTarget?: (uploadTarget: VideoUploadTarget) => void;
   onProgress: (stage: UploadProgressStage, percent?: number) => void;
   session: Session;
 }) {
@@ -522,7 +554,10 @@ async function createMomentFromDirectUpload({
       storageProvider: uploadTarget.provider,
       storageBucket: uploadTarget.bucket,
       storagePath: uploadTarget.storagePath,
+      thumbnailTarget: uploadTarget.thumbnailTarget,
+      uploadedThumbnail: uploadTarget.uploadedThumbnail,
     };
+    onDirectUploadTarget?.(uploadTarget);
 
     const storedMoment = await finalizeUploadedDraftSource(uploadedDraft, session, {
       onProgress,
@@ -577,6 +612,10 @@ function withUploadTimeout<T>(
         clearTimeout(timeout);
       });
   });
+}
+
+function isMultipartFallbackAmbiguousFailure(errorMessage: string) {
+  return errorMessage === 'Multipart fallback upload timed out.';
 }
 
 function createLocalSessionId() {

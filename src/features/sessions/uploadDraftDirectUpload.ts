@@ -2,7 +2,9 @@ import {
   finalizeUploadedSourceVideo,
   reportUploadTargetFailure,
   requestUploadTarget,
+  uploadThumbnailToSignedTarget,
   uploadVideoToSignedTarget,
+  type ThumbnailUploadTarget,
   type VideoUploadTarget,
 } from '../../services/moments';
 import type { Session } from '../../types';
@@ -35,6 +37,11 @@ export async function uploadDraftSourceVideoDirectly(
       return undefined;
     }
 
+    const uploadedThumbnail = await uploadDraftThumbnailIfPossible(
+      draft,
+      uploadTarget,
+    );
+
     options?.onProgress?.('uploading_video');
     await uploadVideoToSignedTarget(uploadTarget, video, {
       onUploadProgress: ({ percent }) => {
@@ -42,7 +49,10 @@ export async function uploadDraftSourceVideoDirectly(
       },
     });
 
-    return uploadTarget;
+    return {
+      ...uploadTarget,
+      uploadedThumbnail,
+    };
   } catch (error) {
     if (uploadTarget) {
       void reportUploadTargetFailure({
@@ -87,7 +97,9 @@ export async function finalizeUploadedDraftSource(
       storagePath: draft.storagePath,
       session,
       video,
-      thumbnailUri: draft.localThumbnailUri,
+      thumbnailStorageProvider: draft.uploadedThumbnail?.storageProvider,
+      thumbnailStorageBucket: draft.uploadedThumbnail?.storageBucket,
+      thumbnailStoragePath: draft.uploadedThumbnail?.storagePath,
     });
   } catch (error) {
     await reportUploadTargetFailure({
@@ -101,4 +113,28 @@ export async function finalizeUploadedDraftSource(
   }
 
   return finalizedMoment;
+}
+
+async function uploadDraftThumbnailIfPossible(
+  draft: UploadDraft,
+  target: VideoUploadTarget,
+) {
+  const thumbnailTarget: ThumbnailUploadTarget | undefined = target.thumbnailTarget;
+
+  if (!draft.localThumbnailUri || !thumbnailTarget) {
+    return undefined;
+  }
+
+  try {
+    return await uploadThumbnailToSignedTarget(
+      thumbnailTarget,
+      draft.localThumbnailUri,
+    );
+  } catch (error) {
+    console.warn(
+      'Thumbnail durable upload failed; continuing without server thumbnail:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+    return undefined;
+  }
 }

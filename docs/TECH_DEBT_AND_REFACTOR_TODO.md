@@ -1226,6 +1226,11 @@ Policy so far:
 - Local video URI is used for playback when available.
 - If local video URI is unavailable, thumbnail plus analysis result is still a
   valid restored state.
+- Build 56 prep moves thumbnail fallback toward durable preview assets:
+  app-generated thumbnails are uploaded to the private `moment-thumbnails`
+  Storage bucket when available, and `moments.thumbnail_uri` stores a
+  `supabase://moment-thumbnails/...` reference that `/api/moments` resolves to a
+  signed URL for Home/Video.
 
 Open decision:
 
@@ -1236,7 +1241,9 @@ Recommendation:
 
 Treat thumbnail persistence separately from source video persistence. A
 thumbnail is product presentation metadata; the source video is temporary AI
-input unless the product later becomes a cloud video library.
+input unless the product later becomes a cloud video library. After
+Auth/User Ownership, tighten thumbnail access and cleanup policies around
+per-user scopes and RLS.
 
 ### 8. Auth and User Model
 

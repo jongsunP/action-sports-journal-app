@@ -1,4 +1,8 @@
 import type { SessionVideoAsset } from '../../services/ai';
+import type {
+  ThumbnailUploadTarget,
+  UploadedThumbnailReference,
+} from '../../services/moments';
 
 export type UploadDraftStatus =
   | 'selected'
@@ -15,6 +19,8 @@ export type UploadDraft = {
   mimeType?: string;
   durationMs?: number;
   localThumbnailUri?: string;
+  thumbnailTarget?: ThumbnailUploadTarget;
+  uploadedThumbnail?: UploadedThumbnailReference;
   createdAt: string;
   updatedAt: string;
   status: UploadDraftStatus;

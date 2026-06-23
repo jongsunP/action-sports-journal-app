@@ -108,6 +108,9 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sourceVideoStorageProvider = "supabase";
 const sourceVideoStorageBucket = "moment-videos";
+const thumbnailStorageProvider = "supabase";
+const thumbnailStorageBucket = "moment-thumbnails";
+const thumbnailSignedUrlExpiresSeconds = 60 * 60 * 24;
 const realtimeAnalysisChannel = "analysis-updates";
 const uploadedSourceStorageInspectTimeoutMs = 5_000;
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
@@ -359,6 +362,7 @@ app.post("/api/video-upload-targets", analysisRateLimit, async (request, respons
     const extension =
       extensionForFileName(fileName ?? "") ?? extensionForMimeType(mimeType);
     const storagePath = `users/${userId}/uploads/${uploadId}/source${extension}`;
+    const thumbnailStoragePath = `users/${userId}/thumbnails/${uploadId}/thumbnail.jpg`;
     const { data, error } = await client.storage
       .from(sourceVideoStorageBucket)
       .createSignedUploadUrl(storagePath, {
@@ -374,6 +378,39 @@ app.post("/api/video-upload-targets", analysisRateLimit, async (request, respons
 
     if (!signedUploadToken) {
       throw new Error("Signed upload target did not include an upload token.");
+    }
+
+    let thumbnailTarget: Record<string, unknown> | undefined;
+
+    try {
+      const { data: thumbnailData, error: thumbnailError } = await client.storage
+        .from(thumbnailStorageBucket)
+        .createSignedUploadUrl(thumbnailStoragePath, {
+          upsert: false,
+        } as never);
+
+      if (thumbnailError) {
+        throw thumbnailError;
+      }
+
+      const thumbnailSignedUploadToken = nullableString(thumbnailData?.token);
+
+      if (!thumbnailSignedUploadToken) {
+        throw new Error("Thumbnail signed upload target did not include a token.");
+      }
+
+      thumbnailTarget = {
+        provider: thumbnailStorageProvider,
+        bucket: thumbnailStorageBucket,
+        storagePath: thumbnailStoragePath,
+        signedUploadToken: thumbnailSignedUploadToken,
+        signedUploadUrl: nullableString(thumbnailData?.signedUrl),
+      };
+    } catch (thumbnailError) {
+      console.warn(
+        "Thumbnail upload target creation failed; continuing without durable thumbnail:",
+        thumbnailError instanceof Error ? thumbnailError.message : "Unknown error",
+      );
     }
 
     await recordUploadTargetIssued({
@@ -401,6 +438,7 @@ app.post("/api/video-upload-targets", analysisRateLimit, async (request, respons
       mimeType,
       fileSize,
       durationMs: Number.isFinite(durationMs) ? Math.round(durationMs) : null,
+      thumbnailTarget,
     });
   } catch (error) {
     const message =
@@ -1069,11 +1107,8 @@ app.get("/api/moments", async (request, response) => {
       hasMoreRows && pageMomentRows.length > 0
         ? encodeMomentCursor(pageMomentRows[pageMomentRows.length - 1])
         : null;
-
-    response.json({
-      hasMore: Boolean(nextCursor),
-      nextCursor,
-      moments: pageMomentRows.map((moment) => ({
+    const responseMoments = await Promise.all(
+      pageMomentRows.map(async (moment) => ({
         id: moment.id,
         sessionId: moment.session_id,
         activityGroupId: moment.activity_group_id,
@@ -1082,7 +1117,7 @@ app.get("/api/moments", async (request, response) => {
         status: moment.status,
         occurredAt: moment.occurred_at,
         sourceVideoUri: moment.source_video_uri,
-        thumbnailUri: moment.thumbnail_uri,
+        thumbnailUri: await resolveMomentThumbnailUri(client, moment.thumbnail_uri),
         durationMs: moment.duration_ms,
         fileName: moment.file_name,
         mimeType: moment.mime_type,
@@ -1103,6 +1138,12 @@ app.get("/api/moments", async (request, response) => {
         createdAt: moment.created_at,
         updatedAt: moment.updated_at,
       })),
+    );
+
+    response.json({
+      hasMore: Boolean(nextCursor),
+      nextCursor,
+      moments: responseMoments,
     });
   } catch (error) {
     const message =
@@ -1137,6 +1178,7 @@ app.delete("/api/moments/:momentId", async (request, response) => {
         [
           "id",
           "user_id",
+          "thumbnail_uri",
           "source_video_storage_bucket",
           "source_video_storage_path",
         ].join(","),
@@ -1171,6 +1213,16 @@ app.delete("/api/moments/:momentId", async (request, response) => {
       bucket: momentRow.source_video_storage_bucket,
       path: momentRow.source_video_storage_path,
     });
+    const thumbnailStorageReference = parseSupabaseStorageReference(
+      nullableString(momentRow.thumbnail_uri) ?? "",
+    );
+
+    if (thumbnailStorageReference) {
+      addMomentStoragePathForDelete(storagePathsByBucket, {
+        bucket: thumbnailStorageReference.bucket,
+        path: thumbnailStorageReference.path,
+      });
+    }
 
     for (const analysisJob of analysisJobs ?? []) {
       addMomentStoragePathForDelete(storagePathsByBucket, {
@@ -3698,7 +3750,11 @@ async function createStoredMomentFromSourceVideo({
     source: "standalone_app",
     occurred_at: occurredAt,
     source_video_uri: nullableString(body?.sourceVideoUri),
-    thumbnail_uri: nullableString(body?.thumbnailUri),
+    thumbnail_uri: buildSupabaseThumbnailReference({
+      provider: body?.thumbnailStorageProvider,
+      bucket: body?.thumbnailStorageBucket,
+      path: body?.thumbnailStoragePath,
+    }),
     file_name: file.originalname,
     mime_type: file.mimetype,
     file_size: file.size,
@@ -3880,7 +3936,11 @@ async function createStoredMomentFromUploadedSource({
       source: "standalone_app",
       occurred_at: occurredAt,
       source_video_uri: nullableString(body?.sourceVideoUri),
-      thumbnail_uri: nullableString(body?.thumbnailUri),
+      thumbnail_uri: buildSupabaseThumbnailReference({
+        provider: body?.thumbnailStorageProvider,
+        bucket: body?.thumbnailStorageBucket,
+        path: body?.thumbnailStoragePath,
+      }),
       file_name:
         nullableString(body?.fileName) ?? basename(storagePath) ?? "source.mov",
       mime_type: mimeType,
@@ -5597,6 +5657,81 @@ function addMomentStoragePathForDelete(
   }
 
   pathsByBucket.set(bucket, new Set([path]));
+}
+
+async function resolveMomentThumbnailUri(
+  client: SupabaseServerClient,
+  value: unknown,
+) {
+  const thumbnailUri = nullableString(value);
+
+  if (!thumbnailUri) {
+    return null;
+  }
+
+  const storageReference = parseSupabaseStorageReference(thumbnailUri);
+
+  if (!storageReference) {
+    return thumbnailUri;
+  }
+
+  const { data, error } = await client.storage
+    .from(storageReference.bucket)
+    .createSignedUrl(
+      storageReference.path,
+      thumbnailSignedUrlExpiresSeconds,
+    );
+
+  if (error) {
+    console.warn("Failed to create signed thumbnail URL:", error.message);
+    return null;
+  }
+
+  return nullableString(data?.signedUrl);
+}
+
+function buildSupabaseThumbnailReference({
+  bucket,
+  path,
+  provider,
+}: {
+  bucket?: unknown;
+  path?: unknown;
+  provider?: unknown;
+}) {
+  const storageProvider = nullableString(provider);
+  const storageBucket = nullableString(bucket);
+  const storagePath = nullableString(path);
+
+  if (
+    storageProvider !== thumbnailStorageProvider ||
+    storageBucket !== thumbnailStorageBucket ||
+    !storagePath
+  ) {
+    return null;
+  }
+
+  return `supabase://${storageBucket}/${storagePath}`;
+}
+
+function parseSupabaseStorageReference(value: string) {
+  const prefix = "supabase://";
+
+  if (!value.startsWith(prefix)) {
+    return undefined;
+  }
+
+  const reference = value.slice(prefix.length);
+  const separatorIndex = reference.indexOf("/");
+
+  if (separatorIndex <= 0 || separatorIndex === reference.length - 1) {
+    return undefined;
+  }
+
+  return {
+    bucket: reference.slice(0, separatorIndex),
+    path: reference.slice(separatorIndex + 1),
+  };
 }
 
 function nullableString(value: unknown) {

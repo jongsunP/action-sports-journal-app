@@ -41,6 +41,7 @@ type UploadTargetResponse = {
   mimeType?: unknown;
   fileSize?: unknown;
   durationMs?: unknown;
+  thumbnailTarget?: unknown;
 };
 
 type DeleteMomentResponse = {
@@ -69,6 +70,22 @@ export type VideoUploadTarget = {
   mimeType?: string;
   fileSize?: number;
   durationMs?: number;
+  thumbnailTarget?: ThumbnailUploadTarget;
+  uploadedThumbnail?: UploadedThumbnailReference;
+};
+
+export type ThumbnailUploadTarget = {
+  provider: string;
+  bucket: string;
+  storagePath: string;
+  signedUploadToken: string;
+  signedUploadUrl?: string;
+};
+
+export type UploadedThumbnailReference = {
+  storageProvider: string;
+  storageBucket: string;
+  storagePath: string;
 };
 
 export type SignedUploadProgress = {
@@ -85,7 +102,9 @@ export type FinalizeUploadedSourceVideoInput = {
   storagePath: string;
   session: Session;
   video?: SessionVideoAsset | null;
-  thumbnailUri?: string | null;
+  thumbnailStorageProvider?: string | null;
+  thumbnailStorageBucket?: string | null;
+  thumbnailStoragePath?: string | null;
 };
 
 export type UploadedMomentSourceVideo = {
@@ -217,6 +236,88 @@ export async function requestUploadTarget(
     mimeType: asString(data.mimeType),
     fileSize: asNumber(data.fileSize),
     durationMs: asNumber(data.durationMs),
+    thumbnailTarget: normalizeThumbnailUploadTarget(data.thumbnailTarget),
+  };
+}
+
+export async function uploadThumbnailToSignedTarget(
+  target: ThumbnailUploadTarget,
+  thumbnailUri: string,
+): Promise<UploadedThumbnailReference> {
+  if (!target.signedUploadUrl) {
+    throw new Error('Thumbnail upload target did not include a signed URL.');
+  }
+
+  const fileInfo = await withTimeout(
+    FileSystem.getInfoAsync(thumbnailUri),
+    SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS,
+    'Timed out while checking thumbnail for signed upload.',
+  );
+
+  if (!fileInfo.exists) {
+    throw new Error('Thumbnail file was not found for signed upload.');
+  }
+
+  const uploadTask = FileSystem.createUploadTask(
+    target.signedUploadUrl,
+    thumbnailUri,
+    {
+      headers: {
+        'cache-control': 'max-age=31536000',
+        'content-type': 'image/jpeg',
+        'x-upsert': 'false',
+      },
+      httpMethod: 'PUT',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    },
+  );
+  const uploadResult = await withTimeout(
+    uploadTask.uploadAsync(),
+    SIGNED_UPLOAD_REQUEST_TIMEOUT_MS,
+    'Timed out while uploading thumbnail to signed target.',
+  );
+
+  if (!uploadResult) {
+    throw new Error('Thumbnail upload did not return a result.');
+  }
+
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    throw new Error(
+      `Thumbnail upload failed with ${uploadResult.status}: ${uploadResult.body}`,
+    );
+  }
+
+  return {
+    storageProvider: target.provider,
+    storageBucket: target.bucket,
+    storagePath: target.storagePath,
+  };
+}
+
+function normalizeThumbnailUploadTarget(
+  value: unknown,
+): ThumbnailUploadTarget | undefined {
+  const record = asRecord(value);
+
+  if (!record) {
+    return undefined;
+  }
+
+  const provider = asString(record.provider);
+  const bucket = asString(record.bucket);
+  const storagePath = asString(record.storagePath);
+  const signedUploadToken = asString(record.signedUploadToken);
+
+  if (!provider || !bucket || !storagePath || !signedUploadToken) {
+    return undefined;
+  }
+
+  return {
+    provider,
+    bucket,
+    storagePath,
+    signedUploadToken,
+    signedUploadUrl: asString(record.signedUploadUrl),
   };
 }
 
@@ -420,7 +521,9 @@ export async function finalizeUploadedSourceVideo(
         notes: input.session.notes ?? null,
         occurredAt: input.session.occurredAt,
         sourceVideoUri: input.session.videoUri ?? input.video?.uri ?? null,
-        thumbnailUri: input.thumbnailUri ?? null,
+        thumbnailStorageProvider: input.thumbnailStorageProvider ?? null,
+        thumbnailStorageBucket: input.thumbnailStorageBucket ?? null,
+        thumbnailStoragePath: input.thumbnailStoragePath ?? null,
         fileName: input.video?.fileName ?? null,
         mimeType: input.video?.mimeType ?? null,
         fileSize: input.video?.fileSize ?? null,
@@ -575,6 +678,11 @@ export async function uploadMomentSourceVideo(
 export async function createMomentFromSourceVideo(
   session: Session,
   video: SessionVideoAsset,
+  options?: {
+    thumbnailStorageProvider?: string | null;
+    thumbnailStorageBucket?: string | null;
+    thumbnailStoragePath?: string | null;
+  },
 ): Promise<UploadedMomentSourceVideo & { momentId: string } | undefined> {
   if (!momentsEndpoint) {
     return undefined;
@@ -603,6 +711,18 @@ export async function createMomentFromSourceVideo(
     name: video.fileName ?? `${session.id}.mov`,
     type: video.mimeType ?? 'video/quicktime',
   } as unknown as Blob);
+
+  if (options?.thumbnailStorageProvider) {
+    formData.append('thumbnailStorageProvider', options.thumbnailStorageProvider);
+  }
+
+  if (options?.thumbnailStorageBucket) {
+    formData.append('thumbnailStorageBucket', options.thumbnailStorageBucket);
+  }
+
+  if (options?.thumbnailStoragePath) {
+    formData.append('thumbnailStoragePath', options.thumbnailStoragePath);
+  }
 
   const response = await fetch(`${momentsEndpoint}/from-source-video`, {
     method: 'POST',
