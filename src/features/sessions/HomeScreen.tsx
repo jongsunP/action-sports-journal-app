@@ -106,6 +106,7 @@ const MOMENT_LIST_PAGE_SIZE = 20;
 const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
+const UPLOAD_FAILURE_REMOTE_RECONCILE_RETRY_MS = 1_200;
 
 function getNextPendingRemoteRefreshReason(
   currentReason: RemoteRefreshReason | null,
@@ -1322,6 +1323,105 @@ export function HomeScreen() {
     remoteMomentIdsBySessionId,
     removeSessionLocally,
   });
+  const shouldSuppressUploadFailureAlert = useCallback(
+    async ({
+      localSessionId,
+      reason,
+      stage,
+      uploadId,
+    }: {
+      localSessionId: string;
+      reason: string;
+      stage: string;
+      uploadId?: string;
+    }) => {
+      if (remoteMomentIdsBySessionId[localSessionId]) {
+        console.info('[upload_timing]', {
+          event: 'upload_failure_remote_reconcile_existing',
+          localSessionId,
+          momentId: remoteMomentIdsBySessionId[localSessionId],
+          reason,
+          stage,
+          uploadId,
+        });
+        return true;
+      }
+
+      if (!hasConfiguredSupabaseMoments()) {
+        return false;
+      }
+
+      const findRemoteMatch = async (attempt: number) => {
+        const remoteMomentPage = await listMomentPageWithTimeout({
+          limit: MOMENT_LIST_PAGE_SIZE,
+        });
+        const matchedMoment = remoteMomentPage.moments.find(
+          (remoteMoment) =>
+            resolveLocalSessionIdForRemoteMoment(
+              remoteMoment,
+              remoteMomentIdsBySessionId,
+              sessions,
+              uploadReconciliationCandidatesBySessionId,
+            ) === localSessionId,
+        );
+
+        syncRemoteMoments(remoteMomentPage.moments);
+        applyVideoArchiveFirstPage(remoteMomentPage);
+
+        if (matchedMoment) {
+          console.info('[upload_timing]', {
+            attempt,
+            event: 'upload_failure_remote_reconcile_matched',
+            localSessionId,
+            momentId: matchedMoment.remoteMomentId,
+            reason,
+            stage,
+            uploadId,
+          });
+          return true;
+        }
+
+        console.info('[upload_timing]', {
+          attempt,
+          event: 'upload_failure_remote_reconcile_unmatched',
+          localSessionId,
+          reason,
+          stage,
+          uploadId,
+        });
+        return false;
+      };
+
+      try {
+        if (await findRemoteMatch(1)) {
+          return true;
+        }
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, UPLOAD_FAILURE_REMOTE_RECONCILE_RETRY_MS),
+        );
+
+        return await findRemoteMatch(2);
+      } catch (error) {
+        console.info('[upload_timing]', {
+          event: 'upload_failure_remote_reconcile_failed',
+          localSessionId,
+          reason: error instanceof Error ? error.message : 'unknown',
+          sourceFailureReason: reason,
+          stage,
+          uploadId,
+        });
+        return false;
+      }
+    },
+    [
+      applyVideoArchiveFirstPage,
+      remoteMomentIdsBySessionId,
+      sessions,
+      syncRemoteMoments,
+      uploadReconciliationCandidatesBySessionId,
+    ],
+  );
 
   const {
     canUploadSession,
@@ -1360,6 +1460,7 @@ export function HomeScreen() {
       clearUploadReconciliationCandidate,
     onUploadReconciliationTargetResolved:
       markUploadReconciliationCandidateWithTarget,
+    shouldSuppressUploadFailureAlert,
     updateLocalMomentStatus,
   });
 

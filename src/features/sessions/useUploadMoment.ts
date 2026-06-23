@@ -74,11 +74,26 @@ type UseUploadMomentParams = {
     uploadTarget: VideoUploadTarget,
     draftId?: string,
   ) => void;
+  shouldSuppressUploadFailureAlert?: (
+    context: UploadFailureAlertContext,
+  ) => Promise<boolean> | boolean;
   onUploadSuccess?: () => void;
   updateLocalMomentStatus: (
     sessionId: string,
     momentStatus: Session['momentStatus'],
   ) => void;
+};
+
+type UploadFailureAlertContext = {
+  localSessionId: string;
+  reason: string;
+  stage: string;
+  uploadId?: string;
+};
+
+type UploadFailureAlertOptions = UploadFailureAlertContext & {
+  message: string;
+  title: string;
 };
 
 export function useUploadMoment({
@@ -94,6 +109,7 @@ export function useUploadMoment({
   onOptimisticSessionRejected,
   onUploadReconciliationCandidateResolved,
   onUploadReconciliationTargetResolved,
+  shouldSuppressUploadFailureAlert,
   onUploadSuccess,
   updateLocalMomentStatus,
 }: UseUploadMomentParams) {
@@ -469,11 +485,15 @@ export function useUploadMoment({
           onOptimisticSessionRejected?.(nextSession.id);
           onUploadReconciliationCandidateResolved?.(nextSession.id);
           setUploadDraftStatus('upload_failed');
-          showUploadFailureAlertIfActive({
+          await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+            reason: 'no_stored_moment',
+            shouldSuppressAlert: shouldSuppressUploadFailureAlert,
+            stage: 'stored_moment',
             title: '영상 업로드에 실패했습니다',
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
           });
           return;
         }
@@ -552,25 +572,37 @@ export function useUploadMoment({
           errorMessage,
         );
         if (isLocalVideoAccessFailure(errorMessage)) {
-          showUploadFailureAlertIfActive({
+          await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '선택한 영상 파일에 다시 접근하지 못했습니다. 영상을 다시 선택한 뒤 업로드해주세요.',
+            reason: errorMessage,
+            shouldSuppressAlert: shouldSuppressUploadFailureAlert,
+            stage: usedUploadFallback ? 'fallback_upload' : 'local_video_access',
             title: '영상 파일을 다시 선택해 주세요',
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
           });
         } else if (isUploadTargetRateLimitFailure(error)) {
-          showUploadFailureAlertIfActive({
+          await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '연속 업로드 요청이 잠시 몰렸습니다. 잠깐 기다린 뒤 다시 업로드해주세요.',
+            reason: errorMessage,
+            shouldSuppressAlert: shouldSuppressUploadFailureAlert,
+            stage: 'request_upload_target',
             title: '잠시 후 다시 시도해주세요',
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
           });
         } else {
-          showUploadFailureAlertIfActive({
+          await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+            reason: errorMessage,
+            shouldSuppressAlert: shouldSuppressUploadFailureAlert,
+            stage: usedUploadFallback ? 'fallback_upload' : 'upload',
             title: '영상 업로드에 실패했습니다',
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
           });
         }
       } finally {
@@ -600,25 +632,71 @@ export function useUploadMoment({
   };
 }
 
-function showUploadFailureAlertIfActive({
+async function showUploadFailureAlertIfActive({
   localSessionId,
   message,
+  reason,
+  shouldSuppressAlert,
+  stage,
   title,
-}: {
-  localSessionId: string;
-  message: string;
-  title: string;
+  uploadId,
+}: UploadFailureAlertOptions & {
+  shouldSuppressAlert?: UseUploadMomentParams['shouldSuppressUploadFailureAlert'];
 }) {
+  const shouldAttemptRemoteSuppress = stage !== 'request_upload_target';
+  const shouldSuppress = shouldAttemptRemoteSuppress
+    ? await shouldSuppressAlert?.({
+        localSessionId,
+        reason,
+        stage,
+        uploadId,
+      })
+    : false;
+
+  if (shouldSuppress) {
+    console.info('[upload_timing]', {
+      event: 'upload_failure_alert_suppressed',
+      localSessionId,
+      reason,
+      stage,
+      suppressReason: 'remote_moment_exists',
+      uploadId,
+    });
+    return;
+  }
+
+  if (shouldAttemptRemoteSuppress && uploadId) {
+    console.info('[upload_timing]', {
+      event: 'upload_failure_alert_suppressed',
+      localSessionId,
+      reason,
+      stage,
+      suppressReason: 'recoverable_upload_target',
+      uploadId,
+    });
+    return;
+  }
+
   if (AppState.currentState !== 'active') {
     console.info('[upload_timing]', {
       appState: AppState.currentState,
       event: 'upload_failure_alert_suppressed',
       localSessionId,
-      reason: 'app_not_active',
+      reason,
+      stage,
+      suppressReason: 'app_not_active',
+      uploadId,
     });
     return;
   }
 
+  console.info('[upload_timing]', {
+    event: 'upload_failure_alert_presented',
+    localSessionId,
+    reason,
+    stage,
+    uploadId,
+  });
   Alert.alert(title, message);
 }
 
