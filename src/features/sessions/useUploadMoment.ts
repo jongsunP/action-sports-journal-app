@@ -26,6 +26,7 @@ import type { Session } from '../../types';
 import type { AppTabId } from './sessionComponents';
 import {
   finalizeUploadedDraftSource,
+  finalizeUploadedDraftSourceFromTarget,
   uploadDraftSourceVideoDirectly,
 } from './uploadDraftDirectUpload';
 import {
@@ -315,6 +316,7 @@ export function useUploadMoment({
     void (async () => {
       let uploadStartedAt: number | undefined;
       let usedUploadFallback = false;
+      let directUploadedTarget: VideoUploadTarget | undefined;
       let fallbackThumbnailReference: UploadedThumbnailReference | undefined;
 
       try {
@@ -345,11 +347,50 @@ export function useUploadMoment({
         let storedMoment = await createMomentFromDirectUpload({
           draft: uploadDraft,
           onDirectUploadTarget: (uploadTarget) => {
+            directUploadedTarget = uploadTarget;
             fallbackThumbnailReference = uploadTarget.uploadedThumbnail;
           },
           onProgress: setUploadProgressStage,
           session: nextSession,
         });
+
+        if (!storedMoment && uploadDraft && directUploadedTarget) {
+          console.info('[upload_timing]', {
+            draftId: uploadDraft.draftId,
+            event: 'direct_finalize_retry_started',
+            localSessionId: nextSession.id,
+            storagePath: directUploadedTarget.storagePath,
+            uploadId: directUploadedTarget.uploadId,
+          });
+          try {
+            storedMoment = await finalizeUploadedDraftSourceFromTarget(
+              uploadDraft,
+              directUploadedTarget,
+              nextSession,
+              {
+                onProgress: setUploadProgressStage,
+              },
+            );
+            console.info('[upload_timing]', {
+              draftId: uploadDraft.draftId,
+              event: 'direct_finalize_retry_success',
+              localSessionId: nextSession.id,
+              momentId: storedMoment?.momentId,
+              storagePath: directUploadedTarget.storagePath,
+              uploadId: directUploadedTarget.uploadId,
+            });
+          } catch (error) {
+            console.info('[upload_timing]', {
+              draftId: uploadDraft.draftId,
+              event: 'direct_finalize_retry_failure',
+              localSessionId: nextSession.id,
+              reason: error instanceof Error ? error.message : 'unknown',
+              storagePath: directUploadedTarget.storagePath,
+              uploadId: directUploadedTarget.uploadId,
+            });
+            throw error;
+          }
+        }
 
         if (!storedMoment) {
           usedUploadFallback = true;

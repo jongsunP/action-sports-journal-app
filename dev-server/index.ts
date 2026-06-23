@@ -3944,6 +3944,40 @@ async function createStoredMomentFromUploadedSource({
       );
     }
 
+    const { data: existingMoment, error: existingMomentError } = await client
+      .from("moments")
+      .select("id,created_at,source_video_storage_path")
+      .eq("source_video_storage_path", storagePath)
+      .maybeSingle();
+
+    if (existingMomentError) {
+      throw new Error(
+        `Failed to check existing uploaded-source Moment: ${existingMomentError.message}`,
+      );
+    }
+
+    if (existingMoment?.id) {
+      await updateUploadTargetStatus({
+        client,
+        status: "finalized",
+        uploadId,
+      });
+
+      console.info("[upload_timing]", {
+        event: "uploaded_source_finalize_idempotent_reuse",
+        momentId: existingMoment.id,
+        storagePath,
+        uploadId,
+      });
+
+      return {
+        momentId: existingMoment.id as string,
+        uploadedAt: nullableString(existingMoment.created_at) ?? new Date().toISOString(),
+        storedVideo,
+        queuedJob: undefined,
+      };
+    }
+
     await updateUploadTargetStatus({
       client,
       status: "uploaded",

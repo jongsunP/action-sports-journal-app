@@ -153,6 +153,29 @@ export async function finalizeUploadedDraftSource(
   return finalizedMoment;
 }
 
+export async function finalizeUploadedDraftSourceFromTarget(
+  draft: UploadDraft,
+  target: VideoUploadTarget,
+  session: Session,
+  options?: {
+    onProgress?: UploadProgressHandler;
+  },
+) {
+  const uploadedDraft: UploadDraft = {
+    ...draft,
+    status: 'uploaded',
+    uploadedAt: new Date().toISOString(),
+    uploadId: target.uploadId,
+    storageProvider: target.provider,
+    storageBucket: target.bucket,
+    storagePath: target.storagePath,
+    thumbnailTarget: target.thumbnailTarget,
+    uploadedThumbnail: target.uploadedThumbnail,
+  };
+
+  return finalizeUploadedDraftSource(uploadedDraft, session, options);
+}
+
 async function uploadDraftThumbnailIfPossible(
   draft: UploadDraft,
   target: VideoUploadTarget,
