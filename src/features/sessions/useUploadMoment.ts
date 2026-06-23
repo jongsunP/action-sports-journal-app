@@ -665,6 +665,18 @@ async function showUploadFailureAlertIfActive({
     return;
   }
 
+  if (stage === 'fallback_upload') {
+    console.info('[upload_timing]', {
+      event: 'upload_failure_alert_suppressed',
+      localSessionId,
+      reason,
+      stage,
+      suppressReason: 'fallback_recoverable_or_ambiguous',
+      uploadId,
+    });
+    return;
+  }
+
   if (shouldAttemptRemoteSuppress && uploadId) {
     console.info('[upload_timing]', {
       event: 'upload_failure_alert_suppressed',
