@@ -1751,7 +1751,11 @@ app.post(
             ])
           : undefined,
         momentStatus:
-          queuedJob.status === "processing" ? "processing" : "queued",
+          queuedJob.status === "completed"
+            ? "completed"
+            : queuedJob.status === "processing"
+              ? "processing"
+              : "queued",
         createdAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -3570,6 +3574,35 @@ async function createQueuedEvidenceAnalysisJob({
     return null;
   }
 
+  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+    client,
+    momentId,
+  });
+
+  if (completedEvidenceResultId) {
+    const { error: momentUpdateError } = await client
+      .from("moments")
+      .update({
+        status: "completed",
+        latest_evidence_result_id: completedEvidenceResultId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", momentId);
+
+    if (momentUpdateError) {
+      throw new Error(
+        `Failed to keep completed moment state before queueing analysis job: ${momentUpdateError.message}`,
+      );
+    }
+
+    void broadcastMomentUpdated({
+      momentId,
+      status: "completed",
+    });
+
+    return null;
+  }
+
   const { data, error } = await client
     .from("analysis_jobs")
     .insert({
@@ -3589,17 +3622,17 @@ async function createQueuedEvidenceAnalysisJob({
     throw new Error(`Failed to insert queued analysis_jobs: ${error.message}`);
   }
 
-  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+  const completedEvidenceResultIdAfterInsert = await findCompletedEvidenceResultIdForMoment({
     client,
     momentId,
   });
   const { error: momentUpdateError } = await client
     .from("moments")
     .update({
-      status: completedEvidenceResultId ? "completed" : "queued",
+      status: completedEvidenceResultIdAfterInsert ? "completed" : "queued",
       latest_analysis_job_id: data.id,
-      ...(completedEvidenceResultId
-        ? { latest_evidence_result_id: completedEvidenceResultId }
+      ...(completedEvidenceResultIdAfterInsert
+        ? { latest_evidence_result_id: completedEvidenceResultIdAfterInsert }
         : {}),
       updated_at: new Date().toISOString(),
     })
@@ -3614,7 +3647,7 @@ async function createQueuedEvidenceAnalysisJob({
   void broadcastMomentUpdated({
     momentId,
     analysisJobId: data.id as string,
-    status: completedEvidenceResultId ? "completed" : "queued",
+    status: completedEvidenceResultIdAfterInsert ? "completed" : "queued",
   });
 
   return {
@@ -4363,6 +4396,21 @@ async function getOrCreateQueuedEvidenceAnalysisJob(metadata: SessionMetadata) {
 
   if (!linkedMoment) {
     return null;
+  }
+
+  const completedEvidenceResultId = await findCompletedEvidenceResultIdForMoment({
+    client,
+    momentId: linkedMoment.id,
+    preferredEvidenceResultId: linkedMoment.latest_evidence_result_id,
+  });
+
+  if (completedEvidenceResultId) {
+    return {
+      id: completedEvidenceResultId,
+      momentId: linkedMoment.id,
+      userId: linkedMoment.user_id,
+      status: "completed" as const,
+    };
   }
 
   const { data: existingJobs, error: existingJobError } = await client

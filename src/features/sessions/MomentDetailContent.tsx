@@ -31,7 +31,13 @@ const ENABLE_INTERNAL_DEBUG_VIEWER =
 type HomeScreenStyles = Record<string, any>;
 let styles: HomeScreenStyles;
 
-function LocalSessionVideoPlayer({ videoUri }: { videoUri: string }) {
+function LocalSessionVideoPlayer({
+  thumbnailUri,
+  videoUri,
+}: {
+  thumbnailUri?: string;
+  videoUri: string;
+}) {
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const player = useVideoPlayer(videoUri, (videoPlayer) => {
     videoPlayer.play();
@@ -44,6 +50,16 @@ function LocalSessionVideoPlayer({ videoUri }: { videoUri: string }) {
   });
 
   if (hasPlaybackError) {
+    if (thumbnailUri) {
+      return (
+        <Image
+          resizeMode="cover"
+          source={{ uri: thumbnailUri }}
+          style={styles.detailVideo}
+        />
+      );
+    }
+
     return (
       <View style={styles.videoMissingFallback}>
         <Text style={styles.videoMissingTitle}>영상 파일을 다시 선택해 주세요.</Text>
@@ -226,7 +242,10 @@ export function MomentDetailContent({
               </Text>
             </Pressable>
           ) : video ? (
-            <LocalSessionVideoPlayer videoUri={video.uri} />
+            <LocalSessionVideoPlayer
+              thumbnailUri={thumbnailUri}
+              videoUri={video.uri}
+            />
           ) : thumbnailUri ? (
             <Image
               resizeMode="cover"
