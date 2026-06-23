@@ -148,6 +148,7 @@ export function HomeScreen() {
   const hasAppliedBootVideoArchivePageRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
   const didTriggerSwipeHapticRef = useRef(false);
+  const pendingVideoArchiveSessionIdsRef = useRef<Set<string>>(new Set());
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -252,14 +253,43 @@ export function HomeScreen() {
       const sessionIds = getSessionIdsForRemoteMoments(
         remoteMomentPage.moments,
       );
+      const remoteSessionIdSet = new Set(sessionIds);
 
-      setVideoArchiveSessionIds(Array.from(new Set(sessionIds)));
+      setVideoArchiveSessionIds((current) => {
+        const existingSessionIds = new Set(sessions.map((session) => session.id));
+        const pendingSessionIds = Array.from(
+          pendingVideoArchiveSessionIdsRef.current,
+        ).filter(
+          (sessionId) =>
+            existingSessionIds.has(sessionId) &&
+            !remoteSessionIdSet.has(sessionId),
+        );
+
+        pendingVideoArchiveSessionIdsRef.current = new Set(pendingSessionIds);
+
+        return Array.from(new Set([...pendingSessionIds, ...sessionIds]));
+      });
       setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
       setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       setHasLoadedVideoArchiveFirstPage(true);
     },
-    [getSessionIdsForRemoteMoments],
+    [getSessionIdsForRemoteMoments, sessions],
   );
+
+  const addPendingVideoArchiveSession = useCallback((sessionId: string) => {
+    pendingVideoArchiveSessionIdsRef.current.add(sessionId);
+    setVideoArchiveSessionIds((current) => [
+      sessionId,
+      ...current.filter((currentSessionId) => currentSessionId !== sessionId),
+    ]);
+  }, []);
+
+  const removePendingVideoArchiveSession = useCallback((sessionId: string) => {
+    pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
+    setVideoArchiveSessionIds((current) =>
+      current.filter((currentSessionId) => currentSessionId !== sessionId),
+    );
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'video') {
@@ -670,6 +700,10 @@ export function HomeScreen() {
         const sessionIds = getSessionIdsForRemoteMoments(
           remoteMomentPage.moments,
         );
+        const remoteSessionIdSet = new Set(sessionIds);
+        for (const sessionId of remoteSessionIdSet) {
+          pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
+        }
 
         syncRemoteMoments(remoteMomentPage.moments);
         appendVideoArchiveSessionIds(sessionIds);
@@ -802,6 +836,8 @@ export function HomeScreen() {
     onUploadSuccess: () => {
       void refreshRemoteMoments('upload_success');
     },
+    onOptimisticSessionCreated: addPendingVideoArchiveSession,
+    onOptimisticSessionRejected: removePendingVideoArchiveSession,
     updateLocalMomentStatus,
   });
 

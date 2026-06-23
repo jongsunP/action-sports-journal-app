@@ -17,6 +17,7 @@ import type { UploadProgressHandler } from './uploadProgress';
 export async function uploadDraftSourceVideoDirectly(
   draft: UploadDraft,
   options?: {
+    localSessionId?: string;
     onProgress?: UploadProgressHandler;
   },
 ): Promise<VideoUploadTarget | undefined> {
@@ -25,6 +26,16 @@ export async function uploadDraftSourceVideoDirectly(
 
   try {
     options?.onProgress?.('creating_target');
+    console.info('[upload_timing]', {
+      draftId: draft.draftId,
+      durationMs: draft.durationMs,
+      event: 'upload_target_request_start',
+      fileName: draft.fileName,
+      fileSize: draft.fileSize,
+      localSessionId: options?.localSessionId,
+      stage: 'request_upload_target',
+    });
+
     uploadTarget = await requestUploadTarget({
       draftId: draft.draftId,
       fileName: draft.fileName,
@@ -36,6 +47,18 @@ export async function uploadDraftSourceVideoDirectly(
     if (!uploadTarget) {
       return undefined;
     }
+
+    console.info('[upload_timing]', {
+      draftId: draft.draftId,
+      durationMs: draft.durationMs,
+      event: 'upload_target_request_success',
+      fileName: draft.fileName,
+      fileSize: draft.fileSize,
+      localSessionId: options?.localSessionId,
+      stage: 'request_upload_target',
+      storagePath: uploadTarget.storagePath,
+      uploadId: uploadTarget.uploadId,
+    });
 
     const uploadedThumbnail = await uploadDraftThumbnailIfPossible(
       draft,
@@ -54,6 +77,21 @@ export async function uploadDraftSourceVideoDirectly(
       uploadedThumbnail,
     };
   } catch (error) {
+    console.info('[upload_timing]', {
+      draftId: draft.draftId,
+      durationMs: draft.durationMs,
+      event: uploadTarget
+        ? 'signed_upload_failure'
+        : 'upload_target_request_failure',
+      fileName: draft.fileName,
+      fileSize: draft.fileSize,
+      localSessionId: options?.localSessionId,
+      reason: error instanceof Error ? error.message : 'unknown',
+      stage: uploadTarget ? 'signed_upload' : 'request_upload_target',
+      storagePath: uploadTarget?.storagePath,
+      uploadId: uploadTarget?.uploadId,
+    });
+
     if (uploadTarget) {
       void reportUploadTargetFailure({
         reason: error instanceof Error ? error.message : 'unknown',

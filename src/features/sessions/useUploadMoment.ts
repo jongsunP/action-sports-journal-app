@@ -5,7 +5,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
@@ -60,6 +60,8 @@ type UseUploadMomentParams = {
   setSessions: Dispatch<SetStateAction<Session[]>>;
   setThumbnailForSession: (sessionId: string, thumbnailUri: string) => void;
   setVideoForSession: (sessionId: string, video: SessionVideoAsset) => void;
+  onOptimisticSessionCreated?: (sessionId: string) => void;
+  onOptimisticSessionRejected?: (sessionId: string) => void;
   onUploadSuccess?: () => void;
   updateLocalMomentStatus: (
     sessionId: string,
@@ -75,6 +77,8 @@ export function useUploadMoment({
   setSessions,
   setThumbnailForSession,
   setVideoForSession,
+  onOptimisticSessionCreated,
+  onOptimisticSessionRejected,
   onUploadSuccess,
   updateLocalMomentStatus,
 }: UseUploadMomentParams) {
@@ -296,6 +300,7 @@ export function useUploadMoment({
     };
 
     setSessions((current) => [nextSession, ...current]);
+    onOptimisticSessionCreated?.(nextSession.id);
 
     setVideoForSession(nextSession.id, videoForUpload);
     const preparedThumbnailUri =
@@ -384,11 +389,14 @@ export function useUploadMoment({
           setSessions((current) =>
             current.filter((session) => session.id !== nextSession.id),
           );
+          onOptimisticSessionRejected?.(nextSession.id);
           setUploadDraftStatus('upload_failed');
-          Alert.alert(
-            '영상 업로드에 실패했습니다',
-            '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
-          );
+          showUploadFailureAlertIfActive({
+            localSessionId: nextSession.id,
+            message:
+              '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+            title: '영상 업로드에 실패했습니다',
+          });
           return;
         }
 
@@ -451,6 +459,7 @@ export function useUploadMoment({
         setSessions((current) =>
           current.filter((session) => session.id !== nextSession.id),
         );
+        onOptimisticSessionRejected?.(nextSession.id);
         setUploadDraftStatus('upload_failed');
         setUploadDraft(null);
         setSelectedVideo(null);
@@ -463,15 +472,19 @@ export function useUploadMoment({
           errorMessage,
         );
         if (isLocalVideoAccessFailure(errorMessage)) {
-          Alert.alert(
-            '영상 파일을 다시 선택해 주세요',
-            '선택한 영상 파일에 다시 접근하지 못했습니다. 영상을 다시 선택한 뒤 업로드해주세요.',
-          );
+          showUploadFailureAlertIfActive({
+            localSessionId: nextSession.id,
+            message:
+              '선택한 영상 파일에 다시 접근하지 못했습니다. 영상을 다시 선택한 뒤 업로드해주세요.',
+            title: '영상 파일을 다시 선택해 주세요',
+          });
         } else {
-          Alert.alert(
-            '영상 업로드에 실패했습니다',
-            '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
-          );
+          showUploadFailureAlertIfActive({
+            localSessionId: nextSession.id,
+            message:
+              '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+            title: '영상 업로드에 실패했습니다',
+          });
         }
       } finally {
         isUploadingSessionRef.current = false;
@@ -498,6 +511,28 @@ export function useUploadMoment({
     uploadDraft,
     uploadProgress,
   };
+}
+
+function showUploadFailureAlertIfActive({
+  localSessionId,
+  message,
+  title,
+}: {
+  localSessionId: string;
+  message: string;
+  title: string;
+}) {
+  if (AppState.currentState !== 'active') {
+    console.info('[upload_timing]', {
+      appState: AppState.currentState,
+      event: 'upload_failure_alert_suppressed',
+      localSessionId,
+      reason: 'app_not_active',
+    });
+    return;
+  }
+
+  Alert.alert(title, message);
 }
 
 function isLocalVideoAccessFailure(message: string) {
@@ -537,6 +572,7 @@ async function createMomentFromDirectUpload({
 
   try {
     uploadTarget = await uploadDraftSourceVideoDirectly(draft, {
+      localSessionId: session.id,
       onProgress,
     });
 
