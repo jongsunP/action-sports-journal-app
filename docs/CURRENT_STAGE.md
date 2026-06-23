@@ -47,6 +47,96 @@ upload target/source/moment existed. Treat the next task as pre-target /
 early-client upload failure observability and cleanup, not as a server
 pagination, Push, Realtime, or AI issue.
 
+Build 68/69 open observations:
+
+These are not classified as P1 blockers.
+
+- Push observation: in Build 69, the first upload completed while the app was
+  foregrounded and the in-app completion notice was observed. The second upload
+  completed while the app was closed/backgrounded, but the user did not clearly
+  see an OS Push notification. On re-entry, the Moment was already completed and
+  evidence was present. DB rows and the enabled push token looked normal, but
+  the current system does not persist Expo Push ticket results, so actual
+  provider delivery cannot be confirmed from DB alone. Current judgment:
+  observability gap, not a confirmed Push bug.
+- List reflection timing: Build 68 showed A appearing slightly later and B
+  appearing immediately. Build 69 showed both A and B appearing immediately.
+  Home/Video/Detail convergence remained normal. Current judgment: not a bug,
+  cause unconfirmed, recheck only if delayed reflection repeatedly affects
+  trust or convergence.
+
+Upload Reliability P1 status:
+
+Build 68 completed the P0 terminal Alert gate fix. Build 69 promoted the
+previously implicit `remote_reconcile_pending` and `recoverable_orphan` upload
+states into named code-level classifications without introducing a reducer or
+changing UI behavior.
+
+Current confirmed Alert policy:
+
+- `request_upload_target` failures before any upload target exists may show an
+  upload failure Alert.
+- true local file access failures may show an Alert.
+- `fallback_upload` failures are recoverable/ambiguous and must not show an
+  immediate failure Alert.
+- failures with an `uploadId` after target issuance are treated as
+  `recoverable_orphan` and must not show an immediate failure Alert.
+- existing or newly matched remote Moments suppress failure Alerts and converge
+  through `/api/moments` reconciliation.
+
+P1 is not complete yet. Before closing P1, settle the remaining policy details
+around `request_upload_target` retry behavior, the exact boundary of local file
+access failures, and when a pending/recoverable upload becomes a terminal
+`upload_failed` state.
+
+Upload Reliability P1 closeout, 2026-06-24:
+
+Problem:
+
+The upload pipeline had become functionally capable but still carried a trust
+risk: server-side success could be misread by the client as a terminal failure,
+and recovery/reconciliation states were implicit in scattered conditions.
+
+Why it mattered:
+
+For Action Sports Journal, upload is not a convenience feature. It is the trust
+boundary of the product. If a rider is told that upload failed while the server
+later completes analysis successfully, Auth, AI Calibration, or compression
+work would be built on an unreliable foundation.
+
+Decision:
+
+Close P0 first by preventing false failure Alerts, then close P1 by naming the
+minimum recovery states without introducing a large reducer/state-machine
+rewrite.
+
+Implementation:
+
+- P0: Build 68 suppresses false failure Alerts for ambiguous fallback failures.
+- P1: Build 69 introduces explicit upload recovery classifications:
+  `remote_reconcile_pending` and `recoverable_orphan`.
+- The Failure Outcome Matrix and Alert policy are documented in
+  `docs/TECH_DEBT_AND_REFACTOR_TODO.md`.
+
+Result:
+
+Build 68/69 QA passed for the current Upload Reliability scope. False failure
+Alerts did not recur, A/B uploads converged, and Home/Video/Detail reached the
+same remote state. Open observations around Push delivery visibility and list
+reflection timing are recorded as non-blocking observability items.
+
+Insight:
+
+The product does not need a full reducer yet. The immediate reliability gain
+came from naming the ambiguous states and making Alert eligibility terminal-only
+instead of treating every thrown error as user-visible failure.
+
+Current Upload Reliability status:
+
+P1 is closed for the current internal QA scope. Continue to treat upload
+pipeline reliability as the gate before Auth/Ownership, but the next upload
+work should be P2 hardening rather than P1 blocker repair.
+
 Part 1 final wrap-up checkpoint, 2026-06-23:
 
 Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the

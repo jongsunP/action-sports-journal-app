@@ -76,6 +76,223 @@ TODO before Auth:
 5. Continue avoiding DB cleanup jobs until upload target semantics are fully
    settled.
 
+## Open Observations Before Upload Reliability P1 - 2026-06-24
+
+These items are intentionally recorded as observations, not confirmed bugs.
+They should not block P1 unless they become reproducible or start affecting
+upload trust.
+
+### Push Delivery Observability
+
+Observation:
+
+- Build 69 first upload completed while the app was foregrounded; the in-app
+  completion notice was observed.
+- Build 69 second upload completed while the app was closed/backgrounded; the
+  user did not clearly see an OS Push notification.
+- Re-entering the app showed the Moment completed normally.
+- DB state showed completed Moment, completed AnalysisJob, EvidenceResult, and
+  an enabled Expo push token for the user.
+
+Current judgment:
+
+This is not classified as a Push bug yet. The current backend sends Push
+best-effort and logs failures only to Render; it does not persist Expo Push
+ticket status. Therefore DB can confirm that Push conditions existed, but not
+whether Expo/APNs accepted or displayed the notification.
+
+Priority:
+
+P2 observability. Do not interrupt Upload Reliability P1.
+
+Recheck condition:
+
+If background completed analyses repeatedly produce no visible OS Push while
+Render logs show successful send attempts, add persisted push delivery
+diagnostics or query Expo receipts.
+
+### List Reflection Timing
+
+Observation:
+
+- Build 68: A reflected in the list slightly later; B reflected immediately.
+- Build 69: A and B both reflected immediately.
+- In both builds, Home/Video/Detail eventually converged correctly.
+
+Current judgment:
+
+Not classified as a bug. The cause is unconfirmed, but convergence is normal
+and the behavior was not reproduced in Build 69.
+
+Priority:
+
+P2 observation only.
+
+Recheck condition:
+
+Revisit if delayed reflection becomes consistent, affects user trust, or causes
+Home/Video/Detail divergence after upload success, Push, or Realtime events.
+
+## Upload Reliability P1 - Failure Outcome Matrix - 2026-06-24
+
+Purpose:
+
+Build 68 fixed the P0 false failure Alert issue. Build 69 names the previously
+implicit recovery states without changing behavior:
+
+- `remote_reconcile_pending`
+- `recoverable_orphan`
+
+The following matrix records the current Build 68/69 behavior as the source of
+truth. It is not a new reducer/state-machine implementation.
+
+### Failure Outcome Matrix
+
+| Case | Stage | Upload ID | Storage path | Remote Moment | Remote refetch | Final state | Alert | Recovery | Reconciliation |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Upload target request fails before target exists | `request_upload_target` | no | no | no | not attempted | `target_not_issued` | allowed | no | no |
+| True local file access failure | `local_video_access` | usually no | usually no | no | may run, usually unmatched | `local_only_failure` | allowed | no | limited |
+| Direct upload fails before fallback | `upload` / direct upload stage | maybe | maybe | no | first-page refetch | `remote_reconcile_pending` or `recoverable_orphan` | suppressed | if target context exists | yes |
+| Finalize timeout/failure after target | `finalize` / `stored_moment` | yes | yes | no | first-page refetch | `recoverable_orphan` | suppressed | yes | yes |
+| Multipart fallback failure/timeout | `fallback_upload` | maybe/no | maybe/no | no | first-page refetch | `remote_reconcile_pending` | suppressed | if target context exists | yes |
+| Upload target exists but no remote Moment yet | any post-target stage | yes | usually yes | no | unmatched | `recoverable_orphan` | suppressed | yes | yes |
+| Remote Moment match succeeds | any post-target stage | maybe | maybe | yes | matched | remote success | suppressed | complete | complete |
+| Remote Moment already linked locally | any stage | any | any | yes | not required | remote success | suppressed | complete | complete |
+| Source uploaded but finalize response unclear | `finalize` / `stored_moment` | yes | yes | no | pending | `recoverable_orphan` | suppressed | yes | yes |
+| Local optimistic session only | pre-target/local-only | no | no | no | unmatched after TTL | `local_only_failure` -> `upload_failed` | limited | no | expires |
+| Failure while app inactive | any stage | any | any | any | stage-dependent | pending/suppressed | suppressed | stage-dependent | stage-dependent |
+
+### Confirmed Alert Policy
+
+- Show an Alert only when the failure is terminal enough for the user to act.
+- Suppress Alerts for `remote_reconcile_pending` and `recoverable_orphan`.
+- Suppress Alerts for `fallback_upload`, even when `uploadId` is missing,
+  because fallback failure is ambiguous and may still converge remotely.
+- Suppress Alerts when a remote Moment already exists or can be found through
+  `/api/moments` first-page reconciliation.
+- Allow Alerts for pre-target `request_upload_target` failure and true local
+  file access failure.
+
+### Ambiguous Cases
+
+1. `request_upload_target` failure is currently Alert-eligible, but a transient
+   network failure before target issuance may still be recoverable. P1 should
+   decide whether this remains terminal or becomes a retry/backoff state.
+2. `local_video_access` currently includes some messages that can also be
+   fallback/timeout related. The policy should separate true local URI/file
+   access failure from ambiguous network/fallback timeout.
+3. `uploadId` exists but `storagePath` is missing. This is not a full
+   `recoverable_orphan` because finalize recovery needs bucket/provider/path.
+   Define whether this is `remote_reconcile_pending`, a partial target context,
+   or terminal after TTL.
+4. `upload_targets.status=failed` can coexist with a successful multipart
+   fallback Moment. User outcome is success, but upload target observability can
+   look failed. This is a tracking semantics issue, not a user-facing P1
+   blocker.
+
+### P1 Policy Decisions Remaining
+
+Before closing Upload Reliability P1, decide:
+
+1. Whether `request_upload_target` failure remains immediately Alert-eligible.
+2. The exact definition of true `local_only_failure`.
+3. The minimum required fields for `recoverable_orphan`
+   (`uploadId`, `storagePath`, `storageProvider`, `storageBucket`).
+4. The terminal `upload_failed` criteria:
+   - remote refetch unmatched after retry,
+   - recovery TTL expired,
+   - local-only TTL expired,
+   - true local file access failure.
+5. Whether terminal user messaging should collapse toward a single
+   network-oriented message such as "네트워크가 끊어졌습니다".
+
+### P2 Items
+
+- Persist or query Expo Push ticket/receipt diagnostics if background Push
+  delivery remains unclear.
+- Clean up `upload_targets` status semantics when Direct Upload fails but
+  multipart fallback succeeds.
+- Design pre-upload CTA gating if the product later limits active uploads or
+  active processing count.
+- Consider a fuller reducer/state-machine only after P1 policy names and
+  outcomes are stable.
+
+## Upload Reliability P1 Closeout - 2026-06-24
+
+Problem:
+
+Upload Reliability P0 fixed the user-facing false failure Alert, but the code
+still expressed recovery and reconciliation through scattered conditions. That
+made it too easy for future changes to accidentally treat recoverable upload
+states as terminal failures again.
+
+Why it mattered:
+
+The app's upload path is the product trust boundary. A technically successful
+server-side upload/analysis that appears as a failed upload in the app is worse
+than a slow upload because it teaches the user not to trust the system.
+
+Options:
+
+1. Introduce a full reducer/state machine immediately.
+2. Keep the P0 patch and move on.
+3. Minimally name the recovery states, document the failure outcome matrix, and
+   defer larger state-machine refactoring until there is evidence it is needed.
+
+Decision:
+
+Choose option 3. P1 should be small and explicit:
+
+- name `remote_reconcile_pending`;
+- name `recoverable_orphan`;
+- keep the existing runtime behavior;
+- document which failures may show an Alert and which must remain quiet.
+
+Implementation:
+
+- Build 68: false failure Alerts from ambiguous fallback failures are
+  suppressed.
+- Build 69: recovery state classification is explicit in code without adding a
+  reducer.
+- The Failure Outcome Matrix above records the current source-of-truth policy.
+- Push and list reflection observations are recorded as open observations, not
+  blockers.
+
+Result:
+
+Upload Reliability P1 is closed for internal QA. The current accepted behavior:
+
+- target pre-issue failures and true local file failures may be user-visible;
+- `fallback_upload` and post-target failures are not immediately user-visible;
+- remote reconciliation can suppress failure;
+- `recoverable_orphan` remains eligible for finalize recovery;
+- Home, Video, and Detail converge through `/api/moments`.
+
+Insight:
+
+The highest-value reliability improvement was not adding more UI or more
+polling. It was separating terminal user-visible failure from recoverable
+intermediate states. A full state-machine reducer is still optional, not a P1
+requirement.
+
+P2 handoff:
+
+- Push delivery observability: persist Expo ticket/receipt results or add a
+  separate diagnostics path if background Push remains uncertain.
+- Upload target semantics: make `upload_targets` reflect final user outcome
+  when Direct Upload fails but multipart fallback succeeds.
+- Upload entry gating: if the app introduces an active upload/processing limit,
+  block before upload starts rather than through mid-flow 429s.
+- Terminal messaging: collapse upload failure copy toward a minimal
+  network-oriented message only after terminal policy is fully stable.
+- Full reducer/state machine: revisit only if future changes again produce
+  scattered transition logic.
+
+Next candidate work:
+
+Auth / Ownership may resume after this closeout, unless a fresh Upload
+Reliability regression appears in QA.
+
 ## Part 1 Final Wrap-Up / Build 55 Diagnostics - 2026-06-23
 
 Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the
