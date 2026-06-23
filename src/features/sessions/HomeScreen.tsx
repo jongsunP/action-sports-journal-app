@@ -103,6 +103,7 @@ type RemoteMomentFirstPage = {
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
+const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
 
@@ -567,10 +568,19 @@ export function HomeScreen() {
           }
 
           const candidateCreatedAtMs = Date.parse(candidate.createdAt);
+          const hasRecoverableUploadTarget = Boolean(
+            candidate.uploadId &&
+              candidate.storagePath &&
+              candidate.storageProvider &&
+              candidate.storageBucket,
+          );
+          const ttlMs = hasRecoverableUploadTarget
+            ? UPLOAD_RECONCILIATION_TTL_MS
+            : LOCAL_ONLY_UPLOAD_TTL_MS;
 
           return (
             Number.isFinite(candidateCreatedAtMs) &&
-            now - candidateCreatedAtMs >= UPLOAD_RECONCILIATION_TTL_MS
+            now - candidateCreatedAtMs >= ttlMs
           );
         })
         .map((candidate) => candidate.localSessionId);
@@ -610,11 +620,21 @@ export function HomeScreen() {
       );
 
       for (const sessionId of expiredSessionIds) {
+        const expiredCandidate =
+          uploadReconciliationCandidatesBySessionId[sessionId];
+        const hasRecoverableUploadTarget = Boolean(
+          expiredCandidate?.uploadId &&
+            expiredCandidate?.storagePath &&
+            expiredCandidate?.storageProvider &&
+            expiredCandidate?.storageBucket,
+        );
         pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
         console.info('[moment_reconciliation]', {
           event: 'remote_moment_unmatched',
           localSessionId: sessionId,
-          matchReason: 'upload_context_ttl_expired',
+          matchReason: hasRecoverableUploadTarget
+            ? 'upload_context_ttl_expired'
+            : 'local_only_upload_context_ttl_expired',
           matched: false,
         });
       }
@@ -625,6 +645,66 @@ export function HomeScreen() {
       uploadReconciliationCandidatesBySessionId,
     ],
   );
+  const expireLocalOnlyOptimisticSessions = useCallback(() => {
+    const now = Date.now();
+    const expiredSessionIds = sessions
+      .filter((session) => {
+        if (
+          remoteMomentIdsBySessionId[session.id] ||
+          uploadReconciliationCandidatesBySessionId[session.id] ||
+          !(
+            session.momentStatus === 'uploading' ||
+            session.momentStatus === 'processing'
+          )
+        ) {
+          return false;
+        }
+
+        const createdAtMs = Date.parse(session.createdAt);
+
+        return (
+          Number.isFinite(createdAtMs) &&
+          now - createdAtMs >= LOCAL_ONLY_UPLOAD_TTL_MS
+        );
+      })
+      .map((session) => session.id);
+
+    if (expiredSessionIds.length === 0) {
+      return;
+    }
+
+    const expiredSessionIdSet = new Set(expiredSessionIds);
+
+    setSessions((current) =>
+      current.map((session) =>
+        expiredSessionIdSet.has(session.id)
+          ? {
+              ...session,
+              momentStatus: 'upload_failed',
+              updatedAt: new Date().toISOString(),
+            }
+          : session,
+      ),
+    );
+
+    for (const sessionId of expiredSessionIds) {
+      pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
+      console.info('[moment_reconciliation]', {
+        event: 'local_only_upload_session_expired',
+        localSessionId: sessionId,
+        matchReason: 'missing_upload_recovery_context',
+        matched: false,
+      });
+    }
+
+    setVideoArchiveSessionIds((current) =>
+      current.filter((sessionId) => !expiredSessionIdSet.has(sessionId)),
+    );
+  }, [
+    remoteMomentIdsBySessionId,
+    sessions,
+    uploadReconciliationCandidatesBySessionId,
+  ]);
   const applyVideoArchiveFirstPage = useCallback(
     (remoteMomentPage: RemoteMomentFirstPage) => {
       const sessionIds = getSessionIdsForRemoteMoments(
@@ -647,12 +727,14 @@ export function HomeScreen() {
         return Array.from(new Set([...pendingSessionIds, ...sessionIds]));
       });
       expireUnmatchedUploadReconciliationCandidates(remoteMomentPage.moments);
+      expireLocalOnlyOptimisticSessions();
       setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
       setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       setHasLoadedVideoArchiveFirstPage(true);
     },
     [
       expireUnmatchedUploadReconciliationCandidates,
+      expireLocalOnlyOptimisticSessions,
       getSessionIdsForRemoteMoments,
       sessions,
     ],
