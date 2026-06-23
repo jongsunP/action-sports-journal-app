@@ -156,7 +156,7 @@ const uploadTargetsEndpoint = analysisEndpoint?.replace(
   '/api/video-upload-targets',
 );
 const SIGNED_UPLOAD_FILE_READ_TIMEOUT_MS = 5000;
-const SIGNED_UPLOAD_REQUEST_TIMEOUT_MS = 8000;
+const SIGNED_UPLOAD_REQUEST_TIMEOUT_MS = 30000;
 const UPLOADED_SOURCE_FINALIZE_TIMEOUT_MS = 18000;
 
 export type ReportUploadTargetFailureInput = {
@@ -271,8 +271,8 @@ export async function uploadThumbnailToSignedTarget(
       uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     },
   );
-  const uploadResult = await withTimeout(
-    uploadTask.uploadAsync(),
+  const uploadResult = await uploadTaskWithTimeout(
+    uploadTask,
     SIGNED_UPLOAD_REQUEST_TIMEOUT_MS,
     'Timed out while uploading thumbnail to signed target.',
   );
@@ -400,8 +400,8 @@ export async function uploadVideoToSignedTarget(
       });
     },
   );
-  const uploadResult = await withTimeout(
-    uploadTask.uploadAsync(),
+  const uploadResult = await uploadTaskWithTimeout(
+    uploadTask,
     SIGNED_UPLOAD_REQUEST_TIMEOUT_MS,
     'Timed out while uploading source video to signed target.',
   );
@@ -1323,6 +1323,50 @@ function withTimeout<T>(
         clearTimeout(timeout);
       });
   });
+}
+
+function uploadTaskWithTimeout(
+  uploadTask: ReturnType<typeof FileSystem.createUploadTask>,
+  timeoutMs: number,
+  message: string,
+) {
+  return new Promise<Awaited<ReturnType<typeof uploadTask.uploadAsync>>>(
+    (resolve, reject) => {
+      let didSettle = false;
+      const timeout = setTimeout(() => {
+        if (didSettle) {
+          return;
+        }
+
+        didSettle = true;
+        void uploadTask.cancelAsync().catch(() => {
+          // The original timeout is still the actionable error for callers.
+        });
+        reject(new Error(message));
+      }, timeoutMs);
+
+      uploadTask.uploadAsync().then(
+        (result) => {
+          if (didSettle) {
+            return;
+          }
+
+          didSettle = true;
+          clearTimeout(timeout);
+          resolve(result);
+        },
+        (error) => {
+          if (didSettle) {
+            return;
+          }
+
+          didSettle = true;
+          clearTimeout(timeout);
+          reject(error);
+        },
+      );
+    },
+  );
 }
 
 function asStringArray(value: unknown) {

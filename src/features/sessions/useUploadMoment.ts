@@ -452,6 +452,12 @@ export function useUploadMoment({
           current.filter((session) => session.id !== nextSession.id),
         );
         setUploadDraftStatus('upload_failed');
+        setUploadDraft(null);
+        setSelectedVideo(null);
+        selectedVideoThumbnailUriRef.current = null;
+        setSelectedVideoThumbnailUri(null);
+        setIsComposerOpen(false);
+        setUploadProgress(null);
         console.warn(
           'Stored Moment source upload failed:',
           errorMessage,

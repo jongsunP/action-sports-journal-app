@@ -1412,6 +1412,9 @@ Follow-up TODO:
 
 - Test app termination before and after source upload completion more deliberately.
 - Refine upload-state copy so it communicates risk rather than absolute failure.
+- Add a server-side stale `upload_targets.status=issued` orphan cleanup policy
+  after upload target semantics are finalized. Do not mutate these rows during
+  Build 58/59 upload stability work.
 - Continue collecting analysis timing data.
 - Continue AI Calibration only from repeated sample patterns.
 - Revisit Moment Detail structure in a later UX phase.
