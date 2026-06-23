@@ -297,6 +297,7 @@ export function HomeScreen() {
         event: 'upload_reconciliation_candidate_targeted',
         localSessionId: sessionId,
         matched: false,
+        state: 'recoverable_orphan',
         storagePath: uploadTarget.storagePath,
         uploadId: uploadTarget.uploadId,
       });
@@ -397,10 +398,11 @@ export function HomeScreen() {
         });
 
         console.info('[moment_reconciliation]', {
-          event: 'upload_finalize_recovery_started',
+          event: 'recoverable_orphan_recovery_started',
           localSessionId: candidate.localSessionId,
           matchReason: 'recoverable_upload_target',
           reason,
+          state: 'recoverable_orphan',
           storagePath: candidate.storagePath,
           uploadId: candidate.uploadId,
         });
@@ -446,22 +448,24 @@ export function HomeScreen() {
               storedMoment.analysisJobStatus ?? 'processing',
             );
             console.info('[moment_reconciliation]', {
-              event: 'upload_finalize_recovery_success',
+              event: 'recoverable_orphan_recovery_success',
               localSessionId: candidate.localSessionId,
               matchReason: 'recoverable_upload_target',
               matched: true,
               momentId: storedMoment.momentId,
               reason,
+              state: 'recoverable_orphan',
               storagePath: candidate.storagePath,
               uploadId: candidate.uploadId,
             });
           }
         } catch (error) {
           console.info('[moment_reconciliation]', {
-            event: 'upload_finalize_recovery_failure',
+            event: 'recoverable_orphan_recovery_failure',
             localSessionId: candidate.localSessionId,
             matched: false,
             reason: error instanceof Error ? error.message : 'unknown',
+            state: 'recoverable_orphan',
             storagePath: candidate.storagePath,
             uploadId: candidate.uploadId,
           });
@@ -637,6 +641,9 @@ export function HomeScreen() {
             ? 'upload_context_ttl_expired'
             : 'local_only_upload_context_ttl_expired',
           matched: false,
+          state: hasRecoverableUploadTarget
+            ? 'recoverable_orphan'
+            : 'remote_reconcile_pending',
         });
       }
     },

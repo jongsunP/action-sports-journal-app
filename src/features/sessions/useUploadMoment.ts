@@ -40,6 +40,7 @@ import {
   type UploadProgressStage,
   type UploadProgressState,
 } from './uploadProgress';
+import { classifyUploadFailure } from './uploadStateMachine';
 
 const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
 
@@ -643,8 +644,11 @@ async function showUploadFailureAlertIfActive({
 }: UploadFailureAlertOptions & {
   shouldSuppressAlert?: UseUploadMomentParams['shouldSuppressUploadFailureAlert'];
 }) {
-  const shouldAttemptRemoteSuppress = stage !== 'request_upload_target';
-  const shouldSuppress = shouldAttemptRemoteSuppress
+  const remoteReconcileClassification = classifyUploadFailure({
+    stage,
+    uploadId,
+  });
+  const shouldSuppress = remoteReconcileClassification.shouldAttemptRemoteReconcile
     ? await shouldSuppressAlert?.({
         localSessionId,
         reason,
@@ -654,49 +658,41 @@ async function showUploadFailureAlertIfActive({
     : false;
 
   if (shouldSuppress) {
+    const classification = classifyUploadFailure({
+      hasRemoteMoment: true,
+      stage,
+      uploadId,
+    });
     console.info('[upload_timing]', {
       event: 'upload_failure_alert_suppressed',
       localSessionId,
       reason,
       stage,
-      suppressReason: 'remote_moment_exists',
+      state: classification.state,
+      suppressReason: classification.suppressReason,
       uploadId,
     });
     return;
   }
 
-  if (stage === 'fallback_upload') {
-    console.info('[upload_timing]', {
-      event: 'upload_failure_alert_suppressed',
-      localSessionId,
-      reason,
-      stage,
-      suppressReason: 'fallback_recoverable_or_ambiguous',
-      uploadId,
-    });
-    return;
-  }
+  const classification = classifyUploadFailure({
+    appState: AppState.currentState,
+    isLocalVideoAccessFailure: isLocalVideoAccessFailure(reason),
+    stage,
+    uploadId,
+  });
 
-  if (shouldAttemptRemoteSuppress && uploadId) {
+  if (classification.shouldSuppressAlert) {
     console.info('[upload_timing]', {
+      appState: classification.suppressReason === 'app_not_active'
+        ? AppState.currentState
+        : undefined,
       event: 'upload_failure_alert_suppressed',
       localSessionId,
       reason,
       stage,
-      suppressReason: 'recoverable_upload_target',
-      uploadId,
-    });
-    return;
-  }
-
-  if (AppState.currentState !== 'active') {
-    console.info('[upload_timing]', {
-      appState: AppState.currentState,
-      event: 'upload_failure_alert_suppressed',
-      localSessionId,
-      reason,
-      stage,
-      suppressReason: 'app_not_active',
+      state: classification.state,
+      suppressReason: classification.suppressReason,
       uploadId,
     });
     return;
@@ -707,6 +703,7 @@ async function showUploadFailureAlertIfActive({
     localSessionId,
     reason,
     stage,
+    state: classification.state,
     uploadId,
   });
   Alert.alert(title, message);
