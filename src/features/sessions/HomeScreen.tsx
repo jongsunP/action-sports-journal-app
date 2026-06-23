@@ -30,6 +30,7 @@ import {
 } from '../../services/notifications/analysisNotificationRefreshEvents';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import {
+  finalizeUploadedSourceVideo,
   hasConfiguredSupabaseMoments,
 } from '../../services/moments';
 import {
@@ -103,6 +104,7 @@ type RemoteMomentFirstPage = {
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
+const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
 
 function getNextPendingRemoteRefreshReason(
   currentReason: RemoteRefreshReason | null,
@@ -157,6 +159,8 @@ export function HomeScreen() {
   const completedBootSyncAtRef = useRef<number | null>(null);
   const didTriggerSwipeHapticRef = useRef(false);
   const pendingVideoArchiveSessionIdsRef = useRef<Set<string>>(new Set());
+  const recoveringUploadSessionIdsRef = useRef<Set<string>>(new Set());
+  const hasAttemptedBootUploadRecoveryRef = useRef(false);
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -244,7 +248,14 @@ export function HomeScreen() {
         draftId: string;
         fileSize?: number;
         durationMs?: number;
+        provider?: string;
+        bucket?: string;
         storagePath: string;
+        uploadedThumbnail?: {
+          storageProvider: string;
+          storageBucket: string;
+          storagePath: string;
+        };
         uploadId: string;
       },
       draftId?: string,
@@ -263,7 +274,18 @@ export function HomeScreen() {
             draftId: draftId ?? uploadTarget.draftId ?? candidate.draftId,
             durationMs: uploadTarget.durationMs ?? candidate.durationMs,
             fileSize: uploadTarget.fileSize ?? candidate.fileSize,
+            storageBucket: uploadTarget.bucket ?? candidate.storageBucket,
             storagePath: uploadTarget.storagePath,
+            storageProvider: uploadTarget.provider ?? candidate.storageProvider,
+            thumbnailStorageBucket:
+              uploadTarget.uploadedThumbnail?.storageBucket ??
+              candidate.thumbnailStorageBucket,
+            thumbnailStoragePath:
+              uploadTarget.uploadedThumbnail?.storagePath ??
+              candidate.thumbnailStoragePath,
+            thumbnailStorageProvider:
+              uploadTarget.uploadedThumbnail?.storageProvider ??
+              candidate.thumbnailStorageProvider,
             uploadId: uploadTarget.uploadId,
           },
         };
@@ -303,6 +325,159 @@ export function HomeScreen() {
       });
     },
     [clearUploadReconciliationCandidate],
+  );
+
+  const recoverUnfinalizedUploadCandidates = useCallback(
+    async (reason: RemoteRefreshReason | 'boot_recovery') => {
+      if (!hasConfiguredSupabaseMoments()) {
+        return false;
+      }
+
+      const now = Date.now();
+      const candidates = Object.values(
+        uploadReconciliationCandidatesBySessionId,
+      );
+      let recoveredAny = false;
+
+      for (const candidate of candidates) {
+        const session = sessions.find(
+          (currentSession) => currentSession.id === candidate.localSessionId,
+        );
+
+        if (
+          !session ||
+          remoteMomentIdsBySessionId[candidate.localSessionId] ||
+          !candidate.uploadId ||
+          !candidate.storagePath ||
+          !candidate.storageProvider ||
+          !candidate.storageBucket ||
+          !(
+            session.momentStatus === 'uploading' ||
+            session.momentStatus === 'queued' ||
+            session.momentStatus === 'processing'
+          )
+        ) {
+          continue;
+        }
+
+        if (recoveringUploadSessionIdsRef.current.has(candidate.localSessionId)) {
+          continue;
+        }
+
+        const lastAttemptAtMs = candidate.recoveryAttemptedAt
+          ? Date.parse(candidate.recoveryAttemptedAt)
+          : Number.NaN;
+        const attemptedRecently =
+          Number.isFinite(lastAttemptAtMs) &&
+          now - lastAttemptAtMs < UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS;
+
+        if (attemptedRecently) {
+          continue;
+        }
+
+        recoveringUploadSessionIdsRef.current.add(candidate.localSessionId);
+        const attemptedAt = new Date().toISOString();
+
+        setUploadReconciliationCandidatesBySessionId((current) => {
+          const currentCandidate = current[candidate.localSessionId];
+
+          if (!currentCandidate) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [candidate.localSessionId]: {
+              ...currentCandidate,
+              recoveryAttemptedAt: attemptedAt,
+            },
+          };
+        });
+
+        console.info('[moment_reconciliation]', {
+          event: 'upload_finalize_recovery_started',
+          localSessionId: candidate.localSessionId,
+          matchReason: 'recoverable_upload_target',
+          reason,
+          storagePath: candidate.storagePath,
+          uploadId: candidate.uploadId,
+        });
+
+        try {
+          const localVideo =
+            videosBySessionId[candidate.localSessionId] ??
+            getVideoAssetFromSession(session);
+          const candidateVideoUri =
+            localVideo?.uri ?? candidate.sourceVideoUri ?? session.videoUri;
+          const storedMoment = await finalizeUploadedSourceVideo({
+            draftId: candidate.draftId ?? candidate.uploadId,
+            uploadId: candidate.uploadId,
+            storageProvider: candidate.storageProvider,
+            storageBucket: candidate.storageBucket,
+            storagePath: candidate.storagePath,
+            session,
+            video: candidateVideoUri
+              ? {
+                  uri: candidateVideoUri,
+                  duration: candidate.durationMs ?? localVideo?.duration,
+                  fileName:
+                    candidate.fileName ??
+                    localVideo?.fileName ??
+                    `${session.id}.mov`,
+                  fileSize: candidate.fileSize ?? localVideo?.fileSize,
+                  mimeType: localVideo?.mimeType ?? 'video/quicktime',
+                }
+              : null,
+            thumbnailStorageProvider: candidate.thumbnailStorageProvider,
+            thumbnailStorageBucket: candidate.thumbnailStorageBucket,
+            thumbnailStoragePath: candidate.thumbnailStoragePath,
+          });
+
+          if (storedMoment?.momentId) {
+            recoveredAny = true;
+            setRemoteMomentIdForSession(
+              candidate.localSessionId,
+              storedMoment.momentId,
+            );
+            updateLocalMomentStatus(
+              candidate.localSessionId,
+              storedMoment.analysisJobStatus ?? 'processing',
+            );
+            console.info('[moment_reconciliation]', {
+              event: 'upload_finalize_recovery_success',
+              localSessionId: candidate.localSessionId,
+              matchReason: 'recoverable_upload_target',
+              matched: true,
+              momentId: storedMoment.momentId,
+              reason,
+              storagePath: candidate.storagePath,
+              uploadId: candidate.uploadId,
+            });
+          }
+        } catch (error) {
+          console.info('[moment_reconciliation]', {
+            event: 'upload_finalize_recovery_failure',
+            localSessionId: candidate.localSessionId,
+            matched: false,
+            reason: error instanceof Error ? error.message : 'unknown',
+            storagePath: candidate.storagePath,
+            uploadId: candidate.uploadId,
+          });
+        } finally {
+          recoveringUploadSessionIdsRef.current.delete(candidate.localSessionId);
+        }
+      }
+
+      return recoveredAny;
+    },
+    [
+      remoteMomentIdsBySessionId,
+      sessions,
+      setRemoteMomentIdForSession,
+      updateLocalMomentStatus,
+      uploadReconciliationCandidatesBySessionId,
+      videosBySessionId,
+    ],
   );
 
   const syncRemoteMoments = useSyncRemoteMoments({
@@ -375,6 +550,20 @@ export function HomeScreen() {
         .filter((candidate) => {
           if (resolvedSessionIds.has(candidate.localSessionId)) {
             return false;
+          }
+
+          if (
+            candidate.uploadId &&
+            candidate.storagePath &&
+            candidate.storageProvider &&
+            candidate.storageBucket
+          ) {
+            if (
+              !candidate.recoveryAttemptedAt ||
+              recoveringUploadSessionIdsRef.current.has(candidate.localSessionId)
+            ) {
+              return false;
+            }
           }
 
           const candidateCreatedAtMs = Date.parse(candidate.createdAt);
@@ -549,6 +738,7 @@ export function HomeScreen() {
           }
 
           try {
+            await recoverUnfinalizedUploadCandidates(currentReason);
             const remoteMomentPage = await listMomentPageWithTimeout({
               limit: MOMENT_LIST_PAGE_SIZE,
             });
@@ -590,10 +780,55 @@ export function HomeScreen() {
       applyVideoArchiveFirstPage,
       markRemoteMomentSyncCompleted,
       remoteMomentIdsBySessionId,
+      recoverUnfinalizedUploadCandidates,
       sessions,
       syncRemoteMoments,
     ],
   );
+
+  useEffect(() => {
+    if (
+      hasAttemptedBootUploadRecoveryRef.current ||
+      !isStorageLoaded ||
+      !isRemoteMomentSyncLoaded ||
+      remoteMomentSyncStatus !== 'completed'
+    ) {
+      return;
+    }
+
+    const hasRecoverableCandidate = Object.values(
+      uploadReconciliationCandidatesBySessionId,
+    ).some(
+      (candidate) =>
+        candidate.uploadId &&
+        candidate.storagePath &&
+        candidate.storageProvider &&
+        candidate.storageBucket &&
+        !remoteMomentIdsBySessionId[candidate.localSessionId],
+    );
+
+    if (!hasRecoverableCandidate) {
+      hasAttemptedBootUploadRecoveryRef.current = true;
+      return;
+    }
+
+    hasAttemptedBootUploadRecoveryRef.current = true;
+    void recoverUnfinalizedUploadCandidates('boot_recovery').then(
+      (recoveredAny) => {
+        if (recoveredAny) {
+          void refreshRemoteMoments('initial_retry');
+        }
+      },
+    );
+  }, [
+    isRemoteMomentSyncLoaded,
+    isStorageLoaded,
+    recoverUnfinalizedUploadCandidates,
+    refreshRemoteMoments,
+    remoteMomentIdsBySessionId,
+    remoteMomentSyncStatus,
+    uploadReconciliationCandidatesBySessionId,
+  ]);
 
   useAnalysisRealtimeSync({
     enabled:

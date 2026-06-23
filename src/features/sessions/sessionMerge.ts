@@ -9,8 +9,14 @@ export type UploadReconciliationCandidate = {
   fileSize?: number | null;
   localSessionId: string;
   occurredAt: string;
+  recoveryAttemptedAt?: string;
+  storageBucket?: string;
   sourceVideoUri?: string | null;
+  storageProvider?: string;
   storagePath?: string;
+  thumbnailStorageBucket?: string;
+  thumbnailStoragePath?: string;
+  thumbnailStorageProvider?: string;
   uploadId?: string;
 };
 
