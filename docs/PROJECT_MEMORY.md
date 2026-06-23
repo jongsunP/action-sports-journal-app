@@ -47,6 +47,49 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## 2026-06-23 Build 65 Upload Recovery Checkpoint
+
+Latest current build:
+
+```text
+buildNumber: 65
+feature commit: 13e95ff fix: expire unrecoverable local upload sessions
+build commit: 5ca179a chore: prepare local upload cleanup qa build
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/315d66c2-a390-4f63-8790-151d890f677f
+```
+
+Problem:
+
+Part 1 upload QA moved beyond simple success/failure. Direct upload can
+successfully place bytes in Storage while finalize/Moment creation is delayed
+or ambiguous, and a separate class of local-only failures can occur before any
+server upload target exists.
+
+Decision:
+
+Treat uploaded-source recovery and local-only cleanup as separate product
+states:
+
+- Recoverable: local session has `uploadId` and `storagePath`; retry finalize
+  through `/api/moments/from-uploaded-source` before giving up.
+- Unrecoverable: local session has no `uploadId/storagePath`; do not keep it as
+  processing after a short TTL.
+
+Result:
+
+Build 64 added orphan uploaded-source recovery. Build 65 added expiry for
+unrecoverable local-only upload sessions. Durable thumbnails, Detail thumbnail
+fallback, foreground Toast-only completion, signed upload timeout stability,
+and duplicate-push guards are already included in the current baseline.
+
+Current unresolved QA item:
+
+In the latest A-processing/B-upload test, B appeared to fail immediately while
+A completed normally. Server inspection found no separate B upload target,
+source object, Moment, job, or evidence. The next task should focus on
+pre-target/early-client upload failure observability and terminal local cleanup
+before starting Auth / Ownership.
+
 ## 2026-06-23 Part 1 Final Wrap-Up / Build 55
 
 Part 1 Upload Experience is now closed for single-user internal QA. The current

@@ -14,6 +14,39 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 65 upload recovery checkpoint, 2026-06-23:
+
+Build 65 is the latest prepared iOS QA build and supersedes the older Build 55
+wrap-up baseline for current resume purposes.
+
+```text
+buildNumber: 65
+feature commit: 13e95ff fix: expire unrecoverable local upload sessions
+build commit: 5ca179a chore: prepare local upload cleanup qa build
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/315d66c2-a390-4f63-8790-151d890f677f
+```
+
+Current upload state:
+
+- Durable thumbnails are persisted to Storage and restored after reinstall.
+- Detail falls back to persisted thumbnail when local video playback is not
+  available.
+- Foreground completion uses in-app Toast only; background uses OS Push.
+- Direct upload target context is preserved early enough for finalize recovery.
+- Orphan uploaded source sessions can retry
+  `/api/moments/from-uploaded-source`.
+- Local-only sessions without `uploadId` / `storagePath` are not recoverable
+  and expire to `upload_failed` after a short TTL.
+
+Current blocker before Auth:
+
+Build 65 QA found that a second upload attempted while the first Moment was
+processing can still fail before a new `upload_targets` row exists. The latest
+server state showed the first upload completed normally; no distinct second
+upload target/source/moment existed. Treat the next task as pre-target /
+early-client upload failure observability and cleanup, not as a server
+pagination, Push, Realtime, or AI issue.
+
 Part 1 final wrap-up checkpoint, 2026-06-23:
 
 Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the

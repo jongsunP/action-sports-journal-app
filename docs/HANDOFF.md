@@ -51,6 +51,51 @@ continuity as well as technical continuity:
 
 ## Current Status
 
+Build 65 upload recovery checkpoint, 2026-06-23:
+
+Build 65 is the latest prepared iOS QA build.
+
+```text
+buildNumber: 65
+feature commit: 13e95ff fix: expire unrecoverable local upload sessions
+build commit: 5ca179a chore: prepare local upload cleanup qa build
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/315d66c2-a390-4f63-8790-151d890f677f
+```
+
+What changed after the Build 55 diagnostics baseline:
+
+- Build 56 added durable thumbnail persistence through the existing
+  `moments.thumbnail_uri` field and the private `moment-thumbnails` bucket.
+- Build 57 added Detail thumbnail fallback and duplicate completed-push guards.
+- Build 58 suppressed foreground OS Push so foreground completion uses the
+  in-app Toast only.
+- Build 59 increased signed upload timeout from 8s to 30s and cancels timed
+  out source/thumbnail upload tasks.
+- Build 61/63 preserved direct upload target context so a successful Storage
+  upload can still be finalized/recovered after timeout or ambiguous failure.
+- Build 62/64 added optimistic-upload reconciliation and orphan uploaded source
+  recovery.
+- Build 65 separates recoverable uploads from unrecoverable local-only uploads.
+
+Current upload recovery rule:
+
+- `uploadId` + `storagePath` present: treat the local optimistic session as a
+  recoverable uploaded-source candidate and retry finalize for up to about
+  three minutes.
+- `uploadId` / `storagePath` missing: treat it as local-only and unrecoverable;
+  it should expire to `upload_failed` after about 45 seconds instead of living
+  forever as processing.
+
+Latest QA finding:
+
+Build 65 still needs one follow-up investigation/fix before starting Auth. In
+the latest A-processing/B-upload scenario, the newest server row showed A
+successfully finalized/completed, but no distinct B `upload_targets` row was
+created. That means B likely failed before upload target creation or in an
+early client-side stage. The next work should improve pre-target failure
+observability and ensure the terminal local failure path is clear, without
+restarting upload architecture.
+
 Part 1 final wrap-up checkpoint, 2026-06-23:
 
 Part 1 Upload Experience is complete for the current single-user internal QA

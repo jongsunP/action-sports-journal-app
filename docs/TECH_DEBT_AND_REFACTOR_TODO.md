@@ -26,6 +26,36 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
+
+Current baseline:
+
+Build 65 separates recoverable orphan uploads from unrecoverable local-only
+sessions.
+
+- Recoverable: local optimistic session has `uploadId` and `storagePath`; retry
+  finalize for up to about three minutes.
+- Unrecoverable: no `uploadId/storagePath`; expire to `upload_failed` after
+  about 45 seconds and remove the Video pending entry.
+
+Remaining risk:
+
+The latest A-processing/B-upload QA found an immediate failure Alert for B while
+server data only showed A completing normally. No distinct B `upload_targets`
+row existed. This points to a pre-target or early client-side failure path.
+
+TODO before Auth:
+
+1. Add clearer pre-target upload failure observability:
+   `localSessionId`, `draftId`, file name, file size, duration, stage, and
+   error message.
+2. Make request-upload-target/local-file-access failures distinguishable from
+   recoverable signed upload/finalize failures.
+3. Keep ambiguous uploaded-source recovery behavior separate from terminal
+   local-only failure.
+4. Continue avoiding DB cleanup jobs until upload target semantics are fully
+   settled.
+
 ## Part 1 Final Wrap-Up / Build 55 Diagnostics - 2026-06-23
 
 Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the

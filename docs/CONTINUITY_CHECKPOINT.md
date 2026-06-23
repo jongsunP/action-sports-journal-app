@@ -39,6 +39,47 @@ Private action sports moment feed + AI Coach direction validated
 Render backend deployed and standalone iPhone app working without Expo Go
 ```
 
+## 2026-06-23 Build 65 Upload Recovery / Local-only Cleanup
+
+Build 65 is the current latest iOS QA build.
+
+```text
+buildNumber: 65
+feature commit: 13e95ff fix: expire unrecoverable local upload sessions
+build commit: 5ca179a chore: prepare local upload cleanup qa build
+EAS Build: https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/315d66c2-a390-4f63-8790-151d890f677f
+```
+
+Problem:
+
+Recent QA exposed two different upload failure classes that must not be mixed:
+
+- Recoverable orphan upload: Storage source exists and the app has
+  `uploadId/storagePath`, but finalize/Moment creation did not complete yet.
+- Unrecoverable local-only upload: no server `upload_targets` row and no
+  `uploadId/storagePath`, so the app only has an optimistic local session.
+
+Decision:
+
+Keep recoverable uploaded-source sessions alive long enough to retry finalize,
+but expire local-only sessions quickly. Do not let local-only
+uploading/processing sessions survive app restart as if analysis is still
+running.
+
+Current behavior:
+
+- `uploadId/storagePath` present: retry finalize for up to about three minutes.
+- `uploadId/storagePath` absent: mark/remove as failed after about 45 seconds.
+- Video pending entries are cleaned together with expired local-only sessions.
+
+Latest QA finding:
+
+Build 65 still produced an immediate "영상 업로드에 실패했습니다" Alert in an
+A-processing/B-upload test. DB inspection showed the latest server row was the
+first upload completing normally and no distinct B upload target existed. The
+next task should trace pre-target/client-local failure stages with better logs
+and make the user-facing failure path clear. This should happen before Auth.
+
 ## 2026-06-23 Part 1 Final Wrap-Up / Build 55
 
 Part 1 Upload Experience is closed for single-user internal QA. Build 55 is the
