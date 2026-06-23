@@ -43,8 +43,8 @@ const UPLOAD_PROGRESS_COPY: Record<
     label: '분석 준비 중',
   },
   fallback_upload: {
-    detail: '네트워크 상태에 맞춰 업로드를 다시 시도하고 있습니다.',
-    label: '업로드를 다시 시도하고 있습니다',
+    detail: '잠시만 기다려 주세요.',
+    label: '영상 업로드 중',
   },
 };
 

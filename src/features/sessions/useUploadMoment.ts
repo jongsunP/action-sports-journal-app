@@ -360,6 +360,8 @@ export function useUploadMoment({
       let uploadStartedAt: number | undefined;
       let usedUploadFallback = false;
       let directUploadedTarget: VideoUploadTarget | undefined;
+      let directFailureReason: string | undefined;
+      let directFailureStage: string | undefined;
       let fallbackThumbnailReference: UploadedThumbnailReference | undefined;
 
       try {
@@ -434,11 +436,14 @@ export function useUploadMoment({
               uploadId: directUploadedTarget.uploadId,
             });
           } catch (error) {
+            directFailureStage = 'finalize_retry';
+            directFailureReason =
+              error instanceof Error ? error.message : 'unknown';
             console.info('[upload_timing]', {
               draftId: uploadDraft.draftId,
               event: 'direct_finalize_retry_failure',
               localSessionId: nextSession.id,
-              reason: error instanceof Error ? error.message : 'unknown',
+              reason: directFailureReason,
               storagePath: directUploadedTarget.storagePath,
               uploadId: directUploadedTarget.uploadId,
             });
@@ -447,12 +452,33 @@ export function useUploadMoment({
 
         if (!storedMoment) {
           usedUploadFallback = true;
+          directFailureStage =
+            directFailureStage ??
+            (directUploadedTarget ? 'finalize_or_response' : 'direct_upload');
+          directFailureReason =
+            directFailureReason ??
+            (directUploadedTarget
+              ? 'direct path did not return a stored moment'
+              : 'direct upload target was not created or direct upload failed');
+          console.info('[upload_timing]', {
+            directFailureReason,
+            directFailureStage,
+            draftId: uploadDraft?.draftId,
+            event: 'upload_path_decided',
+            localSessionId: nextSession.id,
+            path: 'multipart_fallback',
+            storagePath: directUploadedTarget?.storagePath,
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+          });
           setUploadProgressStage('fallback_upload');
           console.info('[upload_timing]', {
+            directFailureReason,
+            directFailureStage,
             draftId: uploadDraft?.draftId,
             event: 'fallback_started',
             localSessionId: nextSession.id,
-            uploadId: uploadDraft?.uploadId,
+            storagePath: directUploadedTarget?.storagePath,
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
           });
           storedMoment = await withUploadTimeout(
             createMomentFromSourceVideo(nextSession, videoForUpload, {
@@ -508,14 +534,30 @@ export function useUploadMoment({
           storedMoment.analysisStarted
             ? 'processing'
             : 'queued';
+        const uploadPath = usedUploadFallback ? 'multipart_fallback' : 'direct';
 
         console.info('[upload_timing]', {
+          directFailureReason,
+          directFailureStage,
+          draftId: uploadDraft?.draftId,
+          event: 'upload_path_decided',
+          localSessionId: nextSession.id,
+          path: uploadPath,
+          storagePath: directUploadedTarget?.storagePath ?? storedMoment.storagePath,
+          uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+        });
+
+        console.info('[upload_timing]', {
+          directStoragePath: directUploadedTarget?.storagePath,
+          directUploadId: directUploadedTarget?.uploadId,
           elapsedMs: Date.now() - uploadStartedAt,
           event: 'upload_success',
+          fallbackReason: directFailureReason,
           localSessionId: nextSession.id,
           momentId: storedMoment.momentId,
           nextMomentStatus,
-          uploadPath: usedUploadFallback ? 'multipart_fallback' : 'direct',
+          uploadPath,
+          usedFallback: usedUploadFallback,
         });
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
