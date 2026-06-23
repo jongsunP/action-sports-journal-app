@@ -18,6 +18,7 @@ export async function uploadDraftSourceVideoDirectly(
   draft: UploadDraft,
   options?: {
     localSessionId?: string;
+    onUploadTargetCreated?: (uploadTarget: VideoUploadTarget) => void;
     onProgress?: UploadProgressHandler;
   },
 ): Promise<VideoUploadTarget | undefined> {
@@ -59,6 +60,7 @@ export async function uploadDraftSourceVideoDirectly(
       storagePath: uploadTarget.storagePath,
       uploadId: uploadTarget.uploadId,
     });
+    options?.onUploadTargetCreated?.(uploadTarget);
 
     const uploadedThumbnail = await uploadDraftThumbnailIfPossible(
       draft,

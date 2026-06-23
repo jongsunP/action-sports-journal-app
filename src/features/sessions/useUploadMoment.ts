@@ -369,17 +369,23 @@ export function useUploadMoment({
           localSessionId: nextSession.id,
         });
 
+        const handleDirectUploadTarget = (uploadTarget: VideoUploadTarget) => {
+          directUploadedTarget = {
+            ...directUploadedTarget,
+            ...uploadTarget,
+          };
+          fallbackThumbnailReference =
+            uploadTarget.uploadedThumbnail ?? fallbackThumbnailReference;
+          onUploadReconciliationTargetResolved?.(
+            nextSession.id,
+            directUploadedTarget,
+            uploadDraft?.draftId,
+          );
+        };
+
         let storedMoment = await createMomentFromDirectUpload({
           draft: uploadDraft,
-          onDirectUploadTarget: (uploadTarget) => {
-            directUploadedTarget = uploadTarget;
-            fallbackThumbnailReference = uploadTarget.uploadedThumbnail;
-            onUploadReconciliationTargetResolved?.(
-              nextSession.id,
-              uploadTarget,
-              uploadDraft?.draftId,
-            );
-          },
+          onDirectUploadTarget: handleDirectUploadTarget,
           onProgress: setUploadProgressStage,
           session: nextSession,
         });
@@ -418,7 +424,6 @@ export function useUploadMoment({
               storagePath: directUploadedTarget.storagePath,
               uploadId: directUploadedTarget.uploadId,
             });
-            throw error;
           }
         }
 
@@ -647,6 +652,7 @@ async function createMomentFromDirectUpload({
   try {
     uploadTarget = await uploadDraftSourceVideoDirectly(draft, {
       localSessionId: session.id,
+      onUploadTargetCreated: onDirectUploadTarget,
       onProgress,
     });
 
