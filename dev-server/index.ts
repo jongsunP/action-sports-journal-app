@@ -117,6 +117,7 @@ const thumbnailStorageBucket = "moment-thumbnails";
 const thumbnailSignedUrlExpiresSeconds = 60 * 60 * 24;
 const realtimeAnalysisChannel = "analysis-updates";
 const uploadedSourceStorageInspectTimeoutMs = 5_000;
+const allowInternalDefaultUser = process.env.ALLOW_INTERNAL_DEFAULT_USER !== "false";
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const appEnv = process.env.APP_ENV ?? "development";
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
@@ -324,6 +325,10 @@ app.post("/api/push-tokens", async (request, response) => {
 
     response.json({ ok: true });
   } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Push token registration failed.";
     console.error("Push token registration failed:", message);
@@ -455,6 +460,10 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
       thumbnailTarget,
     });
   } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Upload target creation failed.";
     console.error("Upload target creation failed:", message);
@@ -582,6 +591,10 @@ app.post("/api/moments", async (request, response) => {
       status: data.status,
     });
   } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Moment creation failed.";
     console.error("Moment creation failed:", message);
@@ -770,6 +783,10 @@ app.post(
         momentId: result.momentId,
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -824,6 +841,10 @@ app.post(
         uploadedAt: result.uploadedAt,
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -1166,6 +1187,10 @@ app.get("/api/moments", async (request, response) => {
       moments: responseMoments,
     });
   } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Moment list failed.";
     console.error("Moment list failed:", message);
@@ -1337,6 +1362,10 @@ app.delete("/api/moments/:momentId", async (request, response) => {
       storageRemovedCount,
     });
   } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Moment delete failed.";
     console.error("Moment delete failed:", message);
@@ -5730,6 +5759,13 @@ type ResolvedRequestUser = {
   userId: string;
 };
 
+class AuthRequiredRequestError extends Error {
+  constructor(message = "Authentication is required for this request.") {
+    super(message);
+    this.name = "AuthRequiredRequestError";
+  }
+}
+
 async function resolveRequestUser(
   request: express.Request,
 ): Promise<ResolvedRequestUser> {
@@ -5742,10 +5778,21 @@ async function resolveRequestUser(
   const bearerToken = readBearerToken(request);
 
   if (!bearerToken) {
+    if (!allowInternalDefaultUser) {
+      console.warn("[auth]", {
+        authMode: "auth_required",
+        event: "request_user_fallback_blocked",
+        fallbackAllowed: false,
+        route: request.path,
+      });
+      throw new AuthRequiredRequestError();
+    }
+
     const userId = await getOrCreateDefaultSupabaseUser();
     logResolvedRequestUser({
       authMode: "internal_default_user",
       authUserId: null,
+      fallbackAllowed: true,
       route: request.path,
       userId,
     });
@@ -5845,16 +5892,33 @@ function readStringUserMetadata(value: unknown) {
 function logResolvedRequestUser({
   authMode,
   authUserId,
+  fallbackAllowed,
   route,
   userId,
-}: ResolvedRequestUser & { route: string }) {
+}: ResolvedRequestUser & { fallbackAllowed?: boolean; route: string }) {
   console.info("[auth]", {
     authMode,
     authUserId,
     event: "resolved_request_user",
+    fallbackAllowed,
     route,
     userId,
   });
+}
+
+function sendAuthRequiredResponse(
+  response: express.Response,
+  error: unknown,
+) {
+  if (!(error instanceof AuthRequiredRequestError)) {
+    return false;
+  }
+
+  response.status(401).json({
+    error: "auth_required",
+    message: error.message,
+  });
+  return true;
 }
 
 function getSupabaseServerClient() {
