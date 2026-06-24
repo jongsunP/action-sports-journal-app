@@ -8,10 +8,12 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 
+import { getAuthMode, type AuthMode } from './authPolicy';
 import { supabase } from '../supabase/client';
 
 type AuthSessionState = {
   accessToken: string | null;
+  authMode: AuthMode;
   isAuthenticated: boolean;
   isLoading: boolean;
   refreshSession: () => Promise<Session | null>;
@@ -74,6 +76,10 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthSessionState>(
     () => ({
       accessToken: session?.access_token ?? null,
+      authMode: getAuthMode({
+        hasAccessToken: Boolean(session?.access_token),
+        isLoading,
+      }),
       isAuthenticated: Boolean(session?.access_token),
       isLoading,
       refreshSession: async () => {

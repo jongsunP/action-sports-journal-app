@@ -1,13 +1,25 @@
+import { allowsInternalDefaultUser } from './authPolicy';
 import { supabase } from '../supabase/client';
 
 type AuthenticatedFetchInit = RequestInit & {
   headers?: HeadersInit;
 };
 
+export class AuthRequiredError extends Error {
+  constructor(message = 'Authentication is required for this request.') {
+    super(message);
+    this.name = 'AuthRequiredError';
+  }
+}
+
 export async function getAuthHeaders(headers?: HeadersInit) {
   const mergedHeaders = new Headers(headers);
 
   if (!supabase) {
+    if (!allowsInternalDefaultUser()) {
+      throw new AuthRequiredError();
+    }
+
     return mergedHeaders;
   }
 
@@ -18,6 +30,10 @@ export async function getAuthHeaders(headers?: HeadersInit) {
       'Supabase auth header lookup failed:',
       error instanceof Error ? error.message : 'Unknown error',
     );
+    if (!allowsInternalDefaultUser()) {
+      throw new AuthRequiredError();
+    }
+
     return mergedHeaders;
   }
 
@@ -25,6 +41,11 @@ export async function getAuthHeaders(headers?: HeadersInit) {
 
   if (accessToken) {
     mergedHeaders.set('Authorization', `Bearer ${accessToken}`);
+    return mergedHeaders;
+  }
+
+  if (!allowsInternalDefaultUser()) {
+    throw new AuthRequiredError();
   }
 
   return mergedHeaders;

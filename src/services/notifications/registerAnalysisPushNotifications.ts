@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { authenticatedFetch } from '../auth/authenticatedFetch';
 import { requestAnalysisNotificationRefresh } from './analysisNotificationRefreshEvents';
 
 type RegisterPushTokenResponse = {
@@ -75,7 +76,7 @@ export async function registerForAnalysisPushNotifications() {
 
   const token = await Notifications.getExpoPushTokenAsync({ projectId });
 
-  const response = await fetch(pushTokenEndpoint, {
+  const response = await authenticatedFetch(pushTokenEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
