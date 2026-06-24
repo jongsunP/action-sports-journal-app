@@ -51,6 +51,26 @@ When the test target is not AI quality itself, it is acceptable to temporarily
 bypass only the paid AI provider call and return a realistic server-side OK
 result so the pipeline can be tested without unnecessary AI cost.
 
+User action instruction format:
+
+When asking the user to do something, say where to go and what to do there. For
+terminal work, always provide a copyable command block that starts from the
+project directory, for example:
+
+```bash
+cd ~/repository/action-sports-journal-app
+open -a TextEdit .env.local
+```
+
+Founder technical context:
+
+The Founder is a web frontend developer. They understand structure, flow, UI,
+and implementation relationships well. Do not lower the technical level.
+Instead, adapt DB, infra, mobile build, Supabase, and deployment instructions
+to a familiar execution interface: exact locations, exact files, and copyable
+commands from the project directory. Do not give vague infra instructions.
+Give concise, exact actions.
+
 When the user asks for "today's wrap-up", "정리", or "handoff", include product
 continuity as well as technical continuity:
 

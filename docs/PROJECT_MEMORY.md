@@ -77,6 +77,40 @@ Validate like the real product, but spend build and AI cost only when they are
 the best next move.
 ```
 
+## User Action Instruction Format
+
+When any Codex or CTO session asks the user to do something, the instruction
+must say exactly where to go and what to do there. Keep it concise, but do not
+omit the location/context.
+
+For terminal tasks, always provide a copyable shell block that starts by
+changing into the project directory.
+
+Example:
+
+```bash
+cd ~/repository/action-sports-journal-app
+open -a TextEdit .env.local
+```
+
+## Founder Technical Background
+
+The Founder is a web frontend developer. They think well in product structure,
+screen flow, and implementation relationships. Database, infrastructure,
+mobile build, and Supabase operational tasks should be presented through a
+clear execution interface because they are outside the Founder's most familiar
+daily workflow.
+
+When asking the Founder to perform DB, infra, environment, build, or dashboard
+actions, assume the task needs precise location/context and copyable commands
+instead of shorthand. Do not lower the technical level of the explanation.
+Adapt the action format so it maps to familiar web frontend development habits
+such as navigating to the project, opening files, and running explicit
+commands.
+
+Explain from structure -> flow -> implementation, and prefer action-first
+instructions over background-heavy explanations.
+
 ## 2026-06-24 Build 74 Push QA / Auth Phase 2 Closeout
 
 Build 74 resolved the remaining Auth Phase 2 Push observation. Build 73 had
