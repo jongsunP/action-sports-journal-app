@@ -152,6 +152,13 @@ become email-recoverable.
 
 Next QA/start point:
 
+- Email Recovery smoke is paused at Supabase `over_email_send_rate_limit` /
+  HTTP 429 for `parksunl7@naver.com`. Do not call `updateUser({ email })`
+  again before the email send cooldown. Retry once with the same email only.
+  If it succeeds, confirm magic-link receipt, session refresh / `getUser()`
+  email reflection, and BFF-driven `public.users.email` sync on the existing
+  app user row. If 429 recurs, document a technical judgment on Supabase hosted
+  email rate limits and whether custom SMTP is needed.
 - Confirm the Supabase Auth email template sends a code that works with the
   in-app `email_change` OTP form, or decide whether this flow should use a
   deep link instead.

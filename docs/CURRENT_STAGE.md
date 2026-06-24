@@ -91,6 +91,15 @@ Server-side, `resolveRequestUser(request)` now updates the existing
 user changes, instead of creating a new app user. QA still needs to verify the
 email template/OTP behavior and confirm ownership continuity after linking.
 
+Email Recovery E2E smoke pause, 2026-06-24:
+
+The current E2E smoke is paused without a final success/failure/blocked
+judgment because Supabase returned `over_email_send_rate_limit` / HTTP 429
+while testing `updateUser({ email })` with `parksunl7@naver.com`. The QA seed
+Auth user, `public.users` row, Moment, and push token were cleaned up. No UI
+changes were made. The next action is one retry with the same email after the
+email send rate-limit cooldown.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the server-side ownership boundary. The BFF now
