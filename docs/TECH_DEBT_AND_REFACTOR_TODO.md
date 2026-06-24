@@ -46,6 +46,20 @@ TODO before calling Email Recovery complete:
    account linking is verified.
 5. Keep no-token default user fallback internal-only throughout this work.
 
+Future recovery backlog:
+
+- Keep Email Recovery as the current baseline for validating account
+  preservation, ownership continuity, and account-linking structure.
+- Keep Kakao Account Linking / Kakao Recovery as a strong candidate before
+  distribution, because ASJ's Korean mobile users and Instagram-centered inflow
+  may find Kakao or SMS more natural than email.
+- Email may be lower-friction than Apple ID for early recovery, but do not treat
+  it as the final Korean-market recovery UX by default.
+- Do not implement Kakao, Phone/SMS, Apple, Google, or Kakao Login during the
+  current Email Recovery pass.
+- Revisit Kakao / Phone only after Email Recovery is stable and the app is
+  preparing for broader distribution.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:

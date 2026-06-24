@@ -160,6 +160,16 @@ Next QA/start point:
 - Implement actual reinstall/new-device recovery sign-in only after the current
   account-linking path is verified.
 
+Long-term recovery caution:
+
+Do not implement Kakao, Phone/SMS, Apple, Google, or other social account
+providers in the current pass. Email Recovery is the baseline recovery path for
+validating ownership continuity and account linking first. Kakao Account
+Linking / Kakao Recovery remains a strong candidate before distribution because
+ASJ targets Korean mobile riders and has Instagram-centered inflow, where Kakao
+or SMS may feel more natural than email. Revisit Kakao / Phone after Email
+Recovery is stable.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the BFF/server ownership boundary. The main
