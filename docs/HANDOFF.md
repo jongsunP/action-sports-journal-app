@@ -140,9 +140,12 @@ Email Recovery implementation start, 2026-06-24:
 
 The first account-linking pass is now in code. It adds an
 `AccountRecoveryScreen` opened from the Home header menu, plus auth-provider
-helpers for requesting a recovery email and verifying the email-change OTP.
-This treats recovery as a way to preserve the current anonymous rider account,
-not as a pre-upload login wall.
+helpers for requesting a recovery email. The OTP input / `verifyOtp` screen
+flow was removed after confirming the current Supabase Change Email template is
+magic-link based. After `updateUser({ email })` succeeds, the UI now shows a
+magic-link pending state and lets the user refresh the app session after
+clicking the email link. This treats recovery as a way to preserve the current
+anonymous rider account, not as a pre-upload login wall.
 
 Server ownership behavior was also tightened: when `resolveRequestUser(request)`
 resolves an existing `users.auth_user_id`, it now syncs changed Supabase Auth
@@ -155,13 +158,10 @@ Next QA/start point:
 - Email Recovery smoke is paused at Supabase `over_email_send_rate_limit` /
   HTTP 429 for `parksunl7@naver.com`. Do not call `updateUser({ email })`
   again before the email send cooldown. Retry once with the same email only.
-  If it succeeds, confirm magic-link receipt, session refresh / `getUser()`
-  email reflection, and BFF-driven `public.users.email` sync on the existing
-  app user row. If 429 recurs, document a technical judgment on Supabase hosted
-  email rate limits and whether custom SMTP is needed.
-- Confirm the Supabase Auth email template sends a code that works with the
-  in-app `email_change` OTP form, or decide whether this flow should use a
-  deep link instead.
+  If it succeeds, confirm email receipt, magic-link click, session refresh /
+  `getUser()` email reflection, and BFF-driven `public.users.email` sync on the
+  existing app user row. If 429 recurs, document a technical judgment on
+  Supabase hosted email rate limits and whether custom SMTP is needed.
 - Link an email on a fresh anonymous Build and verify the same Auth user/app
   user/Moment/Push/Realtime ownership continues after linking.
 - Implement actual reinstall/new-device recovery sign-in only after the current

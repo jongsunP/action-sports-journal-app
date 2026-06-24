@@ -81,10 +81,13 @@ Email Recovery first implementation note, 2026-06-24:
 
 The first recovery/account-linking surface has been added. Home's header menu
 now opens `AccountRecoveryScreen`, where the current authenticated anonymous
-user can request a recovery email link and enter the email-change OTP. This
-uses Supabase Auth's anonymous-user conversion path (`updateUser({ email })`
-plus `verifyOtp` with `email_change`) and keeps anonymous sign-in as the
-device-first baseline.
+user can request a recovery email link. The initial OTP entry /
+`verifyOtp({ type: "email_change" })` UI has been removed because the current
+Supabase Change Email template is magic-link based. After `updateUser({ email
+})` succeeds, the screen now enters a magic-link pending state and asks the user
+to click the email link, return to the app, and use `refreshSession()` to check
+whether the email is connected. Anonymous sign-in remains the device-first
+baseline.
 
 Server-side, `resolveRequestUser(request)` now updates the existing
 `public.users` profile email/display name when the bearer-token Supabase Auth
@@ -96,9 +99,10 @@ Email Recovery E2E smoke pause, 2026-06-24:
 The current E2E smoke is paused without a final success/failure/blocked
 judgment because Supabase returned `over_email_send_rate_limit` / HTTP 429
 while testing `updateUser({ email })` with `parksunl7@naver.com`. The QA seed
-Auth user, `public.users` row, Moment, and push token were cleaned up. No UI
-changes were made. The next action is one retry with the same email after the
-email send rate-limit cooldown.
+Auth user, `public.users` row, Moment, and push token were cleaned up. The UI
+has since been aligned to the magic-link pending flow, but E2E smoke remains
+paused. The next action is one retry with the same email after the email send
+rate-limit cooldown.
 
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
