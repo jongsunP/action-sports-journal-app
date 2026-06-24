@@ -2,6 +2,61 @@
 
 An iOS-first React Native application for action sports athletes.
 
+## Collaboration Response Format
+
+Always answer in Korean honorifics.
+
+When giving action instructions, use highly visible section headers and include
+only sections that have an actual action owner.
+
+- For work that another Codex/development session should do, use:
+
+```text
+## **개발 세션에게**
+<copyable prompt text>
+```
+
+- For work that the user should do directly, use:
+
+```text
+## **사용자에게**
+<short, clear explanation>
+
+```text
+<copyable value only when needed>
+```
+```
+
+For user-facing explanations, be brief and easy to scan. The user will ask
+follow-up questions if more detail is needed. Use copyable blocks for terminal
+commands, exact values, or prompts only. If both the user and development
+session have actions, show both sections and state the order.
+
+Keep the work stream moving. Pause for explanation or questions only when a
+decision is needed from the user or when the user explicitly asks a question.
+If the development session can proceed directly and the user does not need to
+act, do not add a user-facing action section.
+
+For terminal tasks, always provide commands from the project directory:
+
+```bash
+cd ~/repository/action-sports-journal-app
+<command>
+```
+
+When the user asks what remains or asks for current status, answer in time
+order and include both the full remaining list and the immediate next work:
+
+```text
+과거:
+현재:
+가까운 미래:
+먼 미래:
+바로 앞 작업:
+```
+
+Keep this summary concise and easy to scan.
+
 Examples:
 
 - Wakeboard

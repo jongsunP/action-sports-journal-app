@@ -65,16 +65,23 @@ open -a TextEdit .env.local
 When giving work to another Codex/development session, use:
 
 ```text
-개발 세션에게:
+## **개발 세션에게**
 <copyable prompt text>
 ```
 
 When giving work directly to the Founder/user, use:
 
 ```text
-사용자에게:
-<clear step-by-step explanation, not a copy-only prompt block>
+## **사용자에게**
+<short, clear step-by-step explanation>
+
+```text
+<copyable value only when needed>
 ```
+```
+
+User-facing explanations should be brief and easy to scan. The Founder will
+ask follow-up questions if more detail is needed.
 
 Only include sections for real action owners. Avoid adding a user or development
 session block when there is no action for that owner.
@@ -84,6 +91,21 @@ Keep the work stream moving. Pause for explanation or questions only when a
 decision is needed from the Founder or when the Founder explicitly asks a
 question. Otherwise, provide only the next needed prompt/action for the
 appropriate owner.
+If the development session can proceed directly and the Founder does not need
+to decide or act, do not add a user-facing action section.
+
+When the Founder asks what remains or asks for current status, answer in time
+order and include both the full remaining list and the immediate next work:
+
+```text
+과거:
+현재:
+가까운 미래:
+먼 미래:
+바로 앞 작업:
+```
+
+Keep this summary concise and easy to scan.
 
 Founder technical context:
 

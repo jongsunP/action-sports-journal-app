@@ -82,21 +82,31 @@ the best next move.
 When any Codex or CTO session asks the user to do something, the instruction
 must say exactly where to go and what to do there. Keep it concise, but do not
 omit the location/context.
+User-facing explanations should be brief and easy to scan. The Founder will
+ask follow-up questions if more detail is needed.
 
 Use this response format consistently:
 
-- When asking another Codex/development session to do work, write:
+- When asking another Codex/development session to do work, use a highly
+  visible bold heading-style section header and a copyable prompt block:
 
 ```text
-개발 세션에게:
+## **개발 세션에게**
 <copyable prompt text>
 ```
 
-- When asking the Founder/user to do work, write:
+- When asking the Founder/user to do work, use a highly visible bold
+  heading-style section header. Write normal step-by-step explanation outside
+  code blocks, and use code blocks only for exact copy/paste values or terminal
+  commands:
 
 ```text
-사용자에게:
-<clear step-by-step explanation, not a copy-only prompt block>
+## **사용자에게**
+<short, clear step-by-step explanation>
+
+```text
+<copyable value only when needed>
+```
 ```
 
 Only include an action section when there is an actual action owner. Do not add
@@ -107,6 +117,21 @@ Keep the work stream moving. Pause for explanation or questions only when a
 decision is needed from the Founder or when the Founder explicitly asks a
 question. Otherwise, provide only the next needed prompt/action for the
 appropriate owner.
+If the development session can proceed directly and the Founder does not need
+to decide or act, do not add a user-facing action section.
+
+When the Founder asks what remains or asks for current status, answer in time
+order and include both the full remaining list and the immediate next work:
+
+```text
+과거:
+현재:
+가까운 미래:
+먼 미래:
+바로 앞 작업:
+```
+
+Keep this summary concise and easy to scan.
 
 For terminal tasks, always provide a copyable shell block that starts by
 changing into the project directory.
