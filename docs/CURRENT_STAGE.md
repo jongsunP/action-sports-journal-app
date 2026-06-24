@@ -118,9 +118,19 @@ Redirect URI registered:
 `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`.
 
 Kakao consent state: nickname enabled, profile image disabled, email disabled /
-unavailable. The next validation task is a no-email Kakao identity linking
-smoke that proves `linkIdentity` preserves the current anonymous Auth user and
-ASJ ownership boundaries. No app scheme, code, or EAS build work has started.
+unavailable.
+
+Kakao Account Linking first implementation is complete. The app now uses
+`linkIdentity` for Kakao account linking; `signInWithOAuth` is not used. The
+baseline adds `scheme: "actionsportsjournal"`, the Kakao linking helper,
+AuthSessionProvider exposure, and a Kakao recovery-method section inside
+`AccountRecoveryScreen`.
+
+Local/simulator check passed in Expo Go on iPhone 17 Simulator. Confirmed app
+launch, AccountRecoveryScreen entry, existing Email Recovery section rendering,
+Kakao recovery-method section rendering, Kakao button loading state, iOS OAuth
+confirmation prompt for `kauth.kakao.com`, and cancel return with the in-app
+"카카오 연결이 취소되었습니다." message. Deep-link E2E is not verified yet.
 
 Auth Phase 1 server ownership closeout, 2026-06-24:
 

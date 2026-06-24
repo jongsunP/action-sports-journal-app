@@ -262,12 +262,24 @@ Before any Kakao code work, verify:
 
 Next start point:
 
-Plan Kakao `linkIdentity` implementation. Keep the flow as account
-linking/recovery for the current anonymous user, not a login wall. The app
-scheme candidate is `actionsportsjournal`; implementation will require adding
-that scheme to `app.json` and designing the Supabase redirect/deep-link return.
-iOS standalone/EAS preview deep-link verification will likely require a new
-build after code/config changes, but do not build during planning.
+Prepare an EAS preview build only when ready to run Kakao deep-link E2E. The
+local/Simulator check passed: Expo Go on iPhone 17 Simulator launched the app,
+entered `AccountRecoveryScreen`, rendered the existing Email Recovery section
+and the Kakao recovery-method section, opened the iOS OAuth confirmation prompt
+for `kauth.kakao.com`, and returned to the app with the cancel message after
+cancel. Deep-link completion is still unverified.
+
+Remaining Kakao E2E checks:
+
+1. `actionsportsjournal://` deep-link return works in iOS standalone/EAS
+   preview.
+2. Kakao OAuth completes and returns to the app.
+3. Existing anonymous Supabase Auth user id is preserved.
+4. Existing `public.users.id` is preserved.
+5. Moment ownership is preserved.
+6. Push token ownership is preserved.
+7. User-scoped Realtime channel basis remains tied to the same Auth user id.
+8. No new Supabase Auth user is created.
 
 Kakao linkIdentity implementation plan:
 

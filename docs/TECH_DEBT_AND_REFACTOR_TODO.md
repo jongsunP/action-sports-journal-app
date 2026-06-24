@@ -261,6 +261,25 @@ Implementation plan:
    - Do not create the EAS build until the implementation is ready for a focused
      Kakao linking QA pass.
 
+Local/simulator check:
+
+Kakao Account Linking first implementation passed local/Simulator smoke in Expo
+Go on iPhone 17 Simulator. Confirmed app launch, AccountRecoveryScreen entry,
+Email Recovery rendering, Kakao recovery-method rendering, Kakao button loading
+state, iOS OAuth confirmation prompt for `kauth.kakao.com`, and cancel return
+with in-app cancel message.
+
+Remaining EAS preview E2E:
+
+1. `actionsportsjournal://` deep-link return works in standalone iOS.
+2. Kakao OAuth completion returns to the app.
+3. `linkIdentity` preserves the existing anonymous Auth user id.
+4. `public.users.id` remains unchanged.
+5. Moment ownership remains unchanged.
+6. `device_push_tokens.user_id` remains unchanged.
+7. Realtime channel basis remains `analysis-updates:auth:{authUserId}`.
+8. No separate Supabase Auth user is created.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:
