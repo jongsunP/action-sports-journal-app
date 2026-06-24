@@ -13,6 +13,10 @@ import {
   verifyRecoveryEmailOtp,
 } from './accountRecovery';
 import { getAuthMode, type AuthMode } from './authPolicy';
+import {
+  linkKakaoIdentity,
+  type KakaoLinkResult,
+} from './kakaoLinking';
 import { supabase } from '../supabase/client';
 
 type AuthSessionState = {
@@ -20,6 +24,7 @@ type AuthSessionState = {
   authMode: AuthMode;
   isAuthenticated: boolean;
   isLoading: boolean;
+  linkKakaoIdentity: () => Promise<KakaoLinkResult>;
   requestRecoveryEmailLink: (email: string) => Promise<void>;
   refreshSession: () => Promise<Session | null>;
   session: Session | null;
@@ -32,6 +37,24 @@ type AuthSessionState = {
 };
 
 const AuthSessionContext = createContext<AuthSessionState | undefined>(undefined);
+
+async function refreshSupabaseSession() {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    console.warn(
+      'Supabase session refresh failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+    return null;
+  }
+
+  return data.session ?? null;
+}
 
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -136,6 +159,23 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       }),
       isAuthenticated: Boolean(session?.access_token),
       isLoading,
+      linkKakaoIdentity: async () => {
+        const result = await linkKakaoIdentity();
+
+        if (result.status === 'linked') {
+          const nextSession = await refreshSupabaseSession();
+          setSession(
+            nextSession
+              ? {
+                  ...nextSession,
+                  user: result.user ?? nextSession.user,
+                }
+              : result.session,
+          );
+        }
+
+        return result;
+      },
       requestRecoveryEmailLink: async (email: string) => {
         const user = await requestRecoveryEmailLink(email);
         setSession((currentSession) =>
@@ -148,23 +188,9 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         );
       },
       refreshSession: async () => {
-        if (!supabase) {
-          return null;
-        }
-
-        const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          console.warn(
-            'Supabase session refresh failed:',
-            error instanceof Error ? error.message : 'Unknown error',
-          );
-          setSession(null);
-          return null;
-        }
-
-        setSession(data.session ?? null);
-        return data.session ?? null;
+        const nextSession = await refreshSupabaseSession();
+        setSession(nextSession);
+        return nextSession;
       },
       session,
       signOut: async () => {

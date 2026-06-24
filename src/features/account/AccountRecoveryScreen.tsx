@@ -32,6 +32,23 @@ function hasAnonymousFlag(user: unknown) {
   return Boolean((user as { is_anonymous?: boolean } | null)?.is_anonymous);
 }
 
+function readMetadataText(metadata: unknown, key: string) {
+  const value = (metadata as Record<string, unknown> | null)?.[key];
+
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function getKakaoNickname(metadata: unknown) {
+  return (
+    readMetadataText(metadata, 'name') ??
+    readMetadataText(metadata, 'full_name') ??
+    readMetadataText(metadata, 'nickname') ??
+    readMetadataText(metadata, 'preferred_username')
+  );
+}
+
 export function AccountRecoveryScreen() {
   const navigation =
     useNavigation<
@@ -40,6 +57,7 @@ export function AccountRecoveryScreen() {
   const {
     authMode,
     isLoading,
+    linkKakaoIdentity,
     requestRecoveryEmailLink,
     refreshSession,
     user,
@@ -48,19 +66,37 @@ export function AccountRecoveryScreen() {
   const [pendingEmail, setPendingEmail] = useState('');
   const [step, setStep] = useState<RecoveryStep>(user?.email ? 'linked' : 'idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [kakaoStatusMessage, setKakaoStatusMessage] = useState<string | null>(
+    null,
+  );
+  const [isLinkingKakao, setIsLinkingKakao] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isRefreshingSession, setIsRefreshingSession] = useState(false);
 
   const normalizedEmail = useMemo(() => normalizeRecoveryEmail(email), [email]);
   const isAnonymousUser = hasAnonymousFlag(user);
   const currentEmail = user?.email ?? null;
+  const hasKakaoIdentity = Boolean(
+    user?.identities?.some((identity) => identity.provider === 'kakao'),
+  );
+  const kakaoNickname = getKakaoNickname(user?.user_metadata);
   const canSubmitEmail =
     authMode === 'authenticated' &&
     normalizedEmail.includes('@') &&
     !isSubmittingEmail &&
-    !isRefreshingSession;
+    !isRefreshingSession &&
+    !isLinkingKakao;
   const canRefreshLinkStatus =
-    authMode === 'authenticated' && !isSubmittingEmail && !isRefreshingSession;
+    authMode === 'authenticated' &&
+    !isSubmittingEmail &&
+    !isRefreshingSession &&
+    !isLinkingKakao;
+  const canLinkKakao =
+    authMode === 'authenticated' &&
+    !hasKakaoIdentity &&
+    !isSubmittingEmail &&
+    !isRefreshingSession &&
+    !isLinkingKakao;
 
   const handleRequestEmailLink = async () => {
     if (!canSubmitEmail) {
@@ -68,6 +104,7 @@ export function AccountRecoveryScreen() {
     }
 
     setErrorMessage(null);
+    setKakaoStatusMessage(null);
     setIsSubmittingEmail(true);
 
     try {
@@ -87,6 +124,7 @@ export function AccountRecoveryScreen() {
     }
 
     setErrorMessage(null);
+    setKakaoStatusMessage(null);
     setIsRefreshingSession(true);
 
     try {
@@ -109,6 +147,7 @@ export function AccountRecoveryScreen() {
 
     setEmail(pendingEmail);
     setErrorMessage(null);
+    setKakaoStatusMessage(null);
     setIsSubmittingEmail(true);
 
     try {
@@ -117,6 +156,38 @@ export function AccountRecoveryScreen() {
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSubmittingEmail(false);
+    }
+  };
+
+  const handleLinkKakao = async () => {
+    if (!canLinkKakao) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setKakaoStatusMessage(null);
+    setIsLinkingKakao(true);
+
+    try {
+      const result = await linkKakaoIdentity();
+
+      if (result.status === 'linked') {
+        await refreshSession();
+        setKakaoStatusMessage(
+          '카카오가 현재 계정의 복구 수단으로 연결되었습니다.',
+        );
+        return;
+      }
+
+      setKakaoStatusMessage(
+        result.status === 'cancelled'
+          ? '카카오 연결이 취소되었습니다.'
+          : '카카오 연결 창이 닫혔습니다.',
+      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsLinkingKakao(false);
     }
   };
 
@@ -155,11 +226,17 @@ export function AccountRecoveryScreen() {
           <View style={styles.statusPanel}>
             <Text style={styles.panelEyebrow}>현재 상태</Text>
             <Text style={styles.panelTitle}>
-              {currentEmail ? '복구 이메일 연결됨' : '익명 기기 계정'}
+              {currentEmail || hasKakaoIdentity
+                ? '복구 수단 연결됨'
+                : '익명 기기 계정'}
             </Text>
             <Text style={styles.panelText}>
               {currentEmail
                 ? `${currentEmail} 주소가 이 계정에 연결되어 있습니다.`
+                : hasKakaoIdentity
+                  ? kakaoNickname
+                    ? `${kakaoNickname} 카카오 계정이 이 기록의 복구 수단으로 연결되어 있습니다.`
+                    : '카카오 계정이 이 기록의 복구 수단으로 연결되어 있습니다.'
                 : isAnonymousUser
                   ? '현재 라이딩 기록은 이 기기의 익명 계정에 안전하게 묶여 있습니다.'
                   : '인증 세션을 확인한 뒤 복구 이메일을 연결할 수 있습니다.'}
@@ -256,6 +333,40 @@ export function AccountRecoveryScreen() {
                   </Text>
                 </View>
               ) : null}
+
+              <View style={styles.kakaoBlock}>
+                <Text style={styles.formLabel}>카카오 복구 수단</Text>
+                <Text style={styles.helperText}>
+                  현재 익명 계정에 카카오를 연결해 기록을 잃지 않도록
+                  준비합니다. 이메일 권한이 없어도 카카오 연결만으로 복구
+                  수단을 만들 수 있습니다.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!canLinkKakao}
+                  onPress={handleLinkKakao}
+                  style={({ pressed }) => [
+                    styles.kakaoButton,
+                    !canLinkKakao ? styles.buttonDisabled : undefined,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  {isLinkingKakao ? (
+                    <ActivityIndicator color="#181600" />
+                  ) : (
+                    <Text style={styles.kakaoButtonText}>
+                      {hasKakaoIdentity
+                        ? '카카오 복구 수단 연결됨'
+                        : '카카오로 복구 수단 연결'}
+                    </Text>
+                  )}
+                </Pressable>
+                {kakaoStatusMessage ? (
+                  <Text style={styles.kakaoStatusText}>
+                    {kakaoStatusMessage}
+                  </Text>
+                ) : null}
+              </View>
 
               {errorMessage ? (
                 <View style={styles.errorPanel}>
@@ -433,6 +544,33 @@ const styles = StyleSheet.create({
   codeBlock: {
     gap: 10,
     marginTop: 14,
+  },
+  kakaoBlock: {
+    borderColor: 'rgba(254, 229, 0, 0.26)',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 18,
+    padding: 14,
+  },
+  kakaoButton: {
+    alignItems: 'center',
+    backgroundColor: '#fee500',
+    borderRadius: 12,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  kakaoButtonText: {
+    color: '#181600',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  kakaoStatusText: {
+    color: '#fde68a',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 19,
   },
   helperText: {
     color: '#9ca3af',
