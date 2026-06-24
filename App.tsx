@@ -8,6 +8,7 @@ import { HomeScreen } from './src/features/sessions/HomeScreen';
 import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
 import { UploadScreen } from './src/features/sessions/UploadScreen';
 import type { RootStackParamList } from './src/navigation/types';
+import { AuthSessionProvider } from './src/services/auth/AuthSessionProvider';
 
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
@@ -32,43 +33,45 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            contentStyle: styles.container,
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen
-            name="Upload"
-            component={UploadScreen}
-            options={{
-              animation: 'slide_from_right',
-              gestureEnabled: true,
+    <AuthSessionProvider>
+      <View style={styles.container}>
+        <NavigationContainer>
+          <Stack.Navigator
+            screenOptions={{
+              contentStyle: styles.container,
               headerShown: false,
-              presentation: 'card',
             }}
-          />
-          <Stack.Screen
-            name="MomentDetail"
-            component={MomentDetailScreen}
-            options={{
-              animation: 'slide_from_right',
-              animationMatchesGesture: true,
-              fullScreenGestureEnabled: false,
-              gestureEnabled: true,
-              gestureDirection: 'horizontal',
-              gestureResponseDistance: { start: 44 },
-              headerShown: false,
-              presentation: 'card',
-            }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-      <StatusBar backgroundColor="#0b0d12" style="light" />
-    </View>
+          >
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="Upload"
+              component={UploadScreen}
+              options={{
+                animation: 'slide_from_right',
+                gestureEnabled: true,
+                headerShown: false,
+                presentation: 'card',
+              }}
+            />
+            <Stack.Screen
+              name="MomentDetail"
+              component={MomentDetailScreen}
+              options={{
+                animation: 'slide_from_right',
+                animationMatchesGesture: true,
+                fullScreenGestureEnabled: false,
+                gestureEnabled: true,
+                gestureDirection: 'horizontal',
+                gestureResponseDistance: { start: 44 },
+                headerShown: false,
+                presentation: 'card',
+              }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+        <StatusBar backgroundColor="#0b0d12" style="light" />
+      </View>
+    </AuthSessionProvider>
   );
 }
 

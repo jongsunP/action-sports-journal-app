@@ -8,6 +8,7 @@ import type {
 } from '../../types';
 import type { SessionVideoAsset } from '../ai';
 import * as FileSystem from 'expo-file-system/legacy';
+import { authenticatedFetch } from '../auth/authenticatedFetch';
 
 type CreateMomentResponse = {
   momentId?: unknown;
@@ -189,7 +190,7 @@ export async function requestUploadTarget(
     return undefined;
   }
 
-  const response = await fetch(uploadTargetsEndpoint, {
+  const response = await authenticatedFetch(uploadTargetsEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -470,7 +471,7 @@ export async function reportUploadTargetFailure({
   }
 
   try {
-    const response = await fetch(`${uploadTargetsEndpoint}/${uploadId}/failure`, {
+    const response = await authenticatedFetch(`${uploadTargetsEndpoint}/${uploadId}/failure`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -514,7 +515,7 @@ export async function finalizeUploadedSourceVideo(
       abortController.abort();
     }, UPLOADED_SOURCE_FINALIZE_TIMEOUT_MS);
 
-    const response = await fetch(`${momentsEndpoint}/from-uploaded-source`, {
+    const response = await authenticatedFetch(`${momentsEndpoint}/from-uploaded-source`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -604,7 +605,7 @@ export async function insertMoment(session: Session, video?: SessionVideoAsset |
     return undefined;
   }
 
-  const response = await fetch(momentsEndpoint, {
+  const response = await authenticatedFetch(momentsEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -653,7 +654,7 @@ export async function uploadMomentSourceVideo(
     type: video.mimeType ?? 'video/quicktime',
   } as unknown as Blob);
 
-  const response = await fetch(`${momentsEndpoint}/${momentId}/source-video`, {
+  const response = await authenticatedFetch(`${momentsEndpoint}/${momentId}/source-video`, {
     method: 'POST',
     body: formData,
   });
@@ -735,7 +736,7 @@ export async function createMomentFromSourceVideo(
     formData.append('thumbnailStoragePath', options.thumbnailStoragePath);
   }
 
-  const response = await fetch(`${momentsEndpoint}/from-source-video`, {
+  const response = await authenticatedFetch(`${momentsEndpoint}/from-source-video`, {
     method: 'POST',
     body: formData,
   });
@@ -779,7 +780,7 @@ export async function updateMomentStatus(
     return undefined;
   }
 
-  const response = await fetch(`${momentsEndpoint}/${momentId}/status`, {
+  const response = await authenticatedFetch(`${momentsEndpoint}/${momentId}/status`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -803,7 +804,7 @@ export async function deleteMoment(momentId: string) {
     return undefined;
   }
 
-  const response = await fetch(`${momentsEndpoint}/${momentId}`, {
+  const response = await authenticatedFetch(`${momentsEndpoint}/${momentId}`, {
     method: 'DELETE',
   });
 
@@ -845,7 +846,7 @@ export async function listMomentsPage(
   const url = query.toString()
     ? `${momentsEndpoint}?${query.toString()}`
     : momentsEndpoint;
-  const response = await fetch(url);
+  const response = await authenticatedFetch(url);
 
   if (!response.ok) {
     const message = await readRemoteErrorMessage(response);

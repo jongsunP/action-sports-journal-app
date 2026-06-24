@@ -1,0 +1,43 @@
+import { supabase } from '../supabase/client';
+
+type AuthenticatedFetchInit = RequestInit & {
+  headers?: HeadersInit;
+};
+
+export async function getAuthHeaders(headers?: HeadersInit) {
+  const mergedHeaders = new Headers(headers);
+
+  if (!supabase) {
+    return mergedHeaders;
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    console.warn(
+      'Supabase auth header lookup failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+    return mergedHeaders;
+  }
+
+  const accessToken = data.session?.access_token;
+
+  if (accessToken) {
+    mergedHeaders.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  return mergedHeaders;
+}
+
+export async function authenticatedFetch(
+  input: RequestInfo | URL,
+  init: AuthenticatedFetchInit = {},
+) {
+  const headers = await getAuthHeaders(init.headers);
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+}
