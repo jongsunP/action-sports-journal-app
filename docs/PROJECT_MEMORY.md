@@ -120,18 +120,31 @@ appropriate owner.
 If the development session can proceed directly and the Founder does not need
 to decide or act, do not add a user-facing action section.
 
-When the Founder asks what remains or asks for current status, answer in time
-order and include both the full remaining list and the immediate next work:
+When the Founder asks what remains or asks for current status, do not list only
+recent chat items. Summarize by ASJ's larger workstreams and order the groups
+by action timing: current/active first, then near-term, later, long-term, and
+completed/past last. Include both the full remaining list and the immediate
+next work:
 
 ```text
-과거:
-현재:
-가까운 미래:
-먼 미래:
+완료된 기반:
+현재 상태:
 바로 앞 작업:
+가까운 후속:
+나중에 해도 좋은 것:
+장기 보관 목록:
 ```
 
 Keep this summary concise and easy to scan.
+For workstream names, prefer paired labels in the form
+`English term(한국어 설명)` when an English term is a known project term. Use
+plain Korean only when there is no useful English project term. Do not force
+awkward Korean translations for technical/product terms.
+Keep backlog/workstream names stable across answers. If a workstream was once
+named in the project memory or conversation, do not silently rename, merge, or
+omit it just because it is not active today. Preserve the same list structure
+so the Founder can recognize continuity over time. If an item is completed,
+blocked, deferred, or split, keep the item visible and mark its status.
 
 When discussing whether to build, frame the answer around validation stages:
 
@@ -244,22 +257,28 @@ Implemented first pass:
 
 - `AccountRecoveryScreen` lets an authenticated anonymous user request a
   recovery email connection through Supabase Auth `updateUser({ email })`.
-- The screen supports entering a Supabase email-change OTP with
-  `verifyOtp({ type: "email_change" })`.
+- The OTP entry / `verifyOtp({ type: "email_change" })` UI was removed after
+  confirming the active Supabase Change Email template is magic-link based.
+  After `updateUser({ email })` succeeds, the screen shows a pending state and
+  asks the user to click the email link, return to the app, and refresh session
+  state.
 - `AuthSessionProvider` exposes narrowly scoped recovery-email request and OTP
   verification helpers while keeping the existing anonymous session lifecycle.
 - `resolveRequestUser(request)` now syncs changed Supabase Auth email/display
   name values into the existing `public.users` row for the same
   `auth_user_id`.
 
-Current QA needed:
+Current Email Recovery result:
 
-- Confirm the Supabase project email template sends an OTP usable in the app,
-  or adjust the template/deep-link strategy before treating recovery as
-  user-ready.
-- Verify that linking an email preserves the same Supabase Auth user id,
-  app `users.id`, Moment ownership, Push token owner, and user-scoped Realtime
-  channel.
+- `parksunl88@nate.com` confirmed `updateUser({ email })` success and email
+  receipt.
+- The Change Email template is magic-link based.
+- Final linking did not complete because the clicked link redirected to
+  `http://localhost:3000/#error=access_denied&error_code=otp_expired...`.
+- Email Recovery is no longer blocked by hosted sender rate limit or the
+  previous already-registered-email test case, but productization needs a
+  redirect URL / deep-link strategy and a QA pass within the link validity
+  window.
 - Reinstall/new-device recovery sign-in is not implemented yet. This first pass
   only links an email to the current anonymous user.
 
@@ -274,9 +293,10 @@ Kakao or SMS feel more natural than email. Email may still have less friction
 than Apple ID for this phase, but it is not automatically the best final
 recovery UX for Korean riders.
 
-Do not implement Kakao, SMS, Apple, Google, or other social providers yet.
-Validate Email Recovery first as the account-preservation baseline, then
-revisit Kakao / Phone during distribution-readiness planning.
+Kakao Account Linking has now been implemented and verified as the first
+successful recovery path. Do not implement SMS, Apple, Google, or Kakao Login
+walls yet. Keep Email Recovery as a baseline/fallback and revisit Phone/SMS
+during distribution-readiness planning.
 
 Kakao recovery/linking decision:
 
@@ -288,12 +308,32 @@ login wall. The intended product shape is linking Kakao to the existing
 anonymous Supabase Auth user so the rider can preserve and recover the same
 account later.
 
-Implementation should wait until the Supabase/Kakao dashboard setup, app
-scheme/deep-link strategy, and ownership-continuity smoke plan are ready.
-The current phase is setup feasibility confirmation, not implementation:
-confirm Supabase Kakao provider availability, Manual Identity Linking,
-Redirect URLs, Kakao Developers app credentials/consent items, and the
-`actionsportsjournal` app scheme before writing Kakao code.
+Kakao implementation is now in place through `linkIdentity`, not
+`signInWithOAuth`, and Build 75 verified standalone iOS OAuth return. Read-only
+Auth/DB checks confirmed the Kakao identity is linked to existing Auth user
+`499d7e71-623c-4b4e-8653-267d72ac3ca6`, mapped to `public.users.id`
+`6b03b289-a6aa-4f26-aa66-6730e1cca2fe`, with push-token owner and Realtime
+basis preserved. The QA account had no existing Moments, so rerun Moment
+ownership continuity later with a pre-existing Moment sample.
+
+## 2026-06-25 Daily Wrap-up
+
+Kakao Recovery / Account Linking is verified on Build 75 and is currently the
+strongest recovery path for ASJ's Korean user context. Email Recovery passed the
+send/magic-link receipt stage with `parksunl88@nate.com`, but final linking is
+not complete because the link opened a localhost redirect after expiry. Email
+Recovery remains a baseline/fallback until redirect/deep-link strategy is
+settled.
+
+Immediate next work:
+
+1. Improve Kakao Linking UI success/failure/cancel states.
+2. Decide whether Kakao `name` / `full_name` should sync to
+   `public.users.display_name`.
+3. Recheck ownership continuity with a user that already has Moments.
+4. Run Foundation Safety Check before adding more Journal / Analysis / Media UX.
+5. Continue External No-Token Finalization and push token account-switch policy
+   when returning to foundation hardening.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 

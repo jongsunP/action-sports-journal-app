@@ -94,18 +94,31 @@ appropriate owner.
 If the development session can proceed directly and the Founder does not need
 to decide or act, do not add a user-facing action section.
 
-When the Founder asks what remains or asks for current status, answer in time
-order and include both the full remaining list and the immediate next work:
+When the Founder asks what remains or asks for current status, do not list only
+recent chat items. Summarize by ASJ's larger workstreams and order the groups
+by action timing: current/active first, then near-term, later, long-term, and
+completed/past last. Include both the full remaining list and the immediate
+next work:
 
 ```text
-과거:
-현재:
-가까운 미래:
-먼 미래:
+완료된 기반:
+현재 상태:
 바로 앞 작업:
+가까운 후속:
+나중에 해도 좋은 것:
+장기 보관 목록:
 ```
 
 Keep this summary concise and easy to scan.
+For workstream names, prefer paired labels in the form
+`English term(한국어 설명)` when an English term is a known project term. Use
+plain Korean only when there is no useful English project term. Do not force
+awkward Korean translations for technical/product terms.
+Keep backlog/workstream names stable across answers. If a workstream was once
+named in the project memory or conversation, do not silently rename, merge, or
+omit it just because it is not active today. Preserve the same list structure
+so the Founder can recognize continuity over time. If an item is completed,
+blocked, deferred, or split, keep the item visible and mark its status.
 
 When discussing whether to build, frame the answer around validation stages:
 
@@ -159,6 +172,67 @@ continuity as well as technical continuity:
 
 ## Current Status
 
+Daily wrap-up, 2026-06-25:
+
+Today closed the core Kakao Recovery / Account Linking E2E path and clarified
+Email Recovery's current boundary. `master` is synced with `origin/master`;
+today's main commits include:
+
+- `f7223d5 feat: add kakao account linking baseline`
+- `3835b0d chore: bump ios build number to 75`
+- `7279197 docs: close kakao account linking qa`
+- `1de94bc docs: record build qa workflow rules`
+- `7404446 docs: settle email recovery smoke status`
+- `fee7291 docs: record email recovery magic link result`
+
+Kakao Recovery / Account Linking:
+
+- Supabase Kakao provider, Manual Identity Linking, anonymous sign-ins, Kakao
+  Developers redirect URI, Supabase redirect URL, and `actionsportsjournal`
+  scheme are configured.
+- Build 75 E2E succeeded after Kakao consent/scope settings were corrected.
+- Kakao identity `9aaaf219-bdf9-4fe5-91df-1a59ec57d558` is attached to existing
+  Auth user `499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+- No separate new Auth user was observed in the QA window.
+- `public.users.id` `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`, push token
+  ownership, and Realtime basis
+  `analysis-updates:auth:499d7e71-623c-4b4e-8653-267d72ac3ca6` remained
+  consistent.
+- The QA user had `moments` count `0`, so rerun ownership continuity later with
+  an account that already has Moments.
+
+Email Recovery:
+
+- `parksunl88@nate.com` confirmed `updateUser({ email })` success, email receipt,
+  and Supabase Change Email as a magic-link flow.
+- Final link completion failed because the clicked link redirected to
+  `http://localhost:3000/#error=access_denied&error_code=otp_expired...`.
+- Email Recovery is no longer blocked by hosted sender rate limits or the
+  earlier `email_exists` test case, but productization needs redirect URL /
+  deep-link strategy and link-validity-window QA.
+- Keep Email Recovery as baseline/fallback; Kakao Recovery is currently the
+  verified recovery path.
+
+Response/collaboration rules updated:
+
+- Status answers should use stable ASJ workstream labels and include both the
+  full remaining list and immediate next work.
+- Build decisions should be framed by validation stage.
+- After a build is completed, give the Founder QA steps first and wait for QA
+  results before sending the next development prompt.
+- Default rhythm: design -> implementation -> commit/push -> build only when
+  needed.
+- Group related work to avoid unnecessary CTO/development-session bouncing, but
+  pause for alignment before decisions, external console changes, DB migrations,
+  EAS builds, paid work, or large structural changes.
+
+Next start point:
+
+Kakao Linking UI success/failure/cancel-state polish. After that, consider
+Kakao `name` / `full_name` -> `public.users.display_name` sync, ownership smoke
+with a user that already has Moments, Foundation Safety Check, External
+No-Token Finalization, and push token account-switch policy.
+
 Build 74 Push QA / current handoff, 2026-06-24:
 
 Build 74 closes the last known Auth Phase 2 QA observation. Push delivery was
@@ -175,14 +249,14 @@ registration when the auth owner becomes available, retrying eligible failures
 on foreground, and best-effort ensuring registration at upload start. Upload
 continues even if registration fails.
 
-Current milestone status:
+Historical milestone status at Build 74 closeout:
 
 - Upload Part 1 is closed.
 - Auth Phase 1 is closed.
 - Auth Phase 2 is closed for the device-first anonymous identity baseline.
 - Push Observability P2 is complete for internal/dev smoke QA.
-- Current `master` is 3 commits ahead of `origin/master`.
-- Next main product work should be Email Recovery / Account Linking QA.
+- Later work moved through Email Recovery and Kakao Account Linking; see the
+  daily wrap-up above for the current starting point.
 
 Push Observability P2, 2026-06-24:
 
@@ -227,7 +301,7 @@ email/display name fields into that existing app user row. This is meant to
 preserve Moment ownership while allowing the anonymous Supabase Auth user to
 become email-recoverable.
 
-Next QA/start point:
+Email Recovery QA history:
 
 - Email Recovery E2E is blocked by Supabase hosted email rate limits. The
   post-cooldown single retry with `parksunl7@naver.com` returned
@@ -274,24 +348,17 @@ Next QA/start point:
 - Implement actual reinstall/new-device recovery sign-in only after the current
   account-linking path is verified.
 
-Long-term recovery caution:
+Recovery strategy note:
 
-Do not implement Kakao, Phone/SMS, Apple, Google, or other social account
-providers in the current pass. Email Recovery is the baseline recovery path for
-validating ownership continuity and account linking first. Kakao Account
-Linking / Kakao Recovery remains a strong candidate before distribution because
-ASJ targets Korean mobile riders and has Instagram-centered inflow, where Kakao
-or SMS may feel more natural than email. Revisit Kakao / Phone after Email
-Recovery is stable. Because Email Recovery E2E is blocked on hosted email rate
-limits, keep Kakao Account Linking / Recovery as a parallel candidate for Korean
-user recovery UX planning.
+Kakao has now been implemented and verified as an account-linking/recovery path,
+not a login wall. Email Recovery remains useful as a baseline/fallback, but
+productization needs redirect/deep-link work. Phone/SMS, Apple, and Google are
+still not implemented.
 
-Kakao implementation caution:
+Kakao implementation history:
 
-Do not implement Kakao yet, and do not use `signInWithOAuth` to create a new
-login wall or a new Supabase user. The target flow is linking Kakao to the
-currently authenticated anonymous Supabase Auth user, likely through
-`linkIdentity({ provider: "kakao" })` after dashboard setup is confirmed.
+Kakao is implemented through `linkIdentity({ provider: "kakao" })`; do not
+replace it with `signInWithOAuth` or turn it into a login wall.
 
 Before any Kakao code work, verify:
 
@@ -311,16 +378,16 @@ Before any Kakao code work, verify:
    anonymous `auth_user_id`, `public.users.id`, Moment ownership, push token
    ownership, and user-scoped Realtime basis.
 
-Next start point:
+Kakao E2E history:
 
-Prepare an EAS preview build only when ready to run Kakao deep-link E2E. The
+An EAS preview build was prepared as Build 75. The earlier
 local/Simulator check passed: Expo Go on iPhone 17 Simulator launched the app,
 entered `AccountRecoveryScreen`, rendered the existing Email Recovery section
 and the Kakao recovery-method section, opened the iOS OAuth confirmation prompt
 for `kauth.kakao.com`, and returned to the app with the cancel message after
-cancel. Deep-link completion is still unverified.
+cancel. Build 75 later verified deep-link completion.
 
-Remaining Kakao E2E checks:
+Build 75 Kakao E2E checks completed:
 
 1. `actionsportsjournal://` deep-link return works in iOS standalone/EAS
    preview.

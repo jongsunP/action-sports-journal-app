@@ -44,18 +44,31 @@ cd ~/repository/action-sports-journal-app
 <command>
 ```
 
-When the user asks what remains or asks for current status, answer in time
-order and include both the full remaining list and the immediate next work:
+When the user asks what remains or asks for current status, do not list only
+recent chat items. Summarize by ASJ's larger workstreams and order the groups
+by action timing: current/active first, then near-term, later, long-term, and
+completed/past last. Include both the full remaining list and the immediate
+next work:
 
 ```text
-과거:
-현재:
-가까운 미래:
-먼 미래:
+완료된 기반:
+현재 상태:
 바로 앞 작업:
+가까운 후속:
+나중에 해도 좋은 것:
+장기 보관 목록:
 ```
 
 Keep this summary concise and easy to scan.
+For workstream names, prefer paired labels in the form
+`English term(한국어 설명)` when an English term is a known project term. Use
+plain Korean only when there is no useful English project term. Do not force
+awkward Korean translations for technical/product terms.
+Keep backlog/workstream names stable across answers. If a workstream was once
+named in the project memory or conversation, do not silently rename, merge, or
+omit it just because it is not active today. Preserve the same list structure
+so the Founder can recognize continuity over time. If an item is completed,
+blocked, deferred, or split, keep the item visible and mark its status.
 
 When discussing whether to build, frame the answer around validation stages:
 

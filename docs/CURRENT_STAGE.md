@@ -14,6 +14,35 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Daily wrap-up, 2026-06-25:
+
+Kakao Recovery / Account Linking is the verified recovery path as of Build 75.
+Supabase Kakao provider, Manual Identity Linking, anonymous sign-ins, Kakao
+Developers redirect URI, and the `actionsportsjournal` app scheme are in place.
+Build 75 confirmed standalone iOS OAuth return and connected-state UX. Read-only
+Auth/DB checks confirmed Kakao identity
+`9aaaf219-bdf9-4fe5-91df-1a59ec57d558` is attached to existing Auth user
+`499d7e71-623c-4b4e-8653-267d72ac3ca6`; no separate new Auth user was observed;
+`public.users.id` `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`, push token owner,
+and Realtime channel basis
+`analysis-updates:auth:499d7e71-623c-4b4e-8653-267d72ac3ca6` stayed consistent.
+The QA user had no existing Moments, so Moment ownership continuity should be
+rechecked later with a pre-existing Moment sample.
+
+Email Recovery is no longer blocked at the email-send/rate-limit step. The fresh
+test email `parksunl88@nate.com` confirmed `updateUser({ email })` success,
+email receipt, and magic-link template behavior. Final linking did not complete
+because the clicked link landed on
+`http://localhost:3000/#error=access_denied&error_code=otp_expired...`. Email
+Recovery remains a baseline/fallback path and needs redirect URL / deep-link
+strategy plus a link-validity-window QA pass before productization.
+
+Next immediate product work: improve Kakao Linking UI state clarity for success,
+failure, and cancellation. Near follow-ups are Kakao display-name metadata sync
+decision, ownership continuity with a user that already has Moments, Foundation
+Safety Check, External No-Token Finalization, and push token account-switch
+policy.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73
