@@ -5731,7 +5731,9 @@ async function sendAnalysisCompletedPushNotification({
     });
 
     if (!pushResponse.ok) {
-      const errorText = await pushResponse.text().catch(() => "");
+      const errorText = sanitizeExpoPushText(
+        await pushResponse.text().catch(() => ""),
+      );
       await updatePushDeliveryAttempt(client, deliveryAttemptId, {
         error_message:
           errorText || `Expo push send failed with ${pushResponse.status}`,
@@ -6203,7 +6205,9 @@ async function checkPushDeliveryAttemptReceipts({
   const checkedAt = new Date().toISOString();
 
   if (!receiptResponse.ok) {
-    const errorText = await receiptResponse.text().catch(() => "");
+    const errorText = sanitizeExpoPushText(
+      await receiptResponse.text().catch(() => ""),
+    );
     await updatePushDeliveryAttempt(client, attemptId, {
       error_message:
         errorText || `Expo push receipt check failed with ${receiptResponse.status}`,
@@ -6337,12 +6341,13 @@ function summarizeExpoPushTickets(
 
     if (item.status === "error") {
       errorCount += 1;
-      const message =
-        nullableString(item.message) ?? "unknown Expo push ticket error";
+      const message = sanitizeExpoPushText(
+        nullableString(item.message) ?? "unknown Expo push ticket error",
+      );
       errors.push(message);
       if (tokenRow) {
         tokenResults.push({
-          details: readRecordValue(item.details),
+          details: sanitizeExpoPushDetails(item.details),
           maskedExpoPushToken: maskExpoPushToken(tokenRow.expo_push_token),
           message,
           status: "error",
@@ -6415,11 +6420,12 @@ function summarizeExpoPushReceipts({
     }
 
     errorCount += 1;
-    const message =
-      nullableString(item.message) ?? "unknown Expo push receipt error";
+    const message = sanitizeExpoPushText(
+      nullableString(item.message) ?? "unknown Expo push receipt error",
+    );
     errors.push(message);
     receiptResults.push({
-      details: readRecordValue(item.details),
+      details: sanitizeExpoPushDetails(item.details),
       maskedExpoPushToken: tokenResult?.maskedExpoPushToken,
       message,
       status: "error" as const,
@@ -6483,6 +6489,27 @@ function readRecordValue(value: unknown) {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function sanitizeExpoPushText(value: string) {
+  return value.replace(/Expo(?:nent)?PushToken\[[^\]]+\]/g, (token) =>
+    maskExpoPushToken(token),
+  );
+}
+
+function sanitizeExpoPushDetails(value: unknown) {
+  const record = readRecordValue(value);
+
+  if (!record) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(record).map(([key, entry]) => [
+      key,
+      typeof entry === "string" ? sanitizeExpoPushText(entry) : entry,
+    ]),
+  );
 }
 
 function readExpoPushErrorCode(details: unknown) {
