@@ -101,6 +101,26 @@ Start Auth Phase 2 from app login/session wiring and user-scoped realtime/push
 behavior. Do not treat the internal default user's Moments as authenticated
 content.
 
+Auth Phase 2 identity strategy update, 2026-06-24:
+
+Use Supabase Anonymous Sign-in as the device-first identity path. A smoke test
+successfully created an anonymous Supabase Auth user, issued an access token
+(not recorded), confirmed anonymous JWT/user metadata, called BFF
+`GET /api/moments` as `authMode=authenticated`, and created a matching
+`public.users.auth_user_id` row. The authenticated anonymous user saw `0`
+Moments, confirming separation from the internal default user's Moments.
+
+Cleanup candidates from the smoke:
+
+```text
+auth.users anonymous user id: b37f7d2f-199d-44f4-9718-a96d665f497f
+public.users id: ff32ae87-5d69-43d3-ba9d-68c3d9bd8638
+```
+
+Next Auth implementation should create/restore an anonymous session on first
+launch, then treat Email Recovery as the first account-linking feature. Kakao,
+Google, and Apple remain secondary recovery/social options.
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build.

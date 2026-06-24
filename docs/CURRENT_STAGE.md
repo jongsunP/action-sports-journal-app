@@ -85,6 +85,29 @@ is now request-scoped, and then focus on app login/session UX plus private
 Realtime and push-token ownership behavior. Do not merge default-user content
 into authenticated sessions.
 
+Auth Phase 2 identity strategy update, 2026-06-24:
+
+Device-first identity should use Supabase Anonymous Sign-in. The smoke test
+confirmed that `signInAnonymously()` can issue an anonymous access token, the
+JWT/user is anonymous, the BFF resolves the request as
+`authMode=authenticated`, and `public.users` mapping is created through
+`resolveRequestUser()`. Authenticated `/api/moments` returned `0` moments, so
+default-user Moments stayed separate. The access token was not recorded.
+
+Cleanup candidates from the smoke:
+
+```text
+auth.users anonymous user id: b37f7d2f-199d-44f4-9718-a96d665f497f
+public.users id: ff32ae87-5d69-43d3-ba9d-68c3d9bd8638
+```
+
+Current identity direction:
+
+- Device-first = Supabase Anonymous Sign-in.
+- Email Recovery = first follow-up account-linking path.
+- Kakao / Google / Apple = secondary recovery/social options.
+- No-token default user remains internal QA only.
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build and supersedes the older Build 55

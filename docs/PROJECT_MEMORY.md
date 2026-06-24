@@ -94,6 +94,50 @@ Auth Phase 2 starts from:
 - External no-token policy.
 - Push token account-switch policy.
 
+## 2026-06-24 Auth Phase 2 Identity Strategy / Anonymous Smoke
+
+Decision:
+
+Device-first identity should use Supabase Anonymous Sign-in. Email recovery is
+the next account-linking layer. Kakao, Google, and Apple should be treated as
+secondary recovery/social options, not the first identity requirement.
+
+Why:
+
+Action Sports Journal should let a rider reach the first upload experience
+without a login wall, while still giving every external user a real Supabase
+Auth identity, Bearer token, user-owned API boundary, push-token owner, and
+user-scoped Realtime channel. This avoids extending the no-token internal
+default user into an external product mode.
+
+Anonymous Sign-in smoke result:
+
+- `signInAnonymously()` succeeded.
+- An anonymous access token was issued. The token itself was intentionally not
+  recorded.
+- JWT/user metadata confirmed `is_anonymous=true`.
+- The BFF resolved the request as `authMode=authenticated`.
+- `public.users` mapping was created for the anonymous Supabase Auth user.
+- Authenticated `GET /api/moments` returned `0` moments.
+- Default-user Moments remained separate.
+
+Cleanup candidates from the smoke:
+
+```text
+auth.users anonymous user id: b37f7d2f-199d-44f4-9718-a96d665f497f
+public.users id: ff32ae87-5d69-43d3-ba9d-68c3d9bd8638
+```
+
+Do not clean these rows up without explicit approval. They are recorded so a
+future cleanup can be precise.
+
+Next implementation direction:
+
+Add device-first anonymous session creation in the app session lifecycle, then
+keep Email Recovery as the first user-facing account-linking path. Kakao,
+Google, and Apple come after the device-first + email recovery baseline is
+stable.
+
 ## 2026-06-23 Build 65 Upload Recovery Checkpoint
 
 Latest current build:

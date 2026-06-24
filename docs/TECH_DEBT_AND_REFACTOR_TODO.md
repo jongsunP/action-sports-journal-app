@@ -1547,6 +1547,40 @@ Future work:
 Do not start broad social/sharing work before the user ownership boundary,
 session lifecycle, and private realtime behavior are settled.
 
+Auth Phase 2 Identity Strategy, 2026-06-24:
+
+Device-first identity should be implemented with Supabase Anonymous Sign-in,
+not with the no-token default user. The anonymous smoke test succeeded:
+
+- `signInAnonymously()` issued an anonymous access token.
+- JWT/user metadata confirmed `is_anonymous=true`.
+- The BFF resolved the request as `authMode=authenticated`.
+- `public.users.auth_user_id` mapping was created.
+- Authenticated `/api/moments` returned `0` moments.
+- Default-user Moments stayed separate.
+- The access token was intentionally not recorded.
+
+Cleanup candidates:
+
+```text
+auth.users anonymous user id: b37f7d2f-199d-44f4-9718-a96d665f497f
+public.users id: ff32ae87-5d69-43d3-ba9d-68c3d9bd8638
+```
+
+Identity roadmap:
+
+1. Device-first: Supabase Anonymous Sign-in.
+2. Recovery: Email linking / magic-link style recovery.
+3. Secondary social recovery: Kakao, then Google, then Apple.
+
+Technical debt to track:
+
+- Anonymous user cleanup/retention policy.
+- Recovery identity linking and conflict handling.
+- Social provider linking order and App Store Sign in with Apple implications.
+- External no-token default-user fallback must remain disabled once anonymous
+  device-first identity is ready.
+
 ### 9. Push Deep Link
 
 Current state:
