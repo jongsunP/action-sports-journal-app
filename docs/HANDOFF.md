@@ -37,6 +37,20 @@ points to a working but awkward mobile interaction, propose the more app-like
 structure first. A feature being technically functional is not enough; it
 should feel natural on iPhone.
 
+Validation cost principle:
+
+Use the cheapest trustworthy validation path first. Do not run a new build just
+because building is possible; build only when the behavior cannot be validated
+well enough through the simulator, local dev path, Expo/dev-client path, or
+another lower-cost route. If physical-device behavior is required, still prefer
+non-build verification when it is technically sufficient.
+
+For upload and analysis work, do not replace the product path with mock data.
+The app should still call the backend API and exercise the real server flow.
+When the test target is not AI quality itself, it is acceptable to temporarily
+bypass only the paid AI provider call and return a realistic server-side OK
+result so the pipeline can be tested without unnecessary AI cost.
+
 When the user asks for "today's wrap-up", "정리", or "handoff", include product
 continuity as well as technical continuity:
 
@@ -73,6 +87,30 @@ Current milestone status:
 - Auth Phase 1 is closed.
 - Auth Phase 2 is closed for the device-first anonymous identity baseline.
 - Next main product work should be Email Recovery / account linking.
+
+Email Recovery implementation start, 2026-06-24:
+
+The first account-linking pass is now in code. It adds an
+`AccountRecoveryScreen` opened from the Home header menu, plus auth-provider
+helpers for requesting a recovery email and verifying the email-change OTP.
+This treats recovery as a way to preserve the current anonymous rider account,
+not as a pre-upload login wall.
+
+Server ownership behavior was also tightened: when `resolveRequestUser(request)`
+resolves an existing `users.auth_user_id`, it now syncs changed Supabase Auth
+email/display name fields into that existing app user row. This is meant to
+preserve Moment ownership while allowing the anonymous Supabase Auth user to
+become email-recoverable.
+
+Next QA/start point:
+
+- Confirm the Supabase Auth email template sends a code that works with the
+  in-app `email_change` OTP form, or decide whether this flow should use a
+  deep link instead.
+- Link an email on a fresh anonymous Build and verify the same Auth user/app
+  user/Moment/Push/Realtime ownership continues after linking.
+- Implement actual reinstall/new-device recovery sign-in only after the current
+  account-linking path is verified.
 
 Auth Phase 1 server ownership closeout, 2026-06-24:
 

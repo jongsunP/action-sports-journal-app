@@ -26,6 +26,26 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Email Recovery / Account Linking QA - 2026-06-24
+
+The first implementation links a recovery email to the current authenticated
+anonymous Supabase user. It does not yet implement reinstall/new-device
+recovery sign-in.
+
+TODO before calling Email Recovery complete:
+
+1. Verify Supabase email template behavior for `updateUser({ email })`.
+   The in-app UI expects a 6-digit `email_change` OTP. If the project template
+   only provides a magic link, choose and implement the app deep-link strategy
+   before user QA.
+2. Confirm email linking keeps the same Supabase Auth user id and the same
+   `public.users.id`.
+3. Confirm existing Moments, upload targets, push tokens, and Realtime channel
+   ownership stay under the linked user after email verification.
+4. Add the actual recovery sign-in path for reinstall/new-device restore after
+   account linking is verified.
+5. Keep no-token default user fallback internal-only throughout this work.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:

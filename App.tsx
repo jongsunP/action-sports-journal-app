@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { AppState, StyleSheet, View } from 'react-native';
 
+import { AccountRecoveryScreen } from './src/features/account/AccountRecoveryScreen';
 import { HomeScreen } from './src/features/sessions/HomeScreen';
 import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
 import { UploadScreen } from './src/features/sessions/UploadScreen';
@@ -128,6 +129,16 @@ export default function App() {
             }}
           >
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="AccountRecovery"
+              component={AccountRecoveryScreen}
+              options={{
+                animation: 'slide_from_right',
+                gestureEnabled: true,
+                headerShown: false,
+                presentation: 'card',
+              }}
+            />
             <Stack.Screen
               name="Upload"
               component={UploadScreen}

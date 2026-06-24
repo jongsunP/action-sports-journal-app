@@ -47,6 +47,36 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## Validation Cost / Build Policy
+
+ASJ should validate product behavior through the cheapest trustworthy path
+before spending build time, device QA time, or paid AI API calls.
+
+This does not mean weakening validation or replacing the product with mock
+data. The goal is to keep the real app and backend path intact while avoiding
+unnecessary expensive steps.
+
+Policy:
+
+- Build only when a build is genuinely needed.
+- If a behavior can be checked in the simulator, check it there first.
+- If a physical iPhone must be used but an EAS build is not required, prefer
+  the non-build path first.
+- For upload or analysis pipeline work, keep the real app -> backend API ->
+  server flow whenever possible.
+- To control cost, temporarily bypass only the paid AI provider call when the
+  AI result content is not the test target.
+- Do not confuse AI-provider bypass with mock-data testing. The backend should
+  still receive real requests and return a realistic success response for the
+  pipeline stage being tested.
+
+Principle:
+
+```text
+Validate like the real product, but spend build and AI cost only when they are
+the best next move.
+```
+
 ## 2026-06-24 Build 74 Push QA / Auth Phase 2 Closeout
 
 Build 74 resolved the remaining Auth Phase 2 Push observation. Build 73 had
@@ -74,6 +104,35 @@ Next product direction:
 Start Email Recovery / account linking next. Keep Supabase Anonymous Sign-in as
 the device-first identity baseline. Do not turn the no-token internal default
 user fallback into an external user mode.
+
+## 2026-06-24 Email Recovery / Account Linking Start
+
+Email Recovery implementation has started from the device-first anonymous
+identity baseline. This is intentionally not a login wall. The first user-facing
+surface is a recovery/account-linking screen opened from the Home header menu.
+
+Implemented first pass:
+
+- `AccountRecoveryScreen` lets an authenticated anonymous user request a
+  recovery email connection through Supabase Auth `updateUser({ email })`.
+- The screen supports entering a Supabase email-change OTP with
+  `verifyOtp({ type: "email_change" })`.
+- `AuthSessionProvider` exposes narrowly scoped recovery-email request and OTP
+  verification helpers while keeping the existing anonymous session lifecycle.
+- `resolveRequestUser(request)` now syncs changed Supabase Auth email/display
+  name values into the existing `public.users` row for the same
+  `auth_user_id`.
+
+Current QA needed:
+
+- Confirm the Supabase project email template sends an OTP usable in the app,
+  or adjust the template/deep-link strategy before treating recovery as
+  user-ready.
+- Verify that linking an email preserves the same Supabase Auth user id,
+  app `users.id`, Moment ownership, Push token owner, and user-scoped Realtime
+  channel.
+- Reinstall/new-device recovery sign-in is not implemented yet. This first pass
+  only links an email to the current anonymous user.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 

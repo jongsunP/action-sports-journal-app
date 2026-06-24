@@ -1795,10 +1795,7 @@ export function HomeScreen() {
   };
 
   const handleOpenProfile = () => {
-    Alert.alert(
-      '마이페이지',
-      '계정과 설정 화면은 이후 단계에서 연결할 예정입니다.',
-    );
+    navigation.navigate('AccountRecovery');
   };
 
   const renderHomeTab = () => (

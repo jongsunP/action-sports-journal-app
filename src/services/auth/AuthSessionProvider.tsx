@@ -8,6 +8,10 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 
+import {
+  requestRecoveryEmailLink,
+  verifyRecoveryEmailOtp,
+} from './accountRecovery';
 import { getAuthMode, type AuthMode } from './authPolicy';
 import { supabase } from '../supabase/client';
 
@@ -16,10 +20,15 @@ type AuthSessionState = {
   authMode: AuthMode;
   isAuthenticated: boolean;
   isLoading: boolean;
+  requestRecoveryEmailLink: (email: string) => Promise<void>;
   refreshSession: () => Promise<Session | null>;
   session: Session | null;
   signOut: () => Promise<void>;
   user: User | null;
+  verifyRecoveryEmailOtp: (params: {
+    email: string;
+    token: string;
+  }) => Promise<Session | null>;
 };
 
 const AuthSessionContext = createContext<AuthSessionState | undefined>(undefined);
@@ -127,6 +136,17 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       }),
       isAuthenticated: Boolean(session?.access_token),
       isLoading,
+      requestRecoveryEmailLink: async (email: string) => {
+        const user = await requestRecoveryEmailLink(email);
+        setSession((currentSession) =>
+          currentSession
+            ? {
+                ...currentSession,
+                user,
+              }
+            : currentSession,
+        );
+      },
       refreshSession: async () => {
         if (!supabase) {
           return null;
@@ -162,6 +182,16 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         setSession(null);
       },
       user: session?.user ?? null,
+      verifyRecoveryEmailOtp: async ({ email, token }) => {
+        const nextSession = await verifyRecoveryEmailOtp({ email, token });
+
+        if (nextSession) {
+          setSession(nextSession);
+          return nextSession;
+        }
+
+        return null;
+      },
     }),
     [isLoading, session],
   );

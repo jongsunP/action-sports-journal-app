@@ -6018,7 +6018,7 @@ async function resolveRequestUser(
   const now = new Date().toISOString();
   const { data: existingUser, error: selectError } = await client
     .from("users")
-    .select("id")
+    .select("id, display_name, email")
     .eq("auth_user_id", authUserId)
     .maybeSingle();
 
@@ -6027,6 +6027,42 @@ async function resolveRequestUser(
   }
 
   if (existingUser?.id) {
+    const existingEmail =
+      typeof existingUser.email === "string" ? existingUser.email : null;
+    const existingDisplayName =
+      typeof existingUser.display_name === "string"
+        ? existingUser.display_name
+        : null;
+    const nextProfilePatch: {
+      display_name?: string | null;
+      email?: string | null;
+      updated_at?: string;
+    } = {};
+
+    if (email && existingEmail !== email) {
+      nextProfilePatch.email = email;
+    }
+
+    if (displayName && existingDisplayName !== displayName) {
+      nextProfilePatch.display_name = displayName;
+    }
+
+    if (Object.keys(nextProfilePatch).length > 0) {
+      const { error: updateError } = await client
+        .from("users")
+        .update({
+          ...nextProfilePatch,
+          updated_at: now,
+        })
+        .eq("id", existingUser.id as string);
+
+      if (updateError) {
+        throw new Error(
+          `Failed to sync auth user profile: ${updateError.message}`,
+        );
+      }
+    }
+
     logResolvedRequestUser({
       authMode: "authenticated",
       authUserId,

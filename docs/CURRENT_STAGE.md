@@ -47,6 +47,20 @@ user path as an external user mode. Keep Push ticket persistence / receipt
 tracking as a later observability enhancement only if delivery becomes unclear
 again.
 
+Email Recovery first implementation note, 2026-06-24:
+
+The first recovery/account-linking surface has been added. Home's header menu
+now opens `AccountRecoveryScreen`, where the current authenticated anonymous
+user can request a recovery email link and enter the email-change OTP. This
+uses Supabase Auth's anonymous-user conversion path (`updateUser({ email })`
+plus `verifyOtp` with `email_change`) and keeps anonymous sign-in as the
+device-first baseline.
+
+Server-side, `resolveRequestUser(request)` now updates the existing
+`public.users` profile email/display name when the bearer-token Supabase Auth
+user changes, instead of creating a new app user. QA still needs to verify the
+email template/OTP behavior and confirm ownership continuity after linking.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the server-side ownership boundary. The BFF now
