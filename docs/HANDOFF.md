@@ -249,6 +249,11 @@ build after code/config changes, but do not build during planning.
 
 Kakao linkIdentity implementation plan:
 
+- Implementation readiness check: current dependencies do not include
+  `expo-web-browser`, `expo-auth-session`, or `expo-linking`. Add only the
+  packages actually needed for the chosen OAuth/deep-link handling path.
+  `app.json` currently has no `scheme`; adding `scheme: "actionsportsjournal"`
+  is required for standalone deep-link return and will affect native app config.
 - Recommended screen structure: extend the existing `AccountRecoveryScreen` for
   the first pass. It is already opened from the Home header menu, already framed
   as account preservation rather than login, and already has access to
