@@ -18,12 +18,18 @@ const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AnalysisPushRegistration() {
-  const { authMode } = useAuthSession();
+  const { authMode, user } = useAuthSession();
+  const authOwnerKey =
+    authMode === 'authenticated' && user?.id
+      ? `authenticated:${user.id}`
+      : authMode === 'internalFallback'
+        ? 'internalFallback'
+        : null;
 
   useEffect(() => {
     if (
       !ENABLE_ANALYSIS_PUSH_NOTIFICATIONS ||
-      (authMode !== 'authenticated' && authMode !== 'internalFallback')
+      !authOwnerKey
     ) {
       return;
     }
@@ -38,7 +44,7 @@ function AnalysisPushRegistration() {
           error instanceof Error ? error.message : 'Unknown error',
         );
       });
-  }, [authMode]);
+  }, [authOwnerKey]);
 
   return null;
 }

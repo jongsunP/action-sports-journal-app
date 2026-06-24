@@ -303,6 +303,21 @@ app.post("/api/push-tokens", async (request, response) => {
     const now = new Date().toISOString();
     const requestUser = await resolveRequestUser(request);
     const userId = requestUser.userId;
+    const { data: existingToken, error: existingTokenError } = await client
+      .from("device_push_tokens")
+      .select("user_id")
+      .eq("expo_push_token", expoPushToken)
+      .maybeSingle();
+
+    if (existingTokenError) {
+      throw new Error(
+        `Failed to inspect existing push token owner: ${existingTokenError.message}`,
+      );
+    }
+
+    const previousUserId =
+      typeof existingToken?.user_id === "string" ? existingToken.user_id : null;
+    const ownerChanged = Boolean(previousUserId && previousUserId !== userId);
     const { error } = await client
       .from("device_push_tokens")
       .upsert(
@@ -322,6 +337,15 @@ app.post("/api/push-tokens", async (request, response) => {
     if (error) {
       throw new Error(`Failed to upsert device push token: ${error.message}`);
     }
+
+    console.info("[push_token]", {
+      authMode: requestUser.authMode,
+      event: "registered_push_token",
+      expoPushToken: maskExpoPushToken(expoPushToken),
+      ownerChanged,
+      previousUserId,
+      userId,
+    });
 
     response.json({ ok: true });
   } catch (error) {
@@ -5883,6 +5907,14 @@ function readBearerToken(request: express.Request) {
 
   const match = header.match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() || null;
+}
+
+function maskExpoPushToken(token: string) {
+  if (token.length <= 12) {
+    return "***";
+  }
+
+  return `${token.slice(0, 8)}...${token.slice(-4)}`;
 }
 
 function readStringUserMetadata(value: unknown) {
