@@ -163,6 +163,16 @@ Next QA/start point:
   SMTP.
 - Next Email Recovery decision: inspect Supabase Auth email rate-limit/project
   policy, or evaluate custom SMTP before any more E2E attempts.
+- Rate-limit judgment: Supabase's built-in Auth email sender is currently a
+  low-limit demo sender. Official docs list email-triggering endpoints,
+  including `/auth/v1/user` for email updates, at 2 emails/hour project-wide
+  with the built-in provider. This limit is adjustable only with custom SMTP.
+  Do not assume a Free -> Pro upgrade alone resolves the blocker.
+- Custom SMTP is not urgent unless ASJ commits to email recovery as a
+  distribution path. If pursued, evaluate Resend, Postmark, AWS SES, SendGrid,
+  Brevo, or Mailtrap for sandbox testing, then configure sender domain,
+  SPF/DKIM/DMARC, SMTP credentials, Supabase custom SMTP, rate limits, and
+  provider delivery logs.
 - Link an email on a fresh anonymous Build and verify the same Auth user/app
   user/Moment/Push/Realtime ownership continues after linking.
 - Implement actual reinstall/new-device recovery sign-in only after the current

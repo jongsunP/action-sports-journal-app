@@ -124,6 +124,35 @@ completion is blocked by Supabase hosted email rate limits. Add custom SMTP to
 the recovery readiness checklist, or decide that Email Recovery remains a
 baseline-only path while Kakao/Phone recovery is evaluated for Korean-market UX.
 
+Supabase email rate-limit / custom SMTP judgment:
+
+Supabase's built-in Auth email provider is not a production recovery path for
+ASJ. Official docs describe the built-in sender as a low-limit demonstration
+service, currently limited to 2 email-triggering requests per hour project-wide
+for endpoints including `/auth/v1/user` when updating a user's email address.
+That is exactly the Email Recovery `updateUser({ email })` path. The email-send
+limit is only adjustable with custom SMTP; upgrading plan alone should not be
+treated as the fix unless Supabase support explicitly confirms otherwise.
+
+Custom SMTP would move sending to ASJ's chosen email provider and starts with a
+low Supabase-side limit, then can be adjusted in Auth Rate Limits. Minimum setup
+items:
+
+1. Auth sending domain or subdomain.
+2. SMTP provider account, host, port, username, and password.
+3. From address and sender name.
+4. SPF, DKIM, and DMARC records.
+5. Supabase Auth custom SMTP configuration.
+6. Auth Rate Limits value aligned with the provider's allowed sending volume.
+7. Auth logs plus provider delivery logs for E2E smoke.
+
+Candidate services to evaluate: Resend, Postmark, AWS SES, SendGrid, Brevo, or
+Mailtrap for sandbox-only testing. For ASJ's current stage, do not rush custom
+SMTP solely to finish one smoke test. Keep Email Recovery as the baseline
+account-linking structure, evaluate Kakao Recovery in parallel for Korean user
+fit, and add custom SMTP only when email recovery is selected as a real
+distribution path or repeated QA needs reliable email delivery.
+
 Future recovery backlog:
 
 - Keep Email Recovery as the current baseline for validating account
