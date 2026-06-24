@@ -133,6 +133,35 @@ order and include both the full remaining list and the immediate next work:
 
 Keep this summary concise and easy to scan.
 
+When discussing whether to build, frame the answer around validation stages:
+
+- If simulator/local verification remains, say that first and avoid a build.
+- If simulator/local verification is complete and only standalone-device
+  behavior remains, say clearly: "코드 구현과 시뮬레이터에서 가능한 확인은 끝났고,
+  이제 실제 standalone 빌드로 실기기 E2E를 검증할 차례입니다."
+- Do not describe this as "not working" when the actual meaning is "not yet
+  verifiable without a build."
+
+Default work rhythm:
+
+```text
+설계 단계
+→ 구현
+→ 커밋/푸시 등 코드 반영
+→ 필요할 때만 빌드
+```
+
+Avoid bouncing too frequently between the CTO session and development session.
+Group related development actions together, but do not ask a development
+session to run all the way through irreversible decisions, external console
+settings, or builds without CTO/user alignment. Pause only at meaningful
+decision points, risk points, or when the user explicitly asks.
+
+After a development session reports that a build is complete, do not immediately
+send a new development-session prompt. First give the Founder only the QA steps
+needed for that build and wait for the Founder’s QA result. After the Founder
+reports the result, then decide whether to send a development-session follow-up.
+
 For terminal tasks, always provide a copyable shell block that starts by
 changing into the project directory.
 
