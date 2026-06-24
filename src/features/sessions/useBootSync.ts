@@ -97,13 +97,32 @@ export function useBootSync({
   const [remoteMomentSyncStatus, setRemoteMomentSyncStatus] =
     useState<RemoteMomentSyncStatus>(
       isRemoteMomentSyncConfigured ? 'waiting_for_storage' : 'not_configured',
-  );
+    );
+  const previousRemoteMomentSyncEnabledRef = useRef(remoteMomentSyncEnabled);
   const hasStartedInitialRemoteSyncRef = useRef(false);
 
   useEffect(() => {
+    const wasRemoteMomentSyncEnabled =
+      previousRemoteMomentSyncEnabledRef.current;
+    previousRemoteMomentSyncEnabledRef.current = remoteMomentSyncEnabled;
+
     if (!remoteMomentSyncEnabled) {
       hasStartedInitialRemoteSyncRef.current = false;
       setRemoteMomentSyncStatus('not_configured');
+      return;
+    }
+
+    if (!wasRemoteMomentSyncEnabled && remoteMomentSyncEnabled) {
+      hasStartedInitialRemoteSyncRef.current = false;
+      setHasInitialRemoteMomentPage(false);
+      setInitialRemoteMoments([]);
+      setInitialRemoteMomentPageInfo({
+        hasMore: false,
+        nextCursor: null,
+      });
+      setRemoteMomentSyncStatus(
+        hasConfiguredSupabaseMoments() ? 'waiting_for_storage' : 'not_configured',
+      );
       return;
     }
 
@@ -184,6 +203,7 @@ export function useBootSync({
     }
 
     hasStartedInitialRemoteSyncRef.current = true;
+    let didFinishInitialRemoteSync = false;
     let isMounted = true;
 
     async function loadRemoteMoments() {
@@ -205,9 +225,11 @@ export function useBootSync({
           nextCursor: remoteMomentPage.nextCursor,
         });
         setHasInitialRemoteMomentPage(true);
+        didFinishInitialRemoteSync = true;
         setRemoteMomentSyncStatus('completed');
       } catch (error) {
         if (isMounted) {
+          didFinishInitialRemoteSync = true;
           setRemoteMomentSyncStatus(
             isRemoteMomentSyncTimeout(error) ? 'timeout' : 'failed',
           );
@@ -223,6 +245,9 @@ export function useBootSync({
 
     return () => {
       isMounted = false;
+      if (!didFinishInitialRemoteSync) {
+        hasStartedInitialRemoteSyncRef.current = false;
+      }
     };
   }, [
     isStorageLoaded,

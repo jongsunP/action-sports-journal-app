@@ -35,6 +35,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     }
 
     const client = supabase;
+    let hasCompletedInitialAuthLoad = false;
     let isMounted = true;
 
     async function restoreOrCreateAnonymousSession() {
@@ -90,6 +91,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         setSession(null);
       } finally {
         if (isMounted) {
+          hasCompletedInitialAuthLoad = true;
           setIsLoading(false);
         }
       }
@@ -97,8 +99,14 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
 
     const { data: subscription } = client.auth.onAuthStateChange(
       (_event, nextSession) => {
+        if (!hasCompletedInitialAuthLoad && !nextSession) {
+          return;
+        }
+
         setSession(nextSession ?? null);
-        setIsLoading(false);
+        if (hasCompletedInitialAuthLoad || nextSession) {
+          setIsLoading(false);
+        }
       },
     );
 
