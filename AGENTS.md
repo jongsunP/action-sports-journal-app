@@ -46,9 +46,9 @@ cd ~/repository/action-sports-journal-app
 
 When the user asks what remains or asks for current status, do not list only
 recent chat items. Summarize by ASJ's larger workstreams and order the groups
-by action timing: current/active first, then near-term, later, long-term, and
-completed/past last. Include both the full remaining list and the immediate
-next work:
+by time: completed/past first, then current, immediate next, near-term, later,
+and long-term. Include both the full remaining list and the immediate next
+work:
 
 ```text
 완료된 기반:

@@ -122,9 +122,9 @@ to decide or act, do not add a user-facing action section.
 
 When the Founder asks what remains or asks for current status, do not list only
 recent chat items. Summarize by ASJ's larger workstreams and order the groups
-by action timing: current/active first, then near-term, later, long-term, and
-completed/past last. Include both the full remaining list and the immediate
-next work:
+by time: completed/past first, then current, immediate next, near-term, later,
+and long-term. Include both the full remaining list and the immediate next
+work:
 
 ```text
 완료된 기반:
@@ -145,6 +145,59 @@ named in the project memory or conversation, do not silently rename, merge, or
 omit it just because it is not active today. Preserve the same list structure
 so the Founder can recognize continuity over time. If an item is completed,
 blocked, deferred, or split, keep the item visible and mark its status.
+
+Current stable workstream list:
+
+```text
+완료된 기반:
+- Upload Part 1(업로드 1차)
+- Upload Reliability P0/P1(업로드 안정화)
+- State Sync / Polling Removal(상태 동기화 / 폴링 제거)
+- Thumbnail Persistence(썸네일 영속화)
+- Auth Phase 1 / Phase 2(인증 1차 / 2차)
+- Device-first Anonymous Auth(기기 우선 익명 인증)
+- Ownership Boundary(사용자 소유권 경계)
+- Private Realtime(사용자별 실시간 동기화)
+- Push Registration / Delivery(푸시 등록 / 전송)
+- Push Observability P2(푸시 관측성 2차)
+- Account Linking(계정 연결)
+- Kakao Recovery / Account Linking(카카오 복구 / 계정 연결)
+
+현재 상태:
+- Anonymous-first(익명 사용자 우선) 구조 유지
+- Kakao Recovery / Account Linking(카카오 복구 / 계정 연결) 성공
+- Email Recovery(이메일 복구)는 baseline/fallback으로 유지
+- Email Recovery(이메일 복구) 제품화는 deep link / redirect 전략 필요
+- Kakao Linking UI(카카오 연결 UI)는 성공/실패 표시 개선 필요
+
+바로 앞 작업:
+- Kakao Linking UI(카카오 연결 UI) 성공/실패 표시 개선
+
+가까운 후속:
+- Kakao display_name Sync(카카오 이름 동기화) 여부 결정
+- 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
+- Foundation Safety Check(기반 안전 점검)
+- External No-Token Finalization(외부 무토큰 경로 최종 정리)
+- Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
+
+나중에 해도 좋은 것:
+- Journal UX(저널 경험)
+- Analysis UX(분석 결과 경험)
+- Upload UX(업로드 경험) 추가 개선
+- Media / Share UX(미디어 / 공유 경험)
+- Future Media UX Improvements(향후 미디어 경험 개선)
+
+장기 보관 목록:
+- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
+- Email Custom SMTP(이메일 발송 설정)
+- Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
+- Compression / Upload Optimization(영상 압축 / 업로드 최적화)
+- AI Calibration(AI 분석 정확도 보정)
+- Apple Login(애플 로그인)
+- Google Login(구글 로그인)
+- Phone/SMS Recovery(전화번호 / 문자 복구)
+- Anonymous Cleanup(익명 계정 정리)
+```
 
 When discussing whether to build, frame the answer around validation stages:
 
