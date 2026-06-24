@@ -280,6 +280,31 @@ Remaining EAS preview E2E:
 7. Realtime channel basis remains `analysis-updates:auth:{authUserId}`.
 8. No separate Supabase Auth user is created.
 
+Build 75 E2E closeout:
+
+Build 75 passed Kakao Account Linking E2E after Kakao consent configuration was
+corrected. The app returned through `actionsportsjournal`, showed Kakao recovery
+method connected state, and read-only DB/Auth checks confirmed:
+
+- Auth user id `499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+- Kakao identity id `9aaaf219-bdf9-4fe5-91df-1a59ec57d558`.
+- Kakao provider id `4960498960`.
+- `public.users.id` `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`.
+- `public.users.email` `parksunl7@naver.com`.
+- `device_push_tokens` count `1`.
+- Realtime channel basis
+  `analysis-updates:auth:499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+
+Follow-up backlog:
+
+- Kakao linking UX: make connected, failed, and cancelled states more explicit.
+- Kakao metadata sync: decide whether Kakao `name` / `full_name` should update
+  `public.users.display_name`; current QA kept display name as the email while
+  Kakao identity data contained `박종선`.
+- Moment ownership continuity: rerun with a user that already has Moments. The
+  Build 75 QA user had `moments` count `0`, so preservation was verified by
+  ownership structure, not by a real existing Moment sample.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:

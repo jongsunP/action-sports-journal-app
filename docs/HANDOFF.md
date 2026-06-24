@@ -281,6 +281,42 @@ Remaining Kakao E2E checks:
 7. User-scoped Realtime channel basis remains tied to the same Auth user id.
 8. No new Supabase Auth user is created.
 
+Build 75 Kakao Account Linking E2E closeout:
+
+Build 75 confirmed the standalone iOS Kakao account-linking path. Initial QA
+hit Kakao `KOE205` because Kakao OAuth requested consent scopes that were not
+available/configured; after the Kakao Developers consent settings were corrected
+for the requested scopes, OAuth completed, ASJ reopened through the
+`actionsportsjournal` scheme, and `AccountRecoveryScreen` showed the recovery
+method connected state.
+
+Read-only ownership checks:
+
+- Auth user id: `499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+- Kakao identity id: `9aaaf219-bdf9-4fe5-91df-1a59ec57d558`.
+- Kakao provider id: `4960498960`.
+- `public.users.id`: `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`.
+- `public.users.email`: `parksunl7@naver.com`.
+- `device_push_tokens` count for the app user: `1`.
+- Realtime channel basis:
+  `analysis-updates:auth:499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+
+Kakao identity is attached to the existing Auth user, no separate new Auth user
+was observed for the QA window, `public.users.id` remained mapped to the same
+Auth user, push token ownership remained on that `public.users.id`, and
+Realtime remains scoped by the same Auth user id. The QA user had `moments`
+count `0`, so run a future continuity smoke with a pre-existing Moment sample
+before treating Moment preservation as empirically covered.
+
+Kakao follow-ups:
+
+- Improve the connected/error/cancel states so success and failure are more
+  explicit to the user.
+- Decide whether Kakao `name` / `full_name` should update
+  `public.users.display_name`; the QA identity contained `박종선`, while
+  `public.users.display_name` currently stayed as `parksunl7@naver.com`.
+- Re-check ownership continuity on an account that already has Moments.
+
 Kakao linkIdentity implementation plan:
 
 - Implementation readiness check: current dependencies do not include

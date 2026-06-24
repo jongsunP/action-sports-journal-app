@@ -132,6 +132,30 @@ Kakao recovery-method section rendering, Kakao button loading state, iOS OAuth
 confirmation prompt for `kauth.kakao.com`, and cancel return with the in-app
 "카카오 연결이 취소되었습니다." message. Deep-link E2E is not verified yet.
 
+Build 75 Kakao Account Linking E2E QA passed on iOS standalone/internal
+distribution after Kakao Developers consent settings were corrected. Initial
+QA hit Kakao `KOE205` because `account_email` and `profile_image` were requested
+without matching consent availability; after `profile_image` was enabled and
+Kakao account email became available, the OAuth flow returned to ASJ and
+`AccountRecoveryScreen` showed recovery linked state. Confirmed values:
+
+- Auth user id: `499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+- Kakao identity id: `9aaaf219-bdf9-4fe5-91df-1a59ec57d558`.
+- Kakao provider id: `4960498960`.
+- `public.users.id`: `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`.
+- `public.users.email`: `parksunl7@naver.com`.
+- `device_push_tokens` count for the app user: `1`.
+- Realtime channel basis:
+  `analysis-updates:auth:499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+
+Read-only Supabase Auth/Admin and public table checks confirmed the Kakao
+identity is attached to the existing Auth user, no separate new Auth user was
+observed for the QA window, `public.users.id` stayed mapped to that Auth user,
+push token ownership stayed on the same `public.users.id`, and the app code
+continues to derive Realtime from `analysis-updates:auth:{authUserId}`. This QA
+user had `moments` count `0`, so existing Moment preservation was structurally
+verified by ownership boundaries but not with a real pre-existing Moment sample.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the server-side ownership boundary. The BFF now
