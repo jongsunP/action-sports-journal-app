@@ -5481,9 +5481,29 @@ async function sendAnalysisCompletedPushNotification({
       ),
     );
 
+    console.info("[push_observability]", {
+      event: "analysis_push_tokens_loaded",
+      evidenceResultId,
+      momentId,
+      tokenCount: tokens.length,
+      userId,
+    });
+
     if (tokens.length === 0) {
+      console.info("[push_observability]", {
+        event: "analysis_push_skipped_no_tokens",
+        momentId,
+        userId,
+      });
       return;
     }
+
+    console.info("[push_observability]", {
+      event: "analysis_push_send_started",
+      evidenceResultId,
+      momentId,
+      tokenCount: tokens.length,
+    });
 
     const pushResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
@@ -5515,7 +5535,16 @@ async function sendAnalysisCompletedPushNotification({
     }
 
     const pushResult = (await pushResponse.json()) as unknown;
+    const pushTicketSummary = summarizeExpoPushTickets(pushResult);
     const pushErrors = extractExpoPushErrors(pushResult);
+
+    console.info("[push_observability]", {
+      errorCount: pushTicketSummary.errorCount,
+      errors: pushTicketSummary.errors,
+      event: "analysis_push_ticket_result",
+      okCount: pushTicketSummary.okCount,
+      ticketIds: pushTicketSummary.ticketIds,
+    });
 
     if (pushErrors.length > 0) {
       console.warn(
@@ -5741,6 +5770,54 @@ async function resolveRealtimeAnalysisChannel({
   }
 
   return realtimeInternalDefaultChannel;
+}
+
+function summarizeExpoPushTickets(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {
+      errorCount: 0,
+      errors: [],
+      okCount: 0,
+      ticketIds: [],
+    };
+  }
+
+  const response = value as Record<string, unknown>;
+  const tickets = Array.isArray(response.data) ? response.data : [];
+  const errors: string[] = [];
+  const ticketIds: string[] = [];
+  let okCount = 0;
+  let errorCount = 0;
+
+  for (const ticket of tickets) {
+    if (!ticket || typeof ticket !== "object") {
+      continue;
+    }
+
+    const item = ticket as Record<string, unknown>;
+
+    if (item.status === "ok") {
+      okCount += 1;
+      const ticketId = nullableString(item.id);
+
+      if (ticketId) {
+        ticketIds.push(ticketId);
+      }
+      continue;
+    }
+
+    if (item.status === "error") {
+      errorCount += 1;
+      errors.push(nullableString(item.message) ?? "unknown Expo push ticket error");
+    }
+  }
+
+  return {
+    errorCount,
+    errors,
+    okCount,
+    ticketIds,
+  };
 }
 
 function extractExpoPushErrors(value: unknown) {
