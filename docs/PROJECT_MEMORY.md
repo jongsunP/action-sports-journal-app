@@ -138,6 +138,60 @@ keep Email Recovery as the first user-facing account-linking path. Kakao,
 Google, and Apple come after the device-first + email recovery baseline is
 stable.
 
+## 2026-06-24 Auth Phase 2 Build 72 QA
+
+Problem:
+
+Moving from the no-token internal default user to device-first anonymous Auth
+introduced real mobile lifecycle races. Build 70/71 showed that first install
+could stall on Boot Loading while anonymous session creation and initial remote
+sync raced. Build 71 also showed that an auth boundary reset could invalidate
+the selected video while a picker result still returned later, opening
+UploadScreen with no selected video.
+
+Why this mattered:
+
+Device-first identity is the foundation for external ownership. It cannot feel
+less reliable than the earlier internal QA default-user flow. First launch,
+first upload, relaunch, analysis completion, and Home/Video convergence are the
+minimum trust path.
+
+Decision:
+
+Keep Supabase Anonymous Sign-in as the device-first identity path. Do not add
+Login UI yet. Do not re-enable external no-token default-user behavior. Fix the
+first-launch and first-upload lifecycle races directly.
+
+Implementation:
+
+- Auth initialization now keeps `authLoading` until the initial
+  `getSession -> signInAnonymously` flow completes.
+- Initial Boot Sync can retry if an in-flight attempt is cleaned up before
+  reaching a terminal `completed`, `failed`, or `timeout` state.
+- Upload picker/open flow now has a generation guard so stale picker results
+  cannot open an empty UploadScreen after an auth boundary reset.
+
+Build 72 QA result:
+
+- Fresh install passed.
+- Anonymous session was automatically created.
+- Home entered successfully.
+- Upload succeeded.
+- App relaunch preserved/restored state.
+- Analysis completed.
+- Home and Video reflected the completed Moment.
+- Upload race blocker was confirmed fixed.
+- Push was not confirmed in this QA pass.
+
+Current Auth Phase 2 status:
+
+The device-first anonymous-session baseline is validated for first launch,
+upload, relaunch, analysis completion, and Home/Video sync. Push confirmation is
+the remaining observation before declaring Auth Phase 2 fully closed, unless it
+is intentionally carried forward as non-blocking observability. The next
+product implementation after closeout should be Email Recovery / account
+linking.
+
 ## 2026-06-23 Build 65 Upload Recovery Checkpoint
 
 Latest current build:

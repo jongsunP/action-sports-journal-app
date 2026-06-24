@@ -123,6 +123,52 @@ Auth Phase 2 QA build checklist:
 - No-token default fallback remains internal QA only and is not the external
   identity path.
 
+Auth Phase 2 Build 72 QA result, 2026-06-24:
+
+Problem:
+
+Build 70/71 exposed the first real Auth Phase 2 app-side lifecycle risks:
+fresh install could stall on Boot Loading while anonymous session creation and
+Boot Sync raced, and Build 71 could open UploadScreen after an auth boundary
+reset with no selected video.
+
+Why it mattered:
+
+Device-first anonymous identity is only acceptable if first launch and first
+upload feel boring and reliable. A login-free app that stalls at boot or loses
+the selected video would make the anonymous identity path less trustworthy than
+the old internal default-user QA path.
+
+Decision and implementation:
+
+- Keep Device-first = Supabase Anonymous Sign-in.
+- Keep Login UI out of this phase.
+- Prevent `onAuthStateChange(null)` from dropping the app out of
+  `authLoading` before `getSession -> signInAnonymously` completes.
+- Make Boot Sync retryable if an initial remote sync attempt is invalidated by
+  cleanup/race before reaching `completed`, `failed`, or `timeout`.
+- Add an upload-flow generation guard so a picker result that returns after an
+  auth boundary reset cannot open an empty UploadScreen.
+
+Build 72 QA confirmed:
+
+- Fresh install passes Boot Loading.
+- Anonymous session is created automatically.
+- Home opens successfully under the anonymous authenticated owner.
+- Upload succeeds.
+- App relaunch preserves/restores state.
+- Analysis completes.
+- Home and Video both reflect the completed Moment.
+- The Upload race blocker is resolved.
+- Push was not confirmed in this pass.
+
+Current Auth Phase 2 status:
+
+Auth Phase 2 is closeable for the device-first anonymous-session baseline once
+Push is either confirmed in a follow-up QA pass or explicitly carried as an open
+observability item. The next product step remains Email Recovery / account
+linking, not a return to no-token default-user behavior.
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build and supersedes the older Build 55

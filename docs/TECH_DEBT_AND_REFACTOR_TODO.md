@@ -1581,6 +1581,23 @@ Technical debt to track:
 - External no-token default-user fallback must remain disabled once anonymous
   device-first identity is ready.
 
+Auth Phase 2 Build 72 QA follow-up:
+
+Build 72 validated the device-first anonymous-session baseline for fresh
+install, automatic anonymous session creation, Home entry, upload, relaunch,
+analysis completion, Home/Video sync, and the fixed Upload picker/auth-boundary
+race. Push was not confirmed in this pass.
+
+Keep the following as Auth Phase 2 closeout / follow-up items:
+
+- Confirm Push delivery/handling on a Build 72+ QA pass.
+- Decide whether missing Push confirmation is a blocker or an open
+  observability item, given that Home/Video state convergence passed.
+- Add better Push send/delivery observability before treating Push misses as
+  product bugs.
+- Continue to keep no-token default-user fallback internal-only; external
+  users should enter through anonymous Auth.
+
 ### 9. Push Deep Link
 
 Current state:

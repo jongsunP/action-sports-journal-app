@@ -121,6 +121,51 @@ Next Auth implementation should create/restore an anonymous session on first
 launch, then treat Email Recovery as the first account-linking feature. Kakao,
 Google, and Apple remain secondary recovery/social options.
 
+Auth Phase 2 Build 72 QA result, 2026-06-24:
+
+Problem:
+
+The first app-side anonymous-session builds found two lifecycle blockers:
+Build 70/71 fresh install could remain on Boot Loading while anonymous auth and
+Boot Sync raced, and Build 71 could show UploadScreen with "선택된 영상이
+없습니다" after an auth boundary reset invalidated the selected video state.
+
+Decision:
+
+Keep the device-first anonymous identity path, but harden the first-launch and
+first-upload lifecycle before adding any Login UI or recovery provider.
+
+Implementation now on `master`:
+
+- `AuthSessionProvider` keeps `authLoading` until the initial
+  `getSession -> signInAnonymously` flow finishes, so a transient null auth
+  event cannot fall through to internal fallback during first launch.
+- `useBootSync` can retry if an initial remote sync attempt is cleaned up before
+  reaching a terminal `completed`, `failed`, or `timeout` state.
+- `useUploadMoment` uses an upload-flow generation guard so a stale picker
+  result cannot open an empty UploadScreen after `resetUploadFlow()`.
+
+Build 72 QA confirmed:
+
+- Fresh install passed.
+- Anonymous session was created automatically.
+- Home entered successfully.
+- Upload succeeded.
+- App relaunch preserved/restored state.
+- Analysis completed.
+- Home/Video reflected the result.
+- Upload race blocker was resolved.
+- Push was not confirmed in this pass and remains an observation for the next
+  QA pass.
+
+Current Auth Phase 2 handoff:
+
+The device-first anonymous-session baseline is functionally validated for
+launch, upload, relaunch, analysis, and Home/Video sync. Before calling Auth
+Phase 2 fully closed, either confirm Push on Build 72+ or explicitly carry Push
+confirmation as a non-blocking open observation. The next implementation step
+after closeout should be Email Recovery/account linking.
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build.
