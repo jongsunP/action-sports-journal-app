@@ -156,6 +156,18 @@ export function useUploadMoment({
     setUploadProgress(null);
   };
 
+  const resetUploadFlow = () => {
+    isUploadingSessionRef.current = false;
+    setIsUploadingSession(false);
+    setIsComposerOpen(false);
+    setSelectedVideo(null);
+    selectedVideoThumbnailUriRef.current = null;
+    setSelectedVideoThumbnailUri(null);
+    setIsPreparingSelectedVideoThumbnail(false);
+    setUploadDraft(null);
+    setUploadProgress(null);
+  };
+
   const createThumbnailForSession = async (
     sessionId: string,
     video: SessionVideoAsset,
@@ -670,6 +682,7 @@ export function useUploadMoment({
     isPreparingSelectedVideoThumbnail,
     isUploadingSession,
     selectedVideo,
+    resetUploadFlow,
     uploadDraft,
     uploadProgress,
   };

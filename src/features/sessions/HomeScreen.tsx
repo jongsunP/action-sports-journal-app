@@ -55,11 +55,18 @@ import {
   getVideoAssetFromSession,
 } from './sessionFormatters';
 import {
+  clearPersistedSessionState,
   savePersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
-import { setMomentDetailRuntimeState } from './momentDetailRuntimeStore';
-import { setUploadRuntimeState } from './uploadRuntimeStore';
+import {
+  resetMomentDetailRuntimeState,
+  setMomentDetailRuntimeState,
+} from './momentDetailRuntimeStore';
+import {
+  resetUploadRuntimeState,
+  setUploadRuntimeState,
+} from './uploadRuntimeStore';
 import {
   listMomentPageWithTimeout,
   useBootSync,
@@ -101,6 +108,10 @@ type RemoteMomentFirstPage = {
   hasMore: boolean;
   nextCursor: string | null;
 };
+type AuthCacheOwnerKey =
+  | 'internalFallback'
+  | 'loginRequired'
+  | `authenticated:${string}`;
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
@@ -108,6 +119,24 @@ const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
 const UPLOAD_FAILURE_REMOTE_RECONCILE_RETRY_MS = 1_200;
+
+function getAuthCacheOwnerKey({
+  authMode,
+  userId,
+}: {
+  authMode: 'authLoading' | 'authenticated' | 'internalFallback' | 'loginRequired';
+  userId?: string;
+}): AuthCacheOwnerKey | null {
+  if (authMode === 'authLoading') {
+    return null;
+  }
+
+  if (authMode === 'authenticated') {
+    return userId ? `authenticated:${userId}` : 'loginRequired';
+  }
+
+  return authMode;
+}
 
 function getNextPendingRemoteRefreshReason(
   currentReason: RemoteRefreshReason | null,
@@ -126,7 +155,7 @@ export function HomeScreen() {
   const layout = useWindowDimensions();
   const colorScheme = useColorScheme();
   const prefersDarkMode = colorScheme === 'dark';
-  const { authMode } = useAuthSession();
+  const { authMode, user } = useAuthSession();
   const canUseRemoteApi =
     authMode === 'authenticated' || authMode === 'internalFallback';
   const isAuthLoading = authMode === 'authLoading';
@@ -161,6 +190,7 @@ export function HomeScreen() {
     string | null
   >(null);
   const handledNotificationRefreshRequestIdRef = useRef<number | null>(null);
+  const authCacheOwnerKeyRef = useRef<AuthCacheOwnerKey | null>(null);
   const isRefreshingRemoteMomentsRef = useRef(false);
   const pendingRemoteRefreshReasonRef = useRef<RemoteRefreshReason | null>(null);
   const hasAppliedBootVideoArchivePageRef = useRef(false);
@@ -208,6 +238,7 @@ export function HomeScreen() {
     videosBySessionId,
   });
   const {
+    closeMomentDetail,
     closeMomentDetailIfSelected,
     selectMomentDetail,
   } = useMomentDetail({
@@ -1465,6 +1496,7 @@ export function HomeScreen() {
     isComposerOpen,
     isPreparingSelectedVideoThumbnail,
     isUploadingSession,
+    resetUploadFlow,
     selectedVideo,
     uploadDraft,
     uploadProgress,
@@ -1496,6 +1528,102 @@ export function HomeScreen() {
     shouldSuppressUploadFailureAlert,
     updateLocalMomentStatus,
   });
+
+  useEffect(() => {
+    const nextOwnerKey = getAuthCacheOwnerKey({
+      authMode,
+      userId: user?.id,
+    });
+
+    if (!nextOwnerKey) {
+      return;
+    }
+
+    const previousOwnerKey = authCacheOwnerKeyRef.current;
+
+    if (!previousOwnerKey) {
+      authCacheOwnerKeyRef.current = nextOwnerKey;
+      return;
+    }
+
+    if (previousOwnerKey === nextOwnerKey) {
+      return;
+    }
+
+    authCacheOwnerKeyRef.current = nextOwnerKey;
+
+    void clearPersistedSessionState().catch((error) => {
+      console.warn(
+        'Session cache clear failed after auth owner change:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    });
+
+    setSelectedGroupId(ACTIVE_WAKEBOARD_GROUP_ID);
+    setSessions([]);
+    setVideosBySessionId({});
+    setAnalysisBySessionId({});
+    setOpenAiBenchmarkBySessionId({});
+    setGeminiEvidenceBySessionId({});
+    setUserConfirmedTrickBySessionId({});
+    setThumbnailsBySessionId({});
+    setRemoteMomentIdsBySessionId({});
+    setUploadReconciliationCandidatesBySessionId({});
+    setAnalysisCompletionNotice(null);
+
+    pendingVideoArchiveSessionIdsRef.current.clear();
+    recoveringUploadSessionIdsRef.current.clear();
+    handledNotificationRefreshRequestIdRef.current = null;
+    pendingRemoteRefreshReasonRef.current = null;
+    pendingRealtimeCompletionNoticeRef.current = null;
+    isRefreshingRemoteMomentsRef.current = false;
+    hasAppliedBootVideoArchivePageRef.current = false;
+    completedBootSyncAtRef.current = null;
+    hasAttemptedBootUploadRecoveryRef.current = false;
+    didNavigateToUploadRef.current = false;
+
+    setVideoArchiveSessionIds([]);
+    setVideoArchiveNextCursor(null);
+    setHasMoreVideoArchiveMoments(false);
+    setHasLoadedVideoArchiveFirstPage(false);
+    setHasMountedVideoTab(false);
+    setIsLoadingVideoArchiveInitialPage(false);
+    setIsLoadingMoreVideoArchiveMoments(false);
+
+    resetUploadFlow();
+    closeMomentDetail();
+    resetUploadRuntimeState();
+    resetMomentDetailRuntimeState();
+    activeTabRef.current = 'home';
+    setActiveTab('home');
+
+    console.info('[auth_cache_boundary]', {
+      event: 'user_cache_cleared',
+      nextOwnerKey,
+      previousOwnerKey,
+    });
+
+    if (canUseRemoteApi && hasConfiguredSupabaseMoments()) {
+      void refreshRemoteMoments('initial_retry');
+    }
+  }, [
+    authMode,
+    canUseRemoteApi,
+    closeMomentDetail,
+    refreshRemoteMoments,
+    resetUploadFlow,
+    setAnalysisBySessionId,
+    setGeminiEvidenceBySessionId,
+    setOpenAiBenchmarkBySessionId,
+    setRemoteMomentIdsBySessionId,
+    setSessions,
+    setThumbnailsBySessionId,
+    setUploadReconciliationCandidatesBySessionId,
+    setUserConfirmedTrickBySessionId,
+    setVideosBySessionId,
+    user?.id,
+  ]);
+
   const guardedCanUploadSession = canUseRemoteApi && canUploadSession;
   const guardedHandleOpenUploadSheet = useCallback(() => {
     if (!canUseRemoteApi) {

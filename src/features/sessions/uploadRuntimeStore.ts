@@ -47,6 +47,24 @@ export function setUploadRuntimeState(nextState: UploadRuntimeState) {
   listeners.forEach((listener) => listener());
 }
 
+export function resetUploadRuntimeState() {
+  setUploadRuntimeState({
+    canUploadSession: false,
+    formatVideoMeta: () => '',
+    isOpen: false,
+    isPreparingThumbnail: false,
+    isReady: false,
+    isSubmitting: false,
+    onClose: () => {},
+    onPickVideo: () => {},
+    onSubmit: () => {},
+    selectedVideo: null,
+    styles: emptyStyles,
+    uploadDraft: null,
+    uploadProgress: null,
+  });
+}
+
 export function useUploadRuntimeState() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

@@ -50,6 +50,22 @@ export function setMomentDetailRuntimeState(nextState: MomentDetailRuntimeState)
   listeners.forEach((listener) => listener());
 }
 
+export function resetMomentDetailRuntimeState() {
+  setMomentDetailRuntimeState({
+    canRequestGeminiEvidence: false,
+    deletingSessionIds: {},
+    extractingEvidenceBySessionId: {},
+    geminiEvidenceBySessionId: {},
+    handleDeleteSession: () => {},
+    handleExtractEvidence: () => {},
+    isReady: false,
+    sessions: [],
+    styles: emptyStyles,
+    thumbnailsBySessionId: {},
+    videosBySessionId: {},
+  });
+}
+
 export function useMomentDetailRuntimeState() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

@@ -35,3 +35,7 @@ export async function loadPersistedSessionState() {
 export function savePersistedSessionState(state: PersistedSessionState) {
   return AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state));
 }
+
+export function clearPersistedSessionState() {
+  return AsyncStorage.removeItem(SESSION_STORAGE_KEY);
+}
