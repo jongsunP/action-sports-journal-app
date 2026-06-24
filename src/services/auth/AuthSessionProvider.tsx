@@ -34,11 +34,13 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const client = supabase;
     let isMounted = true;
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
+    async function restoreOrCreateAnonymousSession() {
+      try {
+        const { data, error } = await client.auth.getSession();
+
         if (!isMounted) {
           return;
         }
@@ -52,20 +54,55 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        setSession(data.session ?? null);
-      })
-      .finally(() => {
+        if (data.session) {
+          setSession(data.session);
+          return;
+        }
+
+        const { data: anonymousData, error: anonymousError } =
+          await client.auth.signInAnonymously();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (anonymousError) {
+          console.warn(
+            'Supabase anonymous sign-in failed:',
+            anonymousError instanceof Error
+              ? anonymousError.message
+              : 'Unknown error',
+          );
+          setSession(null);
+          return;
+        }
+
+        setSession(anonymousData.session ?? null);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.warn(
+          'Supabase session initialization failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+        setSession(null);
+      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
-      });
+      }
+    }
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(
+    const { data: subscription } = client.auth.onAuthStateChange(
       (_event, nextSession) => {
         setSession(nextSession ?? null);
         setIsLoading(false);
       },
     );
+
+    void restoreOrCreateAnonymousSession();
 
     return () => {
       isMounted = false;
