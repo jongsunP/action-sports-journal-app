@@ -300,7 +300,8 @@ app.post("/api/push-tokens", async (request, response) => {
     }
 
     const now = new Date().toISOString();
-    const userId = await getOrCreateDefaultSupabaseUser();
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
     const { error } = await client
       .from("device_push_tokens")
       .upsert(
@@ -973,7 +974,8 @@ app.get("/api/moments", async (request, response) => {
       return;
     }
 
-    const userId = await getOrCreateDefaultSupabaseUser();
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
     await cleanupStaleAnalysisJobs({ client, userId });
     const limit = parseMomentListLimit(request.query.limit);
     const cursor = decodeMomentCursor(request.query.cursor);
@@ -5667,6 +5669,139 @@ async function getOrCreateDefaultSupabaseUser() {
   }
 
   return data.id as string;
+}
+
+type ResolvedRequestUser = {
+  authMode: "authenticated" | "internal_default_user";
+  authUserId: string | null;
+  userId: string;
+};
+
+async function resolveRequestUser(
+  request: express.Request,
+): Promise<ResolvedRequestUser> {
+  const client = getSupabaseServerClient();
+
+  if (!client) {
+    throw new Error("Supabase service role env is not configured.");
+  }
+
+  const bearerToken = readBearerToken(request);
+
+  if (!bearerToken) {
+    const userId = await getOrCreateDefaultSupabaseUser();
+    logResolvedRequestUser({
+      authMode: "internal_default_user",
+      authUserId: null,
+      route: request.path,
+      userId,
+    });
+    return {
+      authMode: "internal_default_user",
+      authUserId: null,
+      userId,
+    };
+  }
+
+  const { data: authData, error: authError } =
+    await client.auth.getUser(bearerToken);
+
+  if (authError || !authData.user?.id) {
+    throw new Error(
+      `Invalid Supabase auth token: ${authError?.message ?? "missing user"}`,
+    );
+  }
+
+  const authUserId = authData.user.id;
+  const email = authData.user.email ?? null;
+  const displayName =
+    readStringUserMetadata(authData.user.user_metadata?.full_name) ??
+    readStringUserMetadata(authData.user.user_metadata?.name) ??
+    email;
+  const now = new Date().toISOString();
+  const { data: existingUser, error: selectError } = await client
+    .from("users")
+    .select("id")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new Error(`Failed to resolve auth user: ${selectError.message}`);
+  }
+
+  if (existingUser?.id) {
+    logResolvedRequestUser({
+      authMode: "authenticated",
+      authUserId,
+      route: request.path,
+      userId: existingUser.id as string,
+    });
+    return {
+      authMode: "authenticated",
+      authUserId,
+      userId: existingUser.id as string,
+    };
+  }
+
+  const { data: insertedUser, error: insertError } = await client
+    .from("users")
+    .insert({
+      auth_user_id: authUserId,
+      display_name: displayName,
+      email,
+      locale: "ko-KR",
+      updated_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !insertedUser?.id) {
+    throw new Error(
+      `Failed to create auth user mapping: ${insertError?.message ?? "missing user id"}`,
+    );
+  }
+
+  logResolvedRequestUser({
+    authMode: "authenticated",
+    authUserId,
+    route: request.path,
+    userId: insertedUser.id as string,
+  });
+  return {
+    authMode: "authenticated",
+    authUserId,
+    userId: insertedUser.id as string,
+  };
+}
+
+function readBearerToken(request: express.Request) {
+  const header = request.header("authorization");
+
+  if (!header) {
+    return null;
+  }
+
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
+}
+
+function readStringUserMetadata(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function logResolvedRequestUser({
+  authMode,
+  authUserId,
+  route,
+  userId,
+}: ResolvedRequestUser & { route: string }) {
+  console.info("[auth]", {
+    authMode,
+    authUserId,
+    event: "resolved_request_user",
+    route,
+    userId,
+  });
 }
 
 function getSupabaseServerClient() {
