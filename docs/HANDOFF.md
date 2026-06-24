@@ -218,16 +218,32 @@ Before any Kakao code work, verify:
 
 Next user-side setup checks:
 
-1. Prepare the Kakao Developers app.
-2. Copy the Kakao REST API Key.
-3. Enable Kakao Login and Client Secret, then copy the Client Secret Code.
-4. Register the Supabase callback URL in Kakao:
-   `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`.
-5. Configure/confirm Kakao Consent Items, including profile nickname/image and
-   optional `account_email`.
-6. After Kakao values are ready, return to Supabase Kakao provider settings.
+1. Find or generate the Kakao Login Client Secret Code. Supabase Kakao provider
+   setup expects a Client Secret Code; do not activate the provider without it.
+   Kakao's docs place it under App Settings -> App -> Platform Key -> REST API
+   Key -> Client Secret / Kakao Login Client Secret.
+2. Current Kakao Developers state:
+   REST API Key confirmed, Kakao Login enabled, Supabase callback Redirect URI
+   registered, nickname consent enabled, profile image disabled, email disabled
+   / unavailable.
+3. Confirm whether `account_email` can be enabled without Biz App approval. If
+   not, treat email as unavailable for the first Kakao linking smoke.
+4. After the Client Secret Code is ready, return to Supabase Kakao provider
+   settings and enter REST API Key + Client Secret Code.
+5. Keep the "Allow users without an email" option available for first smoke,
+   but expect `public.users.email` to remain empty if Kakao does not provide
+   email.
 
 Actual implementation should wait until those settings are confirmed.
+
+Kakao without email:
+
+Email is not required for ASJ ownership continuity if `linkIdentity` preserves
+the existing anonymous Supabase Auth user id. Recovery UX can show Kakao as a
+linked recovery method using provider identity and nickname metadata while
+`public.users.email` remains null. The smoke must verify that Supabase accepts
+the Kakao flow with "Allow users without an email" and that no new Auth user is
+created.
 
 Auth Phase 1 server ownership closeout, 2026-06-24:
 

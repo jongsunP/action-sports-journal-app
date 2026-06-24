@@ -119,6 +119,15 @@ linking" is now enabled. "Allow anonymous sign-ins" is also enabled.
 The Kakao provider values have not been entered and the provider has not been
 activated yet. No app scheme, code, or EAS build work has started.
 
+Kakao Developers preparation update:
+
+The REST API Key is available, Kakao Login is enabled, and the Supabase callback
+Redirect URI is registered. Current consent state: nickname enabled, profile
+image disabled, email disabled / unavailable. The Client Secret Code has not
+been found yet. Supabase's Kakao provider setup expects both the REST API Key
+and Client Secret Code, so provider activation should wait until the Client
+Secret is generated/activated in Kakao Developers.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the server-side ownership boundary. The BFF now

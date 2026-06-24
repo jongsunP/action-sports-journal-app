@@ -185,7 +185,12 @@ verify:
    enabled.
 3. Supabase Redirect URLs include the app deep-link scheme.
 4. Kakao Developers app exists with REST API key and Kakao Login Client Secret.
+   Status: REST API Key is confirmed, Kakao Login is enabled, and the Supabase
+   callback Redirect URI is registered. Client Secret Code has not been found
+   yet and remains required before Supabase provider activation.
 5. Kakao Login is enabled and required consent items are configured.
+   Status: nickname consent is enabled; profile image is disabled; email is
+   disabled / unavailable.
 6. App scheme is selected, with `actionsportsjournal` as the current candidate.
 7. The linking smoke plan verifies that `linkIdentity` preserves the existing
    Supabase Auth user id, `public.users.id`, Moment ownership, push token
@@ -201,6 +206,17 @@ Setup checklist detail:
 - Kakao Developers remains the next user-side setup step. It must have Kakao
   Login enabled, REST API key, Client Secret, Supabase callback Redirect URI,
   and consent items for profile nickname/image plus optional `account_email`.
+- Kakao Client Secret location per docs: App Settings -> App -> Platform Key ->
+  REST API Key -> Client Secret / Kakao Login Client Secret. Generate/activate
+  it before entering Supabase Kakao provider values.
+- Email is not required for ownership continuity if `linkIdentity` preserves the
+  existing anonymous Auth user id. If `account_email` remains unavailable,
+  first Kakao recovery UX should treat Kakao provider identity + nickname as the
+  linked recovery signal and leave `public.users.email` null.
+- Minimum pre-smoke settings: Supabase Kakao provider has REST API Key + Client
+  Secret Code entered, "Allow users without an email" is considered for the
+  no-email smoke, Manual Identity Linking remains enabled, and the app scheme /
+  Redirect URL plan is ready.
 - Adding the native app scheme will likely require a new iOS standalone/EAS
   preview build to verify deep-link return behavior. Do not create that build
   during the setup-check phase.
