@@ -109,24 +109,18 @@ rate-limit/custom-SMTP decision.
 
 Kakao Account Linking preparation, 2026-06-24:
 
-Supabase-side setup feasibility is partially confirmed. The Kakao provider
-screen exists and shows the required values: REST API Key, Client Secret Code,
-Callback URL `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`, and
-an "Allow users without an email" option. Manual Identity Linking was found at
-Authentication -> Sign In / Providers -> User Signups, and "Allow manual
-linking" is now enabled. "Allow anonymous sign-ins" is also enabled.
+Supabase/Kakao provider setup is now ready for implementation planning.
+Supabase Kakao provider is enabled, REST API Key and Client Secret Code are
+entered, and "Allow users without an email" is enabled. Manual Identity Linking
+is enabled under Authentication -> Sign In / Providers -> User Signups, and
+anonymous sign-ins remain enabled. Kakao Developers has the Supabase callback
+Redirect URI registered:
+`https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`.
 
-The Kakao provider values have not been entered and the provider has not been
-activated yet. No app scheme, code, or EAS build work has started.
-
-Kakao Developers preparation update:
-
-The REST API Key is available, Kakao Login is enabled, and the Supabase callback
-Redirect URI is registered. Current consent state: nickname enabled, profile
-image disabled, email disabled / unavailable. The Client Secret Code has not
-been found yet. Supabase's Kakao provider setup expects both the REST API Key
-and Client Secret Code, so provider activation should wait until the Client
-Secret is generated/activated in Kakao Developers.
+Kakao consent state: nickname enabled, profile image disabled, email disabled /
+unavailable. The next validation task is a no-email Kakao identity linking
+smoke that proves `linkIdentity` preserves the current anonymous Auth user and
+ASJ ownership boundaries. No app scheme, code, or EAS build work has started.
 
 Auth Phase 1 server ownership closeout, 2026-06-24:
 

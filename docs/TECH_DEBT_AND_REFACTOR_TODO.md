@@ -174,10 +174,8 @@ Supabase Auth user, not as a new login wall. Before implementation, prepare and
 verify:
 
 1. Supabase Kakao provider can be enabled for the project.
-   Status: setup screen found. It requires REST API Key, Client Secret Code, and
-   uses callback URL
-   `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`. It also has an
-   "Allow users without an email" option. Values are not entered yet.
+   Status: done. Provider is enabled with REST API Key and Client Secret Code
+   entered. "Allow users without an email" is enabled.
 2. Manual Identity Linking can be enabled and used from the current anonymous
    session.
    Status: "Allow manual linking" was found under Authentication -> Sign In /
@@ -185,9 +183,8 @@ verify:
    enabled.
 3. Supabase Redirect URLs include the app deep-link scheme.
 4. Kakao Developers app exists with REST API key and Kakao Login Client Secret.
-   Status: REST API Key is confirmed, Kakao Login is enabled, and the Supabase
-   callback Redirect URI is registered. Client Secret Code has not been found
-   yet and remains required before Supabase provider activation.
+   Status: done. REST API Key and Client Secret Code are ready, Kakao Login is
+   enabled, and the Supabase callback Redirect URI is registered.
 5. Kakao Login is enabled and required consent items are configured.
    Status: nickname consent is enabled; profile image is disabled; email is
    disabled / unavailable.
@@ -203,23 +200,19 @@ Setup checklist detail:
 - Current scheme candidate: `actionsportsjournal`.
 - Supabase Redirect URLs should include `actionsportsjournal://**` after the
   scheme is confirmed.
-- Kakao Developers remains the next user-side setup step. It must have Kakao
-  Login enabled, REST API key, Client Secret, Supabase callback Redirect URI,
-  and consent items for profile nickname/image plus optional `account_email`.
-- Kakao Client Secret location per docs: App Settings -> App -> Platform Key ->
-  REST API Key -> Client Secret / Kakao Login Client Secret. Generate/activate
-  it before entering Supabase Kakao provider values.
+- Kakao Developers and Supabase provider setup are ready for implementation
+  planning. Kakao email remains unavailable, so the first smoke is a no-email
+  provider-identity linking smoke.
 - Email is not required for ownership continuity if `linkIdentity` preserves the
   existing anonymous Auth user id. If `account_email` remains unavailable,
   first Kakao recovery UX should treat Kakao provider identity + nickname as the
   linked recovery signal and leave `public.users.email` null.
 - Minimum pre-smoke settings: Supabase Kakao provider has REST API Key + Client
-  Secret Code entered, "Allow users without an email" is considered for the
-  no-email smoke, Manual Identity Linking remains enabled, and the app scheme /
-  Redirect URL plan is ready.
+  Secret Code entered, "Allow users without an email" enabled, Manual Identity
+  Linking remains enabled, and the app scheme / Redirect URL plan is ready.
 - Adding the native app scheme will likely require a new iOS standalone/EAS
-  preview build to verify deep-link return behavior. Do not create that build
-  during the setup-check phase.
+  preview build to verify deep-link return behavior after implementation. Do
+  not create that build during planning.
 
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
