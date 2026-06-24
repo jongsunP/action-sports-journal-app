@@ -243,6 +243,46 @@ that scheme to `app.json` and designing the Supabase redirect/deep-link return.
 iOS standalone/EAS preview deep-link verification will likely require a new
 build after code/config changes, but do not build during planning.
 
+Kakao linkIdentity implementation plan:
+
+- Recommended screen structure: extend the existing `AccountRecoveryScreen` for
+  the first pass. It is already opened from the Home header menu, already framed
+  as account preservation rather than login, and already has access to
+  `useAuthSession()`. Avoid creating a separate login screen. Later, if the
+  account surface grows, split it into an `AccountLinkingScreen`.
+- Add a Kakao account-linking section below the Email Recovery baseline. The
+  button copy should be recovery-oriented, such as "카카오로 복구 수단 연결",
+  not "카카오 로그인".
+- Add a narrow auth helper, likely `src/services/auth/kakaoLinking.ts`, that
+  calls `supabase.auth.linkIdentity({ provider: "kakao", options: { redirectTo,
+  skipBrowserRedirect: true } })`. Use `signInWithOAuth` only if a later
+  recovery sign-in flow is explicitly designed; do not use it for linking the
+  current anonymous account.
+- Add Expo OAuth/deep-link dependencies only if needed by implementation:
+  `expo-web-browser` and `expo-linking` / `expo-auth-session` style redirect
+  helpers. Supabase's native mobile docs use app deep links and session/token
+  handling after OAuth redirects; `linkIdentity` supports PKCE, so the
+  implementation should be prepared to exchange the returned code or set the
+  returned session depending on the redirect payload.
+- Add `scheme: "actionsportsjournal"` to `app.json` only when implementation
+  starts. Also add the matching Supabase Redirect URL
+  `actionsportsjournal://**` before smoke.
+- After the browser returns, call `refreshSession()` and `supabase.auth.getUser()`
+  or `getUserIdentities()` to confirm Kakao identity is attached to the same
+  Auth user. Then call a normal BFF endpoint so `resolveRequestUser(request)`
+  can sync display metadata into the existing `public.users` row.
+- `resolveRequestUser(request)` already syncs `email` and display name from
+  `user_metadata.full_name` / `name`. Kakao without email should leave
+  `public.users.email` null. If Kakao nickname appears under a different
+  metadata key, update the server sync narrowly after smoke evidence identifies
+  the exact key.
+- For no-email Kakao, UI should show "카카오 연결됨" and nickname if available.
+  Do not imply email recovery when Kakao does not provide `account_email`.
+- Ownership continuity smoke must verify: Supabase Auth user id unchanged,
+  `public.users.id` unchanged, Moment `user_id` unchanged, push token `user_id`
+  unchanged, Realtime channel basis still `analysis-updates:auth:{authUserId}`,
+  and no new Supabase Auth user was created.
+
 Kakao without email:
 
 Email is not required for ASJ ownership continuity if `linkIdentity` preserves

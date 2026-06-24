@@ -214,6 +214,53 @@ Setup checklist detail:
   preview build to verify deep-link return behavior after implementation. Do
   not create that build during planning.
 
+Implementation plan:
+
+1. Screen structure:
+   - Use the existing `AccountRecoveryScreen` for the first implementation.
+   - Keep the page framed as account preservation / recovery.
+   - Add a Kakao linking section below Email Recovery.
+   - Avoid a new login wall or broad Auth screen.
+2. Auth helper:
+   - Add a focused Kakao linking helper that calls
+     `supabase.auth.linkIdentity({ provider: "kakao", options: { redirectTo,
+     skipBrowserRedirect: true } })`.
+   - Keep `signInWithOAuth` out of this path unless a future reinstall/new-device
+     recovery sign-in flow is explicitly designed.
+3. Deep link/session handling:
+   - Add `scheme: "actionsportsjournal"` to `app.json` when implementation
+     starts.
+   - Add `actionsportsjournal://**` to Supabase Redirect URLs before smoke.
+   - Use Expo browser/deep-link handling (`expo-web-browser` with
+     `expo-linking` or `expo-auth-session` redirect helpers) to open the OAuth
+     URL and capture the app return.
+   - After return, refresh the Supabase session and verify identities with
+     `getUser()` / `getUserIdentities()`. Because `linkIdentity` supports PKCE,
+     be prepared to exchange a returned code if the redirect payload requires it.
+4. Server profile sync:
+   - `resolveRequestUser(request)` already syncs email and display name from
+     Supabase Auth metadata.
+   - Kakao without `account_email` should leave `public.users.email` null.
+   - Only add Kakao-specific nickname metadata mapping after smoke shows the
+     exact metadata key Supabase receives from Kakao.
+5. No-email UI:
+   - Show Kakao as connected using provider identity and nickname metadata.
+   - Do not describe the Kakao-linked state as email recovery if Kakao email is
+     unavailable.
+6. Ownership continuity smoke:
+   - Supabase Auth user id stays the same.
+   - `public.users.id` stays the same.
+   - Existing Moment `user_id` stays the same.
+   - Existing `device_push_tokens.user_id` stays the same.
+   - Realtime channel basis remains `analysis-updates:auth:{authUserId}`.
+   - No separate Supabase Auth user is created.
+7. Build timing:
+   - Local/static implementation and typecheck can happen before a build.
+   - Deep-link return on iOS standalone/EAS preview likely requires a new build
+     after `app.json` scheme changes.
+   - Do not create the EAS build until the implementation is ready for a focused
+     Kakao linking QA pass.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:
