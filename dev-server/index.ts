@@ -370,7 +370,8 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
       return;
     }
 
-    const userId = await getOrCreateDefaultSupabaseUser();
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
     const uploadId = randomUUID();
     const extension =
       extensionForFileName(fileName ?? "") ?? extensionForMimeType(mimeType);
@@ -546,7 +547,8 @@ app.post("/api/moments", async (request, response) => {
     }
 
     const now = new Date().toISOString();
-    const userId = await getOrCreateDefaultSupabaseUser();
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
     const sessionId = getField(request.body?.sessionId, "");
     const fileSize = Number(request.body?.fileSize);
     const durationMs = Number(request.body?.durationMs);
@@ -717,6 +719,7 @@ app.post(
         return;
       }
 
+      const requestUser = await resolveRequestUser(request);
       const result = await createStoredMomentFromSourceVideo({
         client,
         body: request.body,
@@ -727,6 +730,7 @@ app.post(
           size: request.file.size,
         },
         onTiming: logSourceVideoTiming,
+        userId: requestUser.userId,
       });
 
       const queuedJob = result.queuedJob;
@@ -790,9 +794,11 @@ app.post(
         return;
       }
 
+      const requestUser = await resolveRequestUser(request);
       const result = await createStoredMomentFromUploadedSource({
         client,
         body: request.body,
+        userId: requestUser.userId,
       });
       const queuedJob = result.queuedJob;
 
@@ -1185,7 +1191,8 @@ app.delete("/api/moments/:momentId", async (request, response) => {
       return;
     }
 
-    const userId = await getOrCreateDefaultSupabaseUser();
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
     const { data: moment, error: momentError } = await client
       .from("moments")
       .select(
@@ -1214,7 +1221,8 @@ app.delete("/api/moments/:momentId", async (request, response) => {
     const { data: analysisJobs, error: analysisJobsError } = await client
       .from("analysis_jobs")
       .select("id,input_video_storage_bucket,input_video_storage_path")
-      .eq("moment_id", momentId);
+      .eq("moment_id", momentId)
+      .eq("user_id", userId);
 
     if (analysisJobsError) {
       throw new Error(
@@ -1226,6 +1234,7 @@ app.delete("/api/moments/:momentId", async (request, response) => {
     addMomentStoragePathForDelete(storagePathsByBucket, {
       bucket: momentRow.source_video_storage_bucket,
       path: momentRow.source_video_storage_path,
+      userId,
     });
     const thumbnailStorageReference = parseSupabaseStorageReference(
       nullableString(momentRow.thumbnail_uri) ?? "",
@@ -1235,6 +1244,7 @@ app.delete("/api/moments/:momentId", async (request, response) => {
       addMomentStoragePathForDelete(storagePathsByBucket, {
         bucket: thumbnailStorageReference.bucket,
         path: thumbnailStorageReference.path,
+        userId,
       });
     }
 
@@ -1242,6 +1252,7 @@ app.delete("/api/moments/:momentId", async (request, response) => {
       addMomentStoragePathForDelete(storagePathsByBucket, {
         bucket: analysisJob.input_video_storage_bucket,
         path: analysisJob.input_video_storage_path,
+        userId,
       });
     }
 
@@ -1290,7 +1301,8 @@ app.delete("/api/moments/:momentId", async (request, response) => {
     const { error: evidenceDeleteError } = await client
       .from("evidence_results")
       .delete()
-      .eq("moment_id", momentId);
+      .eq("moment_id", momentId)
+      .eq("user_id", userId);
 
     if (evidenceDeleteError) {
       throw new Error(
@@ -1301,7 +1313,8 @@ app.delete("/api/moments/:momentId", async (request, response) => {
     const { error: jobsDeleteError } = await client
       .from("analysis_jobs")
       .delete()
-      .eq("moment_id", momentId);
+      .eq("moment_id", momentId)
+      .eq("user_id", userId);
 
     if (jobsDeleteError) {
       throw new Error(`Failed to delete analysis jobs: ${jobsDeleteError.message}`);
@@ -3764,15 +3777,16 @@ async function createStoredMomentFromSourceVideo({
   client,
   file,
   onTiming,
+  userId,
 }: {
   body: Record<string, unknown>;
   client: SupabaseServerClient;
   file: EvidenceJobVideoFile;
   onTiming?: (event: string, details?: Record<string, unknown>) => void;
+  userId: string;
 }) {
   const momentId = randomUUID();
   const now = new Date().toISOString();
-  const userId = await getOrCreateDefaultSupabaseUser();
   const sessionId = getField(body?.sessionId, "");
   const extension =
     extensionForFileName(file.originalname) ?? extensionForMimeType(file.mimetype);
@@ -3889,9 +3903,11 @@ async function createStoredMomentFromSourceVideo({
 async function createStoredMomentFromUploadedSource({
   body,
   client,
+  userId,
 }: {
   body: Record<string, unknown>;
   client: SupabaseServerClient;
+  userId: string;
 }) {
   const uploadId = getField(body?.uploadId, "");
   const storageBucket = getField(body?.storageBucket, "");
@@ -3918,11 +3934,34 @@ async function createStoredMomentFromUploadedSource({
       throw new Error("Unsupported or missing video type.");
     }
 
-    const userId = await getOrCreateDefaultSupabaseUser();
     const expectedPrefix = `users/${userId}/uploads/${uploadId}/source`;
 
     if (!storagePath.startsWith(expectedPrefix)) {
       throw new Error("Storage path does not match the upload target.");
+    }
+
+    const { data: uploadTarget, error: uploadTargetError } = await client
+      .from("upload_targets")
+      .select("upload_id,user_id,storage_bucket,storage_path,status")
+      .eq("upload_id", uploadId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (uploadTargetError) {
+      throw new Error(
+        `Failed to verify upload target owner: ${uploadTargetError.message}`,
+      );
+    }
+
+    if (!uploadTarget) {
+      throw new Error("Upload target was not found for this user.");
+    }
+
+    if (
+      uploadTarget.storage_bucket !== storageBucket ||
+      uploadTarget.storage_path !== storagePath
+    ) {
+      throw new Error("Uploaded source does not match the issued upload target.");
     }
 
     const storedVideo = {
@@ -3972,6 +4011,7 @@ async function createStoredMomentFromUploadedSource({
       .from("moments")
       .select("id,created_at,source_video_storage_path")
       .eq("source_video_storage_path", storagePath)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (existingMomentError) {
@@ -3985,6 +4025,7 @@ async function createStoredMomentFromUploadedSource({
         client,
         status: "finalized",
         uploadId,
+        userId,
       });
 
       console.info("[upload_timing]", {
@@ -4006,6 +4047,7 @@ async function createStoredMomentFromUploadedSource({
       client,
       status: "uploaded",
       uploadId,
+      userId,
     });
 
     const resolvedFileSize =
@@ -4072,6 +4114,7 @@ async function createStoredMomentFromUploadedSource({
         client,
         status: "finalized",
         uploadId,
+        userId,
       });
 
       return {
@@ -4098,6 +4141,7 @@ async function createStoredMomentFromUploadedSource({
         failureReason: error instanceof Error ? error.message : "unknown",
         status: "failed",
         uploadId,
+        userId,
       });
       throw error;
     }
@@ -4107,6 +4151,7 @@ async function createStoredMomentFromUploadedSource({
       failureReason: error instanceof Error ? error.message : "unknown",
       status: "failed",
       uploadId,
+      userId,
     });
     throw error;
   }
@@ -4161,11 +4206,13 @@ async function updateUploadTargetStatus({
   failureReason,
   status,
   uploadId,
+  userId,
 }: {
   client: SupabaseServerClient;
   failureReason?: string;
   status: "uploaded" | "finalized" | "failed";
   uploadId: string;
+  userId?: string;
 }) {
   const now = new Date().toISOString();
   const timestampColumn =
@@ -4184,10 +4231,16 @@ async function updateUploadTargetStatus({
     updatePayload.failure_reason = failureReason;
   }
 
-  const { error } = await client
+  let updateQuery = client
     .from("upload_targets")
     .update(updatePayload)
     .eq("upload_id", uploadId);
+
+  if (userId) {
+    updateQuery = updateQuery.eq("user_id", userId);
+  }
+
+  const { error } = await updateQuery;
 
   if (error) {
     console.warn("Upload target tracking update failed:", error.message);
@@ -5879,12 +5932,22 @@ function addMomentStoragePathForDelete(
   input: {
     bucket: unknown;
     path: unknown;
+    userId?: string;
   },
 ) {
   const bucket = nullableString(input.bucket);
   const path = nullableString(input.path);
 
   if (!bucket || !path) {
+    return;
+  }
+
+  if (input.userId && !isUserOwnedStoragePath(path, input.userId)) {
+    console.warn("Skipping storage delete outside request user boundary:", {
+      bucket,
+      path,
+      userId: input.userId,
+    });
     return;
   }
 
@@ -5896,6 +5959,10 @@ function addMomentStoragePathForDelete(
   }
 
   pathsByBucket.set(bucket, new Set([path]));
+}
+
+function isUserOwnedStoragePath(path: string, userId: string) {
+  return path.startsWith(`users/${userId}/`);
 }
 
 async function resolveMomentThumbnailUri(
