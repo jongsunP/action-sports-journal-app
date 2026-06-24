@@ -258,6 +258,17 @@ Next QA/start point:
   Brevo, or Mailtrap for sandbox testing, then configure sender domain,
   SPF/DKIM/DMARC, SMTP credentials, Supabase custom SMTP, rate limits, and
   provider delivery logs.
+- Latest Email Recovery smoke with `parksunl88@nate.com`: `updateUser({ email
+  })` was called exactly once and succeeded. The Auth user remained anonymous
+  with empty `email`, `new_email=parksunl88@nate.com`, and `is_anonymous=true`.
+  The email was received and confirmed the Supabase Change Email template is
+  magic-link based. Clicking the link redirected the browser to
+  `http://localhost:3000/#error=access_denied&error_code=otp_expired...`, so
+  final email linking did not complete. Email Recovery is no longer blocked by
+  hosted sender rate limits or the previous `email_exists` case, but it still
+  needs redirect URL/deep-link strategy and a QA pass within the link validity
+  window. Kakao Recovery is already verified on Build 75 and remains the
+  stronger current recovery path; keep Email Recovery as baseline/fallback.
 - Link an email on a fresh anonymous Build and verify the same Auth user/app
   user/Moment/Push/Realtime ownership continues after linking.
 - Implement actual reinstall/new-device recovery sign-in only after the current

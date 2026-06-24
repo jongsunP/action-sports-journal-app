@@ -125,6 +125,21 @@ not closed as a successful recovery smoke. The agreed test email is no longer a
 valid fresh-linking target because it is already owned by the successful Kakao
 QA account. Do not repeat `updateUser({ email })` with this email.
 
+Email Recovery latest magic-link smoke, 2026-06-24:
+
+A fresh Email Recovery smoke used the owner-approved new test email
+`parksunl88@nate.com`. `updateUser({ email })` was called exactly once and
+succeeded. The Auth user stayed anonymous with `email` still empty,
+`new_email=parksunl88@nate.com`, and `is_anonymous=true`; Supabase sent the
+Change Email email, confirming the current template is magic-link based. The
+user received the email, but clicking the link opened a browser redirect to
+`http://localhost:3000/#error=access_denied&error_code=otp_expired...`, so final
+email attachment was not completed. Email Recovery is no longer blocked by the
+hosted sender rate limit or the previously registered email, but full E2E still
+needs a production/deep-link redirect strategy and a QA pass within the link
+validity window. Kakao Recovery remains the already-verified recovery path from
+Build 75; Email Recovery remains a baseline/fallback path.
+
 Kakao Account Linking preparation, 2026-06-24:
 
 Supabase/Kakao provider setup is now ready for implementation planning.
