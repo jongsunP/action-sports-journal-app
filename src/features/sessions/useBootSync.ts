@@ -27,6 +27,7 @@ type UseBootSyncParams = {
   initialRemoteMomentPageLimit?: number;
   normalizeRestoredSession: (session: Session) => Session;
   remoteMomentIdsBySessionId: Record<string, string>;
+  remoteMomentSyncEnabled?: boolean;
   setAnalysisBySessionId: Dispatch<SetStateAction<Record<string, AnalysisResult>>>;
   setGeminiEvidenceBySessionId: Dispatch<
     SetStateAction<Record<string, GeminiEvidenceResult>>
@@ -67,6 +68,7 @@ export function useBootSync({
   initialGroupId,
   initialRemoteMomentPageLimit,
   normalizeRestoredSession,
+  remoteMomentSyncEnabled = true,
   setAnalysisBySessionId,
   setGeminiEvidenceBySessionId,
   setOpenAiBenchmarkBySessionId,
@@ -79,7 +81,8 @@ export function useBootSync({
   setVideosBySessionId,
   syncRemoteMoments,
 }: UseBootSyncParams) {
-  const isRemoteMomentSyncConfigured = hasConfiguredSupabaseMoments();
+  const isRemoteMomentSyncConfigured =
+    remoteMomentSyncEnabled && hasConfiguredSupabaseMoments();
   const [initialRemoteMomentPageInfo, setInitialRemoteMomentPageInfo] =
     useState<RemoteMomentPageInfo>({
       hasMore: false,
@@ -96,6 +99,21 @@ export function useBootSync({
       isRemoteMomentSyncConfigured ? 'waiting_for_storage' : 'not_configured',
   );
   const hasStartedInitialRemoteSyncRef = useRef(false);
+
+  useEffect(() => {
+    if (!remoteMomentSyncEnabled) {
+      hasStartedInitialRemoteSyncRef.current = false;
+      setRemoteMomentSyncStatus('not_configured');
+      return;
+    }
+
+    if (
+      hasConfiguredSupabaseMoments() &&
+      remoteMomentSyncStatus === 'not_configured'
+    ) {
+      setRemoteMomentSyncStatus('waiting_for_storage');
+    }
+  }, [remoteMomentSyncEnabled, remoteMomentSyncStatus]);
 
   useEffect(() => {
     let isMounted = true;

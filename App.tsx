@@ -8,15 +8,23 @@ import { HomeScreen } from './src/features/sessions/HomeScreen';
 import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
 import { UploadScreen } from './src/features/sessions/UploadScreen';
 import type { RootStackParamList } from './src/navigation/types';
-import { AuthSessionProvider } from './src/services/auth/AuthSessionProvider';
+import {
+  AuthSessionProvider,
+  useAuthSession,
+} from './src/services/auth/AuthSessionProvider';
 
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function App() {
+function AnalysisPushRegistration() {
+  const { authMode } = useAuthSession();
+
   useEffect(() => {
-    if (!ENABLE_ANALYSIS_PUSH_NOTIFICATIONS) {
+    if (
+      !ENABLE_ANALYSIS_PUSH_NOTIFICATIONS ||
+      (authMode !== 'authenticated' && authMode !== 'internalFallback')
+    ) {
       return;
     }
 
@@ -30,11 +38,16 @@ export default function App() {
           error instanceof Error ? error.message : 'Unknown error',
         );
       });
-  }, []);
+  }, [authMode]);
 
+  return null;
+}
+
+export default function App() {
   return (
     <AuthSessionProvider>
       <View style={styles.container}>
+        <AnalysisPushRegistration />
         <NavigationContainer>
           <Stack.Navigator
             screenOptions={{

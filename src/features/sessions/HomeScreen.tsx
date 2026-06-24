@@ -28,6 +28,7 @@ import {
   getLatestAnalysisNotificationRefreshRequest,
   subscribeToAnalysisNotificationRefresh,
 } from '../../services/notifications/analysisNotificationRefreshEvents';
+import { useAuthSession } from '../../services/auth/AuthSessionProvider';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import {
   finalizeUploadedSourceVideo,
@@ -125,6 +126,11 @@ export function HomeScreen() {
   const layout = useWindowDimensions();
   const colorScheme = useColorScheme();
   const prefersDarkMode = colorScheme === 'dark';
+  const { authMode } = useAuthSession();
+  const canUseRemoteApi =
+    authMode === 'authenticated' || authMode === 'internalFallback';
+  const isAuthLoading = authMode === 'authLoading';
+  const isLoginRequired = authMode === 'loginRequired';
   const [selectedGroupId, setSelectedGroupId] = useState(
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
@@ -513,6 +519,7 @@ export function HomeScreen() {
     initialRemoteMomentPageLimit: MOMENT_LIST_PAGE_SIZE,
     normalizeRestoredSession,
     remoteMomentIdsBySessionId,
+    remoteMomentSyncEnabled: canUseRemoteApi,
     setAnalysisBySessionId,
     setGeminiEvidenceBySessionId,
     setOpenAiBenchmarkBySessionId,
@@ -781,6 +788,7 @@ export function HomeScreen() {
   const refreshRemoteMoments = useCallback(
     async (reason: RemoteRefreshReason) => {
       if (
+        !canUseRemoteApi ||
         !isStorageLoaded ||
         !isRemoteMomentSyncLoaded ||
         !hasConfiguredSupabaseMoments()
@@ -865,6 +873,7 @@ export function HomeScreen() {
       }
     },
     [
+      canUseRemoteApi,
       isRemoteMomentSyncLoaded,
       isStorageLoaded,
       applyVideoArchiveFirstPage,
@@ -879,6 +888,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (
       hasAttemptedBootUploadRecoveryRef.current ||
+      !canUseRemoteApi ||
       !isStorageLoaded ||
       !isRemoteMomentSyncLoaded ||
       remoteMomentSyncStatus !== 'completed'
@@ -911,6 +921,7 @@ export function HomeScreen() {
       },
     );
   }, [
+    canUseRemoteApi,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
     recoverUnfinalizedUploadCandidates,
@@ -922,6 +933,7 @@ export function HomeScreen() {
 
   useAnalysisRealtimeSync({
     enabled:
+      canUseRemoteApi &&
       isStorageLoaded &&
       isRemoteMomentSyncLoaded &&
       hasConfiguredSupabaseMoments(),
@@ -1020,7 +1032,12 @@ export function HomeScreen() {
   }, [refreshRemoteMoments]);
 
   useEffect(() => {
-    if (!isStorageLoaded || !isRemoteMomentSyncLoaded || !hasConfiguredSupabaseMoments()) {
+    if (
+      !canUseRemoteApi ||
+      !isStorageLoaded ||
+      !isRemoteMomentSyncLoaded ||
+      !hasConfiguredSupabaseMoments()
+    ) {
       return;
     }
 
@@ -1042,10 +1059,11 @@ export function HomeScreen() {
     handleNotificationRefresh(getLatestAnalysisNotificationRefreshRequest());
 
     return subscribeToAnalysisNotificationRefresh(handleNotificationRefresh);
-  }, [isRemoteMomentSyncLoaded, isStorageLoaded, refreshRemoteMoments]);
+  }, [canUseRemoteApi, isRemoteMomentSyncLoaded, isStorageLoaded, refreshRemoteMoments]);
 
   useEffect(() => {
     if (
+      !canUseRemoteApi ||
       remoteMomentSyncStatus !== 'timeout' &&
       remoteMomentSyncStatus !== 'failed'
     ) {
@@ -1053,7 +1071,7 @@ export function HomeScreen() {
     }
 
     void refreshRemoteMoments('initial_retry');
-  }, [refreshRemoteMoments, remoteMomentSyncStatus]);
+  }, [canUseRemoteApi, refreshRemoteMoments, remoteMomentSyncStatus]);
 
   const selectedGroup =
     mockActivityGroups.find((group) => group.id === ACTIVE_WAKEBOARD_GROUP_ID) ??
@@ -1111,6 +1129,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (
       hasAppliedBootVideoArchivePageRef.current ||
+      !canUseRemoteApi ||
       hasLoadedVideoArchiveFirstPage ||
       !hasInitialRemoteMomentPage ||
       remoteMomentSyncStatus !== 'completed'
@@ -1126,6 +1145,7 @@ export function HomeScreen() {
     });
   }, [
     applyVideoArchiveFirstPage,
+    canUseRemoteApi,
     hasInitialRemoteMomentPage,
     hasLoadedVideoArchiveFirstPage,
     initialRemoteMomentPageInfo.hasMore,
@@ -1150,6 +1170,7 @@ export function HomeScreen() {
   }, []);
   const loadInitialVideoArchivePage = useCallback(() => {
     if (
+      !canUseRemoteApi ||
       hasLoadedVideoArchiveFirstPage ||
       isLoadingVideoArchiveInitialPage ||
       !hasConfiguredSupabaseMoments()
@@ -1177,6 +1198,7 @@ export function HomeScreen() {
       });
   }, [
     applyVideoArchiveFirstPage,
+    canUseRemoteApi,
     hasLoadedVideoArchiveFirstPage,
     isLoadingVideoArchiveInitialPage,
     syncRemoteMoments,
@@ -1185,6 +1207,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (
       activeTab !== 'video' ||
+      !canUseRemoteApi ||
       !isStorageLoaded ||
       !isRemoteMomentSyncLoaded
     ) {
@@ -1194,6 +1217,7 @@ export function HomeScreen() {
     loadInitialVideoArchivePage();
   }, [
     activeTab,
+    canUseRemoteApi,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
     loadInitialVideoArchivePage,
@@ -1201,6 +1225,7 @@ export function HomeScreen() {
 
   const handleLoadMoreVideoArchiveMoments = useCallback(() => {
     if (
+      !canUseRemoteApi ||
       !hasLoadedVideoArchiveFirstPage ||
       !hasMoreVideoArchiveMoments ||
       !videoArchiveNextCursor ||
@@ -1242,6 +1267,7 @@ export function HomeScreen() {
       });
   }, [
     appendVideoArchiveSessionIds,
+    canUseRemoteApi,
     expireUnmatchedUploadReconciliationCandidates,
     getSessionIdsForRemoteMoments,
     hasLoadedVideoArchiveFirstPage,
@@ -1470,6 +1496,28 @@ export function HomeScreen() {
     shouldSuppressUploadFailureAlert,
     updateLocalMomentStatus,
   });
+  const guardedCanUploadSession = canUseRemoteApi && canUploadSession;
+  const guardedHandleOpenUploadSheet = useCallback(() => {
+    if (!canUseRemoteApi) {
+      return;
+    }
+
+    void handleOpenUploadSheet();
+  }, [canUseRemoteApi, handleOpenUploadSheet]);
+  const guardedHandlePickVideo = useCallback(async () => {
+    if (!canUseRemoteApi) {
+      return false;
+    }
+
+    return handlePickVideo();
+  }, [canUseRemoteApi, handlePickVideo]);
+  const guardedHandleAddSession = useCallback(() => {
+    if (!canUseRemoteApi) {
+      return;
+    }
+
+    handleAddSession();
+  }, [canUseRemoteApi, handleAddSession]);
 
   useEffect(() => {
     if (!isComposerOpen) {
@@ -1519,25 +1567,26 @@ export function HomeScreen() {
 
   useEffect(() => {
     setUploadRuntimeState({
-      canUploadSession,
+      canUploadSession: guardedCanUploadSession,
       formatVideoMeta,
       isOpen: isComposerOpen,
       isPreparingThumbnail: isPreparingSelectedVideoThumbnail,
-      isReady: true,
+      isReady: canUseRemoteApi,
       isSubmitting: isUploadingSession,
       onClose: closeUploadSheet,
-      onPickVideo: handlePickVideo,
-      onSubmit: handleAddSession,
+      onPickVideo: guardedHandlePickVideo,
+      onSubmit: guardedHandleAddSession,
       selectedVideo,
       styles,
       uploadDraft,
       uploadProgress,
     });
   }, [
-    canUploadSession,
+    canUseRemoteApi,
     closeUploadSheet,
-    handleAddSession,
-    handlePickVideo,
+    guardedCanUploadSession,
+    guardedHandleAddSession,
+    guardedHandlePickVideo,
     isComposerOpen,
     isPreparingSelectedVideoThumbnail,
     isUploadingSession,
@@ -1546,7 +1595,7 @@ export function HomeScreen() {
     uploadProgress,
   ]);
 
-  if (isLoadingInitialMoments) {
+  if (isAuthLoading || isLoadingInitialMoments) {
     return (
       <SafeAreaView
         style={[
@@ -1557,6 +1606,25 @@ export function HomeScreen() {
         <View style={styles.bootLoadingContent}>
           <Text style={styles.kicker}>Riding Journal</Text>
           <Text style={styles.bootLoadingTitle}>기록을 불러오는 중입니다</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isLoginRequired) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.bootLoadingScreen,
+          prefersDarkMode ? styles.containerDark : undefined,
+        ]}
+      >
+        <View style={styles.bootLoadingContent}>
+          <Text style={styles.kicker}>Riding Journal</Text>
+          <Text style={styles.bootLoadingTitle}>로그인이 필요합니다</Text>
+          <Text style={styles.emptyText}>
+            계정 연결 화면은 다음 단계에서 추가할 예정입니다.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -1601,7 +1669,7 @@ export function HomeScreen() {
         <Pressable
           accessibilityLabel="영상 업로드"
           accessibilityRole="button"
-          onPress={handleOpenUploadSheet}
+          onPress={guardedHandleOpenUploadSheet}
           style={({ pressed }) => [
             styles.headerAddButton,
             pressed ? styles.buttonPressed : undefined,
