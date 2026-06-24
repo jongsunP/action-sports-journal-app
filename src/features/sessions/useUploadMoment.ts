@@ -117,6 +117,7 @@ export function useUploadMoment({
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isUploadingSession, setIsUploadingSession] = useState(false);
   const isUploadingSessionRef = useRef(false);
+  const uploadFlowGenerationRef = useRef(0);
   const uploadThumbnailRequestIdRef = useRef(0);
   const selectedVideoThumbnailUriRef = useRef<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<SessionVideoAsset | null>(
@@ -157,6 +158,7 @@ export function useUploadMoment({
   };
 
   const resetUploadFlow = () => {
+    uploadFlowGenerationRef.current += 1;
     isUploadingSessionRef.current = false;
     setIsUploadingSession(false);
     setIsComposerOpen(false);
@@ -288,9 +290,13 @@ export function useUploadMoment({
       return;
     }
 
+    const uploadFlowGeneration = uploadFlowGenerationRef.current;
     const didPickVideo = await handlePickVideo();
 
-    if (didPickVideo) {
+    if (
+      didPickVideo &&
+      uploadFlowGenerationRef.current === uploadFlowGeneration
+    ) {
       setIsComposerOpen(true);
     }
   };
