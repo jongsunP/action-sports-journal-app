@@ -1517,7 +1517,29 @@ per-user scopes and RLS.
 Current state:
 
 The app is personal/QA-oriented and effectively single-user. The backend uses a
-default user pattern.
+default user pattern for no-token internal QA, but Auth Phase 1 has started
+moving server ownership to a request-scoped resolver.
+
+Auth Phase 1 smoke test preparation:
+
+- Authenticated smoke testing requires a Supabase Auth test user
+  `ACCESS_TOKEN`.
+- Do not run the authenticated `GET /api/moments` blindly if the test user's
+  app-level mapping is unknown.
+- First decode the JWT `sub` locally.
+- Then check `users.auth_user_id = sub` with a read-only query.
+- If the mapping exists, authenticated `GET /api/moments` should be safe as a
+  read-only ownership smoke.
+- If the mapping does not exist, `resolveRequestUser()` will create one
+  `users` row on the first authenticated request. Stop and ask for approval
+  before running that request.
+
+Reason this was not executed immediately:
+
+The local environment has the Supabase URL and service-role key, but not an
+anon key or already supplied Supabase Auth access token. Running the
+authenticated endpoint without first checking the mapping could create a new
+`users` row, which is outside read-only smoke constraints.
 
 Future work:
 

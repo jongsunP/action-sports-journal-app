@@ -14,6 +14,48 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Auth Phase 1 server ownership checkpoint, 2026-06-24:
+
+The server-side ownership boundary has started moving from the single
+internal default user toward request-scoped ownership. The first implementation
+adds `resolveRequestUser(request)` and routes the main server ownership paths
+through it while preserving the no-token internal QA fallback.
+
+Current Auth Phase 1 state:
+
+- `resolveRequestUser(request)` exists on the Render/BFF server.
+- No-token requests still resolve to the existing internal default user.
+- Bearer-token requests are prepared to resolve through Supabase Auth and
+  `users.auth_user_id`.
+- Server API handlers no longer call `getOrCreateDefaultSupabaseUser()`
+  directly; the remaining default-user call is the intended fallback inside
+  `resolveRequestUser()`.
+- The converted server paths include Moment list, push token registration,
+  upload target creation, direct finalize, multipart fallback upload, legacy
+  Moment creation, and Moment deletion.
+
+Authenticated smoke test status:
+
+The authenticated `GET /api/moments` smoke test has not been executed yet. It
+requires an `ACCESS_TOKEN` for a Supabase Auth test user. Before making the
+authenticated request, decode the JWT `sub`, then check `users.auth_user_id`
+read-only. If the mapping already exists, the authenticated GET can be treated
+as read-only. If the mapping does not exist, the first authenticated GET will
+create one `users` row through `resolveRequestUser()`, so user approval is
+required before running it.
+
+Next Auth step:
+
+Prepare and run the authenticated read-only smoke path:
+
+```text
+1. Obtain ACCESS_TOKEN.
+2. Decode JWT sub locally.
+3. Read-only check users.auth_user_id = sub.
+4. If mapping exists, run authenticated GET /api/moments.
+5. If mapping does not exist, stop and ask before allowing user-row creation.
+```
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build and supersedes the older Build 55
