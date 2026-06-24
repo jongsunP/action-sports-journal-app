@@ -47,6 +47,36 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## 2026-06-24 Authenticated Moments Smoke Checkpoint
+
+Authenticated `GET /api/moments` was smoke-tested with a Supabase Auth test
+user. The access token was intentionally not recorded.
+
+```text
+JWT sub: e156164b-e810-4ab8-a949-9e14452fdd73
+JWT email: parksunl88@gmail.com
+JWT exp: 2026-06-24T03:50:39.000Z
+Authenticated app userId: 91ab8b25-1adb-4a94-ade2-b00c50e38d22
+Internal default app userId: 737deccd-7da9-49c5-854b-839b62fa417b
+```
+
+Confirmed:
+
+- Server log resolved the bearer-token request as `authMode=authenticated`.
+- Authenticated app `userId` and no-token internal default app `userId` are
+  separate.
+- Authenticated `GET /api/moments` returned `0` moments.
+- No-token `GET /api/moments` returned `30` moments with `hasMore: true`.
+- Default Moments were not exposed in the authenticated response.
+- `users.auth_user_id` mapping did not exist before the authenticated GET and
+  one `users` row was created by `resolveRequestUser()`.
+
+Current Auth implication:
+
+No-token internal default data must remain an internal QA fallback only. Future
+authenticated paths should continue using request-scoped ownership and must
+not merge default-user Moments into authenticated user responses.
+
 ## 2026-06-23 Build 65 Upload Recovery Checkpoint
 
 Latest current build:

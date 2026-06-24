@@ -51,6 +51,29 @@ continuity as well as technical continuity:
 
 ## Current Status
 
+Auth Phase 1 authenticated moments smoke checkpoint, 2026-06-24:
+
+Authenticated `GET /api/moments` has been smoke-tested with a Supabase Auth
+test user. The access token was not recorded.
+
+```text
+JWT sub: e156164b-e810-4ab8-a949-9e14452fdd73
+JWT email: parksunl88@gmail.com
+JWT exp: 2026-06-24T03:50:39.000Z
+Authenticated app userId: 91ab8b25-1adb-4a94-ade2-b00c50e38d22
+Internal default app userId: 737deccd-7da9-49c5-854b-839b62fa417b
+```
+
+Confirmed results:
+
+- Server log resolved the bearer-token request as `authMode=authenticated`.
+- Authenticated `userId` and no-token internal default `userId` are separate.
+- Authenticated `GET /api/moments` returned `0` moments.
+- No-token `GET /api/moments` returned `30` moments with `hasMore: true`.
+- No default Moment IDs were visible in the authenticated response.
+- `users.auth_user_id` mapping did not exist before the authenticated GET and
+  one `users` row was created by `resolveRequestUser()`.
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build.

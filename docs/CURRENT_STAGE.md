@@ -34,27 +34,36 @@ Current Auth Phase 1 state:
   upload target creation, direct finalize, multipart fallback upload, legacy
   Moment creation, and Moment deletion.
 
-Authenticated smoke test status:
+Authenticated smoke test result, 2026-06-24:
 
-The authenticated `GET /api/moments` smoke test has not been executed yet. It
-requires an `ACCESS_TOKEN` for a Supabase Auth test user. Before making the
-authenticated request, decode the JWT `sub`, then check `users.auth_user_id`
-read-only. If the mapping already exists, the authenticated GET can be treated
-as read-only. If the mapping does not exist, the first authenticated GET will
-create one `users` row through `resolveRequestUser()`, so user approval is
-required before running it.
+```text
+Route: GET /api/moments
+JWT sub: e156164b-e810-4ab8-a949-9e14452fdd73
+JWT email: parksunl88@gmail.com
+JWT exp: 2026-06-24T03:50:39.000Z
+Authenticated app userId: 91ab8b25-1adb-4a94-ade2-b00c50e38d22
+Internal default app userId: 737deccd-7da9-49c5-854b-839b62fa417b
+```
+
+Confirmed:
+
+- Server log resolved the bearer-token request as `authMode=authenticated`.
+- The authenticated app `userId` is separate from the no-token internal default
+  `userId`.
+- Authenticated `GET /api/moments` returned `0` moments.
+- No-token `GET /api/moments` returned `30` moments with `hasMore: true`.
+- No default Moment IDs overlapped with the authenticated response.
+- `users.auth_user_id` mapping did not exist before the authenticated GET and
+  one `users` row was created for the Supabase Auth user by
+  `resolveRequestUser()`.
+- The access token was intentionally not recorded.
 
 Next Auth step:
 
-Prepare and run the authenticated read-only smoke path:
-
-```text
-1. Obtain ACCESS_TOKEN.
-2. Decode JWT sub locally.
-3. Read-only check users.auth_user_id = sub.
-4. If mapping exists, run authenticated GET /api/moments.
-5. If mapping does not exist, stop and ask before allowing user-row creation.
-```
+Continue Auth Phase 1 by converting the remaining ownership-sensitive reads
+and writes to depend on the resolved request user, then prepare the
+user-scoped Realtime channel direction. Do not treat no-token internal default
+data as authenticated user data.
 
 Build 65 upload recovery checkpoint, 2026-06-23:
 
