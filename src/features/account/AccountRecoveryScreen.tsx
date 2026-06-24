@@ -18,7 +18,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { normalizeRecoveryEmail } from '../../services/auth/accountRecovery';
 import { useAuthSession } from '../../services/auth/AuthSessionProvider';
 
-type RecoveryStep = 'idle' | 'codeSent' | 'linked';
+type RecoveryStep = 'idle' | 'emailSent' | 'linked';
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -43,15 +43,13 @@ export function AccountRecoveryScreen() {
     requestRecoveryEmailLink,
     refreshSession,
     user,
-    verifyRecoveryEmailOtp,
   } = useAuthSession();
   const [email, setEmail] = useState(user?.email ?? '');
-  const [token, setToken] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
   const [step, setStep] = useState<RecoveryStep>(user?.email ? 'linked' : 'idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [isRefreshingSession, setIsRefreshingSession] = useState(false);
 
   const normalizedEmail = useMemo(() => normalizeRecoveryEmail(email), [email]);
   const isAnonymousUser = hasAnonymousFlag(user);
@@ -60,13 +58,9 @@ export function AccountRecoveryScreen() {
     authMode === 'authenticated' &&
     normalizedEmail.includes('@') &&
     !isSubmittingEmail &&
-    !isVerifyingCode;
-  const canVerifyCode =
-    authMode === 'authenticated' &&
-    pendingEmail.length > 0 &&
-    token.trim().length >= 6 &&
-    !isSubmittingEmail &&
-    !isVerifyingCode;
+    !isRefreshingSession;
+  const canRefreshLinkStatus =
+    authMode === 'authenticated' && !isSubmittingEmail && !isRefreshingSession;
 
   const handleRequestEmailLink = async () => {
     if (!canSubmitEmail) {
@@ -79,8 +73,7 @@ export function AccountRecoveryScreen() {
     try {
       await requestRecoveryEmailLink(normalizedEmail);
       setPendingEmail(normalizedEmail);
-      setStep('codeSent');
-      setToken('');
+      setStep('emailSent');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -88,31 +81,29 @@ export function AccountRecoveryScreen() {
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!canVerifyCode) {
+  const handleRefreshLinkStatus = async () => {
+    if (!canRefreshLinkStatus) {
       return;
     }
 
     setErrorMessage(null);
-    setIsVerifyingCode(true);
+    setIsRefreshingSession(true);
 
     try {
-      await verifyRecoveryEmailOtp({
-        email: pendingEmail,
-        token,
-      });
-      await refreshSession();
-      setStep('linked');
-      setToken('');
+      const nextSession = await refreshSession();
+      if (nextSession?.user.email) {
+        setEmail(nextSession.user.email);
+        setStep('linked');
+      }
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
-      setIsVerifyingCode(false);
+      setIsRefreshingSession(false);
     }
   };
 
   const handleResend = async () => {
-    if (!pendingEmail || isSubmittingEmail || isVerifyingCode) {
+    if (!pendingEmail || isSubmittingEmail || isRefreshingSession) {
       return;
     }
 
@@ -122,7 +113,6 @@ export function AccountRecoveryScreen() {
 
     try {
       await requestRecoveryEmailLink(pendingEmail);
-      setToken('');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -191,7 +181,7 @@ export function AccountRecoveryScreen() {
               <TextInput
                 autoCapitalize="none"
                 autoCorrect={false}
-                editable={!isSubmittingEmail && !isVerifyingCode}
+                editable={!isSubmittingEmail && !isRefreshingSession}
                 inputMode="email"
                 keyboardType="email-address"
                 onChangeText={setEmail}
@@ -214,55 +204,45 @@ export function AccountRecoveryScreen() {
                 {isSubmittingEmail ? (
                   <ActivityIndicator color="#050507" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>확인 코드 받기</Text>
+                  <Text style={styles.primaryButtonText}>복구 이메일 보내기</Text>
                 )}
               </Pressable>
 
-              {step === 'codeSent' ? (
+              {step === 'emailSent' ? (
                 <View style={styles.codeBlock}>
-                  <Text style={styles.formLabel}>이메일 확인 코드</Text>
+                  <Text style={styles.formLabel}>이메일 확인 대기 중</Text>
                   <Text style={styles.helperText}>
-                    {pendingEmail} 주소로 받은 6자리 코드를 입력해주세요.
+                    {pendingEmail} 주소로 보낸 메일에서 확인 링크를 눌러주세요.
+                    링크를 연 뒤 앱으로 돌아와 연결 상태를 새로고침하면 됩니다.
                   </Text>
-                  <TextInput
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!isSubmittingEmail && !isVerifyingCode}
-                    inputMode="numeric"
-                    keyboardType="number-pad"
-                    onChangeText={setToken}
-                    placeholder="000000"
-                    placeholderTextColor="#64748b"
-                    style={styles.input}
-                    textContentType="oneTimeCode"
-                    value={token}
-                  />
                   <Pressable
                     accessibilityRole="button"
-                    disabled={!canVerifyCode}
-                    onPress={handleVerifyCode}
+                    disabled={!canRefreshLinkStatus}
+                    onPress={handleRefreshLinkStatus}
                     style={({ pressed }) => [
                       styles.secondaryButton,
-                      !canVerifyCode ? styles.buttonDisabled : undefined,
+                      !canRefreshLinkStatus ? styles.buttonDisabled : undefined,
                       pressed ? styles.buttonPressed : undefined,
                     ]}
                   >
-                    {isVerifyingCode ? (
+                    {isRefreshingSession ? (
                       <ActivityIndicator color="#f8fafc" />
                     ) : (
-                      <Text style={styles.secondaryButtonText}>계정에 연결</Text>
+                      <Text style={styles.secondaryButtonText}>
+                        연결 상태 새로고침
+                      </Text>
                     )}
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    disabled={isSubmittingEmail || isVerifyingCode}
+                    disabled={isSubmittingEmail || isRefreshingSession}
                     onPress={handleResend}
                     style={({ pressed }) => [
                       styles.textButton,
                       pressed ? styles.buttonPressed : undefined,
                     ]}
                   >
-                    <Text style={styles.textButtonText}>코드 다시 받기</Text>
+                    <Text style={styles.textButtonText}>이메일 다시 보내기</Text>
                   </Pressable>
                 </View>
               ) : null}
