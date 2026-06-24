@@ -51,10 +51,14 @@ continuity as well as technical continuity:
 
 ## Current Status
 
-Auth Phase 1 authenticated moments smoke checkpoint, 2026-06-24:
+Auth Phase 1 server ownership closeout, 2026-06-24:
 
-Authenticated `GET /api/moments` has been smoke-tested with a Supabase Auth
-test user. The access token was not recorded.
+Auth Phase 1 is complete for the BFF/server ownership boundary. The main
+ownership-sensitive API routes now resolve a request-scoped user with
+`resolveRequestUser(request)`. No-token requests still use the internal default
+user for QA, but bearer-token requests resolve to a Supabase Auth-backed
+`users.auth_user_id` mapping. The access token used for smoke testing was not
+recorded.
 
 ```text
 JWT sub: e156164b-e810-4ab8-a949-9e14452fdd73
@@ -73,6 +77,29 @@ Confirmed results:
 - No default Moment IDs were visible in the authenticated response.
 - `users.auth_user_id` mapping did not exist before the authenticated GET and
   one `users` row was created by `resolveRequestUser()`.
+- Authenticated `POST /api/video-upload-targets` created an upload target owned
+  by the authenticated app user and storage paths under
+  `users/{authenticatedUserId}/...`.
+- Authenticated direct upload and finalize created a Moment, AnalysisJob, and
+  EvidenceResult with the same authenticated `user_id`.
+- Authenticated DELETE removed the smoke Moment, AnalysisJob, EvidenceResult,
+  source object, and thumbnail object while staying inside the authenticated
+  user storage prefix.
+
+Auth Phase 1 remaining TODO:
+
+- Convert public MVP Realtime Broadcast to private/user-scoped Realtime after
+  app auth sessions exist.
+- Implement Login UI and app-side authenticated session lifecycle.
+- Decide external no-token behavior. The current default user path is internal
+  QA only.
+- Define push token account-switch policy for shared/reused devices.
+
+Next Auth starting point:
+
+Start Auth Phase 2 from app login/session wiring and user-scoped realtime/push
+behavior. Do not treat the internal default user's Moments as authenticated
+content.
 
 Build 65 upload recovery checkpoint, 2026-06-23:
 

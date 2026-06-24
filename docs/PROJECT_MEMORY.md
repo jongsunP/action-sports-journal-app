@@ -47,10 +47,13 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
-## 2026-06-24 Authenticated Moments Smoke Checkpoint
+## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 
-Authenticated `GET /api/moments` was smoke-tested with a Supabase Auth test
-user. The access token was intentionally not recorded.
+Auth Phase 1 is complete for the server/BFF ownership boundary. The main
+ownership-sensitive server routes now use `resolveRequestUser(request)` so
+bearer-token requests resolve to a Supabase Auth-backed app user and no-token
+requests remain an internal QA fallback. The access token used for smoke
+testing was intentionally not recorded.
 
 ```text
 JWT sub: e156164b-e810-4ab8-a949-9e14452fdd73
@@ -70,12 +73,26 @@ Confirmed:
 - Default Moments were not exposed in the authenticated response.
 - `users.auth_user_id` mapping did not exist before the authenticated GET and
   one `users` row was created by `resolveRequestUser()`.
+- Authenticated `POST /api/video-upload-targets` created an `upload_targets`
+  row owned by the authenticated app user.
+- Authenticated direct upload -> finalize kept ownership consistent through
+  upload target, source/thumbnail Storage paths, Moment, AnalysisJob, and
+  EvidenceResult.
+- Authenticated DELETE removed the smoke Moment rows and Storage objects while
+  staying inside the authenticated user's `users/{userId}/...` prefix.
 
 Current Auth implication:
 
 No-token internal default data must remain an internal QA fallback only. Future
 authenticated paths should continue using request-scoped ownership and must
 not merge default-user Moments into authenticated user responses.
+
+Auth Phase 2 starts from:
+
+- Login UI and app-side session lifecycle.
+- Private/user-scoped Realtime instead of the current public MVP Broadcast.
+- External no-token policy.
+- Push token account-switch policy.
 
 ## 2026-06-23 Build 65 Upload Recovery Checkpoint
 

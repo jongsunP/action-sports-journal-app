@@ -14,14 +14,15 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
-Auth Phase 1 server ownership checkpoint, 2026-06-24:
+Auth Phase 1 server ownership closeout, 2026-06-24:
 
-The server-side ownership boundary has started moving from the single
-internal default user toward request-scoped ownership. The first implementation
-adds `resolveRequestUser(request)` and routes the main server ownership paths
-through it while preserving the no-token internal QA fallback.
+Auth Phase 1 is complete for the server-side ownership boundary. The BFF now
+routes the main ownership-sensitive API paths through `resolveRequestUser(request)`
+instead of letting handlers call the internal default user helper directly. The
+no-token internal QA fallback remains available, but authenticated requests are
+scoped to `users.auth_user_id` mappings and must not see default-user data.
 
-Current Auth Phase 1 state:
+Completed Auth Phase 1 work:
 
 - `resolveRequestUser(request)` exists on the Render/BFF server.
 - No-token requests still resolve to the existing internal default user.
@@ -34,7 +35,7 @@ Current Auth Phase 1 state:
   upload target creation, direct finalize, multipart fallback upload, legacy
   Moment creation, and Moment deletion.
 
-Authenticated smoke test result, 2026-06-24:
+Authenticated smoke results, 2026-06-24:
 
 ```text
 Route: GET /api/moments
@@ -57,13 +58,32 @@ Confirmed:
   one `users` row was created for the Supabase Auth user by
   `resolveRequestUser()`.
 - The access token was intentionally not recorded.
+- Authenticated `POST /api/video-upload-targets` created an `upload_targets`
+  row owned by the authenticated app `userId`, not the default user.
+- Authenticated direct upload -> finalize created a Moment and AnalysisJob
+  with the same authenticated `userId`; EvidenceResult later completed with
+  the same owner.
+- Source and thumbnail paths used `users/{authenticatedUserId}/...` prefixes.
+- Authenticated `DELETE /api/moments/:momentId` deleted only the authenticated
+  user's test Moment, AnalysisJob, EvidenceResult, source object, and thumbnail
+  object. Cleanup stayed inside the authenticated user prefix.
 
-Next Auth step:
+Remaining Auth TODO:
 
-Continue Auth Phase 1 by converting the remaining ownership-sensitive reads
-and writes to depend on the resolved request user, then prepare the
-user-scoped Realtime channel direction. Do not treat no-token internal default
-data as authenticated user data.
+- Private/user-scoped Realtime channel. Current Broadcast channel is still a
+  public MVP sync mechanism.
+- Login UI and app-side authenticated session wiring.
+- External no-token policy. The current no-token default user path is internal
+  QA only and must not become an external user mode.
+- Push token account-switch policy: define whether registration overwrites,
+  separates, or cleans old device tokens when a device changes account.
+
+Auth Phase 2 entry condition:
+
+Proceed to Auth Phase 2 only after accepting that the server ownership boundary
+is now request-scoped, and then focus on app login/session UX plus private
+Realtime and push-token ownership behavior. Do not merge default-user content
+into authenticated sessions.
 
 Build 65 upload recovery checkpoint, 2026-06-23:
 

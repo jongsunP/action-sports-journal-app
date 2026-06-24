@@ -1516,41 +1516,36 @@ per-user scopes and RLS.
 
 Current state:
 
-The app is personal/QA-oriented and effectively single-user. The backend uses a
-default user pattern for no-token internal QA, but Auth Phase 1 has started
-moving server ownership to a request-scoped resolver.
+The app is personal/QA-oriented and historically used a default user pattern
+for no-token internal QA. Auth Phase 1 is now complete for the server/BFF
+ownership boundary: the main ownership-sensitive API handlers resolve
+ownership through `resolveRequestUser(request)`, while the default user remains
+only as an internal no-token fallback.
 
-Auth Phase 1 smoke test preparation:
+Auth Phase 1 verified smoke coverage:
 
-- Authenticated smoke testing requires a Supabase Auth test user
-  `ACCESS_TOKEN`.
-- Do not run the authenticated `GET /api/moments` blindly if the test user's
-  app-level mapping is unknown.
-- First decode the JWT `sub` locally.
-- Then check `users.auth_user_id = sub` with a read-only query.
-- If the mapping exists, authenticated `GET /api/moments` should be safe as a
-  read-only ownership smoke.
-- If the mapping does not exist, `resolveRequestUser()` will create one
-  `users` row on the first authenticated request. Stop and ask for approval
-  before running that request.
-
-Reason this was not executed immediately:
-
-The local environment has the Supabase URL and service-role key, but not an
-anon key or already supplied Supabase Auth access token. Running the
-authenticated endpoint without first checking the mapping could create a new
-`users` row, which is outside read-only smoke constraints.
+- Authenticated `GET /api/moments` returns the authenticated user's data only;
+  the no-token internal default user's Moments are not exposed.
+- Authenticated `POST /api/video-upload-targets` creates `upload_targets` and
+  Storage paths under `users/{authenticatedUserId}/...`.
+- Authenticated direct upload -> finalize preserves the same owner through
+  `upload_targets`, `moments`, `analysis_jobs`, and `evidence_results`.
+- Authenticated DELETE removes only the authenticated user's Moment rows and
+  source/thumbnail Storage objects inside the authenticated user's prefix.
 
 Future work:
 
-- real user identity
-- RLS and ownership rules
-- device token ownership
-- token cleanup
-- account deletion implications
-- multi-device data consistency
+- Login UI and app-side session lifecycle.
+- Private/user-scoped Realtime channel; public Broadcast is still MVP-only.
+- External no-token policy. The default user fallback must stay internal QA
+  only.
+- Push token account-switch policy for devices reused across accounts.
+- RLS and ownership rules once service-role BFF boundaries are settled.
+- Token cleanup, account deletion implications, and multi-device data
+  consistency.
 
-Do not overbuild this before the personal analysis loop is stable.
+Do not start broad social/sharing work before the user ownership boundary,
+session lifecycle, and private realtime behavior are settled.
 
 ### 9. Push Deep Link
 
