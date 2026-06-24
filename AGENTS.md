@@ -99,6 +99,14 @@ send a new development-session prompt. First give the Founder only the QA steps
 needed for that build and wait for the Founder’s QA result. After the Founder
 reports the result, then decide whether to send a development-session follow-up.
 
+Session closeout rule:
+
+The Founder may continue work from another device, so completed work must be
+available remotely. At the end of a work session, ensure committed changes are
+pushed to origin unless there is a deliberate reason not to push. Do not leave
+completed documentation/code work only on the local machine. If something
+cannot be pushed, clearly report the reason and the exact local state.
+
 Examples:
 
 - Wakeboard
