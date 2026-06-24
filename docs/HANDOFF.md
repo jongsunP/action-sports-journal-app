@@ -177,6 +177,24 @@ ASJ targets Korean mobile riders and has Instagram-centered inflow, where Kakao
 or SMS may feel more natural than email. Revisit Kakao / Phone after Email
 Recovery is stable.
 
+Kakao implementation caution:
+
+Do not implement Kakao yet, and do not use `signInWithOAuth` to create a new
+login wall or a new Supabase user. The target flow is linking Kakao to the
+currently authenticated anonymous Supabase Auth user, likely through
+`linkIdentity({ provider: "kakao" })` after dashboard setup is confirmed.
+
+Before any Kakao code work, verify:
+
+1. Supabase Kakao provider can be configured for the active project.
+2. Manual Identity Linking can be enabled.
+3. Kakao Developers REST API key and Kakao Login Client Secret are ready.
+4. App scheme candidate `actionsportsjournal` is acceptable.
+5. Supabase Redirect URLs and native deep-link handling are designed.
+6. A smoke plan exists to confirm `linkIdentity` preserves the existing
+   anonymous `auth_user_id`, `public.users.id`, Moment ownership, push token
+   ownership, and user-scoped Realtime basis.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the BFF/server ownership boundary. The main

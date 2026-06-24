@@ -199,6 +199,19 @@ Do not implement Kakao, SMS, Apple, Google, or other social providers yet.
 Validate Email Recovery first as the account-preservation baseline, then
 revisit Kakao / Phone during distribution-readiness planning.
 
+Kakao recovery/linking decision:
+
+Kakao should be treated as the strongest pre-distribution recovery candidate for
+ASJ's Korean mobile audience and Instagram-centered inflow. This does not change
+the identity strategy: ASJ remains Anonymous-first and Recovery-later, not
+Apple-first, Auth-first, or Login-first. Kakao must not become a pre-upload
+login wall. The intended product shape is linking Kakao to the existing
+anonymous Supabase Auth user so the rider can preserve and recover the same
+account later.
+
+Implementation should wait until the Supabase/Kakao dashboard setup, app
+scheme/deep-link strategy, and ownership-continuity smoke plan are ready.
+
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 
 Auth Phase 1 is complete for the server/BFF ownership boundary. The main

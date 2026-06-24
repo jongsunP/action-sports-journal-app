@@ -60,6 +60,23 @@ Future recovery backlog:
 - Revisit Kakao / Phone only after Email Recovery is stable and the app is
   preparing for broader distribution.
 
+Kakao Account Linking / Recovery backlog:
+
+Treat Kakao as an account-linking/recovery candidate for the existing anonymous
+Supabase Auth user, not as a new login wall. Before implementation, prepare and
+verify:
+
+1. Supabase Kakao provider can be enabled for the project.
+2. Manual Identity Linking can be enabled and used from the current anonymous
+   session.
+3. Supabase Redirect URLs include the app deep-link scheme.
+4. Kakao Developers app exists with REST API key and Kakao Login Client Secret.
+5. Kakao Login is enabled and required consent items are configured.
+6. App scheme is selected, with `actionsportsjournal` as the current candidate.
+7. The linking smoke plan verifies that `linkIdentity` preserves the existing
+   Supabase Auth user id, `public.users.id`, Moment ownership, push token
+   ownership, and user-scoped Realtime channel.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:
