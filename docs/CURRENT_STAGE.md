@@ -108,6 +108,21 @@ Current identity direction:
 - Kakao / Google / Apple = secondary recovery/social options.
 - No-token default user remains internal QA only.
 
+Auth Phase 2 QA build checklist:
+
+- Fresh install creates/restores an anonymous Supabase session.
+- Home starts from the anonymous authenticated user, not the internal default
+  user's existing Moment list.
+- BFF logs `/api/moments` as `authMode=authenticated`.
+- Upload target, finalize, Moment, AnalysisJob, and EvidenceResult share the
+  same anonymous app `user_id`.
+- Push token registration stores the anonymous owner.
+- Realtime uses `analysis-updates:auth:{authUserId}` for authenticated
+  anonymous users.
+- Delete cleanup remains inside the current owner boundary.
+- No-token default fallback remains internal QA only and is not the external
+  identity path.
+
 Build 65 upload recovery checkpoint, 2026-06-23:
 
 Build 65 is the latest prepared iOS QA build and supersedes the older Build 55
