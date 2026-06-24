@@ -84,7 +84,7 @@ upload trust.
 
 ### Push Delivery Observability
 
-Observation:
+Observation history:
 
 - Build 69 first upload completed while the app was foregrounded; the in-app
   completion notice was observed.
@@ -93,23 +93,30 @@ Observation:
 - Re-entering the app showed the Moment completed normally.
 - DB state showed completed Moment, completed AnalysisJob, EvidenceResult, and
   an enabled Expo push token for the user.
+- Build 73 missed Push because the anonymous user's push token registration
+  happened after analysis completion. Render loaded `tokenCount=0` and logged
+  `analysis_push_skipped_no_tokens`.
+- Build 74 confirmed Push delivery after registration timing was fixed. Render
+  logs showed `tokenCount: 1`, send started, Expo ticket result `okCount: 1`,
+  `errorCount: 0`, and a ticket id.
 
 Current judgment:
 
-This is not classified as a Push bug yet. The current backend sends Push
-best-effort and logs failures only to Render; it does not persist Expo Push
-ticket status. Therefore DB can confirm that Push conditions existed, but not
-whether Expo/APNs accepted or displayed the notification.
+The Build 73 issue was a registration timing bug, not a confirmed Expo/APNs
+delivery failure. Build 74 resolves the immediate Push QA blocker. The current
+backend now logs enough Render-side lifecycle information to distinguish:
+tokens missing, send started, ticket accepted, and ticket error.
 
 Priority:
 
-P2 observability. Do not interrupt Upload Reliability P1.
+Not a current Auth Phase 2 blocker. Persisted push ticket / receipt tracking is
+P2 observability only.
 
 Recheck condition:
 
 If background completed analyses repeatedly produce no visible OS Push while
-Render logs show successful send attempts, add persisted push delivery
-diagnostics or query Expo receipts.
+Render logs show `okCount > 0`, add persisted push delivery diagnostics or
+query Expo receipts.
 
 ### List Reflection Timing
 

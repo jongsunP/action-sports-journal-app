@@ -47,6 +47,34 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+## 2026-06-24 Build 74 Push QA / Auth Phase 2 Closeout
+
+Build 74 resolved the remaining Auth Phase 2 Push observation. Build 73 had
+missed Push because token registration was late: analysis completed before the
+anonymous user's Expo token was registered, so Render loaded `tokenCount=0` and
+skipped sending. Build 74 moved push registration earlier and confirmed the full
+send path.
+
+Confirmed in Build 74:
+
+- Push notification was received after analysis completion.
+- Render logs showed `tokenCount: 1`.
+- Send start was logged.
+- Expo ticket result showed `okCount: 1`, `errorCount: 0`.
+- A ticket id was produced.
+
+Current milestone status:
+
+- Upload Part 1 is closed.
+- Auth Phase 1 is closed.
+- Auth Phase 2 is closed for the device-first anonymous identity baseline.
+
+Next product direction:
+
+Start Email Recovery / account linking next. Keep Supabase Anonymous Sign-in as
+the device-first identity baseline. Do not turn the no-token internal default
+user fallback into an external user mode.
+
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 
 Auth Phase 1 is complete for the server/BFF ownership boundary. The main

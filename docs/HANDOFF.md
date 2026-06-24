@@ -51,6 +51,29 @@ continuity as well as technical continuity:
 
 ## Current Status
 
+Build 74 Push QA / current handoff, 2026-06-24:
+
+Build 74 closes the last known Auth Phase 2 QA observation. Push delivery was
+confirmed after analysis completion. Render logs showed the expected lifecycle:
+`tokenCount: 1`, send started, Expo ticket result `okCount: 1`, `errorCount: 0`,
+and a ticket id.
+
+Root cause of the Build 73 Push miss:
+
+Push token registration happened after the analysis had already completed. At
+completion time Render loaded zero tokens and logged
+`analysis_push_skipped_no_tokens`. Build 74 fixed the timing by ensuring push
+registration when the auth owner becomes available, retrying eligible failures
+on foreground, and best-effort ensuring registration at upload start. Upload
+continues even if registration fails.
+
+Current milestone status:
+
+- Upload Part 1 is closed.
+- Auth Phase 1 is closed.
+- Auth Phase 2 is closed for the device-first anonymous identity baseline.
+- Next main product work should be Email Recovery / account linking.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the BFF/server ownership boundary. The main

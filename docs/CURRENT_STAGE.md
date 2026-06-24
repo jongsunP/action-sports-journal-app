@@ -14,6 +14,39 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 74 Push QA / milestone closeout, 2026-06-24:
+
+Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73
+failure was not a provider-delivery problem; it was push token registration
+timing. Analysis completed before the anonymous user's token row existed, so
+Render loaded `tokenCount=0` and skipped sending Push. Build 74 moved
+registration earlier through auth-owner readiness, foreground retry, and an
+upload-start best-effort ensure.
+
+Build 74 QA confirmed:
+
+- Push notification was received after analysis completion.
+- Render logs showed `tokenCount: 1`.
+- `analysis_push_send_started` was observed.
+- Expo ticket result showed `okCount: 1`, `errorCount: 0`.
+- A ticket id was produced.
+- Home and Video state still converged normally.
+- The app icon asset currently points at `./assets/icon.png` and is committed
+  for future builds.
+
+Milestone status:
+
+- Upload Part 1: closed.
+- Auth Phase 1: closed.
+- Auth Phase 2: closed for the device-first anonymous identity baseline.
+
+Next product step:
+
+Start Email Recovery / account linking next. Do not reopen the no-token default
+user path as an external user mode. Keep Push ticket persistence / receipt
+tracking as a later observability enhancement only if delivery becomes unclear
+again.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the server-side ownership boundary. The BFF now
