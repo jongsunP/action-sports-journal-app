@@ -26,6 +26,72 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Foundation Safety Check
+
+### Problem
+
+ASJ is ready to add more Journal UX, Analysis UX, and Media UX, but those layers
+will only feel trustworthy if the foundation under them is stable. Upload,
+Sync, Ownership, Recovery, and cleanup paths have grown through real-device QA,
+so future feature work needs a short safety gate before adding more surface
+area.
+
+### Why it matters
+
+Riders will judge the product by whether their real videos, results, history,
+and recovery paths survive normal mobile conditions. A beautiful Journal or
+Analysis screen cannot compensate for lost uploads, stale sync, mismatched
+ownership, orphaned storage, missing observability, or account-linking that
+splits the rider's history.
+
+### Decision
+
+Before major UX expansion, run a Foundation Safety Check. This is not a new
+architecture project and should not block small copy or polish changes. It is a
+structured review/smoke checklist for the current foundation so future work does
+not accidentally build on unstable assumptions.
+
+### Scope
+
+- Upload Reliability
+- State Sync / Realtime / Push
+- Identity / Ownership
+- Storage / Cleanup
+- Observability
+- Recovery / Account Linking
+
+### Check matrix
+
+| Area | Check | Expected baseline |
+| --- | --- | --- |
+| Upload Reliability | Fresh upload creates target, uploads source, finalizes Moment, starts analysis, and restores result. | One real-device upload can complete without local/remote divergence. |
+| Upload Reliability | Consecutive uploads while another Moment is processing do not create false failure alerts. | Upload target/finalize remain tolerant; AI throttling does not break upload UX. |
+| Upload Reliability | Recoverable orphan and local-only failure paths are distinguishable. | Recoverable rows retry finalize; unrecoverable local-only drafts expire clearly. |
+| State Sync / Realtime / Push | Completed analysis reaches the app through private Realtime or foreground refresh. | User-scoped channel stays private and does not depend on public broadcast. |
+| State Sync / Realtime / Push | Push delivery failure is diagnosable. | `analysis_push_delivery_attempts` distinguishes missing/disabled/invalid tokens, ticket errors, and receipt errors. |
+| State Sync / Realtime / Push | Push remains notification-only. | Push does not become the source of truth for Moment sync. |
+| Identity / Ownership | Bearer-token requests resolve to the current Supabase Auth-backed `public.users` row. | `resolveRequestUser(request)` preserves the `auth_user_id` boundary. |
+| Identity / Ownership | No-token default user remains internal QA only. | External app flows must not silently use the default user. |
+| Identity / Ownership | Moment, upload target, evidence, and push token rows stay scoped to the same app user. | `public.users.id` remains the durable ownership anchor. |
+| Storage / Cleanup | Source video retention and cleanup behavior are explicit. | Cleanup does not delete data still needed for retry, recovery, or QA interpretation. |
+| Storage / Cleanup | Uploaded-source recovery has enough metadata to finalize safely. | Bucket/provider/path and target context are preserved before recovery attempts. |
+| Observability | Upload, analysis, sync, push, and recovery failures have enough structured logs/rows to classify cause. | Debugging does not rely only on user screenshots or generic alerts. |
+| Observability | Raw sensitive tokens are not duplicated into logs or analysis tables. | Push tokens and auth values are masked or referenced by row id. |
+| Recovery / Account Linking | Email Recovery smoke is not called repeatedly while Supabase email rate limit is cooling down. | `updateUser({ email })` is retried once with the agreed email only. |
+| Recovery / Account Linking | Linking a recovery method preserves existing ownership. | Supabase Auth user id, `public.users.id`, Moments, push tokens, and Realtime scope remain continuous. |
+| Recovery / Account Linking | Kakao remains account linking/recovery, not a login wall. | `linkIdentity`-style flow is prepared before any Kakao implementation. |
+
+### When to run
+
+- Before starting a major Journal UX, Analysis UX, or Media UX expansion.
+- Before adding a new recovery provider such as Kakao or Phone/SMS.
+- After Auth, Upload, Realtime, Push, or Storage changes that touch ownership or
+  restoration.
+- Before preparing a new EAS build intended to validate a broader product
+  surface.
+- After any QA report that suggests lost media, missing results, stale sync,
+  wrong owner data, or account recovery confusion.
+
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated
