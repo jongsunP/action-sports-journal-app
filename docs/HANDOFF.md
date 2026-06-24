@@ -86,7 +86,9 @@ Current milestone status:
 - Upload Part 1 is closed.
 - Auth Phase 1 is closed.
 - Auth Phase 2 is closed for the device-first anonymous identity baseline.
-- Next main product work should be Email Recovery / account linking.
+- Push Observability P2 is complete for internal/dev smoke QA.
+- Current `master` is 3 commits ahead of `origin/master`.
+- Next main product work should be Email Recovery / Account Linking QA.
 
 Push Observability P2, 2026-06-24:
 
@@ -104,9 +106,15 @@ completion Push:
 - receipt checks are exposed as an internal/dev endpoint:
   `POST /api/push-receipts/check-pending`.
 
-No automatic scheduler was added. For QA, apply the migration, complete an
-analysis, inspect the latest attempt row, then run the receipt endpoint after
-Expo receipts have had time to appear.
+Smoke QA passed after the phase12 migration was applied. Confirmed statuses:
+`receipt_ok`, `ticket_error` with `DeviceNotRegistered`,
+`skipped_disabled_only`, `skipped_no_tokens`, and `skipped_no_valid_tokens`.
+Ticket/receipt error messages and details are masked before being stored, so
+raw Expo tokens are not duplicated into the observability table.
+
+No automatic scheduler was added. That remains a later P2/operational
+follow-up if manual/internal receipt checks become insufficient. The next
+starting point is Email Recovery / Account Linking QA.
 
 Email Recovery implementation start, 2026-06-24:
 

@@ -156,6 +156,24 @@ the delivery behavior:
 This is still observability, not a Push redesign. The send payload and
 foreground/background notification policy remain unchanged.
 
+Smoke QA closeout:
+
+- `receipt_ok` confirmed with a real enabled iOS token.
+- `ticket_error` confirmed with a fake Expo token returning
+  `DeviceNotRegistered`; the matching token row was set to `enabled=false`.
+- `skipped_disabled_only`, `skipped_no_tokens`, and
+  `skipped_no_valid_tokens` were confirmed with controlled smoke rows.
+- Expo ticket/receipt error messages and details are masked before persistence
+  because Expo can echo a raw token in error payloads.
+- The intended current receipt-check mechanism is the internal/dev endpoint
+  `POST /api/push-receipts/check-pending`.
+
+Remaining later item:
+
+Do not add a scheduler yet. Automatic receipt polling, retention policy, and
+operator dashboards/alerts remain future operational work after manual
+internal/dev checks prove useful.
+
 Recheck condition:
 
 If background completed analyses repeatedly produce no visible OS Push while

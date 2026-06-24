@@ -45,6 +45,25 @@ token counts, send request errors, ticket errors, and receipt errors. Receipt
 checks are manual/internal through `POST /api/push-receipts/check-pending`
 instead of a scheduler.
 
+Push Observability P2 smoke QA is complete. The smoke ran through the backend
+API with `MOCK_AI_ANALYSIS=true`, so paid AI calls were skipped while the
+server persistence and Push send path stayed active. Confirmed cases:
+
+- `receipt_ok`: real enabled iOS token created an attempt row, ticket id, token
+  mapping, and receipt result.
+- `ticket_error`: fake Expo token produced `DeviceNotRegistered` and disabled
+  the matching `device_push_tokens` row.
+- `skipped_disabled_only`: a user with only disabled token rows was recorded
+  without sending.
+- `skipped_no_tokens`: a user with no push token rows was recorded.
+- `skipped_no_valid_tokens`: an enabled but invalid token row was recorded with
+  `invalid_token_count=1`.
+
+During smoke, Expo ticket/receipt error payloads were found to include raw push
+tokens, so the observability writer now masks Expo tokens before storing error
+messages/details. Raw Expo tokens are not duplicated into
+`analysis_push_delivery_attempts`.
+
 Milestone status:
 
 - Upload Part 1: closed.
@@ -54,9 +73,9 @@ Milestone status:
 Next product step:
 
 Start Email Recovery / account linking next. Do not reopen the no-token default
-user path as an external user mode. Keep Push ticket persistence / receipt
-tracking as a later observability enhancement only if delivery becomes unclear
-again.
+user path as an external user mode. Push Observability P2 is complete for the
+current internal/dev scope; a receipt scheduler remains a later operational
+follow-up only.
 
 Email Recovery first implementation note, 2026-06-24:
 
