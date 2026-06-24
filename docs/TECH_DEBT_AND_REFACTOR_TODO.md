@@ -184,6 +184,20 @@ verify:
    Supabase Auth user id, `public.users.id`, Moment ownership, push token
    ownership, and user-scoped Realtime channel.
 
+Setup checklist detail:
+
+- `app.json` currently has no Expo `scheme`; Kakao/Supabase OAuth deep linking
+  will require adding one before implementation.
+- Current scheme candidate: `actionsportsjournal`.
+- Supabase Redirect URLs should include `actionsportsjournal://**` after the
+  scheme is confirmed.
+- Kakao Developers must have Kakao Login enabled, REST API key, Client Secret,
+  Supabase callback Redirect URI, and consent items for profile nickname/image
+  plus optional `account_email`.
+- Adding the native app scheme will likely require a new iOS standalone/EAS
+  preview build to verify deep-link return behavior. Do not create that build
+  during the setup-check phase.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:

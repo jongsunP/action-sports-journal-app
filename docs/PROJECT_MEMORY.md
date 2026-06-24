@@ -211,6 +211,10 @@ account later.
 
 Implementation should wait until the Supabase/Kakao dashboard setup, app
 scheme/deep-link strategy, and ownership-continuity smoke plan are ready.
+The current phase is setup feasibility confirmation, not implementation:
+confirm Supabase Kakao provider availability, Manual Identity Linking,
+Redirect URLs, Kakao Developers app credentials/consent items, and the
+`actionsportsjournal` app scheme before writing Kakao code.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 

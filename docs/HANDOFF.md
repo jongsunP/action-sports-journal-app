@@ -208,6 +208,19 @@ Before any Kakao code work, verify:
    anonymous `auth_user_id`, `public.users.id`, Moment ownership, push token
    ownership, and user-scoped Realtime basis.
 
+Next user-side setup checks:
+
+1. In Supabase Dashboard, confirm the Kakao provider screen exists under
+   Authentication > Sign In / Providers > Kakao.
+2. Confirm Manual Identity Linking can be enabled for the active project.
+3. Confirm Authentication > URL Configuration > Redirect URLs can accept
+   `actionsportsjournal://**`.
+4. In Kakao Developers, confirm an app can be prepared with REST API key,
+   Kakao Login enabled, Client Secret, Supabase callback Redirect URI, and
+   Consent Items.
+
+Actual implementation should wait until those settings are confirmed.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the BFF/server ownership boundary. The main
