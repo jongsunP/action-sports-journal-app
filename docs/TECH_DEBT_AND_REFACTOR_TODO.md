@@ -100,17 +100,29 @@ recovery sign-in.
 
 TODO before calling Email Recovery complete:
 
-1. Verify Supabase email template behavior for `updateUser({ email })`.
-   The in-app UI expects a 6-digit `email_change` OTP. If the project template
-   only provides a magic link, choose and implement the app deep-link strategy
-   before user QA.
-2. Confirm email linking keeps the same Supabase Auth user id and the same
+1. Resolve the E2E blocker: Supabase hosted email sending repeatedly returned
+   `over_email_send_rate_limit` / HTTP 429 for the agreed test email
+   `parksunl7@naver.com`, including the post-cooldown single retry.
+2. Do not run more repeated `updateUser({ email })` tests until Supabase Auth
+   email rate-limit/project policy is understood or custom SMTP is configured.
+3. Verify the magic-link email flow once email sending is available. The OTP
+   input / `verifyOtp` UI has been removed, and the current baseline is
+   `updateUser({ email })` -> magic-link pending UI -> user clicks email link
+   -> app `refreshSession()`.
+4. Confirm email linking keeps the same Supabase Auth user id and the same
    `public.users.id`.
-3. Confirm existing Moments, upload targets, push tokens, and Realtime channel
+5. Confirm existing Moments, upload targets, push tokens, and Realtime channel
    ownership stay under the linked user after email verification.
-4. Add the actual recovery sign-in path for reinstall/new-device restore after
+6. Add the actual recovery sign-in path for reinstall/new-device restore after
    account linking is verified.
-5. Keep no-token default user fallback internal-only throughout this work.
+7. Keep no-token default user fallback internal-only throughout this work.
+
+Current blocker:
+
+Email Recovery's code/structure/UI baseline should remain in place, but E2E
+completion is blocked by Supabase hosted email rate limits. Add custom SMTP to
+the recovery readiness checklist, or decide that Email Recovery remains a
+baseline-only path while Kakao/Phone recovery is evaluated for Korean-market UX.
 
 Future recovery backlog:
 

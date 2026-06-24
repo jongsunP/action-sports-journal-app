@@ -94,15 +94,18 @@ Server-side, `resolveRequestUser(request)` now updates the existing
 user changes, instead of creating a new app user. QA still needs to verify the
 email template/OTP behavior and confirm ownership continuity after linking.
 
-Email Recovery E2E smoke pause, 2026-06-24:
+Email Recovery E2E blocker, 2026-06-24:
 
-The current E2E smoke is paused without a final success/failure/blocked
-judgment because Supabase returned `over_email_send_rate_limit` / HTTP 429
-while testing `updateUser({ email })` with `parksunl7@naver.com`. The QA seed
-Auth user, `public.users` row, Moment, and push token were cleaned up. The UI
-has since been aligned to the magic-link pending flow, but E2E smoke remains
-paused. The next action is one retry with the same email after the email send
-rate-limit cooldown.
+After the cooldown wait, Email Recovery E2E was retried once with
+`parksunl7@naver.com`. `updateUser({ email })` was called exactly once, no
+alternate email was used, and no repeated retry was made. Supabase again
+returned `over_email_send_rate_limit` / HTTP 429. The QA seed Auth user,
+`public.users` row, Moment, and push token were cleaned up.
+
+Email Recovery's code, ownership-sync structure, and magic-link pending UI
+remain the baseline, but E2E completion is blocked on the Supabase hosted email
+rate limit. Do not continue repeated `updateUser({ email })` attempts without a
+rate-limit/custom-SMTP decision.
 
 Auth Phase 1 server ownership closeout, 2026-06-24:
 

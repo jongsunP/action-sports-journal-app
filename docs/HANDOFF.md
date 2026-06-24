@@ -155,13 +155,14 @@ become email-recoverable.
 
 Next QA/start point:
 
-- Email Recovery smoke is paused at Supabase `over_email_send_rate_limit` /
-  HTTP 429 for `parksunl7@naver.com`. Do not call `updateUser({ email })`
-  again before the email send cooldown. Retry once with the same email only.
-  If it succeeds, confirm email receipt, magic-link click, session refresh /
-  `getUser()` email reflection, and BFF-driven `public.users.email` sync on the
-  existing app user row. If 429 recurs, document a technical judgment on
-  Supabase hosted email rate limits and whether custom SMTP is needed.
+- Email Recovery E2E is blocked by Supabase hosted email rate limits. The
+  post-cooldown single retry with `parksunl7@naver.com` returned
+  `over_email_send_rate_limit` / HTTP 429 again. Do not call
+  `updateUser({ email })` again in the next session unless the user explicitly
+  decides to change Supabase Auth email rate-limit policy or configure custom
+  SMTP.
+- Next Email Recovery decision: inspect Supabase Auth email rate-limit/project
+  policy, or evaluate custom SMTP before any more E2E attempts.
 - Link an email on a fresh anonymous Build and verify the same Auth user/app
   user/Moment/Push/Realtime ownership continues after linking.
 - Implement actual reinstall/new-device recovery sign-in only after the current
@@ -175,7 +176,9 @@ validating ownership continuity and account linking first. Kakao Account
 Linking / Kakao Recovery remains a strong candidate before distribution because
 ASJ targets Korean mobile riders and has Instagram-centered inflow, where Kakao
 or SMS may feel more natural than email. Revisit Kakao / Phone after Email
-Recovery is stable.
+Recovery is stable. Because Email Recovery E2E is blocked on hosted email rate
+limits, keep Kakao Account Linking / Recovery as a parallel candidate for Korean
+user recovery UX planning.
 
 Kakao implementation caution:
 
