@@ -200,7 +200,15 @@ currently authenticated anonymous Supabase Auth user, likely through
 Before any Kakao code work, verify:
 
 1. Supabase Kakao provider can be configured for the active project.
+   Confirmed: the provider screen exists and requires REST API Key, Client
+   Secret Code, and the callback URL
+   `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`. It also exposes
+   "Allow users without an email". Values have not been entered and the provider
+   has not been enabled yet.
 2. Manual Identity Linking can be enabled.
+   Confirmed: Authentication -> Sign In / Providers -> User Signups contains
+   "Allow manual linking", and it is enabled. "Allow anonymous sign-ins" is also
+   enabled.
 3. Kakao Developers REST API key and Kakao Login Client Secret are ready.
 4. App scheme candidate `actionsportsjournal` is acceptable.
 5. Supabase Redirect URLs and native deep-link handling are designed.
@@ -210,14 +218,14 @@ Before any Kakao code work, verify:
 
 Next user-side setup checks:
 
-1. In Supabase Dashboard, confirm the Kakao provider screen exists under
-   Authentication > Sign In / Providers > Kakao.
-2. Confirm Manual Identity Linking can be enabled for the active project.
-3. Confirm Authentication > URL Configuration > Redirect URLs can accept
-   `actionsportsjournal://**`.
-4. In Kakao Developers, confirm an app can be prepared with REST API key,
-   Kakao Login enabled, Client Secret, Supabase callback Redirect URI, and
-   Consent Items.
+1. Prepare the Kakao Developers app.
+2. Copy the Kakao REST API Key.
+3. Enable Kakao Login and Client Secret, then copy the Client Secret Code.
+4. Register the Supabase callback URL in Kakao:
+   `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`.
+5. Configure/confirm Kakao Consent Items, including profile nickname/image and
+   optional `account_email`.
+6. After Kakao values are ready, return to Supabase Kakao provider settings.
 
 Actual implementation should wait until those settings are confirmed.
 

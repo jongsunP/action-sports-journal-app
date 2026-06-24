@@ -174,8 +174,15 @@ Supabase Auth user, not as a new login wall. Before implementation, prepare and
 verify:
 
 1. Supabase Kakao provider can be enabled for the project.
+   Status: setup screen found. It requires REST API Key, Client Secret Code, and
+   uses callback URL
+   `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`. It also has an
+   "Allow users without an email" option. Values are not entered yet.
 2. Manual Identity Linking can be enabled and used from the current anonymous
    session.
+   Status: "Allow manual linking" was found under Authentication -> Sign In /
+   Providers -> User Signups and is enabled. "Allow anonymous sign-ins" is also
+   enabled.
 3. Supabase Redirect URLs include the app deep-link scheme.
 4. Kakao Developers app exists with REST API key and Kakao Login Client Secret.
 5. Kakao Login is enabled and required consent items are configured.
@@ -191,9 +198,9 @@ Setup checklist detail:
 - Current scheme candidate: `actionsportsjournal`.
 - Supabase Redirect URLs should include `actionsportsjournal://**` after the
   scheme is confirmed.
-- Kakao Developers must have Kakao Login enabled, REST API key, Client Secret,
-  Supabase callback Redirect URI, and consent items for profile nickname/image
-  plus optional `account_email`.
+- Kakao Developers remains the next user-side setup step. It must have Kakao
+  Login enabled, REST API key, Client Secret, Supabase callback Redirect URI,
+  and consent items for profile nickname/image plus optional `account_email`.
 - Adding the native app scheme will likely require a new iOS standalone/EAS
   preview build to verify deep-link return behavior. Do not create that build
   during the setup-check phase.

@@ -107,6 +107,18 @@ remain the baseline, but E2E completion is blocked on the Supabase hosted email
 rate limit. Do not continue repeated `updateUser({ email })` attempts without a
 rate-limit/custom-SMTP decision.
 
+Kakao Account Linking preparation, 2026-06-24:
+
+Supabase-side setup feasibility is partially confirmed. The Kakao provider
+screen exists and shows the required values: REST API Key, Client Secret Code,
+Callback URL `https://ambpdhpeaewdvfvqzmkz.supabase.co/auth/v1/callback`, and
+an "Allow users without an email" option. Manual Identity Linking was found at
+Authentication -> Sign In / Providers -> User Signups, and "Allow manual
+linking" is now enabled. "Allow anonymous sign-ins" is also enabled.
+
+The Kakao provider values have not been entered and the provider has not been
+activated yet. No app scheme, code, or EAS build work has started.
+
 Auth Phase 1 server ownership closeout, 2026-06-24:
 
 Auth Phase 1 is complete for the server-side ownership boundary. The BFF now
