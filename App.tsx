@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 
 import { HomeScreen } from './src/features/sessions/HomeScreen';
 import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
@@ -34,16 +34,82 @@ function AnalysisPushRegistration() {
       return;
     }
 
-    import('./src/services/notifications/registerAnalysisPushNotifications')
-      .then(({ registerForAnalysisPushNotifications }) =>
-        registerForAnalysisPushNotifications(),
-      )
-      .catch((error) => {
-        console.warn(
-          'Push notification registration failed:',
-          error instanceof Error ? error.message : 'Unknown error',
-        );
-      });
+    let isDisposed = false;
+    let isRegistering = false;
+    let latestStatus: string | undefined;
+    let previousAppState = AppState.currentState;
+
+    const shouldRetryRegistration = () =>
+      !latestStatus ||
+      latestStatus === 'failed' ||
+      latestStatus === 'skipped_permission';
+
+    const runRegistration = (source: string) => {
+      if (isRegistering) {
+        return;
+      }
+
+      isRegistering = true;
+
+      import('./src/services/notifications/registerAnalysisPushNotifications')
+        .then(({ registerForAnalysisPushNotifications }) =>
+          registerForAnalysisPushNotifications({ source }),
+        )
+        .then((result) => {
+          if (isDisposed) {
+            return;
+          }
+
+          latestStatus = result.status;
+          console.info('[push_registration]', {
+            authOwnerKey,
+            event: 'analysis_push_registration_owner_result',
+            reason: result.reason,
+            registered: result.registered,
+            source,
+            status: result.status,
+          });
+        })
+        .catch((error) => {
+          if (isDisposed) {
+            return;
+          }
+
+          latestStatus = 'failed';
+          console.warn(
+            'Push notification registration failed:',
+            error instanceof Error ? error.message : 'Unknown error',
+          );
+        })
+        .finally(() => {
+          isRegistering = false;
+        });
+    };
+
+    runRegistration('auth_owner_ready');
+
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      (nextAppState) => {
+        const wasBackgrounded =
+          previousAppState === 'background' ||
+          previousAppState === 'inactive';
+        previousAppState = nextAppState;
+
+        if (
+          nextAppState === 'active' &&
+          wasBackgrounded &&
+          shouldRetryRegistration()
+        ) {
+          runRegistration('foreground_retry');
+        }
+      },
+    );
+
+    return () => {
+      isDisposed = true;
+      appStateSubscription.remove();
+    };
   }, [authOwnerKey]);
 
   return null;

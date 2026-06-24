@@ -43,6 +43,8 @@ import {
 import { classifyUploadFailure } from './uploadStateMachine';
 
 const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
+const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
+  process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 
 type ExtractEvidenceOptions = {
   openSheet?: boolean;
@@ -336,6 +338,7 @@ export function useUploadMoment({
     isUploadingSessionRef.current = true;
     setIsUploadingSession(true);
     setUploadProgress(buildUploadProgress('preparing'));
+    ensureAnalysisPushRegistrationForUpload();
 
     const now = new Date().toISOString();
     const nextSession: Session = {
@@ -692,6 +695,32 @@ export function useUploadMoment({
     uploadDraft,
     uploadProgress,
   };
+}
+
+function ensureAnalysisPushRegistrationForUpload() {
+  if (!ENABLE_ANALYSIS_PUSH_NOTIFICATIONS) {
+    return;
+  }
+
+  import('../../services/notifications/registerAnalysisPushNotifications')
+    .then(({ registerForAnalysisPushNotifications }) =>
+      registerForAnalysisPushNotifications({ source: 'upload_start' }),
+    )
+    .then((result) => {
+      console.info('[push_registration]', {
+        event: 'analysis_push_registration_upload_ensure_result',
+        reason: result.reason,
+        registered: result.registered,
+        source: 'upload_start',
+        status: result.status,
+      });
+    })
+    .catch((error) => {
+      console.warn(
+        'Upload-start push notification registration failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    });
 }
 
 async function showUploadFailureAlertIfActive({
