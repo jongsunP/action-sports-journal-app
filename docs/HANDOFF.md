@@ -237,6 +237,17 @@ Next QA/start point:
   SMTP.
 - Next Email Recovery decision: inspect Supabase Auth email rate-limit/project
   policy, or evaluate custom SMTP before any more E2E attempts.
+- Final Email Recovery smoke retry, 2026-06-24: at the user's request, a fresh
+  anonymous QA seed session called `updateUser({ email })` exactly once with
+  `parksunl7@naver.com`. The result was `email_exists` / HTTP 422,
+  `A user with this email address has already been registered`, not the previous
+  hosted email rate limit. This is expected after the successful Kakao QA:
+  `parksunl7@naver.com` is already registered on Auth user
+  `499d7e71-623c-4b4e-8653-267d72ac3ca6` and `public.users.id`
+  `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`. No email was sent, so magic-link
+  receipt/click/session refresh was not testable. Temporary QA seed Auth user
+  `68747ded-ee58-4406-8d4f-3037a3c91be4` was cleaned up. Do not retry
+  `updateUser({ email })` with this already-registered email.
 - Rate-limit judgment: Supabase's built-in Auth email sender is currently a
   low-limit demo sender. Official docs list email-triggering endpoints,
   including `/auth/v1/user` for email updates, at 2 emails/hour project-wide

@@ -102,9 +102,13 @@ TODO before calling Email Recovery complete:
 
 1. Resolve the E2E blocker: Supabase hosted email sending repeatedly returned
    `over_email_send_rate_limit` / HTTP 429 for the agreed test email
-   `parksunl7@naver.com`, including the post-cooldown single retry.
-2. Do not run more repeated `updateUser({ email })` tests until Supabase Auth
-   email rate-limit/project policy is understood or custom SMTP is configured.
+   `parksunl7@naver.com`, including the post-cooldown single retry. A final
+   one-call retry later returned `email_exists` / HTTP 422 because the same
+   email is now already registered on the successful Kakao QA Auth user.
+2. Do not run more repeated `updateUser({ email })` tests with
+   `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
+   Any future Email Recovery E2E must first choose a new owner-approved test
+   email and confirm rate-limit/custom-SMTP policy.
 3. Verify the magic-link email flow once email sending is available. The OTP
    input / `verifyOtp` UI has been removed, and the current baseline is
    `updateUser({ email })` -> magic-link pending UI -> user clicks email link
@@ -120,9 +124,27 @@ TODO before calling Email Recovery complete:
 Current blocker:
 
 Email Recovery's code/structure/UI baseline should remain in place, but E2E
-completion is blocked by Supabase hosted email rate limits. Add custom SMTP to
-the recovery readiness checklist, or decide that Email Recovery remains a
-baseline-only path while Kakao/Phone recovery is evaluated for Korean-market UX.
+completion is not closed. It was first blocked by Supabase hosted email rate
+limits, and the final requested retry could not proceed because the agreed test
+email is now already registered through the successful Kakao QA account. Add
+custom SMTP to the recovery readiness checklist if email recovery becomes a
+near-term requirement, or keep Email Recovery as a baseline-only path while
+Kakao/Phone recovery is evaluated for Korean-market UX.
+
+Final smoke result:
+
+- Test email: `parksunl7@naver.com`.
+- `updateUser({ email })` call count: `1`.
+- Result: `email_exists` / HTTP 422,
+  `A user with this email address has already been registered`.
+- Existing registered Auth user:
+  `499d7e71-623c-4b4e-8653-267d72ac3ca6`.
+- Existing `public.users.id`:
+  `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`.
+- No email was sent, so magic-link click/session refresh and
+  `public.users.email` sync were not retested.
+- Temporary QA seed Auth user
+  `68747ded-ee58-4406-8d4f-3037a3c91be4` was cleaned up.
 
 Supabase email rate-limit / custom SMTP judgment:
 

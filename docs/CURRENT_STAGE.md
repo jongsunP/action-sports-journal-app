@@ -107,6 +107,24 @@ remain the baseline, but E2E completion is blocked on the Supabase hosted email
 rate limit. Do not continue repeated `updateUser({ email })` attempts without a
 rate-limit/custom-SMTP decision.
 
+Final Email Recovery smoke retry, 2026-06-24:
+
+At the user's request, Email Recovery was retried one final time with the same
+test email, `parksunl7@naver.com`. A fresh anonymous QA seed session was
+created and `updateUser({ email })` was called exactly once. The result was not
+the previous hosted email rate limit; Supabase returned `email_exists` / HTTP
+422 with `A user with this email address has already been registered`. This
+matches the current post-Kakao QA state, where `parksunl7@naver.com` is already
+registered on Auth user `499d7e71-623c-4b4e-8653-267d72ac3ca6` and mapped to
+`public.users.id` `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`. No email was sent,
+so magic-link click/session refresh could not be tested. The temporary QA seed
+Auth user `68747ded-ee58-4406-8d4f-3037a3c91be4` was cleaned up.
+
+Current Email Recovery status: code/UI baseline remains, but this E2E path is
+not closed as a successful recovery smoke. The agreed test email is no longer a
+valid fresh-linking target because it is already owned by the successful Kakao
+QA account. Do not repeat `updateUser({ email })` with this email.
+
 Kakao Account Linking preparation, 2026-06-24:
 
 Supabase/Kakao provider setup is now ready for implementation planning.
