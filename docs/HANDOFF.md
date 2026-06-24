@@ -62,6 +62,25 @@ cd ~/repository/action-sports-journal-app
 open -a TextEdit .env.local
 ```
 
+When giving work to another Codex/development session, use:
+
+```text
+개발 세션에게:
+<copyable prompt text>
+```
+
+When giving work directly to the Founder/user, use:
+
+```text
+사용자에게:
+<clear step-by-step explanation, not a copy-only prompt block>
+```
+
+Only include sections for real action owners. Avoid adding a user or development
+session block when there is no action for that owner.
+If both the Founder/user and another development session have actions, include
+both sections and state the order clearly.
+
 Founder technical context:
 
 The Founder is a web frontend developer. They understand structure, flow, UI,

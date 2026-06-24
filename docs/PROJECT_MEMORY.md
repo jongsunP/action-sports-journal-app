@@ -83,6 +83,27 @@ When any Codex or CTO session asks the user to do something, the instruction
 must say exactly where to go and what to do there. Keep it concise, but do not
 omit the location/context.
 
+Use this response format consistently:
+
+- When asking another Codex/development session to do work, write:
+
+```text
+개발 세션에게:
+<copyable prompt text>
+```
+
+- When asking the Founder/user to do work, write:
+
+```text
+사용자에게:
+<clear step-by-step explanation, not a copy-only prompt block>
+```
+
+Only include an action section when there is an actual action owner. Do not add
+unnecessary user/development-session sections when no action is needed.
+If both the Founder/user and another development session have actions, include
+both sections and state the order clearly.
+
 For terminal tasks, always provide a copyable shell block that starts by
 changing into the project directory.
 
