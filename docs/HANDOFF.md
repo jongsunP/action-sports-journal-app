@@ -80,6 +80,10 @@ Only include sections for real action owners. Avoid adding a user or development
 session block when there is no action for that owner.
 If both the Founder/user and another development session have actions, include
 both sections and state the order clearly.
+Keep the work stream moving. Pause for explanation or questions only when a
+decision is needed from the Founder or when the Founder explicitly asks a
+question. Otherwise, provide only the next needed prompt/action for the
+appropriate owner.
 
 Founder technical context:
 

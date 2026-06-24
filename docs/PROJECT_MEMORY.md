@@ -103,6 +103,10 @@ Only include an action section when there is an actual action owner. Do not add
 unnecessary user/development-session sections when no action is needed.
 If both the Founder/user and another development session have actions, include
 both sections and state the order clearly.
+Keep the work stream moving. Pause for explanation or questions only when a
+decision is needed from the Founder or when the Founder explicitly asks a
+question. Otherwise, provide only the next needed prompt/action for the
+appropriate owner.
 
 For terminal tasks, always provide a copyable shell block that starts by
 changing into the project directory.
