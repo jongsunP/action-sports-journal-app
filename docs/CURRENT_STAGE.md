@@ -34,6 +34,17 @@ Build 74 QA confirmed:
 - The app icon asset currently points at `./assets/icon.png` and is committed
   for future builds.
 
+Push Observability P2 implementation, 2026-06-24:
+
+Build 74 already confirmed Push delivery, so the P2 work keeps the Push send
+path intact and adds persistent diagnostics only. New migration
+`supabase/phase12_push_delivery_attempts.sql` records analysis completion Push
+attempts, token counts, Expo ticket mapping, and later receipt results. The
+server now distinguishes missing tokens, disabled-token-only users, enabled
+token counts, send request errors, ticket errors, and receipt errors. Receipt
+checks are manual/internal through `POST /api/push-receipts/check-pending`
+instead of a scheduler.
+
 Milestone status:
 
 - Upload Part 1: closed.

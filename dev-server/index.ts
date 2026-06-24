@@ -166,6 +166,46 @@ type LinkedMoment = {
   latest_evidence_result_id?: string | null;
 };
 
+type PushDeliveryAttemptStatus =
+  | "skipped_no_tokens"
+  | "skipped_disabled_only"
+  | "skipped_no_valid_tokens"
+  | "send_started"
+  | "send_request_error"
+  | "ticket_ok"
+  | "ticket_error"
+  | "receipt_ok"
+  | "receipt_error"
+  | "receipt_missing";
+
+type DevicePushTokenRow = {
+  id: string;
+  enabled: boolean | null;
+  expo_push_token: string | null;
+};
+
+type ValidDevicePushTokenRow = DevicePushTokenRow & {
+  expo_push_token: string;
+};
+
+type PushTokenResult = {
+  details?: unknown;
+  maskedExpoPushToken: string;
+  message?: string;
+  status: "ok" | "error" | "unknown";
+  ticketId?: string;
+  tokenId: string;
+};
+
+type PushReceiptResult = {
+  details?: unknown;
+  maskedExpoPushToken?: string;
+  message?: string;
+  status: "ok" | "error" | "unknown";
+  ticketId: string;
+  tokenId?: string;
+};
+
 type StoredVideoInput = {
   bucket: string;
   path: string;
@@ -357,6 +397,69 @@ app.post("/api/push-tokens", async (request, response) => {
     const message =
       error instanceof Error ? error.message : "Push token registration failed.";
     console.error("Push token registration failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
+app.post("/api/push-receipts/check-pending", async (request, response) => {
+  try {
+    if (!isInternalDevEndpointAllowed(request)) {
+      response.status(404).json({ error: "Not found." });
+      return;
+    }
+
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const limit = Math.min(
+      Math.max(Number(request.body?.limit ?? request.query.limit ?? 20), 1),
+      100,
+    );
+    const attemptId = nullableString(request.body?.attemptId ?? request.query.attemptId);
+    let query = client
+      .from("analysis_push_delivery_attempts")
+      .select("id, ticket_ids, token_results")
+      .is("receipt_checked_at", null)
+      .in("status", ["ticket_ok", "ticket_error"])
+      .order("created_at", { ascending: true })
+      .limit(limit);
+
+    if (attemptId) {
+      query = query.eq("id", attemptId);
+    }
+
+    const { data: attempts, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to load pending push receipts: ${error.message}`);
+    }
+
+    const checkedAttempts = [];
+
+    for (const attempt of attempts ?? []) {
+      const result = await checkPushDeliveryAttemptReceipts({
+        attempt,
+        client,
+      });
+
+      checkedAttempts.push(result);
+    }
+
+    response.json({
+      checkedCount: checkedAttempts.length,
+      checkedAttempts,
+      ok: true,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Push receipt check failed.";
+    console.error("Push receipt check failed:", message);
     response.status(500).json({ error: message });
   }
 });
@@ -5461,35 +5564,63 @@ async function sendAnalysisCompletedPushNotification({
 
     const { data, error } = await client
       .from("device_push_tokens")
-      .select("expo_push_token")
-      .eq("user_id", userId)
-      .eq("enabled", true);
+      .select("id, expo_push_token, enabled")
+      .eq("user_id", userId);
 
     if (error) {
       console.warn(
         "Analysis completion push skipped: failed to load tokens:",
         error.message,
       );
+      await createPushDeliveryAttempt(client, {
+        errorMessage: error.message,
+        evidenceResultId,
+        momentId,
+        status: "send_request_error",
+        userId,
+      });
       return;
     }
 
-    const tokens = Array.from(
-      new Set(
-        (data ?? [])
-          .map((row) => nullableString(row.expo_push_token))
-          .filter((token): token is string => Boolean(token && isExpoPushToken(token))),
-      ),
+    const tokenRows: DevicePushTokenRow[] = (data ?? []).map((row) => ({
+      enabled: row.enabled === true,
+      expo_push_token: nullableString(row.expo_push_token),
+      id: row.id as string,
+    }));
+    const registeredTokenCount = tokenRows.length;
+    const disabledTokenCount = tokenRows.filter((row) => !row.enabled).length;
+    const enabledTokenRows = tokenRows.filter((row) => row.enabled);
+    const enabledTokenCount = enabledTokenRows.length;
+    const invalidTokenCount = tokenRows.filter(
+      (row) => !row.expo_push_token || !isExpoPushToken(row.expo_push_token),
+    ).length;
+    const validEnabledTokenRows = dedupeDevicePushTokenRows(
+      enabledTokenRows.filter(isValidDevicePushTokenRow),
     );
 
     console.info("[push_observability]", {
+      disabledTokenCount,
+      enabledTokenCount,
       event: "analysis_push_tokens_loaded",
       evidenceResultId,
+      invalidTokenCount,
       momentId,
-      tokenCount: tokens.length,
+      registeredTokenCount,
+      tokenCount: validEnabledTokenRows.length,
       userId,
     });
 
-    if (tokens.length === 0) {
+    if (registeredTokenCount === 0) {
+      await createPushDeliveryAttempt(client, {
+        disabledTokenCount,
+        enabledTokenCount,
+        evidenceResultId,
+        invalidTokenCount,
+        momentId,
+        registeredTokenCount,
+        status: "skipped_no_tokens",
+        userId,
+      });
       console.info("[push_observability]", {
         event: "analysis_push_skipped_no_tokens",
         momentId,
@@ -5498,11 +5629,83 @@ async function sendAnalysisCompletedPushNotification({
       return;
     }
 
+    if (enabledTokenCount === 0) {
+      await createPushDeliveryAttempt(client, {
+        disabledTokenCount,
+        enabledTokenCount,
+        evidenceResultId,
+        invalidTokenCount,
+        momentId,
+        registeredTokenCount,
+        status: "skipped_disabled_only",
+        tokenResults: tokenRows.map((row) => ({
+          maskedExpoPushToken: row.expo_push_token
+            ? maskExpoPushToken(row.expo_push_token)
+            : "***",
+          status: "unknown",
+          tokenId: row.id,
+        })),
+        userId,
+      });
+      console.info("[push_observability]", {
+        disabledTokenCount,
+        event: "analysis_push_skipped_disabled_only",
+        momentId,
+        registeredTokenCount,
+        userId,
+      });
+      return;
+    }
+
+    if (validEnabledTokenRows.length === 0) {
+      await createPushDeliveryAttempt(client, {
+        disabledTokenCount,
+        enabledTokenCount,
+        evidenceResultId,
+        invalidTokenCount,
+        momentId,
+        registeredTokenCount,
+        status: "skipped_no_valid_tokens",
+        tokenResults: enabledTokenRows.map((row) => ({
+          maskedExpoPushToken: row.expo_push_token
+            ? maskExpoPushToken(row.expo_push_token)
+            : "***",
+          status: "unknown",
+          tokenId: row.id,
+        })),
+        userId,
+      });
+      console.info("[push_observability]", {
+        enabledTokenCount,
+        event: "analysis_push_skipped_no_valid_tokens",
+        invalidTokenCount,
+        momentId,
+        userId,
+      });
+      return;
+    }
+
+    const deliveryAttemptId = await createPushDeliveryAttempt(client, {
+      disabledTokenCount,
+      enabledTokenCount,
+      evidenceResultId,
+      invalidTokenCount,
+      momentId,
+      registeredTokenCount,
+      status: "send_started",
+      tokenResults: validEnabledTokenRows.map((row) => ({
+        maskedExpoPushToken: maskExpoPushToken(row.expo_push_token),
+        status: "unknown",
+        tokenId: row.id,
+      })),
+      userId,
+    });
+
     console.info("[push_observability]", {
       event: "analysis_push_send_started",
       evidenceResultId,
       momentId,
-      tokenCount: tokens.length,
+      tokenCount: validEnabledTokenRows.length,
     });
 
     const pushResponse = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -5513,8 +5716,8 @@ async function sendAnalysisCompletedPushNotification({
         "Content-Type": "application/json",
       },
       body: JSON.stringify(
-        tokens.map((token) => ({
-          to: token,
+        validEnabledTokenRows.map((row) => ({
+          to: row.expo_push_token,
           title: "분석이 완료되었습니다",
           body: "결과를 확인해보세요",
           sound: "default",
@@ -5528,6 +5731,12 @@ async function sendAnalysisCompletedPushNotification({
     });
 
     if (!pushResponse.ok) {
+      const errorText = await pushResponse.text().catch(() => "");
+      await updatePushDeliveryAttempt(client, deliveryAttemptId, {
+        error_message:
+          errorText || `Expo push send failed with ${pushResponse.status}`,
+        status: "send_request_error",
+      });
       console.warn(
         `Analysis completion push failed with ${pushResponse.status}.`,
       );
@@ -5535,8 +5744,26 @@ async function sendAnalysisCompletedPushNotification({
     }
 
     const pushResult = (await pushResponse.json()) as unknown;
-    const pushTicketSummary = summarizeExpoPushTickets(pushResult);
-    const pushErrors = extractExpoPushErrors(pushResult);
+    const pushTicketSummary = summarizeExpoPushTickets(
+      pushResult,
+      validEnabledTokenRows,
+    );
+    const pushErrors = pushTicketSummary.tokenResults
+      .filter((result) => result.status === "error")
+      .map((result) => result.message ?? "unknown Expo push ticket error");
+    const ticketStatus: PushDeliveryAttemptStatus =
+      pushTicketSummary.errorCount > 0 ? "ticket_error" : "ticket_ok";
+
+    await updatePushDeliveryAttempt(client, deliveryAttemptId, {
+      error_message: pushErrors.length > 0 ? pushErrors.join("; ") : null,
+      status: ticketStatus,
+      ticket_ids: pushTicketSummary.ticketIds,
+      token_results: pushTicketSummary.tokenResults,
+    });
+    await disableDevicePushTokensForDeviceNotRegistered({
+      client,
+      tokenResults: pushTicketSummary.tokenResults,
+    });
 
     console.info("[push_observability]", {
       errorCount: pushTicketSummary.errorCount,
@@ -5772,13 +5999,297 @@ async function resolveRealtimeAnalysisChannel({
   return realtimeInternalDefaultChannel;
 }
 
-function summarizeExpoPushTickets(value: unknown) {
+function isValidDevicePushTokenRow(
+  row: DevicePushTokenRow,
+): row is ValidDevicePushTokenRow {
+  return Boolean(row.expo_push_token && isExpoPushToken(row.expo_push_token));
+}
+
+function dedupeDevicePushTokenRows<T extends ValidDevicePushTokenRow>(rows: T[]) {
+  const seenTokens = new Set<string>();
+  const dedupedRows: T[] = [];
+
+  for (const row of rows) {
+    if (!row.expo_push_token || seenTokens.has(row.expo_push_token)) {
+      continue;
+    }
+
+    seenTokens.add(row.expo_push_token);
+    dedupedRows.push(row);
+  }
+
+  return dedupedRows;
+}
+
+async function createPushDeliveryAttempt(
+  client: SupabaseServerClient,
+  {
+    disabledTokenCount = 0,
+    enabledTokenCount = 0,
+    errorMessage,
+    evidenceResultId,
+    invalidTokenCount = 0,
+    momentId,
+    registeredTokenCount = 0,
+    status,
+    tokenResults = [],
+    userId,
+  }: {
+    disabledTokenCount?: number;
+    enabledTokenCount?: number;
+    errorMessage?: string | null;
+    evidenceResultId?: string;
+    invalidTokenCount?: number;
+    momentId?: string;
+    registeredTokenCount?: number;
+    status: PushDeliveryAttemptStatus;
+    tokenResults?: PushTokenResult[];
+    userId: string;
+  },
+) {
+  try {
+    const { data, error } = await client
+      .from("analysis_push_delivery_attempts")
+      .insert({
+        disabled_token_count: disabledTokenCount,
+        enabled_token_count: enabledTokenCount,
+        error_message: errorMessage ?? null,
+        evidence_result_id: evidenceResultId,
+        invalid_token_count: invalidTokenCount,
+        moment_id: momentId,
+        registered_token_count: registeredTokenCount,
+        status,
+        token_results: tokenResults,
+        updated_at: new Date().toISOString(),
+        user_id: userId,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    const attemptId = nullableString(data?.id);
+
+    console.info("[push_observability]", {
+      attemptId,
+      event: "analysis_push_delivery_attempt_recorded",
+      status,
+    });
+
+    return attemptId;
+  } catch (error) {
+    console.warn(
+      "Push delivery attempt insert failed:",
+      error instanceof Error ? error.message : "unknown attempt insert error",
+    );
+    return null;
+  }
+}
+
+async function updatePushDeliveryAttempt(
+  client: SupabaseServerClient,
+  attemptId: string | null,
+  patch: {
+    error_message?: string | null;
+    receipt_checked_at?: string | null;
+    receipt_results?: unknown[];
+    status?: PushDeliveryAttemptStatus;
+    ticket_ids?: string[];
+    token_results?: PushTokenResult[];
+  },
+) {
+  if (!attemptId) {
+    return;
+  }
+
+  try {
+    const { error } = await client
+      .from("analysis_push_delivery_attempts")
+      .update({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", attemptId);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn(
+      "Push delivery attempt update failed:",
+      error instanceof Error ? error.message : "unknown attempt update error",
+    );
+  }
+}
+
+async function disableDevicePushTokensForDeviceNotRegistered({
+  client,
+  tokenResults,
+}: {
+  client: SupabaseServerClient;
+  tokenResults: PushTokenResult[];
+}) {
+  const tokenIds = tokenResults
+    .filter((result) => readExpoPushErrorCode(result.details) === "DeviceNotRegistered")
+    .map((result) => result.tokenId);
+
+  if (tokenIds.length === 0) {
+    return;
+  }
+
+  const { error } = await client
+    .from("device_push_tokens")
+    .update({
+      enabled: false,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", tokenIds);
+
+  if (error) {
+    console.warn(
+      "Failed to disable DeviceNotRegistered push tokens:",
+      error.message,
+    );
+    return;
+  }
+
+  console.info("[push_observability]", {
+    disabledTokenIds: tokenIds,
+    event: "analysis_push_tokens_disabled_device_not_registered",
+  });
+}
+
+async function checkPushDeliveryAttemptReceipts({
+  attempt,
+  client,
+}: {
+  attempt: Record<string, unknown>;
+  client: SupabaseServerClient;
+}) {
+  const attemptId = nullableString(attempt.id);
+  const ticketIds = Array.isArray(attempt.ticket_ids)
+    ? attempt.ticket_ids.filter((id): id is string => typeof id === "string")
+    : [];
+  const tokenResults = readPushTokenResults(attempt.token_results);
+
+  if (!attemptId || ticketIds.length === 0) {
+    if (attemptId) {
+      await updatePushDeliveryAttempt(client, attemptId, {
+        receipt_checked_at: new Date().toISOString(),
+      });
+    }
+
+    return {
+      attemptId,
+      receiptCount: 0,
+      status: "no_ticket_ids",
+    };
+  }
+
+  const receiptResponse = await fetch(
+    "https://exp.host/--/api/v2/push/getReceipts",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ids: ticketIds }),
+    },
+  );
+  const checkedAt = new Date().toISOString();
+
+  if (!receiptResponse.ok) {
+    const errorText = await receiptResponse.text().catch(() => "");
+    await updatePushDeliveryAttempt(client, attemptId, {
+      error_message:
+        errorText || `Expo push receipt check failed with ${receiptResponse.status}`,
+      receipt_checked_at: checkedAt,
+      status: "receipt_error",
+    });
+
+    return {
+      attemptId,
+      error: errorText,
+      receiptCount: 0,
+      status: "receipt_error",
+    };
+  }
+
+  const receiptResult = (await receiptResponse.json()) as unknown;
+  const receiptSummary = summarizeExpoPushReceipts({
+    requestedTicketIds: ticketIds,
+    tokenResults,
+    value: receiptResult,
+  });
+
+  await updatePushDeliveryAttempt(client, attemptId, {
+    error_message:
+      receiptSummary.errors.length > 0 ? receiptSummary.errors.join("; ") : null,
+    receipt_checked_at: checkedAt,
+    receipt_results: receiptSummary.receiptResults,
+    status: receiptSummary.status,
+  });
+  await disableDevicePushTokensForDeviceNotRegistered({
+    client,
+    tokenResults: receiptSummary.receiptResults
+      .filter((receipt): receipt is PushReceiptResult & { tokenId: string } =>
+        Boolean(receipt.tokenId),
+      )
+      .map((receipt): PushTokenResult => ({
+        details: receipt.details,
+        maskedExpoPushToken: receipt.maskedExpoPushToken ?? "***",
+        message: receipt.message,
+        status: receipt.status,
+        tokenId: receipt.tokenId as string,
+      })),
+  });
+
+  console.info("[push_observability]", {
+    attemptId,
+    errorCount: receiptSummary.errorCount,
+    event: "analysis_push_receipt_result",
+    missingCount: receiptSummary.missingCount,
+    okCount: receiptSummary.okCount,
+    status: receiptSummary.status,
+  });
+
+  return {
+    attemptId,
+    errorCount: receiptSummary.errorCount,
+    missingCount: receiptSummary.missingCount,
+    okCount: receiptSummary.okCount,
+    receiptCount: receiptSummary.receiptResults.length,
+    status: receiptSummary.status,
+  };
+}
+
+function summarizeExpoPushTickets(
+  value: unknown,
+  tokenRows: ValidDevicePushTokenRow[],
+): {
+  errorCount: number;
+  errors: string[];
+  okCount: number;
+  ticketIds: string[];
+  tokenResults: PushTokenResult[];
+} {
   if (!value || typeof value !== "object") {
+    const tokenResults: PushTokenResult[] = tokenRows.map((row) => ({
+      maskedExpoPushToken: maskExpoPushToken(row.expo_push_token),
+      status: "unknown",
+      tokenId: row.id,
+    }));
+
     return {
       errorCount: 0,
       errors: [],
       okCount: 0,
       ticketIds: [],
+      tokenResults,
     };
   }
 
@@ -5786,11 +6297,21 @@ function summarizeExpoPushTickets(value: unknown) {
   const tickets = Array.isArray(response.data) ? response.data : [];
   const errors: string[] = [];
   const ticketIds: string[] = [];
+  const tokenResults: PushTokenResult[] = [];
   let okCount = 0;
   let errorCount = 0;
 
-  for (const ticket of tickets) {
+  for (const [index, ticket] of tickets.entries()) {
+    const tokenRow = tokenRows[index];
+
     if (!ticket || typeof ticket !== "object") {
+      if (tokenRow) {
+        tokenResults.push({
+          maskedExpoPushToken: maskExpoPushToken(tokenRow.expo_push_token),
+          status: "unknown",
+          tokenId: tokenRow.id,
+        });
+      }
       continue;
     }
 
@@ -5803,12 +6324,31 @@ function summarizeExpoPushTickets(value: unknown) {
       if (ticketId) {
         ticketIds.push(ticketId);
       }
+      if (tokenRow) {
+        tokenResults.push({
+          maskedExpoPushToken: maskExpoPushToken(tokenRow.expo_push_token),
+          status: "ok",
+          ticketId: ticketId ?? undefined,
+          tokenId: tokenRow.id,
+        });
+      }
       continue;
     }
 
     if (item.status === "error") {
       errorCount += 1;
-      errors.push(nullableString(item.message) ?? "unknown Expo push ticket error");
+      const message =
+        nullableString(item.message) ?? "unknown Expo push ticket error";
+      errors.push(message);
+      if (tokenRow) {
+        tokenResults.push({
+          details: readRecordValue(item.details),
+          maskedExpoPushToken: maskExpoPushToken(tokenRow.expo_push_token),
+          message,
+          status: "error",
+          tokenId: tokenRow.id,
+        });
+      }
     }
   }
 
@@ -5817,32 +6357,148 @@ function summarizeExpoPushTickets(value: unknown) {
     errors,
     okCount,
     ticketIds,
+    tokenResults,
   };
 }
 
-function extractExpoPushErrors(value: unknown) {
-  if (!value || typeof value !== "object") {
+function summarizeExpoPushReceipts({
+  requestedTicketIds,
+  tokenResults,
+  value,
+}: {
+  requestedTicketIds: string[];
+  tokenResults: PushTokenResult[];
+  value: unknown;
+}) {
+  const receiptResults: PushReceiptResult[] = [];
+  const errors: string[] = [];
+  let okCount = 0;
+  let errorCount = 0;
+  let missingCount = 0;
+
+  const data =
+    value && typeof value === "object" && typeof (value as Record<string, unknown>).data === "object"
+      ? ((value as Record<string, unknown>).data as Record<string, unknown>)
+      : {};
+  const tokenResultByTicketId = new Map(
+    tokenResults
+      .filter((result) => result.ticketId)
+      .map((result) => [result.ticketId as string, result]),
+  );
+
+  for (const ticketId of requestedTicketIds) {
+    const receipt = data[ticketId];
+    const tokenResult = tokenResultByTicketId.get(ticketId);
+
+    if (!receipt || typeof receipt !== "object") {
+      missingCount += 1;
+      receiptResults.push({
+        maskedExpoPushToken: tokenResult?.maskedExpoPushToken,
+        status: "unknown" as const,
+        ticketId,
+        tokenId: tokenResult?.tokenId,
+      });
+      continue;
+    }
+
+    const item = receipt as Record<string, unknown>;
+
+    if (item.status === "ok") {
+      okCount += 1;
+      receiptResults.push({
+        maskedExpoPushToken: tokenResult?.maskedExpoPushToken,
+        status: "ok" as const,
+        ticketId,
+        tokenId: tokenResult?.tokenId,
+      });
+      continue;
+    }
+
+    errorCount += 1;
+    const message =
+      nullableString(item.message) ?? "unknown Expo push receipt error";
+    errors.push(message);
+    receiptResults.push({
+      details: readRecordValue(item.details),
+      maskedExpoPushToken: tokenResult?.maskedExpoPushToken,
+      message,
+      status: "error" as const,
+      ticketId,
+      tokenId: tokenResult?.tokenId,
+    });
+  }
+
+  return {
+    errorCount,
+    errors,
+    missingCount,
+    okCount,
+    receiptResults,
+    status:
+      errorCount > 0
+        ? ("receipt_error" as const)
+        : missingCount > 0
+          ? ("receipt_missing" as const)
+          : ("receipt_ok" as const),
+  };
+}
+
+function readPushTokenResults(value: unknown): PushTokenResult[] {
+  if (!Array.isArray(value)) {
     return [];
   }
 
-  const response = value as Record<string, unknown>;
-  const tickets = Array.isArray(response.data) ? response.data : [];
-
-  return tickets
-    .map((ticket) => {
-      if (!ticket || typeof ticket !== "object") {
+  return value
+    .map((item): PushTokenResult | null => {
+      if (!item || typeof item !== "object") {
         return null;
       }
 
-      const item = ticket as Record<string, unknown>;
+      const record = item as Record<string, unknown>;
+      const tokenId = nullableString(record.tokenId);
+      const maskedExpoPushToken = nullableString(record.maskedExpoPushToken);
+      const status = record.status;
 
-      if (item.status !== "error") {
+      if (
+        !tokenId ||
+        !maskedExpoPushToken ||
+        (status !== "ok" && status !== "error" && status !== "unknown")
+      ) {
         return null;
       }
 
-      return nullableString(item.message) ?? "unknown Expo push ticket error";
+      return {
+        details: readRecordValue(record.details),
+        maskedExpoPushToken,
+        message: nullableString(record.message) ?? undefined,
+        status,
+        ticketId: nullableString(record.ticketId) ?? undefined,
+        tokenId,
+      };
     })
-    .filter((message): message is string => Boolean(message));
+    .filter((item): item is PushTokenResult => item !== null);
+}
+
+function readRecordValue(value: unknown) {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readExpoPushErrorCode(details: unknown) {
+  if (!details || typeof details !== "object") {
+    return null;
+  }
+
+  return nullableString((details as Record<string, unknown>).error);
+}
+
+function isInternalDevEndpointAllowed(request: express.Request) {
+  if (appEnv !== "production") {
+    return true;
+  }
+
+  return Boolean(debugCaptureToken && getDebugToken(request) === debugCaptureToken);
 }
 
 async function findMomentByColumn(column: "id" | "session_id", value: string) {

@@ -105,6 +105,22 @@ Start Email Recovery / account linking next. Keep Supabase Anonymous Sign-in as
 the device-first identity baseline. Do not turn the no-token internal default
 user fallback into an external user mode.
 
+Push Observability P2 follow-up:
+
+Build 74 delivery remains accepted. The follow-up implementation adds
+diagnostics only:
+
+- `analysis_push_delivery_attempts` stores analysis completion Push attempt
+  status, token counts, Expo ticket ids, token-row mapping, and receipt results.
+- The send path now records missing tokens, disabled-only tokens, enabled token
+  counts, ticket errors, and receipt errors.
+- `DeviceNotRegistered` disables the matching `device_push_tokens` row.
+- Receipt checking starts as a manual/internal endpoint
+  `POST /api/push-receipts/check-pending`, not a scheduler.
+
+Do not reinterpret this as a Push redesign. Push remains user notification;
+Realtime and `/api/moments` remain the foreground sync path.
+
 ## 2026-06-24 Email Recovery / Account Linking Start
 
 Email Recovery implementation has started from the device-first anonymous

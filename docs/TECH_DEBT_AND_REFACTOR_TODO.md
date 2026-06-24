@@ -132,6 +132,30 @@ Priority:
 Not a current Auth Phase 2 blocker. Persisted push ticket / receipt tracking is
 P2 observability only.
 
+P2 implementation update, 2026-06-24:
+
+Push delivery observability now has a minimum persistent path without changing
+the delivery behavior:
+
+- `supabase/phase12_push_delivery_attempts.sql` adds
+  `analysis_push_delivery_attempts`.
+- Analysis completion Push now loads all of the user's device token rows, not
+  only enabled rows, so it can distinguish:
+  - no registered tokens;
+  - disabled-token-only users;
+  - enabled token count;
+  - invalid token rows.
+- Expo ticket results are stored with `device_push_tokens.id` and masked token
+  values only. Raw Expo push tokens are not duplicated into the observability
+  table.
+- `DeviceNotRegistered` from ticket or receipt details disables the matching
+  token row.
+- Receipt checks are intentionally manual/internal first through
+  `POST /api/push-receipts/check-pending`; no scheduler has been introduced.
+
+This is still observability, not a Push redesign. The send payload and
+foreground/background notification policy remain unchanged.
+
 Recheck condition:
 
 If background completed analyses repeatedly produce no visible OS Push while

@@ -88,6 +88,26 @@ Current milestone status:
 - Auth Phase 2 is closed for the device-first anonymous identity baseline.
 - Next main product work should be Email Recovery / account linking.
 
+Push Observability P2, 2026-06-24:
+
+Push was not redesigned. Build 74's delivery behavior remains the accepted
+baseline. The server now adds a persistent observability record around analysis
+completion Push:
+
+- `analysis_push_delivery_attempts` migration in
+  `supabase/phase12_push_delivery_attempts.sql`;
+- all user push tokens are loaded so missing tokens and disabled-only tokens
+  are distinguishable;
+- Expo ticket results are mapped to `device_push_tokens.id` plus masked token
+  only;
+- `DeviceNotRegistered` disables the matching token;
+- receipt checks are exposed as an internal/dev endpoint:
+  `POST /api/push-receipts/check-pending`.
+
+No automatic scheduler was added. For QA, apply the migration, complete an
+analysis, inspect the latest attempt row, then run the receipt endpoint after
+Expo receipts have had time to appear.
+
 Email Recovery implementation start, 2026-06-24:
 
 The first account-linking pass is now in code. It adds an
