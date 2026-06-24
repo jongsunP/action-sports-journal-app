@@ -3,7 +3,6 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { supabase } from '../../services/supabase/client';
 
-const ANALYSIS_REALTIME_CHANNEL = 'analysis-updates';
 const ANALYSIS_COMPLETED_EVENT = 'analysis_completed';
 const MOMENT_UPDATED_EVENT = 'moment_updated';
 const REALTIME_REFRESH_DEBOUNCE_MS = 350;
@@ -15,9 +14,11 @@ type AnalysisCompletedPayload = {
 };
 
 export function useAnalysisRealtimeSync({
+  channelName,
   enabled,
   onAnalysisCompleted,
 }: {
+  channelName: string | null;
   enabled: boolean;
   onAnalysisCompleted: () => void;
 }) {
@@ -47,7 +48,7 @@ export function useAnalysisRealtimeSync({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !supabase) {
+    if (!enabled || !supabase || !channelName) {
       return;
     }
 
@@ -70,7 +71,7 @@ export function useAnalysisRealtimeSync({
       }
 
       channel = client
-        .channel(ANALYSIS_REALTIME_CHANNEL, {
+        .channel(channelName, {
           config: {
             broadcast: {
               ack: false,
@@ -82,6 +83,7 @@ export function useAnalysisRealtimeSync({
           const payload = normalizeAnalysisCompletedPayload(message);
           console.info('[moment_sync]', {
             event: 'analysis_realtime_received',
+            channelName,
             momentId: payload.momentId,
             analysisJobId: payload.analysisJobId,
           });
@@ -91,6 +93,7 @@ export function useAnalysisRealtimeSync({
           const payload = normalizeAnalysisCompletedPayload(message);
           console.info('[moment_sync]', {
             event: 'moment_updated_realtime_received',
+            channelName,
             momentId: payload.momentId,
             analysisJobId: payload.analysisJobId,
             status: payload.status,
@@ -100,7 +103,10 @@ export function useAnalysisRealtimeSync({
 
       channel.subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[moment_sync] analysis realtime subscription issue:', status);
+          console.warn('[moment_sync] analysis realtime subscription issue:', {
+            channelName,
+            status,
+          });
         }
       });
     };
@@ -130,7 +136,7 @@ export function useAnalysisRealtimeSync({
         refreshTimerRef.current = null;
       }
     };
-  }, [enabled, scheduleRefresh]);
+  }, [channelName, enabled, scheduleRefresh]);
 }
 
 function normalizeAnalysisCompletedPayload(

@@ -115,7 +115,8 @@ const sourceVideoStorageBucket = "moment-videos";
 const thumbnailStorageProvider = "supabase";
 const thumbnailStorageBucket = "moment-thumbnails";
 const thumbnailSignedUrlExpiresSeconds = 60 * 60 * 24;
-const realtimeAnalysisChannel = "analysis-updates";
+const realtimeAnalysisChannelPrefix = "analysis-updates";
+const realtimeInternalDefaultChannel = `${realtimeAnalysisChannelPrefix}:internal-default`;
 const uploadedSourceStorageInspectTimeoutMs = 5_000;
 const allowInternalDefaultUser = process.env.ALLOW_INTERNAL_DEFAULT_USER !== "false";
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
@@ -3688,6 +3689,7 @@ async function createQueuedEvidenceAnalysisJob({
     void broadcastMomentUpdated({
       momentId,
       status: "completed",
+      userId,
     });
 
     return null;
@@ -3738,6 +3740,7 @@ async function createQueuedEvidenceAnalysisJob({
     momentId,
     analysisJobId: data.id as string,
     status: completedEvidenceResultIdAfterInsert ? "completed" : "queued",
+    userId,
   });
 
   return {
@@ -5048,7 +5051,7 @@ async function markEvidenceAnalysisJobProcessing(analysisJobId: string) {
     })
     .eq("id", analysisJobId)
     .eq("status", "queued")
-    .select("id,moment_id")
+    .select("id,moment_id,user_id")
     .maybeSingle();
 
   if (error) {
@@ -5085,6 +5088,7 @@ async function markEvidenceAnalysisJobProcessing(analysisJobId: string) {
     momentId: data.moment_id as string,
     analysisJobId,
     status: completedEvidenceResultId ? "completed" : "processing",
+    userId: data.user_id as string,
   });
 
   return {
@@ -5374,6 +5378,7 @@ async function runGeminiEvidenceExtraction({
       void broadcastAnalysisCompleted({
         momentId: persistence.momentId,
         analysisJobId: persistence.analysisJobId,
+        userId: persistence.userId,
       });
     }
 
@@ -5381,6 +5386,7 @@ async function runGeminiEvidenceExtraction({
       momentId: persistence.momentId,
       analysisJobId: persistence.analysisJobId,
       status: normalizedEvidence.parseFailed ? "failed" : "completed",
+      userId: persistence.userId,
     });
   }
 
@@ -5528,9 +5534,11 @@ async function sendAnalysisCompletedPushNotification({
 async function broadcastAnalysisCompleted({
   momentId,
   analysisJobId,
+  userId,
 }: {
   momentId: string;
   analysisJobId: string;
+  userId?: string;
 }) {
   const client = getSupabaseServerClient();
 
@@ -5538,7 +5546,17 @@ async function broadcastAnalysisCompleted({
     return;
   }
 
-  const channel = client.channel(realtimeAnalysisChannel, {
+  const realtimeChannel = await resolveRealtimeAnalysisChannel({
+    client,
+    momentId,
+    userId,
+  });
+
+  if (!realtimeChannel) {
+    return;
+  }
+
+  const channel = client.channel(realtimeChannel, {
     config: {
       broadcast: {
         ack: true,
@@ -5564,7 +5582,10 @@ async function broadcastAnalysisCompleted({
     if (status !== "ok") {
       console.warn(
         "Analysis completion realtime broadcast was not acknowledged:",
-        status,
+        {
+          channel: realtimeChannel,
+          status,
+        },
       );
     }
   } catch (error) {
@@ -5588,10 +5609,12 @@ async function broadcastMomentUpdated({
   momentId,
   analysisJobId,
   status,
+  userId,
 }: {
   momentId: string;
   analysisJobId?: string;
   status: "queued" | "processing" | "completed" | "failed";
+  userId?: string;
 }) {
   const client = getSupabaseServerClient();
 
@@ -5599,7 +5622,17 @@ async function broadcastMomentUpdated({
     return;
   }
 
-  const channel = client.channel(realtimeAnalysisChannel, {
+  const realtimeChannel = await resolveRealtimeAnalysisChannel({
+    client,
+    momentId,
+    userId,
+  });
+
+  if (!realtimeChannel) {
+    return;
+  }
+
+  const channel = client.channel(realtimeChannel, {
     config: {
       broadcast: {
         ack: true,
@@ -5624,6 +5657,7 @@ async function broadcastMomentUpdated({
 
     if (realtimeStatus !== "ok") {
       console.warn("Moment update realtime broadcast was not acknowledged:", {
+        channel: realtimeChannel,
         realtimeStatus,
         momentId,
         analysisJobId,
@@ -5645,6 +5679,68 @@ async function broadcastMomentUpdated({
       );
     }
   }
+}
+
+async function resolveRealtimeAnalysisChannel({
+  client,
+  momentId,
+  userId,
+}: {
+  client: SupabaseServerClient;
+  momentId: string;
+  userId?: string;
+}) {
+  let resolvedUserId = userId;
+
+  if (!resolvedUserId) {
+    const { data: moment, error: momentError } = await client
+      .from("moments")
+      .select("user_id")
+      .eq("id", momentId)
+      .maybeSingle();
+
+    if (momentError) {
+      console.warn("Realtime channel resolution failed: moment lookup failed:", {
+        error: momentError.message,
+        momentId,
+      });
+      return null;
+    }
+
+    resolvedUserId =
+      typeof moment?.user_id === "string" ? (moment.user_id as string) : undefined;
+  }
+
+  if (!resolvedUserId) {
+    console.warn("Realtime channel resolution skipped: missing user id.", {
+      momentId,
+    });
+    return null;
+  }
+
+  const { data: user, error: userError } = await client
+    .from("users")
+    .select("auth_user_id")
+    .eq("id", resolvedUserId)
+    .maybeSingle();
+
+  if (userError) {
+    console.warn("Realtime channel resolution failed: user lookup failed:", {
+      error: userError.message,
+      momentId,
+      userId: resolvedUserId,
+    });
+    return null;
+  }
+
+  const authUserId =
+    typeof user?.auth_user_id === "string" ? user.auth_user_id : null;
+
+  if (authUserId) {
+    return `${realtimeAnalysisChannelPrefix}:auth:${authUserId}`;
+  }
+
+  return realtimeInternalDefaultChannel;
 }
 
 function extractExpoPushErrors(value: unknown) {

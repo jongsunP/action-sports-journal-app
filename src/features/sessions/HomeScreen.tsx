@@ -119,6 +119,8 @@ const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
 const UPLOAD_FAILURE_REMOTE_RECONCILE_RETRY_MS = 1_200;
+const ANALYSIS_REALTIME_INTERNAL_FALLBACK_CHANNEL =
+  'analysis-updates:internal-default';
 
 function getAuthCacheOwnerKey({
   authMode,
@@ -160,6 +162,12 @@ export function HomeScreen() {
     authMode === 'authenticated' || authMode === 'internalFallback';
   const isAuthLoading = authMode === 'authLoading';
   const isLoginRequired = authMode === 'loginRequired';
+  const realtimeAnalysisChannelName =
+    authMode === 'authenticated' && user?.id
+      ? `analysis-updates:auth:${user.id}`
+      : authMode === 'internalFallback'
+        ? ANALYSIS_REALTIME_INTERNAL_FALLBACK_CHANNEL
+        : null;
   const [selectedGroupId, setSelectedGroupId] = useState(
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
@@ -963,7 +971,9 @@ export function HomeScreen() {
   ]);
 
   useAnalysisRealtimeSync({
+    channelName: realtimeAnalysisChannelName,
     enabled:
+      Boolean(realtimeAnalysisChannelName) &&
       canUseRemoteApi &&
       isStorageLoaded &&
       isRemoteMomentSyncLoaded &&
