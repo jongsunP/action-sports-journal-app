@@ -182,6 +182,12 @@ Upload UX:
   and the 20MB pre-upload guard.
 - Do soon: Upload Entry UX Polish can refine CTA/copy/selection constraints
   without assuming a bottom sheet.
+- History: Upload page/bottom-sheet exploration came from two earlier product
+  ideas. First, the app originally considered collecting video + title +
+  description before upload. Second, Instagram was used as a reference because
+  ASJ's likely users are Instagram-inflow riders who already understand fast
+  media creation flows. This is a product-behavior reference, not a requirement
+  to copy Instagram's exact caption/share screen.
 - Current product judgment: because upload no longer requires pre-submit title
   or description, the current stack-style upload screen may be safer than a
   bottom sheet. The preferred flow is media selection -> upload/analyze ->

@@ -522,9 +522,15 @@ Home v2 / Journal UX First Slice implementation notes:
 
 Next starting point:
 
-Upload Entry UX Bottom Sheet is the recommended next product UX task unless the
-Founder redirects to Analysis Trust UX or a deeper Home v2 pass. Keep the
-upload path intact and validate simulator/local first.
+Upload Entry UX Polish is the recommended next product UX task unless the
+Founder redirects to Analysis Trust UX or a deeper Home v2 pass. Do not assume
+bottom sheet conversion as the default. The historical reason for considering
+an upload page/bottom sheet was Instagram-style media creation: fast media
+selection, clear selected-media confirmation, and a familiar mobile creation
+flow for Instagram-inflow riders. Earlier product thinking also considered
+pre-submit title/description input, but the current philosophy is media
+selection -> upload/analyze -> optional note later. Keep the upload path intact
+and validate simulator/local first.
 
 Response/collaboration rules updated:
 

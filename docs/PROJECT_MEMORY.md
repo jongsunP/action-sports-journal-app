@@ -422,6 +422,17 @@ Auth/DB checks confirmed the Kakao identity is linked to existing Auth user
 basis preserved. The QA account had no existing Moments, so rerun Moment
 ownership continuity later with a pre-existing Moment sample.
 
+Upload Entry UX history:
+
+The upload page / bottom-sheet discussion should remain in memory even if the
+current implementation keeps a stack-style upload screen. The original product
+question considered video + title + description before upload, and Instagram
+was the reference because ASJ's target riders are likely Instagram-inflow users
+who understand fast media creation patterns. Current product thinking has moved
+to media selection -> upload/analyze -> optional note later, so a bottom sheet
+is not mandatory. Preserve the reason for the exploration: make upload feel
+fast, familiar, media-native, and clear before the rider commits a real video.
+
 Kakao Recovery Sign-in decision:
 
 Kakao Linking and Kakao Recovery Sign-in are separate product flows.
