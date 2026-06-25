@@ -172,11 +172,9 @@ Current stable workstream list:
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 
 바로 앞 작업:
-- Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차) 구현
-- Build 81(카카오 기존 기록 복구 QA 빌드) 생성
+- Build 81 실기기 QA(카카오 기존 기록 복구)
 
 가까운 후속:
-- Build 81 실기기 QA(카카오 기존 기록 복구)
 - Kakao display_name Sync(카카오 이름 동기화) 여부 결정
 - 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
 - Foundation Safety Check(기반 안전 점검)
