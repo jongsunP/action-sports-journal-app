@@ -406,6 +406,59 @@ Reasoning:
   pre-submit choice that benefits from a sheet.
 - Compression / Upload Optimization remains a separate later workstream.
 
+## Analysis Trust UX - 2026-06-26
+
+### Decision
+
+Improve trust comprehension in the existing Analysis Detail UI without changing
+the AI pipeline, prompts, schemas, stored results, or backend status semantics.
+
+The goal is not to make the AI result look more certain. The goal is to help
+the rider understand:
+
+- what the AI thinks it saw;
+- why it reached that interpretation;
+- whether the result should be treated as confirmed, possible, or needing
+  review.
+
+### Implemented scope
+
+- Added `trustDescription` to the rider-facing analysis view model.
+- Added a "신뢰 안내" box to the Analysis Summary card.
+- Kept trust labels simple:
+  - `근거 충분`
+  - `가능성 있음`
+  - `확인 필요`
+- Added distinct visual tones for each trust label.
+- Renamed "확인된 신호" to "판단 근거".
+- Kept "확인할 점" as the low-confidence / ambiguous-evidence section.
+- Changed detailed evidence labels from technical English toward rider-facing
+  Korean labels.
+- Mapped raw confidence values to `높음`, `중간`, and `낮음`.
+- Kept internal debug data behind the existing dev/debug viewer gate.
+
+### Validation
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed:
+  - completed/needs-review Detail shows trust explanation, review badge, and
+    judgment evidence list;
+  - detailed evidence labels render in Korean;
+  - in-progress/data-not-ready Detail keeps existing status and retry-disabled
+    behavior.
+- No EAS build, paid AI call, DB migration, external console change, prompt
+  change, schema change, or new analysis execution was performed.
+
+### Follow-up
+
+- Trick Review Bottom Sheet remains a later P2 trust workflow for confirming or
+  correcting the detected trick.
+- Visual Summary Gauges remain later; do not add score-like gauges before the
+  evidence/review workflow is stable.
+- Raw debug viewer layout can be improved later for internal QA, but should not
+  become rider-facing UI.
+
 ## Kakao Single CTA Recovery UX - 2026-06-26
 
 ### Decision

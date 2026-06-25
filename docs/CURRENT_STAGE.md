@@ -342,6 +342,40 @@ Validation:
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
 
+Analysis Trust UX, 2026-06-26:
+
+Analysis result UI now makes the trust level easier to understand without
+changing backend/model/schema semantics or running new AI analysis.
+
+Implemented:
+
+- Added a short rider-facing trust explanation to the top Analysis Summary
+  card.
+- Kept the visible trust states simple: `근거 충분`, `가능성 있음`, `확인 필요`.
+- Added distinct badge tones for strong, possible, and review-needed analysis.
+- Renamed "확인된 신호" to "판단 근거" so the user reads evidence as the basis
+  for the result, not as an absolute truth claim.
+- Kept "확인할 점" as the place for low-confidence / needs-review / ambiguous
+  evidence notes.
+- Updated the detailed evidence panel from technical English labels to more
+  rider-facing Korean labels: "판단 근거 상세", "추정 기술", "확신 수준",
+  "검토", "스탠스", "앞발", "웨이크 경로", and related confidence labels.
+- Mapped raw confidence values to simple Korean levels: `높음`, `중간`, `낮음`.
+- Preserved the internal debug viewer and existing evidence data. No result
+  value is rewritten.
+
+Validation:
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed a completed/needs-review Detail shows
+  the new trust explanation, judgment evidence list, review-needed badge, and
+  Korean detailed evidence labels.
+- Simulator also confirmed an in-progress/data-not-ready Detail keeps the
+  existing status card and retry-disabled explanation.
+- No EAS build, paid AI call, DB migration, external console change, AI prompt
+  change, schema change, or new analysis execution was performed.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73

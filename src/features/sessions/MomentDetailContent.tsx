@@ -370,15 +370,42 @@ function RiderFacingAnalysisCard({
     <View style={styles.riderAnalysisCard}>
       <View style={styles.riderAnalysisHeaderRow}>
         <Text style={styles.riderAnalysisEyebrow}>분석 요약</Text>
-        <Text style={styles.riderAnalysisBadge}>{analysis.confidenceLabel}</Text>
+        <Text
+          style={[
+            styles.riderAnalysisBadge,
+            getRiderAnalysisBadgeStyle(analysis.confidenceLabel),
+          ]}
+        >
+          {analysis.confidenceLabel}
+        </Text>
       </View>
       <Text style={styles.riderAnalysisTitle}>{analysis.title}</Text>
       <Text style={styles.riderAnalysisSummary}>{analysis.summary}</Text>
-      <RiderAnalysisList title="확인된 신호" items={analysis.confirmedSignals} />
+      <View style={styles.riderAnalysisTrustBox}>
+        <Text style={styles.riderAnalysisTrustTitle}>신뢰 안내</Text>
+        <Text style={styles.riderAnalysisTrustText}>
+          {analysis.trustDescription}
+        </Text>
+      </View>
+      <RiderAnalysisList title="판단 근거" items={analysis.confirmedSignals} />
       <RiderAnalysisList title="확인할 점" items={analysis.reviewNotes} />
       <RiderAnalysisList title="다음 연습" items={analysis.nextPractice} />
     </View>
   );
+}
+
+function getRiderAnalysisBadgeStyle(
+  confidenceLabel: RiderFacingAnalysis['confidenceLabel'],
+) {
+  if (confidenceLabel === '근거 충분') {
+    return styles.riderAnalysisBadgeStrong;
+  }
+
+  if (confidenceLabel === '가능성 있음') {
+    return styles.riderAnalysisBadgePossible;
+  }
+
+  return styles.riderAnalysisBadgeReview;
 }
 
 function RiderAnalysisList({
@@ -471,7 +498,7 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
   return (
     <View style={styles.evidencePanel}>
       <Text style={styles.evidenceTitle}>
-        {evidence.status === 'failed' ? 'Gemini 근거 추출 실패' : 'Gemini 동작 근거'}
+        {evidence.status === 'failed' ? '근거 추출 실패' : '판단 근거 상세'}
       </Text>
       <Text
         style={[
@@ -481,30 +508,34 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
             : undefined,
         ]}
       >
-        모델: {evidence.model ?? 'unknown'} ·{' '}
+        AI 근거 ·{' '}
         {evidence.qualityMode === 'degraded'
-          ? 'degraded / low-confidence'
-          : 'standard'}
+          ? '품질 낮음 / 확인 필요'
+          : '일반 분석'}
       </Text>
       <View style={styles.evidenceSummaryGrid}>
-        <EvidenceSummaryCard label="Predicted" value={evidence.primaryCandidate.name} />
-        <EvidenceSummaryCard label="Family" value={evidence.family.value} />
-        <EvidenceSummaryCard label="Confidence" value={evidence.confidence} />
+        <EvidenceSummaryCard label="추정 기술" value={evidence.primaryCandidate.name} />
+        <EvidenceSummaryCard label="계열" value={evidence.family.value} />
         <EvidenceSummaryCard
-          label="Review"
+          label="확신 수준"
+          value={formatEvidenceConfidence(evidence.confidence)}
+        />
+        <EvidenceSummaryCard
+          label="검토"
           value={
             evidence.requiresUserConfirmation ||
             evidence.consistencyStatus === 'needs_review' ||
             evidence.consistencyStatus === 'inconsistent'
-              ? 'needs_review'
-              : 'ok'
+              ? '확인 필요'
+              : '검토 없음'
           }
         />
       </View>
       <View style={styles.evidenceFactRow}>
         <Text style={styles.evidenceFactLabel}>AI 추정 기술</Text>
         <Text style={styles.evidenceFactValue}>
-          {evidence.primaryCandidate.name} ({evidence.primaryCandidate.confidence})
+          {evidence.primaryCandidate.name} ·{' '}
+          {formatEvidenceConfidence(evidence.primaryCandidate.confidence)}
         </Text>
         {shouldAskUser ? (
           <Text style={styles.evidenceWarningText}>
@@ -530,7 +561,8 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
         <View style={styles.evidenceFactRow}>
           <Text style={styles.evidenceFactLabel}>검토 후보</Text>
           <Text style={styles.evidenceFactValue}>
-            {candidateTrace.displayLabel} ({candidateTrace.confidence})
+            {candidateTrace.displayLabel} ·{' '}
+            {formatEvidenceConfidence(candidateTrace.confidence)}
           </Text>
           <Text style={styles.evidenceWarningText}>
             확정 기술명이 아니라, 저장된 관찰 신호를 바탕으로 남긴 검토 후보입니다.
@@ -581,7 +613,8 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
               style={styles.evidenceText}
             >
               {window.startSeconds.toFixed(1)}s-{window.endSeconds.toFixed(1)}s ·{' '}
-              {window.label} ({window.confidence}): {window.evidence}
+              {window.label} · {formatEvidenceConfidence(window.confidence)}:{' '}
+              {window.evidence}
             </Text>
           ))}
         </View>
@@ -595,14 +628,15 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
               style={styles.evidenceText}
             >
               {observation.timestampLabel} · {observation.label} (
-              {observation.confidence}): {observation.detail}
+              {formatEvidenceConfidence(observation.confidence)}):{' '}
+              {observation.detail}
             </Text>
           ))}
         </View>
       ) : null}
       <View style={styles.evidenceSection}>
         <Text style={styles.evidenceSectionTitle}>
-          불확실성 ({evidence.uncertainty.level})
+          불확실성 ({formatEvidenceConfidence(evidence.uncertainty.level)})
         </Text>
         {evidence.uncertainty.reasons.map((reason) => (
           <Text key={reason} style={styles.evidenceText}>
@@ -637,27 +671,30 @@ function ApproachObservedFactsSummary({
     <View style={styles.evidenceSection}>
       <Text style={styles.evidenceSectionTitle}>어프로치 관찰 세부</Text>
       <Text style={styles.evidenceText}>
-        stance: {facts.stance.value} ({facts.stance.confidence})
+        스탠스: {facts.stance.value} ·{' '}
+        {formatEvidenceConfidence(facts.stance.confidence)}
       </Text>
       <Text style={styles.evidenceText}>
-        leadFoot: {facts.leadFoot.value} ({facts.leadFoot.confidence})
+        앞발: {facts.leadFoot.value} ·{' '}
+        {formatEvidenceConfidence(facts.leadFoot.confidence)}
       </Text>
       <Text style={styles.evidenceText}>
-        boardDirection: {facts.boardDirection.value} (
-        {facts.boardDirection.confidence})
+        보드 방향: {facts.boardDirection.value} ·{' '}
+        {formatEvidenceConfidence(facts.boardDirection.confidence)}
       </Text>
       <Text style={styles.evidenceText}>
-        wakePath: {facts.wakeCrossingPath.startPosition} →{' '}
+        웨이크 경로: {facts.wakeCrossingPath.startPosition} →{' '}
         {facts.wakeCrossingPath.takeoffPosition} →{' '}
-        {facts.wakeCrossingPath.landingPosition} (
-        {facts.wakeCrossingPath.confidence})
+        {facts.wakeCrossingPath.landingPosition} ·{' '}
+        {formatEvidenceConfidence(facts.wakeCrossingPath.confidence)}
       </Text>
       <Text style={styles.evidenceText}>
-        edge: {facts.edgeDirectionEvidence.value} (
-        {facts.edgeDirectionEvidence.confidence})
+        엣지: {facts.edgeDirectionEvidence.value} ·{' '}
+        {formatEvidenceConfidence(facts.edgeDirectionEvidence.confidence)}
       </Text>
       <Text style={styles.evidenceText}>
-        handle/body: {facts.handlePosition.value} · {facts.bodyOrientation.value}
+        핸들/몸 방향: {facts.handlePosition.value} ·{' '}
+        {facts.bodyOrientation.value}
       </Text>
     </View>
   );
@@ -677,26 +714,27 @@ function InversionObservedFactsSummary({
     <View style={styles.evidenceSection}>
       <Text style={styles.evidenceSectionTitle}>인버트 관찰 세부</Text>
       <Text style={styles.evidenceText}>
-        bodyInverted: {formatObservedBoolean(facts.bodyInverted)}
+        몸이 뒤집힘: {formatObservedBoolean(facts.bodyInverted)}
       </Text>
       <Text style={styles.evidenceText}>
-        boardAboveHead: {formatObservedBoolean(facts.boardAboveHead)}
+        보드가 머리 위로 올라감: {formatObservedBoolean(facts.boardAboveHead)}
       </Text>
       <Text style={styles.evidenceText}>
-        rollAxisObserved: {formatObservedBoolean(facts.rollAxisObserved)}
+        롤 축 관찰: {formatObservedBoolean(facts.rollAxisObserved)}
       </Text>
       <Text style={styles.evidenceText}>
-        flipAxisObserved: {formatObservedBoolean(facts.flipAxisObserved)}
+        플립 축 관찰: {formatObservedBoolean(facts.flipAxisObserved)}
       </Text>
       <Text style={styles.evidenceText}>
-        duration: {duration} ({facts.inversionDuration.confidence})
+        지속 시간: {duration} ·{' '}
+        {formatEvidenceConfidence(facts.inversionDuration.confidence)}
       </Text>
       <Text style={styles.evidenceText}>
-        evidenceCount: {facts.inversionEvidenceCount}
+        인버트 근거 수: {facts.inversionEvidenceCount}
       </Text>
       {facts.antiInversionEvidence.slice(0, 3).map((item) => (
         <Text key={item} style={styles.evidenceText}>
-          anti: {item}
+          반대 근거: {item}
         </Text>
       ))}
     </View>
@@ -705,14 +743,14 @@ function InversionObservedFactsSummary({
 
 function formatObservedBoolean(value: true | false | 'unknown') {
   if (value === true) {
-    return 'true';
+    return '보임';
   }
 
   if (value === false) {
-    return 'false';
+    return '보이지 않음';
   }
 
-  return 'unknown';
+  return '확인 필요';
 }
 
 function EvidenceFactRow({
@@ -730,11 +768,27 @@ function EvidenceFactRow({
     <View style={styles.evidenceFactRow}>
       <Text style={styles.evidenceFactLabel}>{label}</Text>
       <Text style={styles.evidenceFactValue}>
-        {value} ({confidence})
+        {value} · {formatEvidenceConfidence(confidence)}
       </Text>
       <Text style={styles.evidenceText}>{evidence}</Text>
     </View>
   );
+}
+
+function formatEvidenceConfidence(confidence: string) {
+  if (confidence === 'high') {
+    return '높음';
+  }
+
+  if (confidence === 'medium') {
+    return '중간';
+  }
+
+  if (confidence === 'low') {
+    return '낮음';
+  }
+
+  return confidence;
 }
 
 function CoachingResultDetail({

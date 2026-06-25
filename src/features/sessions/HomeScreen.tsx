@@ -3902,6 +3902,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  riderAnalysisBadgeStrong: {
+    backgroundColor: 'rgba(3, 199, 90, 0.14)',
+    borderColor: 'rgba(3, 199, 90, 0.26)',
+    color: '#86efac',
+  },
+  riderAnalysisBadgePossible: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: 'rgba(125, 211, 252, 0.28)',
+    color: '#7dd3fc',
+  },
+  riderAnalysisBadgeReview: {
+    backgroundColor: 'rgba(251, 191, 36, 0.14)',
+    borderColor: 'rgba(251, 191, 36, 0.28)',
+    color: '#fbbf24',
+  },
   riderAnalysisTitle: {
     color: '#f8fafc',
     fontSize: 18,
@@ -3914,6 +3929,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 19,
     marginTop: 7,
+  },
+  riderAnalysisTrustBox: {
+    backgroundColor: 'rgba(148, 163, 184, 0.09)',
+    borderColor: 'rgba(148, 163, 184, 0.16)',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+  },
+  riderAnalysisTrustTitle: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '900',
+    lineHeight: 16,
+  },
+  riderAnalysisTrustText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginTop: 4,
   },
   riderAnalysisSection: {
     borderTopColor: 'rgba(255, 255, 255, 0.08)',

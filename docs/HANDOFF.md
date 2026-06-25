@@ -543,12 +543,40 @@ Upload Entry UX Polish implementation notes:
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
 
+Analysis Trust UX implementation notes:
+
+- This was UI trust polish only. Backend status semantics, model output,
+  schemas, prompts, and stored evidence values did not change.
+- `riderFacingAnalysis.ts` now adds a short `trustDescription` for the three
+  rider-facing trust states: `근거 충분`, `가능성 있음`, `확인 필요`.
+- Moment Detail's Analysis Summary card now shows a "신뢰 안내" box.
+- Trust badges now have separate tones for strong, possible, and review-needed
+  results.
+- "확인된 신호" is now "판단 근거" to avoid overclaiming certainty.
+- "확인할 점" remains the short review-needed section for ambiguous or
+  low-confidence evidence.
+- Detailed evidence copy is less technical: "판단 근거 상세", "추정 기술",
+  "확신 수준", "검토", and Korean confidence labels (`높음`, `중간`, `낮음`).
+- Approach/inversion observed-facts labels were translated away from raw
+  English field names where they are rider-facing.
+- Internal debug viewer remains available only behind the existing dev/debug
+  gate.
+- `npm run typecheck` and `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed:
+  - completed/needs-review Detail shows the new trust explanation and
+    review-needed badge;
+  - detailed evidence labels render in Korean;
+  - in-progress/data-not-ready Detail keeps the existing status card and
+    retry-disabled explanation.
+- No EAS build, paid AI call, DB migration, external console change, prompt
+  change, schema change, or new analysis execution was performed.
+
 Next starting point:
 
-Analysis Trust UX is the recommended next product UX task unless the Founder
-redirects to Kakao Single CTA standalone QA, recovery observability, or a deeper
-Home v2 pass. Upload Entry Bottom Sheet should remain deferred unless a real
-pre-submit choice appears.
+Kakao Single CTA Recovery UX Simulator/Standalone QA is the recommended next
+validation task unless the Founder redirects to recovery observability, Email
+Recovery deep-link strategy, or a deeper Home v2 pass. Upload Entry Bottom Sheet
+should remain deferred unless a real pre-submit choice appears.
 
 Response/collaboration rules updated:
 

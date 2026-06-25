@@ -8,6 +8,7 @@ export type RiderFacingConfidenceLabel =
 export type RiderFacingAnalysis = {
   title: string;
   confidenceLabel: RiderFacingConfidenceLabel;
+  trustDescription: string;
   summary: string;
   confirmedSignals: string[];
   reviewNotes: string[];
@@ -42,6 +43,7 @@ export function buildRiderFacingAnalysis(
   return {
     title: candidateLabel,
     confidenceLabel,
+    trustDescription: getTrustDescription(confidenceLabel),
     summary: getSummary(evidence, confidenceLabel),
     confirmedSignals,
     reviewNotes:
@@ -53,6 +55,18 @@ export function buildRiderFacingAnalysis(
         ? nextPractice
         : ['다음 영상에서도 접근, 팝, 착지 흐름을 같은 기준으로 확인해보세요.'],
   };
+}
+
+function getTrustDescription(confidenceLabel: RiderFacingConfidenceLabel) {
+  if (confidenceLabel === '근거 충분') {
+    return '여러 관찰 신호가 같은 방향입니다. 그래도 영상 각도에 따라 세부 기술명은 달라질 수 있습니다.';
+  }
+
+  if (confidenceLabel === '가능성 있음') {
+    return '주요 신호는 보이지만 일부 구간은 모호합니다. 확정 판정보다 가능성으로 보는 것이 안전합니다.';
+  }
+
+  return 'AI가 확정하지 않은 결과입니다. 아래 확인할 점을 먼저 보고 직접 검토해 주세요.';
 }
 
 function getNeedsReview(evidence: GeminiEvidenceResult) {
