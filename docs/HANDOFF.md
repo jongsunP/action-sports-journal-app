@@ -344,19 +344,60 @@ Validation:
   no-token `POST /api/push-tokens` returned 401.
 - Invalid bearer `POST /api/video-upload-targets` returned 401.
 
+Push Token Account-switch Policy:
+
+Push Token Account-switch Policy ran on 2026-06-26. This did not redesign Push.
+Push remains notification-only and Moment sync still comes from private Realtime
+or foreground refresh.
+
+Policy:
+
+- The same device/expo push token belongs to the currently authenticated app
+  owner.
+- When the app session changes from anonymous owner to Kakao recovered owner,
+  push token registration must run again under the recovered bearer token.
+- `device_push_tokens.expo_push_token` remains unique. The existing server
+  upsert on `expo_push_token` moves the token row to the new `public.users.id`
+  instead of creating duplicate rows.
+- Moving the row prevents the previous anonymous owner from receiving future
+  analysis-completion Push notifications for the same physical device.
+- `DeviceNotRegistered` handling remains unchanged: ticket/receipt errors can
+  still disable the matching token row.
+
+Implementation:
+
+- `HomeScreen` now ensures push registration at `auth_owner_ready`.
+- `HomeScreen` now retries push registration on foreground when authenticated.
+- Existing `upload_start` registration remains in `useUploadMoment`.
+- Server `/api/push-tokens` behavior and DB schema did not need migration:
+  unique `expo_push_token` plus upsert already implement row move semantics.
+
+Validation:
+
+- `npm run typecheck` passed.
+- Local/server smoke used `MOCK_AI_ANALYSIS=true`; no paid AI provider calls
+  were made.
+- Smoke created temporary anonymous owner A and owner B, then registered the
+  same fake Expo token against `/api/push-tokens`.
+- After owner A registration, one token row belonged to owner A.
+- After owner B registration, the same token row id moved to owner B and stayed
+  `enabled=true`.
+- Temporary Auth users, `public.users` rows, and token row were cleaned up.
+- No actual Push send, EAS build, DB migration, or external console change was
+  performed.
+
 Next starting point:
 
-External No-Token Finalization is no longer the next task. Move to Push token
-account-switch policy or optional recovery-attempt observability, depending on
-CTO/user alignment.
+Push Token Account-switch Policy is no longer the next task. Move to optional
+recovery-attempt observability, Email Recovery deep-link strategy, or product UX
+work depending on CTO/user alignment.
 
-Backlog after External No-Token Finalization:
+Backlog after Push Token Account-switch Policy:
 
-- Push token account-switch policy.
 - Recovery attempt observability row/log design, if desired.
+- Email Recovery deep link / redirect.
 - Kakao display_name sync.
 - Initial Loading / Video Tab Spinner Observability.
-- Email Recovery deep link / redirect.
 - Journal / Upload / Analysis UX.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
   verified, and Kakao Recovery Sign-in P1 is verified on Build 81.
@@ -376,9 +417,10 @@ Response/collaboration rules updated:
 
 Next start point:
 
-Post-External No-Token hardening. Start with Push token account-switch policy or
-optional recovery-attempt observability, depending on CTO/user alignment. Kakao
-`name` / `full_name` -> `public.users.display_name` sync is low urgency.
+Post-push-token account-switch hardening. Start with optional recovery-attempt
+observability, Email Recovery deep-link strategy, or product UX work depending
+on CTO/user alignment. Kakao `name` / `full_name` ->
+`public.users.display_name` sync is low urgency.
 
 Build 74 Push QA / current handoff, 2026-06-24:
 
@@ -722,7 +764,8 @@ Auth Phase 1 remaining TODO:
 - Implement Login UI and app-side authenticated session lifecycle.
 - External no-token behavior is finalized: default-user fallback is explicit
   dev/test opt-in only.
-- Define push token account-switch policy for shared/reused devices.
+- Push token account-switch policy is finalized for the current Push boundary:
+  same Expo token moves to the current authenticated owner.
 
 Next Auth starting point:
 

@@ -175,6 +175,7 @@ Current stable workstream list:
 - Foundation Safety Check(기반 안전 점검)
 - Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)
+- Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -187,12 +188,14 @@ Current stable workstream list:
 - Upload File-size Validation(업로드 용량 초과 사전 차단)은 20MB 사전 차단으로 반영
 - Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)는 재설치 후 카카오 복구 시 기존 영상 목록 재노출 확인
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)은 외부 사용자 API no-token 401 차단으로 완료
+- Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)는 같은 Expo token을 현재 authenticated owner로 이동하는 정책으로 완료
 
 바로 앞 작업:
-- Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
+- Recovery Attempt Observability(복구 시도 관측성) 또는 Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
 
 가까운 후속:
-- Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
+- Recovery Attempt Observability(복구 시도 관측성)
+- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
 
 나중에 해도 좋은 것:
 - Kakao display_name Sync(카카오 이름 동기화)
@@ -501,11 +504,9 @@ settled.
 
 Immediate next work:
 
-1. Continue push token account-switch policy when returning to foundation
-   hardening.
-2. Decide whether Kakao `name` / `full_name` should sync to
+1. Decide whether Kakao `name` / `full_name` should sync to
    `public.users.display_name`.
-3. Keep Journal / Analysis / Media UX expansion behind the foundation-hardening
+2. Keep Journal / Analysis / Media UX expansion behind the foundation-hardening
    queue.
 
 ## 2026-06-26 Foundation Safety Check
@@ -521,9 +522,8 @@ Current foundation readout:
 - PASS: Push remains notification-only with Push Observability P2 in place;
   private Realtime/foreground refresh remain the sync source of truth; Kakao
   Account Linking and Kakao Recovery Sign-in P1 remain separated and verified.
-- WATCH: Push token account-switch policy, source/orphan cleanup caution,
-  optional recovery-attempt observability, and Email Recovery redirect/deep-link
-  productization.
+- WATCH: source/orphan cleanup caution, optional recovery-attempt
+  observability, and Email Recovery redirect/deep-link productization.
 - FIXED: local 20MB upload size guard.
 - BLOCKED: none.
 
@@ -534,7 +534,9 @@ confirm video exists -> delete app -> reinstall -> anonymous state has no video
 Kakao Recovery ownership smoke. DB read-only verification can still be used
 later if a low-level ownership audit is needed.
 
-Next foundation hardening should move to Push Token Account-switch Policy.
+Next foundation hardening should move to optional recovery-attempt
+observability or Email Recovery deep-link strategy if CTO/user alignment wants
+to continue foundation work.
 
 ## 2026-06-26 External No-Token Finalization
 
@@ -565,6 +567,43 @@ Validation:
 - Health showed `internalDefaultUserFallbackAllowed=false`.
 - No-token Moment list/upload target/push token requests returned 401.
 - Invalid bearer upload target request returned 401.
+
+## 2026-06-26 Push Token Account-switch Policy
+
+Push Token Account-switch Policy is complete for the current Push boundary.
+Push remains notification-only and does not become the source of truth for
+Moment sync.
+
+Policy:
+
+- A device/expo push token belongs to the currently authenticated app owner.
+- If a session switches from anonymous owner to Kakao recovered owner, the app
+  must register the push token again under the recovered bearer token.
+- `device_push_tokens.expo_push_token` stays unique, so server upsert moves the
+  row to the new `public.users.id` instead of creating duplicate rows.
+- The previous owner should not remain an enabled send target for the same
+  physical device.
+- `DeviceNotRegistered` disabling remains unchanged.
+
+Implementation:
+
+- `HomeScreen` now ensures push registration when the authenticated owner is
+  ready.
+- `HomeScreen` retries push registration on foreground while authenticated.
+- Existing upload-start registration remains.
+- No DB migration was needed.
+
+Validation:
+
+- `npm run typecheck` passed.
+- Local/server smoke used two temporary anonymous Auth users and one fake Expo
+  token.
+- Owner A registration created one token row for owner A.
+- Owner B registration with the same token moved the same row id to owner B and
+  kept it `enabled=true`.
+- Temporary Auth users, `public.users` rows, and token row were cleaned up.
+- No actual Push send, EAS build, paid AI call, DB migration, or external
+  console change was performed.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 
@@ -611,7 +650,7 @@ Auth Phase 2 starts from:
 - Login UI and app-side session lifecycle.
 - Private/user-scoped Realtime instead of the current public MVP Broadcast.
 - External no-token policy is finalized as explicit dev/test opt-in only.
-- Push token account-switch policy.
+- Push token account-switch policy is finalized for the current Push boundary.
 
 ## 2026-06-24 Auth Phase 2 Identity Strategy / Anonymous Smoke
 

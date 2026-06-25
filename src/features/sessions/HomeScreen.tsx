@@ -93,6 +93,8 @@ import type { RemoteMomentRecord } from '../../services/moments';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
+const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
+  process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 type RemoteRefreshReason =
   | 'foreground'
   | 'initial_retry'
@@ -121,6 +123,32 @@ const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
 const UPLOAD_FAILURE_REMOTE_RECONCILE_RETRY_MS = 1_200;
 const ANALYSIS_REALTIME_INTERNAL_FALLBACK_CHANNEL =
   'analysis-updates:internal-default';
+
+function ensureAnalysisPushRegistration(source: string) {
+  if (!ENABLE_ANALYSIS_PUSH_NOTIFICATIONS) {
+    return;
+  }
+
+  import('../../services/notifications/registerAnalysisPushNotifications')
+    .then(({ registerForAnalysisPushNotifications }) =>
+      registerForAnalysisPushNotifications({ source }),
+    )
+    .then((result) => {
+      console.info('[push_registration]', {
+        event: 'analysis_push_registration_ensure_result',
+        reason: result.reason,
+        registered: result.registered,
+        source,
+        status: result.status,
+      });
+    })
+    .catch((error) => {
+      console.warn(
+        'Push notification registration ensure failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    });
+}
 
 function getAuthCacheOwnerKey({
   authMode,
@@ -1063,6 +1091,10 @@ export function HomeScreen() {
         nextAppState === 'active' &&
         (previousAppState === 'background' || previousAppState === 'inactive')
       ) {
+        if (authMode === 'authenticated' && user?.id) {
+          ensureAnalysisPushRegistration('foreground_retry');
+        }
+
         void refreshRemoteMoments('foreground');
       }
     });
@@ -1070,7 +1102,7 @@ export function HomeScreen() {
     return () => {
       subscription.remove();
     };
-  }, [refreshRemoteMoments]);
+  }, [authMode, refreshRemoteMoments, user?.id]);
 
   useEffect(() => {
     if (
@@ -1538,6 +1570,14 @@ export function HomeScreen() {
     shouldSuppressUploadFailureAlert,
     updateLocalMomentStatus,
   });
+
+  useEffect(() => {
+    if (authMode !== 'authenticated' || !user?.id || !canUseRemoteApi) {
+      return;
+    }
+
+    ensureAnalysisPushRegistration('auth_owner_ready');
+  }, [authMode, canUseRemoteApi, user?.id]);
 
   useEffect(() => {
     const nextOwnerKey = getAuthCacheOwnerKey({

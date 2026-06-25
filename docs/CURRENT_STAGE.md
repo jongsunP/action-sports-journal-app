@@ -122,9 +122,33 @@ Local smoke used `MOCK_AI_ANALYSIS=true` and no paid AI calls. Confirmed:
 `POST /api/video-upload-targets` returns 401, invalid bearer returns 401, and
 no-token `POST /api/push-tokens` returns 401. `npm run typecheck` passed.
 
-No BLOCKED foundation item was found. The next foundation follow-ups are Push
-token account-switch policy and optional recovery-attempt observability. Kakao
-display-name sync remains low urgency.
+Push Token Account-switch Policy, 2026-06-26:
+
+Push token ownership policy is now explicit: the same device/expo push token
+belongs to the currently authenticated app owner. The existing DB schema already
+supports this because `device_push_tokens.expo_push_token` is unique and
+`POST /api/push-tokens` upserts on `expo_push_token`, moving the token row to
+the resolved request user's `public.users.id` when ownership changes. This
+keeps old owners from receiving duplicate future analysis-completion pushes
+after Kakao Recovery Sign-in.
+
+The app now re-runs push token registration when an authenticated owner becomes
+ready and on foreground retry, in addition to the existing upload-start ensure.
+This covers anonymous -> Kakao recovered session switches without redesigning
+Push delivery. Push remains notification-only and does not become a source of
+truth for Moment sync.
+
+Local/server smoke used two temporary anonymous Supabase Auth users and one fake
+Expo token. Owner A registered the token, then owner B registered the same
+token. The same `device_push_tokens.id` moved from owner A's `public.users.id`
+to owner B's `public.users.id`, stayed `enabled=true`, and cleanup removed the
+temporary Auth users, public user rows, and token row. No actual Push send, EAS
+build, paid AI call, DB migration, or external console change was performed.
+`npm run typecheck` passed.
+
+No BLOCKED foundation item was found. The next foundation follow-ups are
+optional recovery-attempt observability and Email Recovery deep-link strategy.
+Kakao display-name sync remains low urgency.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
@@ -357,8 +381,8 @@ Confirmed:
 
 Remaining Auth TODO:
 
-- Push token account-switch policy: define whether registration overwrites,
-  separates, or cleans old device tokens when a device changes account.
+- Push token account-switch policy is finalized for the current Push boundary:
+  the same Expo token moves to the current authenticated owner.
 - External no-token policy is finalized: default-user fallback is explicit
   dev/test opt-in only and must not become an external user mode.
 

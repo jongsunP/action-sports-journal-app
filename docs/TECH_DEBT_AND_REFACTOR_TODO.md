@@ -146,9 +146,8 @@ FIX NEEDED:
 
 Needs separate CTO/user alignment before implementation:
 
-1. Push Token Account-switch Policy after Kakao recovery sign-in.
-2. Optional structured recovery-attempt observability.
-3. Email Recovery redirect/deep-link productization.
+1. Optional structured recovery-attempt observability.
+2. Email Recovery redirect/deep-link productization.
 
 BLOCKED:
 
@@ -447,10 +446,8 @@ Build 81 QA verified:
 
 Remaining follow-up checks:
 
-1. Reconfirm ownership continuity with an account that already has Moments.
-2. Decide whether Kakao name/full_name should sync to `public.users.display_name`.
-3. Keep push token account-switch policy as a foundation-hardening item.
-4. Keep Realtime recovered-auth-channel verification in the ownership continuity
+1. Decide whether Kakao name/full_name should sync to `public.users.display_name`.
+2. Keep Realtime recovered-auth-channel verification in the ownership continuity
    follow-up if additional DB/log evidence is needed.
 
 Risks / QA gates:
@@ -2062,7 +2059,6 @@ Future work:
 
 - Login UI and app-side session lifecycle.
 - Private/user-scoped Realtime channel; public Broadcast is still MVP-only.
-- Push token account-switch policy for devices reused across accounts.
 - RLS and ownership rules once service-role BFF boundaries are settled.
 - Token cleanup, account deletion implications, and multi-device data
   consistency.
@@ -2120,6 +2116,41 @@ Keep the following as Auth Phase 2 closeout / follow-up items:
   product bugs.
 - Continue to keep no-token default-user fallback explicit dev/test opt-in only;
   external users should enter through anonymous Auth.
+
+### Push Token Account-switch Policy - 2026-06-26
+
+Status: complete for the current Push boundary.
+
+Policy:
+
+- Push remains notification-only.
+- A device/expo push token belongs to the currently authenticated app owner.
+- After anonymous -> Kakao recovered session switch, the app should register the
+  push token again with the recovered bearer token.
+- `device_push_tokens.expo_push_token` remains unique. Server upsert on
+  `expo_push_token` moves the existing row to the new `public.users.id` instead
+  of creating a duplicate enabled send target.
+- `DeviceNotRegistered` ticket/receipt handling still disables the matching
+  token row and is not changed by this policy.
+
+Implementation:
+
+- `HomeScreen` ensures push registration at `auth_owner_ready`.
+- `HomeScreen` retries push registration on foreground while authenticated.
+- Existing `upload_start` registration remains.
+- No DB migration was needed.
+
+Validation:
+
+- `npm run typecheck` passed.
+- Local/server smoke used `MOCK_AI_ANALYSIS=true`.
+- A temporary owner A registered a fake Expo token.
+- A temporary owner B registered the same fake Expo token.
+- The same `device_push_tokens.id` moved from owner A's `public.users.id` to
+  owner B's `public.users.id` and stayed `enabled=true`.
+- Temporary Auth users, `public.users` rows, and token row were cleaned up.
+- No actual Push send, EAS build, paid AI call, DB migration, or external
+  console change was performed.
 
 ### 9. Push Deep Link
 
