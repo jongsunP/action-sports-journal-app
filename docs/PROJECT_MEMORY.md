@@ -178,6 +178,7 @@ Current stable workstream list:
 가까운 후속:
 - 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
 - Foundation Safety Check(기반 안전 점검)
+- Upload File-size Validation(업로드 용량 초과 사전 차단)
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 

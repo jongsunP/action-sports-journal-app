@@ -281,6 +281,7 @@ Backlog after Build 81 QA:
 - Kakao display_name sync.
 - Ownership continuity with an account that already has Moments.
 - Foundation Safety Check.
+- Upload file-size validation before upload submit.
 - External No-Token Finalization.
 - Push token account-switch policy.
 - Initial Loading / Video Tab Spinner Observability.

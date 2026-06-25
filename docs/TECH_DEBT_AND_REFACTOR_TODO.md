@@ -1049,6 +1049,15 @@ Current upload sends the original selected video bytes. This preserves analysis
 quality, but it can increase upload time, mobile network use, Supabase Storage
 cost, and user friction as ASJ grows.
 
+Related near-term UX guard:
+
+Before changing compression policy, add `Upload File-size Validation`: if the
+selected video exceeds the current server/storage limit, block the upload
+before submit and show a clear message. The current 20MB ceiling is a
+conservative safety policy, not proof that larger videos are impossible. If a
+large file is rejected only after the user presses upload, the experience looks
+like a broken upload rather than an intentional product limit.
+
 Cause:
 
 Direct Upload validates the local file and sends it through
