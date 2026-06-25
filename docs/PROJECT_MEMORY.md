@@ -231,6 +231,14 @@ development session. During the break, answer the Founder first and provide a
 revised final prompt only when the Founder asks to continue or requests the
 prompt again.
 
+Keep meta-collaboration settings separate from development task context.
+Preferences about answer format, session workflow, handoff rhythm, memory, and
+remote-push discipline are operating rules for Codex/CTO sessions. Record them
+in project/personal docs when durable, but do not overload ordinary
+development-session prompts with these meta rules. Development prompts should
+include only the product, technical, QA, safety, and workflow details needed to
+execute that development task.
+
 After a development session reports that a build is complete, do not immediately
 send a new development-session prompt. First give the Founder only the QA steps
 needed for that build and wait for the Founder’s QA result. After the Founder
