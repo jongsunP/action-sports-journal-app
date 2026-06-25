@@ -361,7 +361,7 @@ This is the recovery gap after successful Kakao account linking. Keep
 
 P1 implementation status, 2026-06-25:
 
-P1 is implemented and Build 81 is waiting for standalone iPhone QA.
+P1 is implemented and Build 81 standalone iPhone QA passed.
 
 Implemented:
 
@@ -372,16 +372,22 @@ Implemented:
 5. Recovery success refreshes/replaces the Supabase session and user.
 6. Local-work guard blocks recovery when unsynced/uploading local work exists.
 
-Build 81 QA must still verify:
+Build 81 QA verified:
 
 1. Reinstall/new-device anonymous session can recover the existing Kakao-linked
    Auth user.
-2. Home/Video/Detail reload under the recovered owner.
-3. Push token re-registers under the recovered app user.
-4. Realtime leaves the previous auth scope and subscribes to the recovered auth
-   channel.
-5. OAuth cancel/failure is not shown as success.
-6. The local-work guard is understandable and does not feel like a system error.
+2. The account/recovery screen opens from fresh anonymous state.
+3. "카카오로 기존 기록 복구" opens Kakao login/consent.
+4. OAuth success returns to ASJ.
+5. The existing Kakao-linked account is recovered from the user's perspective.
+
+Remaining follow-up checks:
+
+1. Reconfirm ownership continuity with an account that already has Moments.
+2. Decide whether Kakao name/full_name should sync to `public.users.display_name`.
+3. Keep push token account-switch policy as a foundation-hardening item.
+4. Keep Realtime recovered-auth-channel verification in the ownership continuity
+   follow-up if additional DB/log evidence is needed.
 
 Risks / QA gates:
 

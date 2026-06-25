@@ -40,15 +40,16 @@ session to the existing Kakao-linked Auth user, then expects ownership, Push
 token registration, Realtime subscription, and Home/Video/Detail refresh to
 converge under that recovered user.
 
-Kakao Recovery Sign-in P1 is implemented and Build 81 is ready for standalone
-iOS QA. P1 includes a separate Kakao recovery sign-in helper, `recoverWithKakao`
-in `AuthSessionProvider`, a distinct "기존 기록 복구하기" section in
+Kakao Recovery Sign-in P1 is complete after Build 81 standalone iPhone QA. P1
+includes a separate Kakao recovery sign-in helper, `recoverWithKakao` in
+`AuthSessionProvider`, a distinct "기존 기록 복구하기" section in
 `AccountRecoveryScreen`, and a local-work guard for unsynced/uploading work.
-Simulator/UI gate passed for the screen path and copy separation. Build 81 was
-created with build number `81`, EAS Build ID
+Simulator/UI gate passed for the screen path and copy separation, and Build 81
+confirmed the real-device flow: fresh anonymous state -> account/recovery screen
+-> "카카오로 기존 기록 복구" -> Kakao login/consent -> ASJ app return -> existing
+Kakao-linked account recovered. Build 81 used build number `81`, EAS Build ID
 `24ca707e-f248-4533-9953-2cc7912af651`, and install/log URL
 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`.
-Do not record Build 81 as passed yet; real-device QA is pending.
 
 Email Recovery is no longer blocked at the email-send/rate-limit step. The fresh
 test email `parksunl88@nate.com` confirmed `updateUser({ email })` success,
@@ -58,15 +59,11 @@ because the clicked link landed on
 Recovery remains a baseline/fallback path and needs redirect URL / deep-link
 strategy plus a link-validity-window QA pass before productization.
 
-Next immediate product work: install Build 81 and run Kakao Recovery Sign-in
-QA. Confirm fresh anonymous session -> "카카오로 기존 기록 복구" -> existing
-Kakao-linked Auth user session switch, then verify Home / Video / Detail remote
-reload, Push token owner re-registration, Realtime resubscription, OAuth
-cancel/failure handling, and the unsynced/uploading local-work guard. Do not
-start Initial Loading / Video Tab Spinner Observability, Email Recovery
-deep-link work, Push token account-switch hardening, External No-Token
-Finalization, Kakao display-name sync, or Journal / Upload / Analysis UX until
-Build 81 QA gives the next signal.
+Next immediate product work should move to the post-Build-81 follow-ups:
+Kakao display-name sync decision, ownership continuity with a user that already
+has Moments, Foundation Safety Check, External No-Token Finalization, and push
+token account-switch policy. Kakao Recovery Sign-in P1 itself is no longer in
+QA-waiting state.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 

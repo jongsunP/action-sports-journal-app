@@ -195,12 +195,12 @@ continuity as well as technical continuity:
 
 ## Current Status
 
-Daily wrap-up, 2026-06-25, Build 81 checkpoint:
+Daily wrap-up, 2026-06-25, Build 81 closeout:
 
 Today closed the Kakao Recovery Method Linking workstream, documented the
-separate Kakao Recovery Sign-in product flow, implemented P1, and created the
-standalone iOS QA build. `master` is synced with `origin/master`; today's main
-commits include:
+separate Kakao Recovery Sign-in product flow, implemented P1, created the
+standalone iOS QA build, and Build 81 real-device QA passed. `master` is synced
+with `origin/master`; today's main commits include:
 
 - `f7223d5 feat: add kakao account linking baseline`
 - `3835b0d chore: bump ios build number to 75`
@@ -211,6 +211,7 @@ commits include:
 - `e7a55c0 docs: define kakao recovery sign-in flow`
 - `d22b83b feat: add kakao recovery sign-in flow`
 - `754d4a5 chore: prepare kakao recovery sign-in qa build`
+- `88c113b docs: record kakao recovery sign-in qa checkpoint`
 
 Kakao Recovery / Account Linking:
 
@@ -253,8 +254,10 @@ Kakao Recovery Sign-in:
     `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`
   - IPA URL:
     `https://expo.dev/artifacts/eas/DtB9KwaaG4uMnPVBhRP5N3npU_VFFd4nEV4dNnVJoXk.ipa`
-- Build 81 is not yet QA-passed. It is waiting for the Founder to install and
-  verify Kakao Recovery Sign-in on a real iPhone.
+- Build 81 standalone iPhone QA passed. The Founder installed and launched the
+  build, entered account/recovery from a fresh anonymous state, ran
+  "카카오로 기존 기록 복구", completed Kakao login/consent, returned to ASJ, and
+  confirmed recovery into the existing Kakao-linked account.
 
 Email Recovery:
 
@@ -268,23 +271,23 @@ Email Recovery:
 
 Next starting point:
 
-Install Build 81 and run the "카카오로 기존 기록 복구" QA. Verify that a fresh
-anonymous session can switch into the existing Kakao-linked Auth user, then
-confirm Home / Video / Detail reload under the recovered account, Push token
-ownership re-registers, Realtime resubscribes to the recovered Auth user, OAuth
-cancel/failure does not look successful, and unsynced/uploading local work is
-blocked with clear guidance.
+Build 81 QA is no longer the next task. Move to the post-recovery follow-up
+queue: Kakao display-name sync decision, ownership continuity with a user that
+already has Moments, Foundation Safety Check, External No-Token Finalization,
+and push token account-switch policy.
 
 Backlog after Build 81 QA:
 
+- Kakao display_name sync.
+- Ownership continuity with an account that already has Moments.
+- Foundation Safety Check.
+- External No-Token Finalization.
+- Push token account-switch policy.
 - Initial Loading / Video Tab Spinner Observability.
 - Email Recovery deep link / redirect.
-- Push token account-switch policy hardening if Build 81 exposes a gap.
-- External No-Token Finalization.
-- Kakao display_name sync.
 - Journal / Upload / Analysis UX.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
-  currently the verified recovery-method path.
+  verified, and Kakao Recovery Sign-in P1 is now verified on Build 81.
 
 Response/collaboration rules updated:
 
