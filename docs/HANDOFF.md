@@ -427,6 +427,8 @@ Backlog after Push Token Account-switch Policy and product UX review:
 
 - Product UX Baseline P1: Unified User-Facing Status Resolver.
 - Home v2 / Journal UX first slice after status consistency.
+- Kakao Single CTA Recovery UX: show one simple Kakao action to users while
+  keeping internal link/recover branching.
 - Detail menu / Retry Eligibility polish.
 - Upload Entry UX bottom sheet.
 - Analysis trust UX: Trick Review and visual summary candidates.

@@ -201,6 +201,18 @@ Journal UX:
 - Wait: Do not invent progression metrics or broader journal data that does not
   exist yet.
 
+Kakao Recovery UX:
+
+- Current state: Kakao linking and Kakao recovery sign-in are technically
+  separate and both verified, but exposing both as separate user choices can
+  feel unnecessarily complex.
+- Do soon: consider one user-facing Kakao CTA that internally branches between
+  connecting the current anonymous account and recovering an existing
+  Kakao-linked account.
+- Guardrail: keep local unsynced/uploading work protection and do not blur the
+  internal ownership distinction between `linkIdentity` and recovery
+  `signInWithOAuth`.
+
 Media / Share UX:
 
 - Current state: Instagram-led growth remains strategically important, but share

@@ -196,6 +196,7 @@ Current stable workstream list:
 
 가까운 후속:
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)
+- Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)
 - Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)
 - Analysis Trust UX(분석 신뢰 UX)

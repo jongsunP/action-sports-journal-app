@@ -172,6 +172,11 @@ Reasoning:
 
 - Upload UX is stable enough after the 20MB pre-upload guard; compression and
   upload optimization remain separate later work.
+- Kakao Recovery UX has a follow-up candidate: user-facing UI should eventually
+  show one simple Kakao action instead of exposing internal "link" versus
+  "recover" concepts. Internally the app can still branch between
+  `linkIdentity` and recovery `signInWithOAuth`, guarded by local unsynced work
+  and account state.
 - Analysis UX needs trust improvements, but evidence/confidence/review surfaces
   should be built on top of consistent status language first.
 - Journal UX is the right next product direction because ASJ must feel like a
