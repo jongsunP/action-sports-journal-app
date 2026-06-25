@@ -173,16 +173,16 @@ Current stable workstream list:
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 
 바로 앞 작업:
-- Kakao display_name Sync(카카오 이름 동기화) 여부 결정
+- Foundation Safety Check(기반 안전 점검)
 
 가까운 후속:
 - 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
-- Foundation Safety Check(기반 안전 점검)
 - Upload File-size Validation(업로드 용량 초과 사전 차단)
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 
 나중에 해도 좋은 것:
+- Kakao display_name Sync(카카오 이름 동기화)
 - Journal UX(저널 경험)
 - Analysis UX(분석 결과 경험)
 - Upload UX(업로드 경험) 추가 개선

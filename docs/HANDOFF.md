@@ -272,18 +272,17 @@ Email Recovery:
 Next starting point:
 
 Build 81 QA is no longer the next task. Move to the post-recovery follow-up
-queue: Kakao display-name sync decision, ownership continuity with a user that
-already has Moments, Foundation Safety Check, External No-Token Finalization,
-and push token account-switch policy.
+queue. The current CTO decision is to run Foundation Safety Check next.
+Kakao display-name sync is low urgency and can wait.
 
 Backlog after Build 81 QA:
 
-- Kakao display_name sync.
-- Ownership continuity with an account that already has Moments.
 - Foundation Safety Check.
+- Ownership continuity with an account that already has Moments.
 - Upload file-size validation before upload submit.
 - External No-Token Finalization.
 - Push token account-switch policy.
+- Kakao display_name sync.
 - Initial Loading / Video Tab Spinner Observability.
 - Email Recovery deep link / redirect.
 - Journal / Upload / Analysis UX.
