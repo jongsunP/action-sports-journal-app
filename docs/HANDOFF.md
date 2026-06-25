@@ -386,19 +386,55 @@ Validation:
 - No actual Push send, EAS build, DB migration, or external console change was
   performed.
 
+Post-foundation Product UX Next-Step Review:
+
+Foundation hardening is closed enough to move back into product UX. The
+recommended next task is Product UX Baseline P1: Unified User-Facing Status
+Resolver.
+
+Use this as the first Journal / Analysis / Upload shared UX slice:
+
+- Keep backend status/job semantics unchanged.
+- Create or consolidate one UI-facing resolver for visible Moment state.
+- Use only the simple rider-facing states `진행중`, `완료`, and `실패`.
+- Apply consistently to Home, Recent Sessions, Primary Insight, Journal
+  Timeline, Video list, and Detail.
+- Validate through simulator/local UI and typecheck first. No EAS build is
+  needed for this first status-consistency pass.
+
+Candidate comparison from the review:
+
+- Upload UX: current pipeline is safe enough after the 20MB guard. Upload Entry
+  bottom sheet is valuable but depends on UI primitive/composer reorganization.
+  Compression / Upload Optimization remains a separate later technical/product
+  decision.
+- Analysis UX: trust/review improvements are important, especially evidence,
+  confidence, and needs-review display, but they should build on consistent
+  visible state first.
+- Journal UX: strongest next product direction because ASJ should feel like a
+  life log, not only an analysis/gallery app. Status consistency is the smallest
+  safe slice before Home v2 sections.
+- Media / Share UX: important for Instagram-led growth, but should wait until
+  Journal/Detail surfaces are strong enough to share.
+
 Next starting point:
 
-Push Token Account-switch Policy is no longer the next task. Move to optional
-recovery-attempt observability, Email Recovery deep-link strategy, or product UX
-work depending on CTO/user alignment.
+Start Product UX Baseline P1: Unified User-Facing Status Resolver unless the
+Founder explicitly redirects to recovery observability or Email Recovery
+deep-link strategy.
 
-Backlog after Push Token Account-switch Policy:
+Backlog after Push Token Account-switch Policy and product UX review:
 
+- Product UX Baseline P1: Unified User-Facing Status Resolver.
+- Home v2 / Journal UX first slice after status consistency.
+- Detail menu / Retry Eligibility polish.
+- Upload Entry UX bottom sheet.
+- Analysis trust UX: Trick Review and visual summary candidates.
+- Media / Share UX later.
 - Recovery attempt observability row/log design, if desired.
 - Email Recovery deep link / redirect.
 - Kakao display_name sync.
 - Initial Loading / Video Tab Spinner Observability.
-- Journal / Upload / Analysis UX.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
   verified, and Kakao Recovery Sign-in P1 is verified on Build 81.
 

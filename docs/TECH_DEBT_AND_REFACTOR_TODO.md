@@ -155,6 +155,78 @@ BLOCKED:
   watch/follow-up items, not current blockers for continuing foundation
   hardening.
 
+## Post-foundation Product UX Next-Step Review - 2026-06-26
+
+Foundation hardening is closed enough to move into product UX. The recommended
+next task is Product UX Baseline P1: Unified User-Facing Status Resolver.
+
+### Decision
+
+Start with a UI-only user-facing status resolver before larger Journal,
+Analysis, Upload, or Media surface work.
+
+Rules:
+
+- Keep backend status/job semantics unchanged.
+- Use one visible-state mapping across Home, Recent Sessions, Primary Insight,
+  Journal Timeline, Video list, and Detail.
+- Keep rider-facing state language simple: `진행중`, `완료`, `실패`.
+- Do not combine this first pass with Home v2 layout, Upload bottom sheet,
+  Trick Review, visual gauges, Share, DB migration, or build work.
+
+### Candidate comparison
+
+Upload UX:
+
+- Current state: Upload pipeline is stable enough after Foundation Safety Check
+  and the 20MB pre-upload guard.
+- Do soon: Upload Entry UX bottom sheet can reduce duplicate Home CTA weight.
+- Wait: Compression / Upload Optimization is a separate technical/product
+  decision and should not be bundled into immediate UX polish.
+
+Analysis UX:
+
+- Current state: Result screens are functional but can feel dense and technical.
+- Do soon: Evidence, confidence, and needs-review presentation should become
+  easier to review.
+- Wait: Trick Review bottom sheet and visual summary gauges have data/persistence
+  decisions and should build on consistent status language first.
+
+Journal UX:
+
+- Current state: Home v2 planning exists and ASJ needs to feel more like a life
+  log than a video gallery.
+- Do now: Status consistency is the smallest safe Journal/Analysis shared slice
+  and prepares Primary Insight, Recent Sessions, and Journal Timeline.
+- Wait: Do not invent progression metrics or broader journal data that does not
+  exist yet.
+
+Media / Share UX:
+
+- Current state: Instagram-led growth remains strategically important, but share
+  surfaces are not yet the core blocker.
+- Do later: Build share/media UX after Journal and Detail surfaces have stronger
+  story cards worth sharing.
+
+### Minimum next implementation scope
+
+1. Create or consolidate a shared UI-facing status resolver.
+2. Map internal states to visible states:
+   - queued -> `진행중`
+   - processing -> `진행중`
+   - completed -> `완료`
+   - failed -> `실패`
+3. Apply the resolver to the currently visible Home / list / detail surfaces.
+4. Keep retry eligibility, upload bottom sheet, Home v2 layout, and analysis
+   trust widgets as separate follow-up work.
+
+### Validation
+
+- Run `npm run typecheck`.
+- Use simulator/local UI to confirm the same Moment shows the same visible state
+  across Home, Video list, and Detail.
+- No EAS build is needed for this first status-consistency pass.
+
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated

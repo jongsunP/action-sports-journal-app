@@ -150,6 +150,36 @@ No BLOCKED foundation item was found. The next foundation follow-ups are
 optional recovery-attempt observability and Email Recovery deep-link strategy.
 Kakao display-name sync remains low urgency.
 
+Post-foundation Product UX Next-Step Review, 2026-06-26:
+
+Foundation hardening is closed enough to restart product UX work. The
+recommended first product task is Product UX Baseline P1: Unified User-Facing
+Status Resolver. Treat this as a Journal / Analysis / Upload shared UX baseline,
+not a backend status redesign.
+
+Decision:
+
+- Do this before a full Home v2 layout pass, Upload bottom sheet, Trick Review
+  bottom sheet, visual gauges, or Media / Share work.
+- Keep backend job/status semantics unchanged.
+- Map user-visible Moment states consistently across Home, Recent Sessions,
+  Primary Insight, Journal Timeline, Video list, and Detail.
+- Visible state should stay simple: `진행중`, `완료`, `실패`.
+- Validate in simulator/local UI first; no EAS build is needed for the first
+  status-consistency pass.
+
+Reasoning:
+
+- Upload UX is stable enough after the 20MB pre-upload guard; compression and
+  upload optimization remain separate later work.
+- Analysis UX needs trust improvements, but evidence/confidence/review surfaces
+  should be built on top of consistent status language first.
+- Journal UX is the right next product direction because ASJ must feel like a
+  life log, not only an analysis or gallery app. A unified visible-status layer
+  is the smallest safe slice that prepares Home v2 and Moment Detail.
+- Media / Share UX remains important for Instagram-led growth, but it should
+  wait until the app has stronger journal/detail cards worth sharing.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73
