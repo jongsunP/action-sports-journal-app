@@ -225,6 +225,21 @@ no Metro/Expo session or booted simulator was active; OAuth/deep-link E2E still
 requires a later standalone-device QA pass when a build is intentionally
 scheduled.
 
+Simulator UI check follow-up:
+
+- Expo Go / iPhone 17 Simulator launched successfully from `npm run ios`.
+- Home opened normally and the account/recovery screen was reachable from the
+  Home header menu.
+- The account/recovery screen showed one Kakao section only. The previous
+  separate "카카오 복구 수단" and "기존 기록 복구하기" blocks were not visible.
+- The default CTA centered on "카카오로 계속하기" and the copy fit without
+  visible overflow or button clipping.
+- Pressing the CTA showed the in-app "진행 중" state, opened the iOS OAuth
+  confirmation prompt for `kauth.kakao.com`, and canceling returned to ASJ with
+  the "카카오 진행이 취소됨" / "미완료" state.
+- No actual Kakao login/deep-link completion was performed. Standalone OAuth
+  E2E remains a later intentional build/QA item.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73

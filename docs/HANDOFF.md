@@ -461,6 +461,12 @@ Kakao Single CTA Recovery UX implementation notes:
 - Simulator UI was not launched because no Metro/Expo session or booted
   simulator was active. Standalone-device OAuth/deep-link QA remains a later
   validation item if this UX needs real Kakao flow confirmation.
+- Follow-up simulator UI check passed in Expo Go / iPhone 17 Simulator:
+  AccountRecoveryScreen showed one Kakao section, "카카오로 계속하기" copy fit,
+  the old separate "카카오 복구 수단" / "기존 기록 복구하기" blocks were gone,
+  pressing the CTA showed the iOS OAuth confirmation prompt, and cancel returned
+  to ASJ with a clear "카카오 진행이 취소됨" state. No real Kakao login/deep-link
+  completion was performed.
 
 Response/collaboration rules updated:
 
