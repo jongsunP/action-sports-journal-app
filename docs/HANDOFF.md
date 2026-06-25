@@ -432,8 +432,10 @@ Backlog after Push Token Account-switch Policy and product UX review:
   preserving internal link/recover separation. Simulator UI review and future
   standalone OAuth E2E remain follow-up validation, not blockers for the code
   path.
+- Detail menu / Retry Eligibility polish: implemented in Moment Detail with a
+  visible action panel, disabled retry reasons, and delete in the same action
+  area.
 - Home v2 / Journal UX first slice after status consistency.
-- Detail menu / Retry Eligibility polish.
 - Upload Entry UX bottom sheet.
 - Analysis trust UX: Trick Review and visual summary candidates.
 - Media / Share UX later.
@@ -467,6 +469,31 @@ Kakao Single CTA Recovery UX implementation notes:
   pressing the CTA showed the iOS OAuth confirmation prompt, and cancel returned
   to ASJ with a clear "카카오 진행이 취소됨" state. No real Kakao login/deep-link
   completion was performed.
+
+Detail Menu / Retry Eligibility Polish implementation notes:
+
+- `MomentDetailContent` now shows a `작업` panel under the video.
+- Retry remains UI-only/action-eligibility polish. Backend status semantics did
+  not change.
+- `분석 다시 시도` is visible but disabled unless `getRetryEligibility()` allows
+  retry.
+- The retry reason is shown below the actions so completed/running/source-missing
+  states explain why retry is unavailable.
+- `삭제` is visible in the same action panel. Existing delete confirmation and
+  delete API behavior are unchanged.
+- The old header-only delete affordance was removed from Detail content to avoid
+  hiding the main destructive action in a tiny icon.
+- `npm run typecheck` and `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed completed and running Detail states.
+  Failed-state UI was verified by code path/typecheck only because the current
+  local first-screen samples did not expose a failed Moment.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
+Next starting point:
+
+Home v2 / Journal UX First Slice is the recommended next product UX task unless
+the Founder redirects to Upload Entry UX Bottom Sheet or Analysis Trust UX.
 
 Response/collaboration rules updated:
 

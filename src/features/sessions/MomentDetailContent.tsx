@@ -170,8 +170,11 @@ export function MomentDetailContent({
       '검토가 필요한 분석입니다. 기술 확정은 다음 단계에서 action sheet로 제공할 예정입니다.',
     );
   };
-  const shouldShowInlineRetry =
-    retryEligibility.canRetry && momentStatus === 'failed' && Boolean(onRetry);
+  const hasDetailActions = Boolean(onRetry || onDelete);
+  const canPressRetry = Boolean(
+    onRetry && retryEligibility.canRetry && !isDeleting,
+  );
+  const canPressDelete = Boolean(onDelete && !isDeleting);
 
   return (
     <SafeAreaView style={styles.detailModalContainer}>
@@ -205,51 +208,14 @@ export function MomentDetailContent({
             </Text>
           </View>
         </View>
-        <View style={styles.detailHeaderActions}>
-          {onDelete ? (
-            <Pressable
-              accessibilityLabel={isDeleting ? '영상 삭제 중' : '영상 삭제'}
-              accessibilityRole="button"
-              disabled={isDeleting}
-              onPress={onDelete}
-              style={({ pressed }) => [
-                styles.detailHeaderDeleteButton,
-                isDeleting ? styles.detailHeaderDeleteButtonDisabled : undefined,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              {isDeleting ? (
-                <Text style={styles.detailHeaderDeleteText}>삭제 중…</Text>
-              ) : (
-                <View style={styles.detailTrashIcon}>
-                  <View style={styles.detailTrashLid} />
-                  <View style={styles.detailTrashCan} />
-                </View>
-              )}
-            </Pressable>
-          ) : null}
-        </View>
+        <View style={styles.detailHeaderActions} />
       </View>
       <ScrollView
         contentContainerStyle={styles.detailModalBody}
         showsVerticalScrollIndicator
       >
         <View style={styles.detailVideoFrame}>
-          {shouldShowInlineRetry ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={onRetry}
-              style={({ pressed }) => [
-                styles.detailInlineRetry,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Text style={styles.detailInlineRetryTitle}>분석 다시 시도</Text>
-              <Text style={styles.detailInlineRetryText}>
-                분석에 실패했습니다. 다시 요청할 수 있습니다.
-              </Text>
-            </Pressable>
-          ) : video ? (
+          {video ? (
             <LocalSessionVideoPlayer
               thumbnailUri={thumbnailUri}
               videoUri={video.uri}
@@ -270,6 +236,56 @@ export function MomentDetailContent({
             </View>
           )}
         </View>
+
+          {hasDetailActions ? (
+            <View style={styles.detailActionPanel}>
+              <Text style={styles.detailActionTitle}>작업</Text>
+              <View style={styles.detailActionRow}>
+                {onRetry ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canPressRetry }}
+                    disabled={!canPressRetry}
+                    onPress={canPressRetry ? onRetry : undefined}
+                    style={({ pressed }) => [
+                      styles.detailRetryButton,
+                      !canPressRetry ? styles.detailRetryButtonDisabled : undefined,
+                      pressed ? styles.buttonPressed : undefined,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.detailRetryText,
+                        !canPressRetry ? styles.detailRetryTextDisabled : undefined,
+                      ]}
+                    >
+                      분석 다시 시도
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {onDelete ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canPressDelete }}
+                    disabled={!canPressDelete}
+                    onPress={canPressDelete ? onDelete : undefined}
+                    style={({ pressed }) => [
+                      styles.detailDeleteButton,
+                      !canPressDelete ? styles.detailDeleteButtonDisabled : undefined,
+                      pressed ? styles.buttonPressed : undefined,
+                    ]}
+                  >
+                    <Text style={styles.detailDeleteText}>
+                      {isDeleting ? '삭제 중...' : '삭제'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {onRetry ? (
+                <Text style={styles.detailHint}>{retryEligibility.reason}</Text>
+              ) : null}
+            </View>
+          ) : null}
 
           {shouldShowTrickReviewAction ? (
             <Pressable

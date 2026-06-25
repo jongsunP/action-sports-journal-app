@@ -3315,45 +3315,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 6,
   },
-  detailHeaderDeleteButton: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: 10,
-    height: 34,
-    justifyContent: 'center',
-    minWidth: 34,
-    paddingHorizontal: 6,
-  },
-  detailHeaderDeleteButtonDisabled: {
-    backgroundColor: 'rgba(252, 165, 165, 0.12)',
-    opacity: 0.7,
-  },
-  detailHeaderDeleteText: {
-    color: '#fca5a5',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  detailTrashIcon: {
-    alignItems: 'center',
-    height: 20,
-    justifyContent: 'center',
-    width: 20,
-  },
-  detailTrashLid: {
-    backgroundColor: '#fca5a5',
-    borderRadius: 999,
-    height: 2,
-    marginBottom: 2,
-    width: 13,
-  },
-  detailTrashCan: {
-    borderColor: '#fca5a5',
-    borderRadius: 2,
-    borderTopWidth: 0,
-    borderWidth: 2,
-    height: 12,
-    width: 11,
-  },
   detailVideoFrame: {
     aspectRatio: 1,
     backgroundColor: '#0f172a',
@@ -3361,24 +3322,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  detailInlineRetry: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
+  detailActionPanel: {
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+    paddingBottom: 16,
   },
-  detailInlineRetryTitle: {
+  detailActionTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '900',
-    marginBottom: 8,
-  },
-  detailInlineRetryText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-    textAlign: 'center',
+    marginBottom: 10,
   },
   detailReviewCard: {
     alignItems: 'center',
@@ -3630,8 +3584,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
-    marginHorizontal: 16,
-    marginTop: 12,
   },
   detailRetryButton: {
     alignItems: 'center',
@@ -3649,12 +3601,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
+  detailRetryTextDisabled: {
+    color: '#cbd5e1',
+  },
   detailDeleteButton: {
     alignItems: 'center',
     backgroundColor: '#fff1f2',
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 11,
+  },
+  detailDeleteButtonDisabled: {
+    opacity: 0.55,
   },
   detailDeleteText: {
     color: '#be123c',

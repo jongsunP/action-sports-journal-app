@@ -269,6 +269,46 @@ Follow-up:
 - Home v2 / Journal UX first slice, Upload Entry bottom sheet, Analysis trust
   UX, and Media / Share UX remain separate follow-up work.
 
+## Detail Menu / Retry Eligibility Polish - 2026-06-26
+
+### Decision
+
+Moment Detail actions should be visible and explainable without changing backend
+status semantics. Retry is an eligibility-driven UI action, not a generic
+"run again anytime" command.
+
+### Implemented scope
+
+- Added a `작업` panel under the Detail video.
+- Removed the tiny header-only delete affordance from `MomentDetailContent`.
+- Kept `삭제` visible in the action panel and preserved the existing delete
+  confirmation/API behavior.
+- Kept `분석 다시 시도` visible when the Detail screen has an `onRetry` handler,
+  but disabled it unless `getRetryEligibility()` returns `canRetry=true`.
+- Shows the retry reason below the action buttons.
+- Preserved backend/internal Moment status semantics.
+
+### Retry policy
+
+- Running states (`uploading`, `queued`, `processing`) keep retry disabled and
+  explain that upload/analysis is already in progress.
+- Completed state keeps retry disabled and prioritizes result review.
+- Failed and upload-failed states can retry only when the existing eligibility
+  helper allows it, including local/source video availability.
+- Missing-video/source-unavailable states explain why retry cannot run.
+
+### Validation
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed:
+  - completed Detail: disabled retry, visible delete, completed reason copy
+  - running Detail: disabled retry, visible delete, in-progress reason copy
+- Failed-state rendering was verified by code path/typecheck only because the
+  currently visible local samples did not include a failed Moment.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
 ## Kakao Single CTA Recovery UX - 2026-06-26
 
 ### Decision

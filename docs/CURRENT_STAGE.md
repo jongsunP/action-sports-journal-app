@@ -240,6 +240,40 @@ Simulator UI check follow-up:
 - No actual Kakao login/deep-link completion was performed. Standalone OAuth
   E2E remains a later intentional build/QA item.
 
+Detail Menu / Retry Eligibility Polish, 2026-06-26:
+
+Moment Detail now exposes a clearer action area instead of relying on a small
+header delete icon and failure-only inline retry. The Detail surface keeps
+backend status semantics unchanged and uses the existing retry eligibility
+helper to explain what the user can do.
+
+Implemented:
+
+- Added a `작업` action panel under the video in Moment Detail.
+- `분석 다시 시도` is always visible when retry is available from the screen
+  contract, but it is disabled unless `getRetryEligibility()` allows retry.
+- The panel shows the retry reason, such as "이미 정상 완료된 분석입니다." or
+  "이미 분석 요청을 진행하고 있습니다."
+- `삭제` is shown in the same action panel, keeping deletion visible without
+  turning it into a hidden header-only affordance.
+- Completed results prioritize viewing the result; retry is disabled.
+- Running/uploading analysis keeps retry disabled and explains that work is in
+  progress.
+- Failed or upload-failed states still use the existing retry eligibility path
+  and require a local/source video when needed.
+
+Validation:
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed completed and running Detail states:
+  completed state showed disabled retry, delete, and "이미 정상 완료된 분석입니다.";
+  running state showed disabled retry, delete, and "이미 분석 요청을 진행하고
+  있습니다."
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed. A stale local sample emitted an upload warning during simulator
+  refresh, but no upload or AI flow was intentionally started for this QA.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73
