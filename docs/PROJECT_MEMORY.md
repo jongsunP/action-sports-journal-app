@@ -174,6 +174,7 @@ Current stable workstream list:
 - Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차)
 - Foundation Safety Check(기반 안전 점검)
 - Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)
+- External No-Token Finalization(외부 무토큰 경로 최종 정리)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -185,12 +186,12 @@ Current stable workstream list:
 - Foundation Safety Check(기반 안전 점검)는 2026-06-26 완료
 - Upload File-size Validation(업로드 용량 초과 사전 차단)은 20MB 사전 차단으로 반영
 - Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)는 재설치 후 카카오 복구 시 기존 영상 목록 재노출 확인
+- External No-Token Finalization(외부 무토큰 경로 최종 정리)은 외부 사용자 API no-token 401 차단으로 완료
 
 바로 앞 작업:
-- External No-Token Finalization(외부 무토큰 경로 최종 정리)
+- Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 
 가까운 후속:
-- External No-Token Finalization(외부 무토큰 경로 최종 정리)
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 
 나중에 해도 좋은 것:
@@ -500,12 +501,11 @@ settled.
 
 Immediate next work:
 
-1. Recheck ownership continuity with a user that already has Moments.
-2. Continue External No-Token Finalization and push token account-switch policy
-   when returning to foundation hardening.
-3. Decide whether Kakao `name` / `full_name` should sync to
+1. Continue push token account-switch policy when returning to foundation
+   hardening.
+2. Decide whether Kakao `name` / `full_name` should sync to
    `public.users.display_name`.
-4. Keep Journal / Analysis / Media UX expansion behind the foundation-hardening
+3. Keep Journal / Analysis / Media UX expansion behind the foundation-hardening
    queue.
 
 ## 2026-06-26 Foundation Safety Check
@@ -521,9 +521,9 @@ Current foundation readout:
 - PASS: Push remains notification-only with Push Observability P2 in place;
   private Realtime/foreground refresh remain the sync source of truth; Kakao
   Account Linking and Kakao Recovery Sign-in P1 remain separated and verified.
-- WATCH: External No-Token Finalization, Push token account-switch policy,
-  source/orphan cleanup caution, optional recovery-attempt observability, and
-  Email Recovery redirect/deep-link productization.
+- WATCH: Push token account-switch policy, source/orphan cleanup caution,
+  optional recovery-attempt observability, and Email Recovery redirect/deep-link
+  productization.
 - FIXED: local 20MB upload size guard.
 - BLOCKED: none.
 
@@ -534,7 +534,37 @@ confirm video exists -> delete app -> reinstall -> anonymous state has no video
 Kakao Recovery ownership smoke. DB read-only verification can still be used
 later if a low-level ownership audit is needed.
 
-Next foundation hardening should start with External No-Token Finalization.
+Next foundation hardening should move to Push Token Account-switch Policy.
+
+## 2026-06-26 External No-Token Finalization
+
+External No-Token Finalization is complete for the current server/app boundary.
+Normal app/API paths now require a Supabase bearer token and do not silently use
+the internal default user. The internal default-user fallback is explicit-only:
+server `ALLOW_INTERNAL_DEFAULT_USER=true` plus `APP_ENV=development` or
+`APP_ENV=test`, and app `EXPO_PUBLIC_ALLOW_INTERNAL_DEFAULT_USER=true`.
+
+Closed paths:
+
+- Moment list/create/delete/status.
+- Upload target create/failure report.
+- Source upload/finalize and stored-video analysis.
+- Gemini analysis/evidence extraction, OpenAI benchmark, remote thumbnail
+  fallback, and Push token registration.
+
+Additional ownership hardening:
+
+- MomentId-based legacy routes now verify ownership against the resolved request
+  user before writing or queueing work.
+- Invalid bearer tokens return 401 `auth_required`.
+
+Validation:
+
+- `npm run typecheck` passed.
+- Local server smoke used `MOCK_AI_ANALYSIS=true`; no paid AI calls.
+- Health showed `internalDefaultUserFallbackAllowed=false`.
+- No-token Moment list/upload target/push token requests returned 401.
+- Invalid bearer upload target request returned 401.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 
@@ -572,15 +602,15 @@ Confirmed:
 
 Current Auth implication:
 
-No-token internal default data must remain an internal QA fallback only. Future
-authenticated paths should continue using request-scoped ownership and must
-not merge default-user Moments into authenticated user responses.
+No-token internal default data must remain explicit dev/test opt-in only.
+Future authenticated paths should continue using request-scoped ownership and
+must not merge default-user Moments into authenticated user responses.
 
 Auth Phase 2 starts from:
 
 - Login UI and app-side session lifecycle.
 - Private/user-scoped Realtime instead of the current public MVP Broadcast.
-- External no-token policy.
+- External no-token policy is finalized as explicit dev/test opt-in only.
 - Push token account-switch policy.
 
 ## 2026-06-24 Auth Phase 2 Identity Strategy / Anonymous Smoke

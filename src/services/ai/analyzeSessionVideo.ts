@@ -4,6 +4,7 @@ import type {
   GeminiEvidenceResult,
   Session,
 } from '../../types';
+import { authenticatedFetch } from '../auth/authenticatedFetch';
 
 export type SessionVideoAsset = {
   uri: string;
@@ -239,7 +240,7 @@ export async function queueStoredSessionEvidenceExtractionWithGemini({
     throw new Error('저장된 영상 분석 엔드포인트가 설정되지 않았습니다.');
   }
 
-  const response = await fetch(`${momentsEndpoint}/${momentId}/analyze-stored-video`, {
+  const response = await authenticatedFetch(`${momentsEndpoint}/${momentId}/analyze-stored-video`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -354,7 +355,7 @@ async function requestRemoteJson({
     type: video.mimeType ?? 'video/quicktime',
   } as unknown as Blob);
 
-  const response = await fetch(endpoint, {
+  const response = await authenticatedFetch(endpoint, {
     method: 'POST',
     body: formData,
   });

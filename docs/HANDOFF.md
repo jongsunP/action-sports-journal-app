@@ -290,9 +290,8 @@ Result summary:
   separated and passed real-device QA; Push remains notification-only with P2
   observability; user-scoped Realtime/foreground refresh remain the data sync
   path.
-- WATCH: external no-token fallback must be finalized for production/preview;
-  source/orphan cleanup remains deliberately cautious; recovery attempts do not
-  yet have a dedicated structured DB row; Email Recovery remains
+- WATCH: source/orphan cleanup remains deliberately cautious; recovery attempts
+  do not yet have a dedicated structured DB row; Email Recovery remains
   baseline/fallback pending redirect/deep-link productization.
 - FIXED: known >20MB picker assets now show a local size alert instead of
   entering the upload flow.
@@ -305,14 +304,54 @@ state has no video -> Kakao reconnect -> previous video list appears. Treat the
 user-facing ownership-continuity smoke as complete; DB read-only verification
 is optional later if a low-level audit is needed.
 
+External No-Token Finalization:
+
+External No-Token Finalization ran on 2026-06-26. Normal app/API paths now
+require a Supabase bearer token and no longer silently resolve to the internal
+default user. The internal default-user fallback is explicit-only:
+`ALLOW_INTERNAL_DEFAULT_USER=true` plus `APP_ENV=development` or `APP_ENV=test`
+on the server, and `EXPO_PUBLIC_ALLOW_INTERNAL_DEFAULT_USER=true` on the app.
+
+Blocked no-token/default-user paths:
+
+- Moment list/create/delete/status.
+- Upload target create/failure report.
+- Source upload/finalize and stored-video analysis.
+- Legacy Gemini analysis/evidence extraction and OpenAI benchmark endpoints.
+- Remote thumbnail fallback.
+- Push token registration.
+
+Kept open:
+
+- `GET /health`.
+- Internal/debug endpoints that are already separated from user-owned app data.
+
+Additional ownership hardening:
+
+- Legacy momentId-based source upload, status update, stored-video analysis, and
+  evidence job creation now verify the Moment belongs to the resolved request
+  user before writing or queueing work.
+- Invalid bearer tokens now return 401 `auth_required` instead of surfacing as
+  generic server errors.
+
+Validation:
+
+- `npm run typecheck` passed.
+- Local server smoke used `MOCK_AI_ANALYSIS=true`, so no paid AI provider calls
+  were made.
+- `GET /health` reported `internalDefaultUserFallbackAllowed=false`.
+- No-token `GET /api/moments`, no-token `POST /api/video-upload-targets`, and
+  no-token `POST /api/push-tokens` returned 401.
+- Invalid bearer `POST /api/video-upload-targets` returned 401.
+
 Next starting point:
 
-Foundation Safety Check is no longer the next task. Move to the foundation
-hardening queue. The nearest CTO decision is External No-Token Finalization.
+External No-Token Finalization is no longer the next task. Move to Push token
+account-switch policy or optional recovery-attempt observability, depending on
+CTO/user alignment.
 
-Backlog after Foundation Safety Check:
+Backlog after External No-Token Finalization:
 
-- External No-Token Finalization.
 - Push token account-switch policy.
 - Recovery attempt observability row/log design, if desired.
 - Kakao display_name sync.
@@ -337,10 +376,9 @@ Response/collaboration rules updated:
 
 Next start point:
 
-Post-Foundation Safety Check hardening. Start with External No-Token
-Finalization. Keep Push token account-switch policy close behind. Kakao `name`
-/ `full_name` -> `public.users.display_name` sync is
-low urgency.
+Post-External No-Token hardening. Start with Push token account-switch policy or
+optional recovery-attempt observability, depending on CTO/user alignment. Kakao
+`name` / `full_name` -> `public.users.display_name` sync is low urgency.
 
 Build 74 Push QA / current handoff, 2026-06-24:
 
@@ -682,8 +720,8 @@ Auth Phase 1 remaining TODO:
 - Convert public MVP Realtime Broadcast to private/user-scoped Realtime after
   app auth sessions exist.
 - Implement Login UI and app-side authenticated session lifecycle.
-- Decide external no-token behavior. The current default user path is internal
-  QA only.
+- External no-token behavior is finalized: default-user fallback is explicit
+  dev/test opt-in only.
 - Define push token account-switch policy for shared/reused devices.
 
 Next Auth starting point:

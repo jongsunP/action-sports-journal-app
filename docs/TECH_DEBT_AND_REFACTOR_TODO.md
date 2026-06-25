@@ -116,9 +116,9 @@ PASS:
 WATCH:
 
 - `resolveRequestUser(request)` preserves the Supabase Auth ->
-  `public.users` boundary for bearer-token requests, but External No-Token
-  Finalization is still needed so the default user path cannot leak into
-  external app traffic.
+  `public.users` boundary for bearer-token requests. External No-Token
+  Finalization is now complete: normal app/API paths require a bearer token,
+  and default-user fallback is explicit dev/test opt-in only.
 - Moment ownership continuity after Kakao Recovery Sign-in has passed a
   user-facing existing-Moment smoke. The Founder tested fresh install -> Kakao
   reconnect -> upload video -> restart app and confirm video exists -> delete
@@ -146,11 +146,9 @@ FIX NEEDED:
 
 Needs separate CTO/user alignment before implementation:
 
-1. External No-Token Finalization.
-2. Push Token Account-switch Policy after Kakao recovery sign-in.
-3. Ownership continuity smoke with a pre-existing Moment sample.
-4. Optional structured recovery-attempt observability.
-5. Email Recovery redirect/deep-link productization.
+1. Push Token Account-switch Policy after Kakao recovery sign-in.
+2. Optional structured recovery-attempt observability.
+3. Email Recovery redirect/deep-link productization.
 
 BLOCKED:
 
@@ -2032,8 +2030,22 @@ Current state:
 The app is personal/QA-oriented and historically used a default user pattern
 for no-token internal QA. Auth Phase 1 is now complete for the server/BFF
 ownership boundary: the main ownership-sensitive API handlers resolve
-ownership through `resolveRequestUser(request)`, while the default user remains
-only as an internal no-token fallback.
+ownership through `resolveRequestUser(request)`.
+
+External No-Token Finalization status, 2026-06-26:
+
+- Complete for the current server/app boundary.
+- Normal app/API paths require a Supabase bearer token.
+- The internal default-user fallback is disabled by default and only opens when
+  the server has `ALLOW_INTERNAL_DEFAULT_USER=true` plus
+  `APP_ENV=development` or `APP_ENV=test`.
+- The app-side fallback is also explicit-only through
+  `EXPO_PUBLIC_ALLOW_INTERNAL_DEFAULT_USER=true`.
+- No-token Moment, upload, analysis, thumbnail fallback, Push token, and
+  benchmark routes return 401 instead of using the default user.
+- Invalid bearer tokens return 401 `auth_required`.
+- Legacy momentId-based write/queue routes verify ownership against the
+  resolved request user.
 
 Auth Phase 1 verified smoke coverage:
 
@@ -2050,8 +2062,6 @@ Future work:
 
 - Login UI and app-side session lifecycle.
 - Private/user-scoped Realtime channel; public Broadcast is still MVP-only.
-- External no-token policy. The default user fallback must stay internal QA
-  only.
 - Push token account-switch policy for devices reused across accounts.
 - RLS and ownership rules once service-role BFF boundaries are settled.
 - Token cleanup, account deletion implications, and multi-device data
@@ -2091,8 +2101,8 @@ Technical debt to track:
 - Anonymous user cleanup/retention policy.
 - Recovery identity linking and conflict handling.
 - Social provider linking order and App Store Sign in with Apple implications.
-- External no-token default-user fallback must remain disabled once anonymous
-  device-first identity is ready.
+- External no-token default-user fallback is disabled by default and must remain
+  explicit dev/test opt-in only.
 
 Auth Phase 2 Build 72 QA follow-up:
 
@@ -2108,8 +2118,8 @@ Keep the following as Auth Phase 2 closeout / follow-up items:
   observability item, given that Home/Video state convergence passed.
 - Add better Push send/delivery observability before treating Push misses as
   product bugs.
-- Continue to keep no-token default-user fallback internal-only; external
-  users should enter through anonymous Auth.
+- Continue to keep no-token default-user fallback explicit dev/test opt-in only;
+  external users should enter through anonymous Auth.
 
 ### 9. Push Deep Link
 

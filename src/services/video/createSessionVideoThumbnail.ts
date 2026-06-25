@@ -1,6 +1,7 @@
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 import type { SessionVideoAsset } from '../ai';
+import { authenticatedFetch } from '../auth/authenticatedFetch';
 
 type ThumbnailResponse = {
   imageUri?: unknown;
@@ -99,7 +100,7 @@ async function createRemoteSessionVideoThumbnail(video: SessionVideoAsset) {
     type: video.mimeType ?? 'video/quicktime',
   } as unknown as Blob);
 
-  const response = await fetch(thumbnailEndpoint, {
+  const response = await authenticatedFetch(thumbnailEndpoint, {
     method: 'POST',
     body: formData,
   });

@@ -78,8 +78,8 @@ The check classified the current foundation as usable with several watch items:
   disabling.
 - Identity / Ownership: WATCH. Authenticated API calls preserve the Supabase
   Auth -> `public.users` boundary, and core rows remain anchored on
-  `public.users.id`. External No-Token Finalization remains a foundation
-  follow-up because the internal default-user fallback must stay QA-only.
+  `public.users.id`. External No-Token Finalization is now complete; the
+  internal default-user fallback is explicit dev/test opt-in only.
 - Storage / Cleanup: WATCH. Uploaded-source metadata keeps provider, bucket,
   path, and upload target context for recovery/finalize. Source cleanup is
   explicit after completed analysis, while orphan cleanup remains a future
@@ -99,9 +99,32 @@ anonymous state has no video -> Kakao reconnect -> previous video list appears.
 This closes the user-facing ownership continuity concern for Kakao Recovery
 Sign-in. DB read-only verification remains optional for a later low-level audit.
 
-No BLOCKED foundation item was found. The next foundation follow-ups are:
-External No-Token Finalization, Push token account-switch policy, and optional
-recovery-attempt observability. Kakao display-name sync remains low urgency.
+External No-Token Finalization, 2026-06-26:
+
+External no-token/default-user fallback is now closed for normal app/API paths.
+The server no longer allows the internal default user unless it is explicitly
+enabled with `ALLOW_INTERNAL_DEFAULT_USER=true` and `APP_ENV=development` or
+`APP_ENV=test`. The app-side fallback is also explicit-only through
+`EXPO_PUBLIC_ALLOW_INTERNAL_DEFAULT_USER=true`; otherwise API calls require a
+Supabase bearer token from the Anonymous Auth / recovered Kakao session.
+
+Blocked no-token paths include Moment list/create/delete/status, upload target
+creation/failure, source upload/finalize, stored-video analysis, legacy Gemini
+analysis/evidence extraction, OpenAI benchmark, remote thumbnail fallback, and
+Push token registration. Legacy momentId-based source/status/analysis routes
+now verify that the Moment belongs to the resolved request user before writing
+or queueing work. `GET /health` and explicitly internal/debug endpoints remain
+separate from user-owned app data.
+
+Local smoke used `MOCK_AI_ANALYSIS=true` and no paid AI calls. Confirmed:
+`GET /health` returns `internalDefaultUserFallbackAllowed=false`, no-token
+`GET /api/moments` returns 401, no-token
+`POST /api/video-upload-targets` returns 401, invalid bearer returns 401, and
+no-token `POST /api/push-tokens` returns 401. `npm run typecheck` passed.
+
+No BLOCKED foundation item was found. The next foundation follow-ups are Push
+token account-switch policy and optional recovery-attempt observability. Kakao
+display-name sync remains low urgency.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
@@ -334,13 +357,10 @@ Confirmed:
 
 Remaining Auth TODO:
 
-- Private/user-scoped Realtime channel. Current Broadcast channel is still a
-  public MVP sync mechanism.
-- Login UI and app-side authenticated session wiring.
-- External no-token policy. The current no-token default user path is internal
-  QA only and must not become an external user mode.
 - Push token account-switch policy: define whether registration overwrites,
   separates, or cleans old device tokens when a device changes account.
+- External no-token policy is finalized: default-user fallback is explicit
+  dev/test opt-in only and must not become an external user mode.
 
 Auth Phase 2 entry condition:
 

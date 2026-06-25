@@ -5,7 +5,7 @@ export type AuthMode =
   | 'loginRequired';
 
 export function allowsInternalDefaultUser() {
-  return process.env.EXPO_PUBLIC_ALLOW_INTERNAL_DEFAULT_USER !== 'false';
+  return process.env.EXPO_PUBLIC_ALLOW_INTERNAL_DEFAULT_USER === 'true';
 }
 
 export function getAuthMode({

@@ -118,9 +118,9 @@ const thumbnailSignedUrlExpiresSeconds = 60 * 60 * 24;
 const realtimeAnalysisChannelPrefix = "analysis-updates";
 const realtimeInternalDefaultChannel = `${realtimeAnalysisChannelPrefix}:internal-default`;
 const uploadedSourceStorageInspectTimeoutMs = 5_000;
-const allowInternalDefaultUser = process.env.ALLOW_INTERNAL_DEFAULT_USER !== "false";
 const debugCaptureToken = process.env.DEBUG_CAPTURE_TOKEN;
 const appEnv = process.env.APP_ENV ?? "development";
+const allowInternalDefaultUser = isInternalDefaultUserFallbackAllowed();
 const mockAiAnalysisRequested = process.env.MOCK_AI_ANALYSIS === "true";
 const mockAiAllowRemote =
   process.env.MOCK_AI_ANALYSIS_ALLOW_REMOTE === "true";
@@ -288,6 +288,11 @@ app.get("/health", (_request, response) => {
     pushNotifications: {
       endpoint: "/api/push-tokens",
       provider: "expo",
+    },
+    auth: {
+      internalDefaultUserFallbackAllowed: allowInternalDefaultUser,
+      internalDefaultUserFallbackPolicy:
+        "disabled by default; requires APP_ENV=development/test and ALLOW_INTERNAL_DEFAULT_USER=true",
     },
     spendPolicy: "development budget target: under KRW 10,000/month",
     limits: {
@@ -620,6 +625,7 @@ app.post(
         return;
       }
 
+      const requestUser = await resolveRequestUser(request);
       const reason = getField(
         request.body?.reason,
         "Direct upload failed before fallback.",
@@ -649,6 +655,7 @@ app.post(
         failureReason,
         status: "failed",
         uploadId,
+        userId: requestUser.userId,
       });
 
       console.warn("[upload_timing] direct_upload_failure", {
@@ -662,6 +669,10 @@ app.post(
 
       response.json({ ok: true });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -764,6 +775,18 @@ app.post(
         return;
       }
 
+      const requestUser = await resolveRequestUser(request);
+      const ownedMoment = await findMomentOwnedByUser({
+        client,
+        momentId,
+        userId: requestUser.userId,
+      });
+
+      if (!ownedMoment) {
+        response.status(404).json({ error: "Moment not found." });
+        return;
+      }
+
       const storedVideo = await storeMomentSourceVideo({
         client,
         momentId,
@@ -797,6 +820,10 @@ app.post(
         uploadedAt: new Date().toISOString(),
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : "Source video upload failed.";
       console.error("Source video upload failed:", message);
@@ -995,10 +1022,31 @@ app.post(
         return;
       }
 
+      const client = getSupabaseServerClient();
+
+      if (!client) {
+        response.status(503).json({
+          error: "Supabase service role env is not configured.",
+        });
+        return;
+      }
+
       const momentId = getField(request.params.momentId, "");
 
       if (!isUuid(momentId)) {
         response.status(400).json({ error: "Invalid moment id." });
+        return;
+      }
+
+      const requestUser = await resolveRequestUser(request);
+      const ownedMoment = await findMomentOwnedByUser({
+        client,
+        momentId,
+        userId: requestUser.userId,
+      });
+
+      if (!ownedMoment) {
+        response.status(404).json({ error: "Moment not found." });
         return;
       }
 
@@ -1052,6 +1100,10 @@ app.post(
         createdAt: new Date().toISOString(),
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -1554,16 +1606,24 @@ app.patch("/api/moments/:momentId/status", async (request, response) => {
       return;
     }
 
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
     const { data: existingMoment, error: existingMomentError } = await client
       .from("moments")
       .select("id,status,latest_evidence_result_id")
       .eq("id", momentId)
-      .single();
+      .eq("user_id", userId)
+      .maybeSingle();
 
     if (existingMomentError) {
       throw new Error(
         `Failed to read moment status: ${existingMomentError.message}`,
       );
+    }
+
+    if (!existingMoment) {
+      response.status(404).json({ error: "Moment not found." });
+      return;
     }
 
     const isDowngradeRequest = status === "queued" || status === "processing";
@@ -1580,8 +1640,9 @@ app.patch("/api/moments/:momentId/status", async (request, response) => {
           .update({
             status: "completed",
             updated_at: new Date().toISOString(),
-          })
-          .eq("id", momentId);
+        })
+        .eq("id", momentId)
+        .eq("user_id", userId);
 
         if (completedUpdateError) {
           throw new Error(
@@ -1604,6 +1665,7 @@ app.patch("/api/moments/:momentId/status", async (request, response) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", momentId)
+      .eq("user_id", userId)
       .select("id,status")
       .single();
 
@@ -1616,6 +1678,10 @@ app.patch("/api/moments/:momentId/status", async (request, response) => {
       status: data.status,
     });
   } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Moment status update failed.";
     console.error("Moment status update failed:", message);
@@ -1706,6 +1772,8 @@ app.post(
   upload.single("video"),
   async (request, response) => {
     try {
+      await resolveRequestUser(request);
+
       if (!request.file) {
         response.status(400).json({ error: "video file is required." });
         return;
@@ -1723,6 +1791,10 @@ app.post(
         createdAt: new Date().toISOString(),
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : "Thumbnail creation failed.";
       console.error("Thumbnail creation failed:", message);
@@ -1740,6 +1812,8 @@ app.post(
   upload.single("video"),
   async (request, response) => {
     try {
+      await resolveRequestUser(request);
+
       const usageKey = todayKey("gemini");
 
       if (!mockAiAnalysisEnabled && isDailyUsageLimitExceeded(usageKey)) {
@@ -1855,6 +1929,10 @@ app.post(
         createdAt: new Date().toISOString(),
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : "Analysis failed.";
       console.error("Gemini analysis request failed:", message);
@@ -1872,6 +1950,8 @@ app.post(
   upload.single("video"),
   async (request, response) => {
     try {
+      const requestUser = await resolveRequestUser(request);
+
       if (!mockAiAnalysisEnabled && !process.env.GEMINI_API_KEY) {
         response.status(500).json({
           error: "GEMINI_API_KEY is not configured on the server.",
@@ -1892,7 +1972,10 @@ app.post(
       }
 
       const metadata = getSessionMetadata(request);
-      const queuedJob = await getOrCreateQueuedEvidenceAnalysisJob(metadata);
+      const queuedJob = await getOrCreateQueuedEvidenceAnalysisJob(
+        metadata,
+        requestUser.userId,
+      );
 
       if (!queuedJob) {
         response.status(400).json({
@@ -1943,6 +2026,10 @@ app.post(
         createdAt: new Date().toISOString(),
       });
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : "Evidence extraction failed.";
       console.error("Gemini evidence extraction failed:", message);
@@ -1960,6 +2047,8 @@ app.post(
   upload.single("video"),
   async (request, response) => {
     try {
+      await resolveRequestUser(request);
+
       const usageKey = todayKey("openai");
 
       assertExternalAiAllowed("OpenAI benchmark");
@@ -2259,6 +2348,10 @@ app.post(
 
       response.json(responseBody);
     } catch (error) {
+      if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : "Benchmark failed.";
       console.error("OpenAI benchmark request failed:", message);
@@ -4406,6 +4499,29 @@ async function updateUploadTargetStatus({
   }
 }
 
+async function findMomentOwnedByUser({
+  client,
+  momentId,
+  userId,
+}: {
+  client: SupabaseServerClient;
+  momentId: string;
+  userId: string;
+}) {
+  const { data, error } = await client
+    .from("moments")
+    .select("id")
+    .eq("id", momentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to verify Moment ownership: ${error.message}`);
+  }
+
+  return data;
+}
+
 async function removeStoredVideoAfterFailedMomentCreate({
   client,
   path,
@@ -4655,14 +4771,17 @@ async function updateAnalysisJobStoredVideoInput({
   }
 }
 
-async function getOrCreateQueuedEvidenceAnalysisJob(metadata: SessionMetadata) {
+async function getOrCreateQueuedEvidenceAnalysisJob(
+  metadata: SessionMetadata,
+  userId?: string,
+) {
   const client = getSupabaseServerClient();
 
   if (!client) {
     throw new Error("Supabase service role env is not configured.");
   }
 
-  const linkedMoment = await findLinkedMomentForEvidence(metadata);
+  const linkedMoment = await findLinkedMomentForEvidence(metadata, userId);
 
   if (!linkedMoment) {
     return null;
@@ -5528,7 +5647,10 @@ async function runGeminiEvidenceExtraction({
   }
 }
 
-async function findLinkedMomentForEvidence(metadata: SessionMetadata) {
+async function findLinkedMomentForEvidence(
+  metadata: SessionMetadata,
+  userId?: string,
+) {
   const client = getSupabaseServerClient();
 
   if (!client) {
@@ -5536,11 +5658,11 @@ async function findLinkedMomentForEvidence(metadata: SessionMetadata) {
   }
 
   if (isUuid(metadata.momentId)) {
-    return findMomentByColumn("id", metadata.momentId);
+    return findMomentByColumn("id", metadata.momentId, userId);
   }
 
   if (isUuid(metadata.sessionId)) {
-    return findMomentByColumn("session_id", metadata.sessionId);
+    return findMomentByColumn("session_id", metadata.sessionId, userId);
   }
 
   return null;
@@ -6520,6 +6642,13 @@ function readExpoPushErrorCode(details: unknown) {
   return nullableString((details as Record<string, unknown>).error);
 }
 
+function isInternalDefaultUserFallbackAllowed() {
+  return (
+    process.env.ALLOW_INTERNAL_DEFAULT_USER === "true" &&
+    (appEnv === "development" || appEnv === "test")
+  );
+}
+
 function isInternalDevEndpointAllowed(request: express.Request) {
   if (appEnv !== "production") {
     return true;
@@ -6528,18 +6657,27 @@ function isInternalDevEndpointAllowed(request: express.Request) {
   return Boolean(debugCaptureToken && getDebugToken(request) === debugCaptureToken);
 }
 
-async function findMomentByColumn(column: "id" | "session_id", value: string) {
+async function findMomentByColumn(
+  column: "id" | "session_id",
+  value: string,
+  userId?: string,
+) {
   const client = getSupabaseServerClient();
 
   if (!client) {
     return null;
   }
 
-  const { data, error } = await client
+  let query = client
     .from("moments")
     .select("id,user_id,status,latest_evidence_result_id")
-    .eq(column, value)
-    .maybeSingle();
+    .eq(column, value);
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw new Error(`Failed to find linked Moment: ${error.message}`);
@@ -6687,8 +6825,13 @@ async function resolveRequestUser(
     await client.auth.getUser(bearerToken);
 
   if (authError || !authData.user?.id) {
-    throw new Error(
-      `Invalid Supabase auth token: ${authError?.message ?? "missing user"}`,
+    console.warn("[auth]", {
+      authMode: "auth_required",
+      event: "invalid_bearer_token",
+      route: request.path,
+    });
+    throw new AuthRequiredRequestError(
+      "A valid Supabase auth token is required for this request.",
     );
   }
 
