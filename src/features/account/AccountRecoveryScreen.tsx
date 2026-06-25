@@ -17,11 +17,22 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { normalizeRecoveryEmail } from '../../services/auth/accountRecovery';
 import { useAuthSession } from '../../services/auth/AuthSessionProvider';
+import { checkRecoveryLocalWorkGuard } from './recoveryLocalWorkGuard';
 
 type RecoveryStep = 'idle' | 'emailSent' | 'linked';
 type KakaoFeedbackType = 'success' | 'cancelled' | 'dismissed' | 'error';
 type KakaoFeedback = {
   type: KakaoFeedbackType;
+  message: string;
+};
+type KakaoRecoveryFeedbackType =
+  | 'success'
+  | 'cancelled'
+  | 'dismissed'
+  | 'blocked'
+  | 'error';
+type KakaoRecoveryFeedback = {
+  type: KakaoRecoveryFeedbackType;
   message: string;
 };
 type KakaoUiState =
@@ -211,6 +222,7 @@ export function AccountRecoveryScreen() {
     authMode,
     isLoading,
     linkKakaoIdentity,
+    recoverWithKakao,
     requestRecoveryEmailLink,
     refreshSession,
     user,
@@ -220,7 +232,10 @@ export function AccountRecoveryScreen() {
   const [step, setStep] = useState<RecoveryStep>(user?.email ? 'linked' : 'idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [kakaoFeedback, setKakaoFeedback] = useState<KakaoFeedback | null>(null);
+  const [kakaoRecoveryFeedback, setKakaoRecoveryFeedback] =
+    useState<KakaoRecoveryFeedback | null>(null);
   const [isLinkingKakao, setIsLinkingKakao] = useState(false);
+  const [isRecoveringWithKakao, setIsRecoveringWithKakao] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isRefreshingSession, setIsRefreshingSession] = useState(false);
 
@@ -234,18 +249,27 @@ export function AccountRecoveryScreen() {
     normalizedEmail.includes('@') &&
     !isSubmittingEmail &&
     !isRefreshingSession &&
-    !isLinkingKakao;
+    !isLinkingKakao &&
+    !isRecoveringWithKakao;
   const canRefreshLinkStatus =
     authMode === 'authenticated' &&
     !isSubmittingEmail &&
     !isRefreshingSession &&
-    !isLinkingKakao;
+    !isLinkingKakao &&
+    !isRecoveringWithKakao;
   const canLinkKakao =
     authMode === 'authenticated' &&
     !hasKakaoIdentity &&
     !isSubmittingEmail &&
     !isRefreshingSession &&
-    !isLinkingKakao;
+    !isLinkingKakao &&
+    !isRecoveringWithKakao;
+  const canRecoverWithKakao =
+    authMode === 'authenticated' &&
+    !isSubmittingEmail &&
+    !isRefreshingSession &&
+    !isLinkingKakao &&
+    !isRecoveringWithKakao;
   const kakaoUiCopy = getKakaoUiCopy({
     hasKakaoIdentity,
     isLinkingKakao,
@@ -266,6 +290,7 @@ export function AccountRecoveryScreen() {
 
     setErrorMessage(null);
     setKakaoFeedback(null);
+    setKakaoRecoveryFeedback(null);
     setIsSubmittingEmail(true);
 
     try {
@@ -286,6 +311,7 @@ export function AccountRecoveryScreen() {
 
     setErrorMessage(null);
     setKakaoFeedback(null);
+    setKakaoRecoveryFeedback(null);
     setIsRefreshingSession(true);
 
     try {
@@ -309,6 +335,7 @@ export function AccountRecoveryScreen() {
     setEmail(pendingEmail);
     setErrorMessage(null);
     setKakaoFeedback(null);
+    setKakaoRecoveryFeedback(null);
     setIsSubmittingEmail(true);
 
     try {
@@ -327,6 +354,7 @@ export function AccountRecoveryScreen() {
 
     setErrorMessage(null);
     setKakaoFeedback(null);
+    setKakaoRecoveryFeedback(null);
     setIsLinkingKakao(true);
 
     try {
@@ -365,6 +393,64 @@ export function AccountRecoveryScreen() {
       });
     } finally {
       setIsLinkingKakao(false);
+    }
+  };
+
+  const handleRecoverWithKakao = async () => {
+    if (!canRecoverWithKakao) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setKakaoFeedback(null);
+    setKakaoRecoveryFeedback(null);
+    setIsRecoveringWithKakao(true);
+
+    try {
+      const guard = await checkRecoveryLocalWorkGuard();
+
+      if (!guard.canRecover) {
+        setKakaoRecoveryFeedback({
+          type: 'blocked',
+          message: guard.message,
+        });
+        return;
+      }
+
+      const result = await recoverWithKakao();
+
+      if (result.status === 'recovered') {
+        setEmail(result.user.email ?? '');
+        setStep(result.user.email ? 'linked' : 'idle');
+        setKakaoRecoveryFeedback({
+          type: 'success',
+          message: '카카오 계정의 기존 기록으로 돌아왔습니다.',
+        });
+        return;
+      }
+
+      if (result.status === 'notRecovered') {
+        setKakaoRecoveryFeedback({
+          type: 'error',
+          message: result.message,
+        });
+        return;
+      }
+
+      setKakaoRecoveryFeedback({
+        type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
+        message:
+          result.status === 'cancelled'
+            ? '카카오 복구 로그인이 취소되었습니다. 현재 기기 계정은 그대로 유지됩니다.'
+            : '카카오 복구 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
+      });
+    } catch (error) {
+      setKakaoRecoveryFeedback({
+        type: 'error',
+        message: getErrorMessage(error),
+      });
+    } finally {
+      setIsRecoveringWithKakao(false);
     }
   };
 
@@ -568,6 +654,56 @@ export function AccountRecoveryScreen() {
                     ]}
                   >
                     {kakaoFeedback.message}
+                  </Text>
+                ) : null}
+              </View>
+
+              <View style={styles.recoveryBlock}>
+                <Text style={styles.formLabel}>기존 기록 복구하기</Text>
+                <Text style={styles.recoveryTitle}>
+                  카카오로 기존 기록 복구
+                </Text>
+                <Text style={styles.helperText}>
+                  앱을 다시 설치했거나 새 기기라면, 이전에 연결한 카카오
+                  계정으로 기존 라이딩 기록을 불러옵니다.
+                </Text>
+                <Text style={styles.recoveryNoticeText}>
+                  이 기능은 현재 기기에 복구 수단을 연결하는 것이 아니라,
+                  기존 카카오 연결 계정으로 세션을 전환합니다.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!canRecoverWithKakao}
+                  onPress={handleRecoverWithKakao}
+                  style={({ pressed }) => [
+                    styles.recoveryButton,
+                    !canRecoverWithKakao ? styles.buttonDisabled : undefined,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  {isRecoveringWithKakao ? (
+                    <ActivityIndicator color="#f8fafc" />
+                  ) : (
+                    <Text style={styles.recoveryButtonText}>
+                      카카오로 기존 기록 복구
+                    </Text>
+                  )}
+                </Pressable>
+                {kakaoRecoveryFeedback ? (
+                  <Text
+                    style={[
+                      styles.recoveryStatusText,
+                      kakaoRecoveryFeedback.type === 'success'
+                        ? styles.recoveryStatusTextSuccess
+                        : kakaoRecoveryFeedback.type === 'blocked'
+                          ? styles.recoveryStatusTextAttention
+                          : kakaoRecoveryFeedback.type === 'cancelled' ||
+                              kakaoRecoveryFeedback.type === 'dismissed'
+                            ? styles.recoveryStatusTextNeutral
+                            : styles.recoveryStatusTextError,
+                    ]}
+                  >
+                    {kakaoRecoveryFeedback.message}
                   </Text>
                 ) : null}
               </View>
@@ -827,6 +963,57 @@ const styles = StyleSheet.create({
   },
   kakaoStatusTextAttention: {
     color: '#fde68a',
+  },
+  recoveryBlock: {
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    borderColor: 'rgba(96, 165, 250, 0.24)',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 18,
+    padding: 14,
+  },
+  recoveryTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  recoveryNoticeText: {
+    color: '#bfdbfe',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  recoveryButton: {
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  recoveryButtonText: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  recoveryStatusText: {
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 19,
+  },
+  recoveryStatusTextAttention: {
+    color: '#fde68a',
+  },
+  recoveryStatusTextError: {
+    color: '#fecdd3',
+  },
+  recoveryStatusTextNeutral: {
+    color: '#cbd5e1',
+  },
+  recoveryStatusTextSuccess: {
+    color: '#bbf7d0',
   },
   helperText: {
     color: '#9ca3af',

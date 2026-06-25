@@ -17,6 +17,10 @@ import {
   linkKakaoIdentity,
   type KakaoLinkResult,
 } from './kakaoLinking';
+import {
+  signInWithKakaoRecovery,
+  type KakaoRecoverySignInResult,
+} from './kakaoRecoverySignIn';
 import { supabase } from '../supabase/client';
 
 type AuthSessionState = {
@@ -26,6 +30,7 @@ type AuthSessionState = {
   isLoading: boolean;
   linkKakaoIdentity: () => Promise<KakaoLinkResult>;
   requestRecoveryEmailLink: (email: string) => Promise<void>;
+  recoverWithKakao: () => Promise<KakaoRecoverySignInResult>;
   refreshSession: () => Promise<Session | null>;
   session: Session | null;
   signOut: () => Promise<void>;
@@ -207,6 +212,23 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
               }
             : currentSession,
         );
+      },
+      recoverWithKakao: async () => {
+        const result = await signInWithKakaoRecovery();
+
+        if (result.status === 'recovered') {
+          const nextSession = await refreshSupabaseSession();
+          setSession(
+            nextSession
+              ? {
+                  ...nextSession,
+                  user: result.user ?? nextSession.user,
+                }
+              : result.session,
+          );
+        }
+
+        return result;
       },
       refreshSession: async () => {
         const nextSession = await refreshSupabaseSession();
