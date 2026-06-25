@@ -374,7 +374,7 @@ export function AccountRecoveryScreen() {
             <Text style={styles.kicker}>Account Recovery</Text>
             <Text style={styles.title}>계정 복구</Text>
             <Text style={styles.headerMeta}>
-              이 기기의 라이딩 기록을 이메일로 복구할 수 있게 연결합니다.
+              이 기기의 라이딩 기록을 복구할 수단을 연결합니다.
             </Text>
           </View>
           <View style={styles.headerSpacer} />
@@ -522,9 +522,8 @@ export function AccountRecoveryScreen() {
                 </View>
                 <Text style={styles.helperText}>{kakaoUiCopy.description}</Text>
                 <Text style={styles.kakaoFallbackText}>
-                  이메일 복구는 별도 예비 수단입니다. 카카오와 이메일은 서로
-                  대체 경로이며, 둘 중 하나만 연결되어도 기록 복구에 사용할 수
-                  있습니다.
+                  카카오와 이메일은 대체 복구 수단입니다. 둘 중 하나만
+                  연결해도 기록 복구에 사용할 수 있습니다.
                 </Text>
                 <Pressable
                   accessibilityRole="button"
