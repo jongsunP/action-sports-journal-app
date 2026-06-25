@@ -62,6 +62,9 @@ Policy:
 - If a behavior can be checked in the simulator, check it there first.
 - If a physical iPhone must be used but an EAS build is not required, prefer
   the non-build path first.
+- When a build is genuinely needed, consider whether small, safe, already
+  reviewed UI/copy fixes can ship with the same build. Do not bundle unrelated
+  changes that would blur the QA purpose.
 - For upload or analysis pipeline work, keep the real app -> backend API ->
   server flow whenever possible.
 - To control cost, temporarily bypass only the paid AI provider call when the
@@ -75,6 +78,12 @@ Principle:
 ```text
 Validate like the real product, but spend build and AI cost only when they are
 the best next move.
+```
+
+Short form:
+
+```text
+비용과 빌드는 아끼되, 검증의 현실성은 아끼지 않는다.
 ```
 
 ## User Action Instruction Format

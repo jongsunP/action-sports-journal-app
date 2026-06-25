@@ -45,11 +45,18 @@ well enough through the simulator, local dev path, Expo/dev-client path, or
 another lower-cost route. If physical-device behavior is required, still prefer
 non-build verification when it is technically sufficient.
 
+When a build is genuinely needed, consider whether small, safe, already
+reviewed UI/copy fixes can ship with the same build. Keep the QA purpose clear;
+do not bundle unrelated changes that would make the build result hard to
+interpret.
+
 For upload and analysis work, do not replace the product path with mock data.
 The app should still call the backend API and exercise the real server flow.
 When the test target is not AI quality itself, it is acceptable to temporarily
 bypass only the paid AI provider call and return a realistic server-side OK
 result so the pipeline can be tested without unnecessary AI cost.
+
+Short form: 비용과 빌드는 아끼되, 검증의 현실성은 아끼지 않는다.
 
 User action instruction format:
 
