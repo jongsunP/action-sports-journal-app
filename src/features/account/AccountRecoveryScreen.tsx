@@ -134,10 +134,10 @@ function getKakaoUiCopy({
     case 'error':
       return {
         state,
-        title: '카카오 연결 실패',
+        title: '카카오 연결 확인 필요',
         description:
           kakaoFeedback?.message ??
-          '카카오 연결을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.',
+          '현재 기기 계정에는 카카오가 연결되지 않았습니다. 필요하면 다시 시도해주세요.',
         buttonLabel: '카카오로 다시 연결',
       };
     case 'notLinked':
@@ -517,7 +517,7 @@ export function AccountRecoveryScreen() {
                             kakaoUiCopy.state === 'dismissed'
                           ? styles.kakaoStateBadgeNeutral
                           : kakaoUiCopy.state === 'error'
-                            ? styles.kakaoStateBadgeError
+                            ? styles.kakaoStateBadgeAttention
                             : styles.kakaoStateBadgeDefault,
                     ]}
                   >
@@ -528,7 +528,7 @@ export function AccountRecoveryScreen() {
                         : kakaoUiCopy.state === 'linking'
                           ? '진행 중'
                           : kakaoUiCopy.state === 'error'
-                            ? '오류'
+                            ? '확인 필요'
                             : kakaoUiCopy.state === 'cancelled' ||
                                 kakaoUiCopy.state === 'dismissed'
                               ? '미완료'
@@ -559,11 +559,12 @@ export function AccountRecoveryScreen() {
                     </Text>
                   )}
                 </Pressable>
-                {kakaoFeedback?.type === 'error' ? (
+                {kakaoFeedback?.type === 'error' &&
+                kakaoUiCopy.description !== kakaoFeedback.message ? (
                   <Text
                     style={[
                       styles.kakaoStatusText,
-                      styles.kakaoStatusTextError,
+                      styles.kakaoStatusTextAttention,
                     ]}
                   >
                     {kakaoFeedback.message}
@@ -790,9 +791,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(250, 204, 21, 0.12)',
     borderColor: 'rgba(250, 204, 21, 0.26)',
   },
-  kakaoStateBadgeError: {
-    backgroundColor: 'rgba(244, 63, 94, 0.13)',
-    borderColor: 'rgba(251, 113, 133, 0.28)',
+  kakaoStateBadgeAttention: {
+    backgroundColor: 'rgba(250, 204, 21, 0.12)',
+    borderColor: 'rgba(250, 204, 21, 0.28)',
   },
   kakaoStateBadgeText: {
     color: '#f8fafc',
@@ -824,8 +825,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 19,
   },
-  kakaoStatusTextError: {
-    color: '#fecdd3',
+  kakaoStatusTextAttention: {
+    color: '#fde68a',
   },
   helperText: {
     color: '#9ca3af',
