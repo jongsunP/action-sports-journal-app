@@ -198,10 +198,11 @@ Current stable workstream list:
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)는 Home 상단 Journal Snapshot, 최근 인사이트, 최근 기록 문맥으로 완료
 
 바로 앞 작업:
-- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)
+- Upload Entry UX Polish(업로드 진입 UX 정리)
 
 가까운 후속:
 - Kakao Single CTA Recovery UX Simulator/Standalone QA(카카오 단일 CTA 복구 UX 검증)
+- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Analysis Trust UX(분석 신뢰 UX)
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
@@ -253,6 +254,11 @@ considered handed off until the Founder explicitly says it was passed to the
 development session. During the break, answer the Founder first and provide a
 revised final prompt only when the Founder asks to continue or requests the
 prompt again.
+
+If the CTO session shows a copyable development-session prompt and the Founder
+asks a follow-up question before saying it was delivered, assume the prompt has
+not been sent. Revise the task direction based on the discussion instead of
+treating the earlier prompt as active.
 
 Keep meta-collaboration settings separate from development task context.
 Preferences about answer format, session workflow, handoff rhythm, memory, and

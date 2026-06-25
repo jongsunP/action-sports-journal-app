@@ -180,7 +180,14 @@ Upload UX:
 
 - Current state: Upload pipeline is stable enough after Foundation Safety Check
   and the 20MB pre-upload guard.
-- Do soon: Upload Entry UX bottom sheet can reduce duplicate Home CTA weight.
+- Do soon: Upload Entry UX Polish can refine CTA/copy/selection constraints
+  without assuming a bottom sheet.
+- Current product judgment: because upload no longer requires pre-submit title
+  or description, the current stack-style upload screen may be safer than a
+  bottom sheet. The preferred flow is media selection -> upload/analyze ->
+  optional note later. Instagram remains an important UX reference for
+  media-native speed, but ASJ should not copy Instagram's caption/share
+  pre-submit step unless the product actually needs that input.
 - Wait: Compression / Upload Optimization is a separate technical/product
   decision and should not be bundled into immediate UX polish.
 
@@ -340,7 +347,9 @@ progression, media/share, or new data-model work.
 
 ### Follow-up
 
-- Upload Entry UX Bottom Sheet remains the recommended next product UX slice.
+- Upload Entry UX Polish remains the recommended next product UX slice. Do not
+  assume bottom sheet conversion; keep the current stack-style upload flow if
+  it better matches the no-required-input upload philosophy.
 - Analysis Trust UX can follow after upload entry and journal framing are more
   stable.
 - A deeper Home v2 timeline/progression pass should wait until it can reuse

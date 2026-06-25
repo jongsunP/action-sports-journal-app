@@ -158,6 +158,11 @@ development session. During the break, answer the Founder first and provide a
 revised final prompt only when the Founder asks to continue or requests the
 prompt again.
 
+If the CTO session only displayed a prompt and the Founder asks a follow-up
+question, assume the prompt has not been delivered to the development session.
+Do not continue as though that prompt is active; revise or replace it after the
+discussion.
+
 Keep meta-collaboration settings separate from development task context.
 Preferences about answer format, session workflow, handoff rhythm, memory, and
 remote-push discipline are operating rules for Codex/CTO sessions. Record them
@@ -405,8 +410,11 @@ Implemented scope:
 
 Candidate comparison from the review:
 
-- Upload UX: current pipeline is safe enough after the 20MB guard. Upload Entry
-  bottom sheet is valuable but depends on UI primitive/composer reorganization.
+- Upload UX: current pipeline is safe enough after the 20MB guard. The next
+  step should be Upload Entry UX Polish, not necessarily a bottom sheet.
+  Current product thinking favors fast media selection -> upload/analyze ->
+  optional note later. A bottom sheet can be reconsidered if upload has
+  meaningful pre-submit choices, but should not be assumed as the default.
   Compression / Upload Optimization remains a separate later technical/product
   decision.
 - Analysis UX: trust/review improvements are important, especially evidence,
@@ -436,7 +444,8 @@ Backlog after Push Token Account-switch Policy and product UX review:
   visible action panel, disabled retry reasons, and delete in the same action
   area.
 - Home v2 / Journal UX first slice after status consistency.
-- Upload Entry UX bottom sheet.
+- Upload Entry UX Polish. Keep the current stack-style upload screen unless a
+  bottom sheet clearly improves a real pre-submit choice.
 - Analysis trust UX: Trick Review and visual summary candidates.
 - Media / Share UX later.
 - Recovery attempt observability row/log design, if desired.
