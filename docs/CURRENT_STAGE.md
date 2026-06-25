@@ -92,10 +92,16 @@ The check classified the current foundation as usable with several watch items:
   known ownership. Email Recovery remains baseline/fallback and still needs
   redirect/deep-link productization before completion.
 
+Follow-up QA update: existing-Moment Kakao Recovery smoke passed from the
+Founder side. The tested path was fresh install -> Kakao reconnect -> upload
+video -> app restart confirms video exists -> delete app -> reinstall ->
+anonymous state has no video -> Kakao reconnect -> previous video list appears.
+This closes the user-facing ownership continuity concern for Kakao Recovery
+Sign-in. DB read-only verification remains optional for a later low-level audit.
+
 No BLOCKED foundation item was found. The next foundation follow-ups are:
-ownership continuity with a user that already has Moments, External No-Token
-Finalization, Push token account-switch policy, and optional recovery-attempt
-observability. Kakao display-name sync remains low urgency.
+External No-Token Finalization, Push token account-switch policy, and optional
+recovery-attempt observability. Kakao display-name sync remains low urgency.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 

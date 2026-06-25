@@ -291,24 +291,27 @@ Result summary:
   observability; user-scoped Realtime/foreground refresh remain the data sync
   path.
 - WATCH: external no-token fallback must be finalized for production/preview;
-  ownership continuity should be rechecked with an account that already has
-  Moments; source/orphan cleanup remains deliberately cautious; recovery
-  attempts do not yet have a dedicated structured DB row; Email Recovery remains
+  source/orphan cleanup remains deliberately cautious; recovery attempts do not
+  yet have a dedicated structured DB row; Email Recovery remains
   baseline/fallback pending redirect/deep-link productization.
 - FIXED: known >20MB picker assets now show a local size alert instead of
   entering the upload flow.
 - BLOCKED: none found during the document/code safety check.
 
+Follow-up QA update: the Founder later confirmed the existing-Moment Kakao
+Recovery smoke. Tested path: fresh install -> Kakao reconnect -> upload video
+-> restart app and confirm video exists -> delete app -> reinstall -> anonymous
+state has no video -> Kakao reconnect -> previous video list appears. Treat the
+user-facing ownership-continuity smoke as complete; DB read-only verification
+is optional later if a low-level audit is needed.
+
 Next starting point:
 
 Foundation Safety Check is no longer the next task. Move to the foundation
-hardening queue. The nearest CTO decision is whether to start External
-No-Token Finalization first or run an ownership-continuity smoke with an account
-that already has Moments.
+hardening queue. The nearest CTO decision is External No-Token Finalization.
 
 Backlog after Foundation Safety Check:
 
-- Ownership continuity with an account that already has Moments.
 - External No-Token Finalization.
 - Push token account-switch policy.
 - Recovery attempt observability row/log design, if desired.
@@ -334,10 +337,9 @@ Response/collaboration rules updated:
 
 Next start point:
 
-Post-Foundation Safety Check hardening. Start with either External No-Token
-Finalization or ownership continuity smoke with a user that already has
-Moments, depending on CTO/user alignment. Keep Push token account-switch policy
-close behind. Kakao `name` / `full_name` -> `public.users.display_name` sync is
+Post-Foundation Safety Check hardening. Start with External No-Token
+Finalization. Keep Push token account-switch policy close behind. Kakao `name`
+/ `full_name` -> `public.users.display_name` sync is
 low urgency.
 
 Build 74 Push QA / current handoff, 2026-06-24:

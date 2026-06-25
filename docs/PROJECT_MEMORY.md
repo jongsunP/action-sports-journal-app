@@ -173,6 +173,7 @@ Current stable workstream list:
 - Kakao Recovery / Account Linking(카카오 복구 / 계정 연결)
 - Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차)
 - Foundation Safety Check(기반 안전 점검)
+- Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -183,12 +184,12 @@ Current stable workstream list:
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 - Foundation Safety Check(기반 안전 점검)는 2026-06-26 완료
 - Upload File-size Validation(업로드 용량 초과 사전 차단)은 20MB 사전 차단으로 반영
+- Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)는 재설치 후 카카오 복구 시 기존 영상 목록 재노출 확인
 
 바로 앞 작업:
-- External No-Token Finalization(외부 무토큰 경로 최종 정리) 또는 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
+- External No-Token Finalization(외부 무토큰 경로 최종 정리)
 
 가까운 후속:
-- 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 
@@ -520,16 +521,20 @@ Current foundation readout:
 - PASS: Push remains notification-only with Push Observability P2 in place;
   private Realtime/foreground refresh remain the sync source of truth; Kakao
   Account Linking and Kakao Recovery Sign-in P1 remain separated and verified.
-- WATCH: External No-Token Finalization, ownership continuity with a user that
-  already has Moments, Push token account-switch policy, source/orphan cleanup
-  caution, optional recovery-attempt observability, and Email Recovery
-  redirect/deep-link productization.
+- WATCH: External No-Token Finalization, Push token account-switch policy,
+  source/orphan cleanup caution, optional recovery-attempt observability, and
+  Email Recovery redirect/deep-link productization.
 - FIXED: local 20MB upload size guard.
 - BLOCKED: none.
 
-Next foundation hardening should start with either External No-Token
-Finalization or ownership continuity smoke with an existing-Moment account,
-depending on CTO/user alignment.
+Follow-up QA update: the Founder completed an existing-Moment recovery smoke.
+Scenario: fresh install -> Kakao reconnect -> upload video -> restart app and
+confirm video exists -> delete app -> reinstall -> anonymous state has no video
+-> Kakao reconnect -> previous video list appears. This closes the user-facing
+Kakao Recovery ownership smoke. DB read-only verification can still be used
+later if a low-level ownership audit is needed.
+
+Next foundation hardening should start with External No-Token Finalization.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 

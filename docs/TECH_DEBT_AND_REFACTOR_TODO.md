@@ -119,9 +119,12 @@ WATCH:
   `public.users` boundary for bearer-token requests, but External No-Token
   Finalization is still needed so the default user path cannot leak into
   external app traffic.
-- Moment ownership continuity after Kakao Recovery Sign-in should be rechecked
-  with an account that already has Moments. Build 81 passed user-facing recovery,
-  but the recovered sample was not a Moment-preservation sample.
+- Moment ownership continuity after Kakao Recovery Sign-in has passed a
+  user-facing existing-Moment smoke. The Founder tested fresh install -> Kakao
+  reconnect -> upload video -> restart app and confirm video exists -> delete
+  app -> reinstall -> anonymous state has no video -> Kakao reconnect ->
+  previous video list appears. DB read-only verification remains optional later
+  if a low-level ownership audit is needed.
 - Uploaded-source recovery has enough provider/bucket/path/upload-target
   metadata to finalize safely, but automatic orphan cleanup should remain
   deferred until retry/recovery semantics are rechecked.
