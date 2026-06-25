@@ -361,6 +361,51 @@ progression, media/share, or new data-model work.
 - A deeper Home v2 timeline/progression pass should wait until it can reuse
   existing data honestly without inventing progression metrics.
 
+## Upload Entry UX Polish - 2026-06-26
+
+### Decision
+
+Keep the current route-backed/full-screen Upload flow. Do not convert to a
+bottom sheet yet.
+
+Reasoning:
+
+- Current product direction is fast media selection first.
+- The app no longer needs a pre-submit title/description/caption step for this
+  slice.
+- A bottom sheet could imply there is extra form work before upload, which would
+  work against the desired Instagram-like quick media creation feel.
+- The existing Upload screen already gives enough room for selected-video
+  confirmation, upload safety copy, progress, and failure state.
+
+### Implemented scope
+
+- Added "새 기록 만들기" header copy to `UploadContent`.
+- Reframed selected-video metadata as "선택한 라이딩 영상".
+- Added a compact "영상 확인 -> 업로드 -> 분석 시작" step strip.
+- Added helper copy that analysis can start without a memo step and that the
+  current limit is 20MB.
+- Updated the primary action to "업로드하고 분석 시작".
+- Preserved picker, upload submit, upload progress, upload failure alert/retry,
+  route-backed `UploadScreen`, and existing 20MB pre-upload validation.
+
+### Validation
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed Home upload CTA opens the iOS video
+  picker.
+- Selected-video Upload screen rendering was verified by code path/typecheck
+  because the simulator picker did not complete selection during this pass.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
+### Follow-up
+
+- Upload Entry Bottom Sheet remains deferred until the product has a real
+  pre-submit choice that benefits from a sheet.
+- Compression / Upload Optimization remains a separate later workstream.
+
 ## Kakao Single CTA Recovery UX - 2026-06-26
 
 ### Decision

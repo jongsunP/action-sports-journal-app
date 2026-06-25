@@ -75,6 +75,12 @@ export function UploadContent({
             >
               <Text style={styles.headerMenuText}>×</Text>
             </Pressable>
+            <View style={styles.uploadSheetTitleBlock}>
+              <Text style={styles.uploadSheetTitle}>새 기록 만들기</Text>
+              <Text style={styles.uploadSheetDescription}>
+                영상을 고르면 바로 업로드하고 분석을 시작합니다.
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -95,13 +101,27 @@ export function UploadContent({
                   styles.selectedVideoInfo,
                 ]}
               >
-                <Text style={styles.selectedVideoLabel}>선택된 영상</Text>
+                <Text style={styles.selectedVideoLabel}>선택한 라이딩 영상</Text>
                 <Text style={styles.selectedVideoTitle} numberOfLines={1}>
                   {visibleVideo.fileName ?? '선택한 영상'}
                 </Text>
                 <Text style={styles.selectedVideoMeta}>
                   {formatVideoMeta(visibleVideo)}
                 </Text>
+                <View style={styles.uploadStepStrip}>
+                  <UploadStepItem index="1" label="영상 확인" styles={styles} />
+                  <UploadStepItem index="2" label="업로드" styles={styles} />
+                  <UploadStepItem index="3" label="분석 시작" styles={styles} />
+                </View>
+                <View style={styles.selectedVideoHelper}>
+                  <Text style={styles.selectedVideoHelperTitle}>
+                    빠르게 기록을 시작합니다
+                  </Text>
+                  <Text style={styles.selectedVideoHelperText}>
+                    메모 입력 없이 먼저 분석합니다. 현재 업로드는 20MB 이하
+                    클립만 지원합니다.
+                  </Text>
+                </View>
               </View>
             </>
           ) : (
@@ -114,7 +134,7 @@ export function UploadContent({
 
         <View style={styles.uploadPageFooter}>
           <Text style={styles.uploadAiNotice}>
-            업로드가 끝나면 AI 분석을 시작합니다. 업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.
+            업로드가 끝나면 분석은 서버에서 이어집니다. 업로드 중에는 앱을 닫지 않는 것이 안전합니다.
           </Text>
           {isSubmitting ? (
             <View style={styles.uploadSubmittingPanel}>
@@ -174,7 +194,7 @@ export function UploadContent({
                   ? '업로드 중...'
                   : isPreparingThumbnail
                     ? '준비 중...'
-                    : '업로드'}
+                    : '업로드하고 분석 시작'}
               </Text>
             </Pressable>
           </View>
@@ -218,6 +238,23 @@ export function UploadContent({
         ) : null}
       </View>
     </SafeAreaView>
+  );
+}
+
+function UploadStepItem({
+  index,
+  label,
+  styles,
+}: {
+  index: string;
+  label: string;
+  styles: HomeScreenStyles;
+}) {
+  return (
+    <View style={styles.uploadStepPill}>
+      <Text style={styles.uploadStepIndex}>{index}</Text>
+      <Text style={styles.uploadStepText}>{label}</Text>
+    </View>
   );
 }
 

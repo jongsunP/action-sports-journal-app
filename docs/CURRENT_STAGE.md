@@ -306,6 +306,42 @@ Validation:
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
 
+Upload Entry UX Polish, 2026-06-26:
+
+Upload entry now stays with the existing route-backed/full-screen Upload flow
+instead of moving to a bottom sheet. The current product direction is fast
+media selection first: video pick -> selected video confirmation -> upload and
+server analysis. There is no meaningful pre-submit choice that needs a bottom
+sheet yet, and moving the flow into a sheet could make it look like the user
+must fill in title/description before starting.
+
+Implemented:
+
+- Kept the Home upload CTA, picker, route-backed `UploadScreen`, selected-video
+  confirmation, upload progress, failure/retry, and 20MB pre-upload validation
+  flows intact.
+- Added a clear Upload header: "새 기록 만들기" with short copy that explains
+  the fast video-to-analysis path.
+- Reframed selected video metadata as "선택한 라이딩 영상".
+- Added a compact step strip: "영상 확인 -> 업로드 -> 분석 시작".
+- Added short helper copy that analysis starts without a memo/title step and
+  that the current upload limit is 20MB.
+- Updated the primary action copy to "업로드하고 분석 시작".
+- Kept the upload safety message: upload can continue to server analysis after
+  upload finishes, but the app should not be closed during the upload step.
+
+Validation:
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed Home upload CTA opens the iOS video
+  picker from a populated Home state.
+- The selected-video Upload screen rendering was verified by code path and
+  typecheck; the simulator picker did not complete selection during this pass.
+- The 20MB guard remains in `useUploadMoment` and was not rewritten.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73

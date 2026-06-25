@@ -520,17 +520,35 @@ Home v2 / Journal UX First Slice implementation notes:
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
 
+Upload Entry UX Polish implementation notes:
+
+- Upload entry intentionally keeps the existing route-backed/full-screen
+  `UploadScreen` flow.
+- Bottom sheet conversion is deferred because the current direction has no
+  meaningful pre-submit title/description/caption choice. The desired path is
+  fast media selection -> upload/analyze -> optional note later.
+- Home upload CTA, picker opening, selected-video confirmation, upload
+  progress, failure/retry, and 20MB pre-upload validation are preserved.
+- `UploadContent` now frames the screen as "새 기록 만들기".
+- Selected video metadata is labeled "선택한 라이딩 영상".
+- A compact step strip shows "영상 확인 -> 업로드 -> 분석 시작".
+- Helper copy clarifies that analysis can start without a memo step and that
+  the current upload limit is 20MB.
+- Primary action copy is now "업로드하고 분석 시작".
+- `npm run typecheck` and `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed the Home upload CTA opens the iOS
+  video picker. The selected-video Upload screen was verified by code
+  path/typecheck because the simulator picker did not complete selection during
+  this pass.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
 Next starting point:
 
-Upload Entry UX Polish is the recommended next product UX task unless the
-Founder redirects to Analysis Trust UX or a deeper Home v2 pass. Do not assume
-bottom sheet conversion as the default. The historical reason for considering
-an upload page/bottom sheet was Instagram-style media creation: fast media
-selection, clear selected-media confirmation, and a familiar mobile creation
-flow for Instagram-inflow riders. Earlier product thinking also considered
-pre-submit title/description input, but the current philosophy is media
-selection -> upload/analyze -> optional note later. Keep the upload path intact
-and validate simulator/local first.
+Analysis Trust UX is the recommended next product UX task unless the Founder
+redirects to Kakao Single CTA standalone QA, recovery observability, or a deeper
+Home v2 pass. Upload Entry Bottom Sheet should remain deferred unless a real
+pre-submit choice appears.
 
 Response/collaboration rules updated:
 
