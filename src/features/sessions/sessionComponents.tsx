@@ -49,6 +49,51 @@ type SessionSummary = {
 
 const HORIZONTAL_PRESS_CANCEL_PX = 10;
 
+export function JournalSnapshot({
+  activeCount,
+  completedCount,
+  failedCount,
+  lastCompletedLabel,
+  styles,
+  totalCount,
+}: {
+  activeCount: number;
+  completedCount: number;
+  failedCount: number;
+  lastCompletedLabel?: string;
+  styles: HomeScreenStyles;
+  totalCount: number;
+}) {
+  const snapshotItems = [
+    { label: '기록', value: `${totalCount}` },
+    { label: '완료', value: `${completedCount}` },
+    { label: '진행중', value: `${activeCount}` },
+  ];
+
+  return (
+    <View style={styles.journalSnapshot}>
+      <View style={styles.journalSnapshotHeader}>
+        <Text style={styles.journalSnapshotTitle}>Journal Snapshot</Text>
+        <Text style={styles.journalSnapshotMeta} numberOfLines={1}>
+          {lastCompletedLabel
+            ? `최근 완료 ${lastCompletedLabel}`
+            : failedCount > 0
+              ? `확인 필요 ${failedCount}`
+              : '첫 기록을 기다리는 중'}
+        </Text>
+      </View>
+      <View style={styles.journalSnapshotGrid}>
+        {snapshotItems.map((item) => (
+          <View key={item.label} style={styles.journalSnapshotItem}>
+            <Text style={styles.journalSnapshotValue}>{item.value}</Text>
+            <Text style={styles.journalSnapshotLabel}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export function MomentStatusDot({ status }: { status?: MomentStatus }) {
   if (!status) {
     return null;
@@ -287,12 +332,12 @@ export function RecentSessionsRail({
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyTitle}>
-          {isLoading ? 'Wake Board Loading...' : '아직 세션이 없습니다'}
+          {isLoading ? 'Wake Board Loading...' : '아직 라이딩 기록이 없습니다'}
         </Text>
         <Text style={styles.emptyText}>
           {isLoading
             ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
-            : '첫 영상을 추가하면 최근 세션이 이곳에 표시됩니다.'}
+            : '첫 영상을 추가하면 최근 기록이 이곳에 쌓입니다.'}
         </Text>
       </View>
     );
@@ -361,7 +406,7 @@ export function PrimaryInsightCard({
 
   return (
     <View style={styles.primaryInsightCard}>
-      <Text style={styles.cardEyebrow}>오늘의 인사이트</Text>
+      <Text style={styles.cardEyebrow}>최근 인사이트</Text>
       {summary?.completedEvidence ? (
         <>
           <Text style={styles.primaryInsightTitle}>
@@ -430,11 +475,11 @@ export function PrimaryInsightCard({
       ) : (
         <>
           <Text style={styles.primaryInsightTitle}>
-            분석 결과가 여기에 표시됩니다
+            첫 라이딩 기록을 시작해보세요
           </Text>
           <Text style={styles.primaryInsightText}>
-            상단 업로드 버튼으로 라이딩 영상을 추가하면 세션별 동작 근거와
-            보수적인 요약을 이곳에 표시합니다.
+            상단 업로드 버튼으로 영상을 남기면 최근 인사이트와 기록 흐름이
+            이곳에 쌓입니다.
           </Text>
         </>
       )}

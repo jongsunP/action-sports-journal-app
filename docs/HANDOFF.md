@@ -490,10 +490,32 @@ Detail Menu / Retry Eligibility Polish implementation notes:
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
 
+Home v2 / Journal UX First Slice implementation notes:
+
+- Home first screen now has a compact `Journal Snapshot` band above Primary
+  Insight.
+- The snapshot uses existing Moment/session summaries only: total records,
+  completed records, in-progress records, and latest completed analysis date.
+- Header and empty-state copy now frame the surface as a riding journal rather
+  than only a video upload/gallery app.
+- Primary Insight remains the main recent insight surface.
+- The recent rail is now labeled "최근 기록" / `JOURNAL` while keeping the same
+  horizontal rail and Detail navigation behavior.
+- Upload CTA, Video Archive tab, Moment Detail entry, backend status semantics,
+  and data model are unchanged.
+- `npm run typecheck` and `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed Home renders the snapshot, recent
+  insight, and recent record rail; Video tab still opens. Current local samples
+  covered completed/failed records, while empty-state copy was verified by code
+  path/typecheck only.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
 Next starting point:
 
-Home v2 / Journal UX First Slice is the recommended next product UX task unless
-the Founder redirects to Upload Entry UX Bottom Sheet or Analysis Trust UX.
+Upload Entry UX Bottom Sheet is the recommended next product UX task unless the
+Founder redirects to Analysis Trust UX or a deeper Home v2 pass. Keep the
+upload path intact and validate simulator/local first.
 
 Response/collaboration rules updated:
 

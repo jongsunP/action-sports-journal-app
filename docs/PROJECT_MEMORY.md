@@ -178,6 +178,7 @@ Current stable workstream list:
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 - Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)
 - Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)
+- Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -194,13 +195,13 @@ Current stable workstream list:
 - Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)는 진행중/완료/실패 UI 표시 통합으로 완료
 - Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)는 단일 Kakao 섹션/CTA 구현 완료, simulator UI와 standalone OAuth E2E는 후속 검증
 - Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)는 Moment Detail 작업 패널과 재시도 disabled reason으로 완료
+- Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)는 Home 상단 Journal Snapshot, 최근 인사이트, 최근 기록 문맥으로 완료
 
 바로 앞 작업:
-- Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)
+- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)
 
 가까운 후속:
 - Kakao Single CTA Recovery UX Simulator/Standalone QA(카카오 단일 CTA 복구 UX 검증)
-- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)
 - Analysis Trust UX(분석 신뢰 UX)
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)

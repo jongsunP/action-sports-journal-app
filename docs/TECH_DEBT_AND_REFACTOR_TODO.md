@@ -309,6 +309,43 @@ status semantics. Retry is an eligibility-driven UI action, not a generic
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
 
+## Home v2 / Journal UX First Slice - 2026-06-26
+
+### Decision
+
+Start Home v2 with a narrow journal-feel slice before broader layout,
+progression, media/share, or new data-model work.
+
+### Implemented scope
+
+- Added `Journal Snapshot` to Home using existing Moment/session data only.
+- Shows total records, completed records, in-progress records, and latest
+  completed analysis date.
+- Shifted header, Primary Insight empty state, and recent rail copy toward
+  riding-record/journal language.
+- Renamed the recent rail to "최근 기록" / `JOURNAL`.
+- Preserved upload CTA visibility, Video Archive navigation, Moment Detail
+  navigation, backend status semantics, and existing data model.
+
+### Validation
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed the Home screen renders the snapshot,
+  recent insight, and recent record rail; Video tab still opens.
+- Empty-state copy was verified by code path/typecheck only because the current
+  simulator had existing local/remote samples.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
+### Follow-up
+
+- Upload Entry UX Bottom Sheet remains the recommended next product UX slice.
+- Analysis Trust UX can follow after upload entry and journal framing are more
+  stable.
+- A deeper Home v2 timeline/progression pass should wait until it can reuse
+  existing data honestly without inventing progression metrics.
+
 ## Kakao Single CTA Recovery UX - 2026-06-26
 
 ### Decision

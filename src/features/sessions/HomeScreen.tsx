@@ -36,12 +36,14 @@ import {
 } from '../../services/moments';
 import {
   getMomentStatus,
+  getVisibleMomentStatus,
 } from './momentStatus';
 import {
   APP_TABS,
   type AppTabId,
   BottomNavigation,
   FlowPlaceholderTab,
+  JournalSnapshot,
   PrimaryInsightCard,
   RecentSessionsRail,
   VideoArchiveList,
@@ -1401,6 +1403,30 @@ export function HomeScreen() {
   const latestAnalysisLabel = latestCompletedSummary
     ? formatShortSessionDate(latestCompletedSummary.session.occurredAt)
     : undefined;
+  const journalSnapshot = useMemo(() => {
+    let activeCount = 0;
+    let completedCount = 0;
+    let failedCount = 0;
+
+    for (const summary of homeSessionSummaries) {
+      const visibleStatus = getVisibleMomentStatus(summary.momentStatus);
+
+      if (visibleStatus === 'completed') {
+        completedCount += 1;
+      } else if (visibleStatus === 'failed') {
+        failedCount += 1;
+      } else if (visibleStatus === 'running') {
+        activeCount += 1;
+      }
+    }
+
+    return {
+      activeCount,
+      completedCount,
+      failedCount,
+      totalCount: homeSessionSummaries.length,
+    };
+  }, [homeSessionSummaries]);
   const recentSessionSummaries = homeSessionSummaries.slice(0, 8);
   const sessionSummaryById = useMemo(
     () =>
@@ -1857,7 +1883,7 @@ export function HomeScreen() {
           <Text style={styles.kicker}>Riding Journal</Text>
           <Text style={styles.title}>오늘의 라이딩 저널</Text>
           <Text style={styles.headerMeta}>
-            {visibleSessions.length}개 세션
+            {journalSnapshot.totalCount}개 기록
             {latestAnalysisLabel ? ` · 최근 분석 ${latestAnalysisLabel}` : ''}
           </Text>
         </View>
@@ -1874,6 +1900,15 @@ export function HomeScreen() {
         </Pressable>
       </View>
 
+      <JournalSnapshot
+        activeCount={journalSnapshot.activeCount}
+        completedCount={journalSnapshot.completedCount}
+        failedCount={journalSnapshot.failedCount}
+        lastCompletedLabel={latestAnalysisLabel}
+        styles={styles}
+        totalCount={journalSnapshot.totalCount}
+      />
+
       <PrimaryInsightCard
         formatShortSessionDate={formatShortSessionDate}
         isLoading={isSessionListLoading}
@@ -1884,8 +1919,8 @@ export function HomeScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionLabel}>최근 세션</Text>
-          <Text style={styles.sectionHint}>RECENT</Text>
+          <Text style={styles.sectionLabel}>최근 기록</Text>
+          <Text style={styles.sectionHint}>JOURNAL</Text>
         </View>
         <RecentSessionsRail
           formatShortSessionDate={formatShortSessionDate}
@@ -2324,6 +2359,59 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     lineHeight: 24,
+  },
+  journalSnapshot: {
+    backgroundColor: '#0f1117',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+    marginHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  journalSnapshotHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  journalSnapshotTitle: {
+    color: '#f9fafb',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  journalSnapshotMeta: {
+    color: '#9ca3af',
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  journalSnapshotGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  journalSnapshotItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 10,
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  journalSnapshotValue: {
+    color: '#f9fafb',
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  journalSnapshotLabel: {
+    color: '#9ca3af',
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
   },
   primaryInsightCard: {
     backgroundColor: '#101218',

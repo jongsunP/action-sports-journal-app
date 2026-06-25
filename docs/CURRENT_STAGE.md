@@ -274,6 +274,38 @@ Validation:
   performed. A stale local sample emitted an upload warning during simulator
   refresh, but no upload or AI flow was intentionally started for this QA.
 
+Home v2 / Journal UX First Slice, 2026-06-26:
+
+Home's first screen now starts to read as a riding journal without changing the
+data model or backend status semantics. This is a first slice only, not the
+full Home v2 redesign.
+
+Implemented:
+
+- Added a compact `Journal Snapshot` band using existing Moment/session data:
+  total records, completed records, in-progress records, and latest completed
+  analysis date.
+- Updated Home header copy from session/gallery framing toward journal record
+  framing.
+- Updated Primary Insight empty state to invite the rider to start a riding
+  record, not just upload a video.
+- Renamed the recent rail from "최근 세션" to "최근 기록" while preserving the
+  existing horizontal rail and Detail navigation.
+- Reused the existing UI-facing status resolver so Home continues to show
+  `진행중`, `완료`, and `실패` consistently.
+- Kept the upload CTA, Video Archive tab, and Moment Detail entry flow intact.
+
+Validation:
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Expo Go / iPhone 17 Simulator confirmed the Home screen renders with Journal
+  Snapshot, recent insight, and recent record rail. The Video tab still opens.
+- Current local samples covered completed and failed records; empty-state copy
+  was verified by code path/typecheck rather than a clean data reset.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73
