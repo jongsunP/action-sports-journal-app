@@ -144,6 +144,13 @@ session to run all the way through irreversible decisions, external console
 settings, or builds without CTO/user alignment. Pause only at meaningful
 decision points, risk points, or when the user explicitly asks.
 
+If the Founder asks a question after the CTO session drafts or proposes a
+development-session prompt, treat that as a handoff break. The prompt is not
+considered handed off until the Founder explicitly says it was passed to the
+development session. During the break, answer the Founder first and provide a
+revised final prompt only when the Founder asks to continue or requests the
+prompt again.
+
 After a development session reports that a build is complete, do not immediately
 send a new development-session prompt. First give the Founder only the QA steps
 needed for that build and wait for the Founder’s QA result. After the Founder
