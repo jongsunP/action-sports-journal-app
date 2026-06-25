@@ -123,6 +123,10 @@ available remotely. At the end of a work session, ensure committed changes are
 pushed to origin unless there is a deliberate reason not to push. Do not leave
 completed documentation/code work only on the local machine. If something
 cannot be pushed, clearly report the reason and the exact local state.
+When the Founder says to wrap up, close out, pause, finish, or "정리하자",
+treat it as a remote-backed closeout request: update durable project docs and
+personal context when needed, commit and push safe changes, and leave the next
+starting point clear.
 
 Examples:
 

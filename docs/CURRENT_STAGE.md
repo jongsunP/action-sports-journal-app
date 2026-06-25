@@ -376,6 +376,34 @@ Validation:
 - No EAS build, paid AI call, DB migration, external console change, AI prompt
   change, schema change, or new analysis execution was performed.
 
+Build 82 Post-foundation UX QA, 2026-06-26:
+
+Build 82 is ready for Founder real-device QA. This is the first standalone
+iOS preview/internal build after the post-foundation UX polish set.
+
+Build details:
+
+- buildNumber: `82`
+- build commit: `16b44a9 chore: prepare post-foundation ux qa build`
+- EAS build page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/c0effa32-29cb-49e6-9baf-e0642c480b68`
+- install/build URL:
+  `https://expo.dev/artifacts/eas/ttWHXF2SLddnDWq0NG0TV3r3e3LKRGDgg0Lgi-jsbQA.ipa`
+
+Included QA surface:
+
+- Product UX Baseline P1 - Unified User-Facing Status Resolver
+- Kakao Single CTA Recovery UX
+- Detail Menu / Retry Eligibility Polish
+- Home v2 / Journal UX First Slice
+- Upload Entry UX Polish
+- Analysis Trust UX
+
+Next starting point:
+
+Wait for the Founder to share Build 82 QA results. Do not send a new
+development-session prompt before reviewing the user's QA result.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73

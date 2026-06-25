@@ -200,11 +200,13 @@ Current stable workstream list:
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)는 Home 상단 Journal Snapshot, 최근 인사이트, 최근 기록 문맥으로 완료
 - Upload Entry UX Polish(업로드 진입 UX 정리)는 route-backed Upload 화면 유지, 빠른 영상 선택/확인/업로드 안내 copy로 완료
 - Analysis Trust UX(분석 신뢰 UX)는 Detail 분석 요약의 신뢰 안내, 판단 근거, 확인 필요 표시 정리로 완료
+- Build 82 Post-foundation UX QA(빌드 82 기반 이후 UX QA)는 iOS preview/internal build 생성 완료, 사용자 실기기 QA 결과 대기
 
 바로 앞 작업:
-- Kakao Single CTA Recovery UX Simulator/Standalone QA(카카오 단일 CTA 복구 UX 검증)
+- Build 82 User QA Result Review(빌드 82 사용자 QA 결과 검토)
 
 가까운 후속:
+- Kakao Single CTA Recovery UX Standalone QA(카카오 단일 CTA standalone QA)는 Build 82 QA 중 선택 확인
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
@@ -284,6 +286,12 @@ available remotely. At the end of a work session, ensure committed changes are
 pushed to origin unless there is a deliberate reason not to push. Do not leave
 completed documentation/code work only on the local machine. If something
 cannot be pushed, clearly report the reason and the exact local state.
+
+When the Founder says to wrap up, close out, pause, finish, or "정리하자",
+treat it as a remote-backed closeout request. Update durable project docs and,
+when the change is a general workflow preference, the personal context
+repository too. Commit and push safe documentation changes before ending the
+session, and leave the next starting point clear.
 
 For terminal tasks, always provide a copyable shell block that starts by
 changing into the project directory.
