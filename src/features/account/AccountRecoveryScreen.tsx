@@ -45,6 +45,14 @@ function hasAnonymousFlag(user: unknown) {
   return Boolean((user as { is_anonymous?: boolean } | null)?.is_anonymous);
 }
 
+function hasKakaoProviderIdentity(user: {
+  identities?: Array<{ provider?: string | null }>;
+} | null | undefined) {
+  return Boolean(
+    user?.identities?.some((identity) => identity.provider === 'kakao'),
+  );
+}
+
 function readMetadataText(metadata: unknown, key: string) {
   const value = (metadata as Record<string, unknown> | null)?.[key];
 
@@ -219,9 +227,7 @@ export function AccountRecoveryScreen() {
   const normalizedEmail = useMemo(() => normalizeRecoveryEmail(email), [email]);
   const isAnonymousUser = hasAnonymousFlag(user);
   const currentEmail = user?.email ?? null;
-  const hasKakaoIdentity = Boolean(
-    user?.identities?.some((identity) => identity.provider === 'kakao'),
-  );
+  const hasKakaoIdentity = hasKakaoProviderIdentity(user);
   const kakaoNickname = getKakaoNickname(user?.user_metadata);
   const canSubmitEmail =
     authMode === 'authenticated' &&
@@ -326,10 +332,21 @@ export function AccountRecoveryScreen() {
     try {
       const result = await linkKakaoIdentity();
 
-      if (result.status === 'linked') {
+      if (result.status === 'linked' && hasKakaoProviderIdentity(result.user)) {
         setKakaoFeedback({
           type: 'success',
           message: '카카오가 현재 계정의 복구 수단으로 연결되었습니다.',
+        });
+        return;
+      }
+
+      if (result.status === 'linked' || result.status === 'notLinked') {
+        setKakaoFeedback({
+          type: 'error',
+          message:
+            result.status === 'notLinked'
+              ? result.message
+              : '카카오 연결을 완료하지 못했습니다. 다시 시도해주세요.',
         });
         return;
       }

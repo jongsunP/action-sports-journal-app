@@ -14,6 +14,13 @@ export type KakaoLinkResult =
       user: User | null;
     }
   | {
+      status: 'notLinked';
+      reason: 'callback_error' | 'missing_auth_payload' | 'missing_kakao_identity';
+      message: string;
+      session: Session | null;
+      user: User | null;
+    }
+  | {
       status: 'cancelled';
     }
   | {
@@ -40,8 +47,41 @@ function readHashParams(url: URL) {
 
   return {
     accessToken: params.get('access_token'),
+    error: params.get('error'),
+    errorCode: params.get('error_code'),
+    errorDescription: params.get('error_description'),
     refreshToken: params.get('refresh_token'),
   };
+}
+
+function hasKakaoIdentity(user: User | null) {
+  return Boolean(
+    user?.identities?.some((identity) => identity.provider === 'kakao'),
+  );
+}
+
+function getKakaoCallbackFailureMessage({
+  error,
+  errorCode,
+  errorDescription,
+}: {
+  error: string | null;
+  errorCode: string | null;
+  errorDescription: string | null;
+}) {
+  const detail = `${error ?? ''} ${errorCode ?? ''} ${
+    errorDescription ?? ''
+  }`.toLowerCase();
+
+  if (
+    detail.includes('already') ||
+    detail.includes('exists') ||
+    detail.includes('identity')
+  ) {
+    return '이미 다른 기기 계정에 연결된 카카오일 수 있습니다. 현재 기기 계정에는 연결되지 않았습니다.';
+  }
+
+  return '카카오 연결을 완료하지 못했습니다. 다시 시도해주세요.';
 }
 
 async function completeKakaoLinkFromRedirectUrl(url: string) {
@@ -50,19 +90,46 @@ async function completeKakaoLinkFromRedirectUrl(url: string) {
   }
 
   const redirectUrl = new URL(url);
+  const queryError = redirectUrl.searchParams.get('error');
+  const queryErrorCode = redirectUrl.searchParams.get('error_code');
+  const queryErrorDescription =
+    redirectUrl.searchParams.get('error_description');
   const code = redirectUrl.searchParams.get('code');
+  const { accessToken, error, errorCode, errorDescription, refreshToken } =
+    readHashParams(redirectUrl);
+
+  if (
+    queryError ||
+    queryErrorCode ||
+    queryErrorDescription ||
+    error ||
+    errorCode ||
+    errorDescription
+  ) {
+    throw new KakaoLinkingError(
+      getKakaoCallbackFailureMessage({
+        error: queryError ?? error,
+        errorCode: queryErrorCode ?? errorCode,
+        errorDescription: queryErrorDescription ?? errorDescription,
+      }),
+    );
+  }
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      throw error;
+      throw new KakaoLinkingError(
+        getKakaoCallbackFailureMessage({
+          error: error.name,
+          errorCode: error.code ?? null,
+          errorDescription: error.message,
+        }),
+      );
     }
 
     return;
   }
-
-  const { accessToken, refreshToken } = readHashParams(redirectUrl);
 
   if (accessToken && refreshToken) {
     const { error } = await supabase.auth.setSession({
@@ -73,7 +140,13 @@ async function completeKakaoLinkFromRedirectUrl(url: string) {
     if (error) {
       throw error;
     }
+
+    return;
   }
+
+  throw new KakaoLinkingError(
+    '카카오 연결 결과를 확인하지 못했습니다. 다시 시도해주세요.',
+  );
 }
 
 export async function linkKakaoIdentity(): Promise<KakaoLinkResult> {
@@ -125,9 +198,23 @@ export async function linkKakaoIdentity(): Promise<KakaoLinkResult> {
     throw userError;
   }
 
+  const nextSession = sessionData.session ?? null;
+  const nextUser = userData.user ?? null;
+
+  if (!hasKakaoIdentity(nextUser)) {
+    return {
+      status: 'notLinked',
+      reason: 'missing_kakao_identity',
+      message:
+        '카카오 연결을 완료하지 못했습니다. 이미 다른 기기 계정에 연결된 카카오일 수 있습니다.',
+      session: nextSession,
+      user: nextUser,
+    };
+  }
+
   return {
     status: 'linked',
-    session: sessionData.session ?? null,
-    user: userData.user ?? null,
+    session: nextSession,
+    user: nextUser,
   };
 }
