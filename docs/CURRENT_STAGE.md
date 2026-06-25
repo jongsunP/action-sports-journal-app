@@ -29,16 +29,26 @@ and Realtime channel basis
 The QA user had no existing Moments, so Moment ownership continuity should be
 rechecked later with a pre-existing Moment sample.
 
-Kakao Linking UI follow-up is now clarified beyond Build 75: false success is
+Kakao Linking UI follow-up is now closed beyond Build 75: false success is
 blocked, linked-state copy is clearer, and cleanup confirmed the same Kakao
 account can be linked to a fresh anonymous user after the old test account is
-removed. The remaining product gap is not linking. It is reinstall/new-device
+removed. The remaining product gap moved from linking to reinstall/new-device
 recovery sign-in. `linkIdentity` stays scoped to connecting Kakao as a recovery
-method for the current anonymous/device-first account. The future "기존 기록
-복구하기 -> Kakao로 복구" flow should be a separate `signInWithOAuth` recovery
-sign-in path that switches the app session to the existing Kakao-linked Auth
-user, then lets ownership, Push token registration, Realtime subscription, and
-Home/Video/Detail refresh converge under that recovered user.
+method for the current anonymous/device-first account. The separate "기존 기록
+복구하기 -> Kakao로 복구" flow now uses `signInWithOAuth` to switch the app
+session to the existing Kakao-linked Auth user, then expects ownership, Push
+token registration, Realtime subscription, and Home/Video/Detail refresh to
+converge under that recovered user.
+
+Kakao Recovery Sign-in P1 is implemented and Build 81 is ready for standalone
+iOS QA. P1 includes a separate Kakao recovery sign-in helper, `recoverWithKakao`
+in `AuthSessionProvider`, a distinct "기존 기록 복구하기" section in
+`AccountRecoveryScreen`, and a local-work guard for unsynced/uploading work.
+Simulator/UI gate passed for the screen path and copy separation. Build 81 was
+created with build number `81`, EAS Build ID
+`24ca707e-f248-4533-9953-2cc7912af651`, and install/log URL
+`https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`.
+Do not record Build 81 as passed yet; real-device QA is pending.
 
 Email Recovery is no longer blocked at the email-send/rate-limit step. The fresh
 test email `parksunl88@nate.com` confirmed `updateUser({ email })` success,
@@ -48,16 +58,15 @@ because the clicked link landed on
 Recovery remains a baseline/fallback path and needs redirect URL / deep-link
 strategy plus a link-validity-window QA pass before productization.
 
-Next immediate product work: implement Kakao Recovery Sign-in P1 after this
-design decision is accepted. P1 is limited to a separate Kakao recovery sign-in
-helper, a distinct "기존 기록 복구하기" section in `AccountRecoveryScreen`,
-session/user refresh on recovery success, and a guard or warning for unsynced or
-uploading local work. Do not replace `linkIdentity`, do not add DB schema,
-automatic `public.users` merge, Email Recovery productization, Apple/Google
-providers, or Push/Realtime redesign in this pass. Near follow-ups are Kakao
-display-name metadata sync decision, ownership continuity with a user that
-already has Moments, Foundation Safety Check, External No-Token Finalization,
-and push token account-switch policy.
+Next immediate product work: install Build 81 and run Kakao Recovery Sign-in
+QA. Confirm fresh anonymous session -> "카카오로 기존 기록 복구" -> existing
+Kakao-linked Auth user session switch, then verify Home / Video / Detail remote
+reload, Push token owner re-registration, Realtime resubscription, OAuth
+cancel/failure handling, and the unsynced/uploading local-work guard. Do not
+start Initial Loading / Video Tab Spinner Observability, Email Recovery
+deep-link work, Push token account-switch hardening, External No-Token
+Finalization, Kakao display-name sync, or Journal / Upload / Analysis UX until
+Build 81 QA gives the next signal.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 

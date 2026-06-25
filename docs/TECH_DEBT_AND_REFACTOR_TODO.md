@@ -349,9 +349,9 @@ Follow-up backlog:
   existing account with Kakao" sign-in flow is still required before the UI can
   promise reinstall/new-device recovery.
 
-Kakao Recovery Sign-in P1 design:
+Kakao Recovery Sign-in P1 status:
 
-This is the next recovery gap after successful Kakao account linking. Keep
+This is the recovery gap after successful Kakao account linking. Keep
 `linkIdentity` and `signInWithOAuth` separate:
 
 - `linkIdentity`: connect Kakao to the currently signed-in anonymous/device-first
@@ -359,15 +359,29 @@ This is the next recovery gap after successful Kakao account linking. Keep
 - `signInWithOAuth`: recover an existing Kakao-linked Auth user after
   reinstall/new-device. This is the "기존 기록 복구하기" path.
 
-P1 implementation candidates:
+P1 implementation status, 2026-06-25:
 
-1. Add a `kakaoRecoverySignIn` helper separate from the current linking helper.
-2. Add a distinct "기존 기록 복구하기" section to `AccountRecoveryScreen`.
-3. Keep the linking CTA and recovery sign-in CTA separate in copy and layout.
-4. On recovery success, replace/refresh the Supabase session and user.
-5. Before recovery, check for unsynced/uploading local work and block or warn.
-6. After recovery, refresh Home/Video/Detail, re-register the Push token under
-   the recovered owner, and verify Realtime resubscription.
+P1 is implemented and Build 81 is waiting for standalone iPhone QA.
+
+Implemented:
+
+1. `kakaoRecoverySignIn` helper separate from the current linking helper.
+2. `recoverWithKakao` path in `AuthSessionProvider`.
+3. Distinct "기존 기록 복구하기" section in `AccountRecoveryScreen`.
+4. Linking CTA and recovery sign-in CTA separated in copy and layout.
+5. Recovery success refreshes/replaces the Supabase session and user.
+6. Local-work guard blocks recovery when unsynced/uploading local work exists.
+
+Build 81 QA must still verify:
+
+1. Reinstall/new-device anonymous session can recover the existing Kakao-linked
+   Auth user.
+2. Home/Video/Detail reload under the recovered owner.
+3. Push token re-registers under the recovered app user.
+4. Realtime leaves the previous auth scope and subscribes to the recovered auth
+   channel.
+5. OAuth cancel/failure is not shown as success.
+6. The local-work guard is understandable and does not feel like a system error.
 
 Risks / QA gates:
 

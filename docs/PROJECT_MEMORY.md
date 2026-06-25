@@ -166,16 +166,17 @@ Current stable workstream list:
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
 - Kakao Recovery / Account Linking(카카오 복구 / 계정 연결) 성공
-- Kakao Recovery Sign-in(카카오 기존 기록 복구 로그인)은 설계 완료, 구현 전
+- Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차)은 구현 완료, Build 81 실기기 QA 대기
 - Email Recovery(이메일 복구)는 baseline/fallback으로 유지
 - Email Recovery(이메일 복구) 제품화는 deep link / redirect 전략 필요
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 
 바로 앞 작업:
-- Kakao Recovery Sign-in(카카오 기존 기록 복구 로그인) 설계 결정 문서화
+- Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차) 구현
+- Build 81(카카오 기존 기록 복구 QA 빌드) 생성
 
 가까운 후속:
-- Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차) 구현
+- Build 81 실기기 QA(카카오 기존 기록 복구)
 - Kakao display_name Sync(카카오 이름 동기화) 여부 결정
 - 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
 - Foundation Safety Check(기반 안전 점검)
@@ -408,6 +409,39 @@ P1 implementation scope:
    recovery so local work is not silently lost.
 6. QA cancel/failure behavior in the Simulator first. Create standalone builds
    only after Founder/CTO approval.
+
+P1 implementation status, 2026-06-25:
+
+Kakao Recovery Sign-in P1 is implemented and waiting for Build 81 real-device
+QA. The implementation added the separate sign-in helper, `recoverWithKakao` in
+`AuthSessionProvider`, a distinct "기존 기록 복구하기" section in
+`AccountRecoveryScreen`, and a local-work guard for unsynced/uploading work.
+Simulator/UI gate passed for the screen path, CTA separation, and cancellation /
+failure readiness that can be checked before standalone E2E.
+
+Build 81:
+
+- Build number: `81`.
+- Build ID: `24ca707e-f248-4533-9953-2cc7912af651`.
+- Install/log URL:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/DtB9KwaaG4uMnPVBhRP5N3npU_VFFd4nEV4dNnVJoXk.ipa`.
+- Basis implementation commit: `d22b83b feat: add kakao recovery sign-in flow`.
+- Build prep commit: `754d4a5 chore: prepare kakao recovery sign-in qa build`.
+- QA status: pending. Do not mark as passed until the Founder completes
+  standalone iPhone QA.
+
+Build 81 QA should verify:
+
+1. Fresh anonymous session after reinstall/new device.
+2. "카카오로 기존 기록 복구" opens the Kakao recovery sign-in flow.
+3. OAuth success switches to the existing Kakao-linked Auth user.
+4. Home / Video / Detail reload under the recovered account.
+5. Push token owner re-registers for the recovered user.
+6. Realtime resubscribes to the recovered Auth user channel.
+7. OAuth cancel/failure is not shown as success.
+8. Unsynced/uploading local work blocks recovery with clear guidance.
 
 Non-goals for P1:
 

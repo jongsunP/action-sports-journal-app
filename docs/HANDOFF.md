@@ -180,11 +180,12 @@ continuity as well as technical continuity:
 
 ## Current Status
 
-Daily wrap-up, 2026-06-25:
+Daily wrap-up, 2026-06-25, Build 81 checkpoint:
 
-Today closed the core Kakao Recovery / Account Linking E2E path and clarified
-Email Recovery's current boundary. `master` is synced with `origin/master`;
-today's main commits include:
+Today closed the Kakao Recovery Method Linking workstream, documented the
+separate Kakao Recovery Sign-in product flow, implemented P1, and created the
+standalone iOS QA build. `master` is synced with `origin/master`; today's main
+commits include:
 
 - `f7223d5 feat: add kakao account linking baseline`
 - `3835b0d chore: bump ios build number to 75`
@@ -192,6 +193,9 @@ today's main commits include:
 - `1de94bc docs: record build qa workflow rules`
 - `7404446 docs: settle email recovery smoke status`
 - `fee7291 docs: record email recovery magic link result`
+- `e7a55c0 docs: define kakao recovery sign-in flow`
+- `d22b83b feat: add kakao recovery sign-in flow`
+- `754d4a5 chore: prepare kakao recovery sign-in qa build`
 
 Kakao Recovery / Account Linking:
 
@@ -208,6 +212,34 @@ Kakao Recovery / Account Linking:
   consistent.
 - The QA user had `moments` count `0`, so rerun ownership continuity later with
   an account that already has Moments.
+- Build 79/80 follow-up fixed Kakao false success: OAuth callback error,
+  missing code/token, and missing Kakao identity are no longer shown as linked.
+- The previous Kakao-linked test account for provider id `4960498960` was
+  cleaned up with user approval, and the same Kakao account was successfully
+  linked again to a fresh anonymous/device-first account.
+- Kakao Linking is now considered complete for the current recovery-method
+  linking scope.
+
+Kakao Recovery Sign-in:
+
+- `linkIdentity` remains the current-account recovery-method linking path.
+- `signInWithOAuth` is now implemented as the separate "기존 기록 복구하기" path
+  for reinstall/new-device recovery.
+- P1 added a Kakao recovery sign-in helper, `recoverWithKakao` in
+  `AuthSessionProvider`, a distinct "기존 기록 복구하기" section in
+  `AccountRecoveryScreen`, and a local-work guard for unsynced/uploading work.
+- Simulator/UI gate passed for the AccountRecoveryScreen path, copy separation,
+  and cancellation/failure readiness that can be checked before standalone
+  OAuth E2E.
+- Build 81 was created for standalone iOS QA:
+  - Build number: `81`
+  - EAS Build ID: `24ca707e-f248-4533-9953-2cc7912af651`
+  - Install/log URL:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/DtB9KwaaG4uMnPVBhRP5N3npU_VFFd4nEV4dNnVJoXk.ipa`
+- Build 81 is not yet QA-passed. It is waiting for the Founder to install and
+  verify Kakao Recovery Sign-in on a real iPhone.
 
 Email Recovery:
 
@@ -218,8 +250,26 @@ Email Recovery:
 - Email Recovery is no longer blocked by hosted sender rate limits or the
   earlier `email_exists` test case, but productization needs redirect URL /
   deep-link strategy and link-validity-window QA.
-- Keep Email Recovery as baseline/fallback; Kakao Recovery is currently the
-  verified recovery path.
+
+Next starting point:
+
+Install Build 81 and run the "카카오로 기존 기록 복구" QA. Verify that a fresh
+anonymous session can switch into the existing Kakao-linked Auth user, then
+confirm Home / Video / Detail reload under the recovered account, Push token
+ownership re-registers, Realtime resubscribes to the recovered Auth user, OAuth
+cancel/failure does not look successful, and unsynced/uploading local work is
+blocked with clear guidance.
+
+Backlog after Build 81 QA:
+
+- Initial Loading / Video Tab Spinner Observability.
+- Email Recovery deep link / redirect.
+- Push token account-switch policy hardening if Build 81 exposes a gap.
+- External No-Token Finalization.
+- Kakao display_name sync.
+- Journal / Upload / Analysis UX.
+- Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
+  currently the verified recovery-method path.
 
 Response/collaboration rules updated:
 
