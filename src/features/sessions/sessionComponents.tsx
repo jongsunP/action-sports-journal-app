@@ -62,6 +62,24 @@ export function MomentStatusDot({ status }: { status?: MomentStatus }) {
   );
 }
 
+function MomentStatusLabel({
+  status,
+  styles,
+}: {
+  status?: MomentStatus;
+  styles: HomeScreenStyles;
+}) {
+  if (!status) {
+    return null;
+  }
+
+  return (
+    <Text style={styles.momentStatusLabel} numberOfLines={1}>
+      {getMomentStatusLabel(status)}
+    </Text>
+  );
+}
+
 function SessionMediaPreview({
   hasVideo,
   styles,
@@ -307,6 +325,7 @@ export function RecentSessionsRail({
             </View>
           </View>
           <View style={styles.recentFloatingMetaRow}>
+            <MomentStatusLabel status={momentStatus} styles={styles} />
             <Text style={styles.recentDate} numberOfLines={1}>
               {formatShortSessionDate(session.occurredAt)}
             </Text>
@@ -338,6 +357,8 @@ export function PrimaryInsightCard({
   summary?: SessionSummary;
   styles: HomeScreenStyles;
 }) {
+  const visibleSummaryStatus = getVisibleMomentStatus(summary?.momentStatus);
+
   return (
     <View style={styles.primaryInsightCard}>
       <Text style={styles.cardEyebrow}>오늘의 인사이트</Text>
@@ -358,6 +379,10 @@ export function PrimaryInsightCard({
           ) : null}
           <View style={styles.primaryInsightFooter}>
             <MomentStatusDot status={summary.momentStatus ?? 'completed'} />
+            <MomentStatusLabel
+              status={summary.momentStatus ?? 'completed'}
+              styles={styles}
+            />
             <Text style={styles.primaryInsightDate}>
               {formatShortSessionDate(summary.session.occurredAt)}
             </Text>
@@ -376,7 +401,7 @@ export function PrimaryInsightCard({
       ) : summary ? (
         <>
           <Text style={styles.primaryInsightTitle}>
-            {summary.momentStatus === 'failed'
+            {visibleSummaryStatus === 'failed'
               ? '분석을 다시 시도할 수 있습니다'
               : '최근 세션을 분석하고 있습니다'}
           </Text>
@@ -387,6 +412,7 @@ export function PrimaryInsightCard({
           </Text>
           <View style={styles.primaryInsightFooter}>
             <MomentStatusDot status={summary.momentStatus} />
+            <MomentStatusLabel status={summary.momentStatus} styles={styles} />
             <Text style={styles.primaryInsightDate}>
               {formatShortSessionDate(summary.session.occurredAt)}
             </Text>
@@ -519,6 +545,7 @@ export function VideoArchiveList({
         </View>
         <View style={styles.videoArchiveBody}>
           <View style={styles.videoArchiveMetaRow}>
+            <MomentStatusLabel status={momentStatus} styles={styles} />
             <Text style={styles.recentDate} numberOfLines={1}>
               {formatShortSessionDate(session.occurredAt)}
             </Text>

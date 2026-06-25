@@ -239,6 +239,36 @@ Media / Share UX:
   across Home, Video list, and Detail.
 - No EAS build is needed for this first status-consistency pass.
 
+### Execution result - 2026-06-26
+
+Product UX Baseline P1 is implemented.
+
+Implemented:
+
+- Added a UI-facing Moment status presentation helper in `momentStatus.ts`.
+- Preserved backend/internal `MomentStatus` semantics.
+- Mapped visible labels as:
+  - `uploading`, `queued`, `processing` -> `진행중`
+  - `completed` -> `완료`
+  - `failed`, `upload_failed` -> `실패`
+- Applied visible labels to Home Primary Insight, Recent Sessions, Video Archive
+  rows, and Moment Detail header.
+- Kept detailed explanatory copy for upload/progress/failure states so users
+  still get useful context after seeing the simplified label.
+
+Validation:
+
+- `npm run typecheck` passed.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+
+Follow-up:
+
+- Detail Menu / Retry Eligibility Polish remains the recommended next UX
+  backlog item.
+- Home v2 / Journal UX first slice, Upload Entry bottom sheet, Analysis trust
+  UX, and Media / Share UX remain separate follow-up work.
+
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated

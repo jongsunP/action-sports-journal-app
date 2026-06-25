@@ -176,6 +176,7 @@ Current stable workstream list:
 - Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
+- Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -189,15 +190,14 @@ Current stable workstream list:
 - Kakao Recovery Ownership Smoke(카카오 복구 소유권 스모크)는 재설치 후 카카오 복구 시 기존 영상 목록 재노출 확인
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)은 외부 사용자 API no-token 401 차단으로 완료
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)는 같은 Expo token을 현재 authenticated owner로 이동하는 정책으로 완료
-- Post-foundation Product UX Review(기반 이후 제품 UX 검토)는 다음 제품 작업을 Product UX Baseline P1로 정리
+- Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)는 진행중/완료/실패 UI 표시 통합으로 완료
 
 바로 앞 작업:
-- Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)
+- Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)
 
 가까운 후속:
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)
 - Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)
-- Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)
 - Analysis Trust UX(분석 신뢰 UX)
 - Recovery Attempt Observability(복구 시도 관측성)

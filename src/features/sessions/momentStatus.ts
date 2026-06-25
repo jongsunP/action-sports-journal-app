@@ -9,6 +9,11 @@ const STALE_RETRY_THRESHOLD_MS = 10 * 60 * 1000;
 
 export type VisibleMomentStatus = 'running' | 'completed' | 'failed';
 
+export type UserFacingMomentStatusPresentation = {
+  label: '진행중' | '완료' | '실패';
+  visibleStatus: VisibleMomentStatus;
+};
+
 export type RetryEligibility = {
   canRetry: boolean;
   reason: string;
@@ -170,8 +175,40 @@ export function getVisibleMomentStatus(
   return 'running';
 }
 
+export function getUserFacingMomentStatusPresentation(
+  status?: MomentStatus,
+): UserFacingMomentStatusPresentation | undefined {
+  const visibleStatus = getVisibleMomentStatus(status);
+
+  if (!visibleStatus) {
+    return undefined;
+  }
+
+  if (visibleStatus === 'completed') {
+    return {
+      label: '완료',
+      visibleStatus,
+    };
+  }
+
+  if (visibleStatus === 'failed') {
+    return {
+      label: '실패',
+      visibleStatus,
+    };
+  }
+
+  return {
+    label: '진행중',
+    visibleStatus,
+  };
+}
+
 export function getMomentStatusLabel(status: MomentStatus) {
-  return getMomentStatusPresentation(status).label;
+  return (
+    getUserFacingMomentStatusPresentation(status)?.label ??
+    getMomentStatusPresentation(status).label
+  );
 }
 
 export function getMomentStatusMessage(status: MomentStatus) {
@@ -204,7 +241,7 @@ function isStaleRunningMoment(session: Session, status?: MomentStatus) {
 function getMomentStatusPresentation(status: MomentStatus) {
   if (status === 'uploading') {
     return {
-      label: '업로드중',
+      label: '진행중',
       title: '영상을 업로드하고 있습니다',
       body: '영상을 서버에 업로드하고 있습니다. 이 단계에서는 앱을 닫지 마세요. 업로드가 끝나면 분석은 서버에서 계속됩니다.',
     };
@@ -212,7 +249,7 @@ function getMomentStatusPresentation(status: MomentStatus) {
 
   if (status === 'upload_failed') {
     return {
-      label: '업로드 실패',
+      label: '실패',
       title: '업로드가 완료되지 않았습니다',
       body: '영상 업로드가 중단되어 분석을 시작하지 못했습니다. 원본 영상을 다시 선택해 업로드해 주세요.',
     };
@@ -220,7 +257,7 @@ function getMomentStatusPresentation(status: MomentStatus) {
 
   if (status === 'queued') {
     return {
-      label: '대기',
+      label: '진행중',
       title: '업로드 완료 · 분석 대기 중',
       body: '업로드가 완료되었습니다. 이제 앱을 닫아도 분석은 계속됩니다. 영상 길이와 네트워크 상태에 따라 몇 분 정도 걸릴 수 있습니다.',
     };
@@ -228,7 +265,7 @@ function getMomentStatusPresentation(status: MomentStatus) {
 
   if (status === 'processing') {
     return {
-      label: '분석중',
+      label: '진행중',
       title: 'AI가 영상을 분석하고 있습니다',
       body: 'Gemini가 영상의 접근, 팝, 회전, 착지 신호를 확인하고 있습니다. 보통 잠시 걸리지만 경우에 따라 1~5분 정도 걸릴 수 있습니다. 알림이 켜져 있으면 앱을 닫아도 완료 후 알려드립니다.',
     };

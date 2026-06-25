@@ -1394,7 +1394,8 @@ export function HomeScreen() {
       summary.momentStatus === 'uploading' ||
       summary.momentStatus === 'queued' ||
       summary.momentStatus === 'processing' ||
-      summary.momentStatus === 'upload_failed',
+      summary.momentStatus === 'upload_failed' ||
+      summary.momentStatus === 'failed',
   );
   const primaryInsightSummary = latestCompletedSummary ?? latestActiveSummary;
   const latestAnalysisLabel = latestCompletedSummary
@@ -2452,6 +2453,11 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 11,
     fontWeight: '800',
+  },
+  momentStatusLabel: {
+    color: '#f9fafb',
+    fontSize: 11,
+    fontWeight: '900',
   },
   recentFloatingMetaRow: {
     alignItems: 'center',

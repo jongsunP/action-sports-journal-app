@@ -185,6 +185,21 @@ Reasoning:
 - Media / Share UX remains important for Instagram-led growth, but it should
   wait until the app has stronger journal/detail cards worth sharing.
 
+Implementation result:
+
+- Product UX Baseline P1 is implemented.
+- `src/features/sessions/momentStatus.ts` now exposes a UI-facing status
+  presentation that maps Moment state to `진행중`, `완료`, or `실패` without
+  changing backend status semantics.
+- Home Primary Insight, Recent Sessions, Video Archive rows, and Moment Detail
+  header now use the same visible status language.
+- `queued`, `processing`, and `uploading` map to `진행중`; `completed` maps to
+  `완료`; `failed` and `upload_failed` map to `실패`.
+- Detailed state copy remains more specific where useful, such as upload
+  guidance or analysis progress explanation.
+- `npm run typecheck` passed. No EAS build, paid AI call, DB migration, or
+  external console change was performed.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73

@@ -14,7 +14,11 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { DebugResultViewer } from './DebugResultViewer';
-import { getMomentStatusMessage, getRetryEligibility } from './momentStatus';
+import {
+  getMomentStatusLabel,
+  getMomentStatusMessage,
+  getRetryEligibility,
+} from './momentStatus';
 import {
   buildRiderFacingAnalysis,
   type RiderFacingAnalysis,
@@ -193,7 +197,11 @@ export function MomentDetailContent({
           <View style={styles.detailHeaderMetaRow}>
             <MomentStatusDot status={momentStatus} />
             <Text style={styles.detailHeaderMeta} numberOfLines={1}>
-              {formatSessionDateTime(session.occurredAt)}
+              {momentStatus
+                ? `${getMomentStatusLabel(momentStatus)} · ${formatSessionDateTime(
+                    session.occurredAt,
+                  )}`
+                : formatSessionDateTime(session.occurredAt)}
             </Text>
           </View>
         </View>

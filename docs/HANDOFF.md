@@ -389,18 +389,19 @@ Validation:
 Post-foundation Product UX Next-Step Review:
 
 Foundation hardening is closed enough to move back into product UX. The
-recommended next task is Product UX Baseline P1: Unified User-Facing Status
-Resolver.
+first task, Product UX Baseline P1: Unified User-Facing Status Resolver, is now
+implemented.
 
-Use this as the first Journal / Analysis / Upload shared UX slice:
+Implemented scope:
 
-- Keep backend status/job semantics unchanged.
-- Create or consolidate one UI-facing resolver for visible Moment state.
-- Use only the simple rider-facing states `진행중`, `완료`, and `실패`.
-- Apply consistently to Home, Recent Sessions, Primary Insight, Journal
-  Timeline, Video list, and Detail.
-- Validate through simulator/local UI and typecheck first. No EAS build is
-  needed for this first status-consistency pass.
+- Backend status/job semantics are unchanged.
+- `momentStatus.ts` exposes a UI-facing presentation for visible Moment state.
+- Rider-facing labels are limited to `진행중`, `완료`, and `실패`.
+- Home Primary Insight, Recent Sessions, Video Archive, and Moment Detail header
+  now use the same visible status language.
+- Detailed copy can still explain upload/progress/failure context where needed.
+- `npm run typecheck` passed. No EAS build, paid AI call, DB migration, or
+  external console change was performed.
 
 Candidate comparison from the review:
 
@@ -419,13 +420,14 @@ Candidate comparison from the review:
 
 Next starting point:
 
-Start Product UX Baseline P1: Unified User-Facing Status Resolver unless the
-Founder explicitly redirects to recovery observability or Email Recovery
-deep-link strategy.
+Product UX Baseline P1 is complete. The recommended next product UX task is
+Detail Menu / Retry Eligibility Polish, following the existing UX backlog order,
+unless the Founder redirects to Home v2 / Journal UX first slice or Kakao
+Single CTA Recovery UX.
 
 Backlog after Push Token Account-switch Policy and product UX review:
 
-- Product UX Baseline P1: Unified User-Facing Status Resolver.
+- Product UX Baseline P1: Unified User-Facing Status Resolver. Completed.
 - Home v2 / Journal UX first slice after status consistency.
 - Kakao Single CTA Recovery UX: show one simple Kakao action to users while
   keeping internal link/recover branching.
