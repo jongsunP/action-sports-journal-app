@@ -92,6 +92,69 @@ not accidentally build on unstable assumptions.
 - After any QA report that suggests lost media, missing results, stale sync,
   wrong owner data, or account recovery confusion.
 
+### Execution result - 2026-06-26
+
+Foundation Safety Check ran after Kakao Recovery Sign-in P1 / Build 81 passed
+and before new Journal / Analysis / Media UX work. This pass was a code/docs/QA
+baseline inspection plus a small local safety fix. No EAS build, paid AI call,
+external console change, or DB migration was performed.
+
+PASS:
+
+- Push remains notification-only. Private Realtime plus foreground refresh
+  remain the source of truth for completed analysis state.
+- Push Observability P2 still covers missing tokens, disabled-only users,
+  invalid token rows, Expo ticket mapping, receipt checks, and
+  `DeviceNotRegistered` token disabling without duplicating raw Expo tokens in
+  analysis attempt rows.
+- Kakao Account Linking and Kakao Recovery Sign-in P1 remain separated:
+  `linkIdentity` connects a recovery method to the current account, while the
+  recovery sign-in path is isolated for reinstall/new-device recovery.
+- Core ownership tables continue to use `public.users.id` as the durable app
+  owner anchor.
+
+WATCH:
+
+- `resolveRequestUser(request)` preserves the Supabase Auth ->
+  `public.users` boundary for bearer-token requests, but External No-Token
+  Finalization is still needed so the default user path cannot leak into
+  external app traffic.
+- Moment ownership continuity after Kakao Recovery Sign-in should be rechecked
+  with an account that already has Moments. Build 81 passed user-facing recovery,
+  but the recovered sample was not a Moment-preservation sample.
+- Uploaded-source recovery has enough provider/bucket/path/upload-target
+  metadata to finalize safely, but automatic orphan cleanup should remain
+  deferred until retry/recovery semantics are rechecked.
+- Source video cleanup after completed analysis is explicit, but QA/debugging
+  expectations must account for cleaned-up source objects.
+- Recovery failures are currently diagnosable through UI state/logs, but there
+  is no dedicated structured recovery-attempt table yet.
+- Email Recovery remains a baseline/fallback path. It is no longer blocked by
+  sender rate limits, but redirect URL / deep-link strategy and link-validity QA
+  are still needed before productization.
+- The new upload size guard depends on `asset.fileSize`; when the platform does
+  not expose file size, server/storage validation remains the final guard.
+
+FIX NEEDED:
+
+- Fixed in this pass: Upload File-size Validation now blocks known >20MB video
+  picker assets before upload submit, matching the current storage/provider
+  limit and avoiding a confusing post-selection upload failure.
+
+Needs separate CTO/user alignment before implementation:
+
+1. External No-Token Finalization.
+2. Push Token Account-switch Policy after Kakao recovery sign-in.
+3. Ownership continuity smoke with a pre-existing Moment sample.
+4. Optional structured recovery-attempt observability.
+5. Email Recovery redirect/deep-link productization.
+
+BLOCKED:
+
+- No blocker was found in this safety pass. The remaining items are deliberate
+  watch/follow-up items, not current blockers for continuing foundation
+  hardening.
+
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated
@@ -1051,12 +1114,14 @@ cost, and user friction as ASJ grows.
 
 Related near-term UX guard:
 
-Before changing compression policy, add `Upload File-size Validation`: if the
-selected video exceeds the current server/storage limit, block the upload
-before submit and show a clear message. The current 20MB ceiling is a
+`Upload File-size Validation` has a first-pass guard as of the 2026-06-26
+Foundation Safety Check: when the picker exposes a selected video's file size
+and it exceeds the current 20MB server/storage limit, the app blocks the upload
+before submit and shows a clear message. The current 20MB ceiling is a
 conservative safety policy, not proof that larger videos are impossible. If a
-large file is rejected only after the user presses upload, the experience looks
-like a broken upload rather than an intentional product limit.
+platform does not expose file size, server/storage validation remains the final
+guard. Compression and larger-file policy remain separate product/technical
+decisions.
 
 Cause:
 

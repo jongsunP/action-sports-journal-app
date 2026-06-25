@@ -163,6 +163,7 @@ Current stable workstream list:
 - Account Linking(계정 연결)
 - Kakao Recovery / Account Linking(카카오 복구 / 계정 연결)
 - Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차)
+- Foundation Safety Check(기반 안전 점검)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -171,13 +172,14 @@ Current stable workstream list:
 - Email Recovery(이메일 복구)는 baseline/fallback으로 유지
 - Email Recovery(이메일 복구) 제품화는 deep link / redirect 전략 필요
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
+- Foundation Safety Check(기반 안전 점검)는 2026-06-26 완료
+- Upload File-size Validation(업로드 용량 초과 사전 차단)은 20MB 사전 차단으로 반영
 
 바로 앞 작업:
-- Foundation Safety Check(기반 안전 점검)
+- External No-Token Finalization(외부 무토큰 경로 최종 정리) 또는 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
 
 가까운 후속:
 - 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
-- Upload File-size Validation(업로드 용량 초과 사전 차단)
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)
 
@@ -488,13 +490,37 @@ settled.
 
 Immediate next work:
 
-1. Improve Kakao Linking UI success/failure/cancel states.
-2. Decide whether Kakao `name` / `full_name` should sync to
-   `public.users.display_name`.
-3. Recheck ownership continuity with a user that already has Moments.
-4. Run Foundation Safety Check before adding more Journal / Analysis / Media UX.
-5. Continue External No-Token Finalization and push token account-switch policy
+1. Recheck ownership continuity with a user that already has Moments.
+2. Continue External No-Token Finalization and push token account-switch policy
    when returning to foundation hardening.
+3. Decide whether Kakao `name` / `full_name` should sync to
+   `public.users.display_name`.
+4. Keep Journal / Analysis / Media UX expansion behind the foundation-hardening
+   queue.
+
+## 2026-06-26 Foundation Safety Check
+
+Foundation Safety Check ran after Kakao Recovery Sign-in P1 / Build 81 passed.
+The check found no current BLOCKED foundation item and no need for a large
+refactor. The only code fix was Upload File-size Validation: known >20MB picker
+assets are now blocked locally before upload submit, matching the current
+storage/provider limit.
+
+Current foundation readout:
+
+- PASS: Push remains notification-only with Push Observability P2 in place;
+  private Realtime/foreground refresh remain the sync source of truth; Kakao
+  Account Linking and Kakao Recovery Sign-in P1 remain separated and verified.
+- WATCH: External No-Token Finalization, ownership continuity with a user that
+  already has Moments, Push token account-switch policy, source/orphan cleanup
+  caution, optional recovery-attempt observability, and Email Recovery
+  redirect/deep-link productization.
+- FIXED: local 20MB upload size guard.
+- BLOCKED: none.
+
+Next foundation hardening should start with either External No-Token
+Finalization or ownership continuity smoke with an existing-Moment account,
+depending on CTO/user alignment.
 
 ## 2026-06-24 Auth Phase 1 Server Ownership Closeout
 

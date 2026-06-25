@@ -43,6 +43,8 @@ import {
 import { classifyUploadFailure } from './uploadStateMachine';
 
 const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
+const MAX_UPLOAD_VIDEO_BYTES = 20 * 1024 * 1024;
+const MAX_UPLOAD_VIDEO_MB = Math.round(MAX_UPLOAD_VIDEO_BYTES / 1024 / 1024);
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 
@@ -268,6 +270,18 @@ export function useUploadMoment({
 
     if (!asset || asset.type !== 'video') {
       Alert.alert('영상이 필요합니다', '분석할 영상을 선택해주세요.');
+      return false;
+    }
+
+    if (
+      typeof asset.fileSize === 'number' &&
+      Number.isFinite(asset.fileSize) &&
+      asset.fileSize > MAX_UPLOAD_VIDEO_BYTES
+    ) {
+      Alert.alert(
+        '영상 용량이 너무 큽니다',
+        `현재 분석 업로드는 ${MAX_UPLOAD_VIDEO_MB}MB 이하 영상만 지원합니다. 더 짧은 클립을 선택해주세요.`,
+      );
       return false;
     }
 

@@ -59,11 +59,43 @@ because the clicked link landed on
 Recovery remains a baseline/fallback path and needs redirect URL / deep-link
 strategy plus a link-validity-window QA pass before productization.
 
-Next immediate product work should move to the post-Build-81 follow-ups:
-Kakao display-name sync decision, ownership continuity with a user that already
-has Moments, Foundation Safety Check, External No-Token Finalization, and push
-token account-switch policy. Kakao Recovery Sign-in P1 itself is no longer in
-QA-waiting state.
+Foundation Safety Check, 2026-06-26:
+
+Foundation Safety Check has run against the current code/docs/QA baseline before
+adding more Journal UX, Analysis UX, or Media UX. This was not a large refactor.
+The check classified the current foundation as usable with several watch items:
+
+- Upload Reliability: WATCH. The target -> source upload -> finalize Moment ->
+  analysis start path, recoverable orphan path, and local-only failure
+  separation are in place. A small fix now blocks known >20MB videos in the
+  picker before upload submit, matching the current storage/provider limit.
+  If a platform does not expose `asset.fileSize`, server/storage validation
+  remains the final guard.
+- State Sync / Realtime / Push: PASS with WATCH follow-up. Private
+  Realtime/foreground refresh remain the source of truth, Push stays
+  notification-only, and Push Observability P2 still records token counts,
+  Expo ticket mapping, receipt results, and `DeviceNotRegistered` token
+  disabling.
+- Identity / Ownership: WATCH. Authenticated API calls preserve the Supabase
+  Auth -> `public.users` boundary, and core rows remain anchored on
+  `public.users.id`. External No-Token Finalization remains a foundation
+  follow-up because the internal default-user fallback must stay QA-only.
+- Storage / Cleanup: WATCH. Uploaded-source metadata keeps provider, bucket,
+  path, and upload target context for recovery/finalize. Source cleanup is
+  explicit after completed analysis, while orphan cleanup remains a future
+  careful item.
+- Observability: WATCH. Upload, analysis, sync, Push, and recovery have enough
+  logs/rows for current QA, and Push observability does not duplicate raw Expo
+  tokens. Recovery attempts do not yet have a dedicated structured DB row.
+- Recovery / Account Linking: PASS with WATCH follow-up. Kakao Account Linking
+  and Kakao Recovery Sign-in P1 have passed real-device QA without splitting
+  known ownership. Email Recovery remains baseline/fallback and still needs
+  redirect/deep-link productization before completion.
+
+No BLOCKED foundation item was found. The next foundation follow-ups are:
+ownership continuity with a user that already has Moments, External No-Token
+Finalization, Push token account-switch policy, and optional recovery-attempt
+observability. Kakao display-name sync remains low urgency.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
