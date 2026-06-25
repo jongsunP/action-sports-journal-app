@@ -542,13 +542,11 @@ export function AccountRecoveryScreen() {
                     </Text>
                   )}
                 </Pressable>
-                {kakaoFeedback ? (
+                {kakaoFeedback?.type === 'error' ? (
                   <Text
                     style={[
                       styles.kakaoStatusText,
-                      kakaoFeedback.type === 'error'
-                        ? styles.kakaoStatusTextError
-                        : undefined,
+                      styles.kakaoStatusTextError,
                     ]}
                   >
                     {kakaoFeedback.message}
