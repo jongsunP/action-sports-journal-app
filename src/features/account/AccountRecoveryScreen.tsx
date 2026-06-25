@@ -19,6 +19,19 @@ import { normalizeRecoveryEmail } from '../../services/auth/accountRecovery';
 import { useAuthSession } from '../../services/auth/AuthSessionProvider';
 
 type RecoveryStep = 'idle' | 'emailSent' | 'linked';
+type KakaoFeedbackType = 'success' | 'cancelled' | 'dismissed' | 'error';
+type KakaoFeedback = {
+  type: KakaoFeedbackType;
+  message: string;
+};
+type KakaoUiState =
+  | 'notLinked'
+  | 'linking'
+  | 'linked'
+  | 'success'
+  | 'cancelled'
+  | 'dismissed'
+  | 'error';
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -49,6 +62,88 @@ function getKakaoNickname(metadata: unknown) {
   );
 }
 
+function getKakaoUiCopy({
+  hasKakaoIdentity,
+  isLinkingKakao,
+  kakaoFeedback,
+  kakaoNickname,
+}: {
+  hasKakaoIdentity: boolean;
+  isLinkingKakao: boolean;
+  kakaoFeedback: KakaoFeedback | null;
+  kakaoNickname: string | null;
+}) {
+  const state: KakaoUiState = hasKakaoIdentity
+    ? kakaoFeedback?.type === 'success'
+      ? 'success'
+      : 'linked'
+    : isLinkingKakao
+      ? 'linking'
+      : kakaoFeedback?.type ?? 'notLinked';
+
+  switch (state) {
+    case 'linked':
+      return {
+        state,
+        title: '카카오 복구 수단 연결됨',
+        description: kakaoNickname
+          ? `${kakaoNickname} 카카오 계정으로 이 기록을 복구할 수 있습니다.`
+          : '카카오 계정으로 이 기록을 복구할 수 있습니다.',
+        buttonLabel: '카카오 연결 완료',
+      };
+    case 'success':
+      return {
+        state,
+        title: '카카오 연결 완료',
+        description: '현재 기기의 기록이 카카오 계정과 연결되었습니다.',
+        buttonLabel: '카카오 연결 완료',
+      };
+    case 'linking':
+      return {
+        state,
+        title: '카카오 연결 진행 중',
+        description: '카카오 화면에서 동의가 끝나면 이 앱으로 돌아옵니다.',
+        buttonLabel: '카카오 연결 중',
+      };
+    case 'cancelled':
+      return {
+        state,
+        title: '카카오 연결이 취소됨',
+        description:
+          kakaoFeedback?.message ??
+          '사용자가 카카오 연결을 취소했습니다. 기록은 그대로 보존됩니다.',
+        buttonLabel: '카카오로 다시 연결',
+      };
+    case 'dismissed':
+      return {
+        state,
+        title: '카카오 연결이 완료되지 않음',
+        description:
+          kakaoFeedback?.message ??
+          '카카오 연결 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
+        buttonLabel: '카카오로 다시 연결',
+      };
+    case 'error':
+      return {
+        state,
+        title: '카카오 연결 실패',
+        description:
+          kakaoFeedback?.message ??
+          '카카오 연결을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        buttonLabel: '카카오로 다시 연결',
+      };
+    case 'notLinked':
+    default:
+      return {
+        state,
+        title: '카카오 복구 수단 연결',
+        description:
+          '이 기기의 익명 기록을 카카오 계정과 연결해 재설치나 기기 변경에 대비합니다.',
+        buttonLabel: '카카오로 복구 수단 연결',
+      };
+  }
+}
+
 export function AccountRecoveryScreen() {
   const navigation =
     useNavigation<
@@ -66,9 +161,7 @@ export function AccountRecoveryScreen() {
   const [pendingEmail, setPendingEmail] = useState('');
   const [step, setStep] = useState<RecoveryStep>(user?.email ? 'linked' : 'idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [kakaoStatusMessage, setKakaoStatusMessage] = useState<string | null>(
-    null,
-  );
+  const [kakaoFeedback, setKakaoFeedback] = useState<KakaoFeedback | null>(null);
   const [isLinkingKakao, setIsLinkingKakao] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isRefreshingSession, setIsRefreshingSession] = useState(false);
@@ -97,6 +190,12 @@ export function AccountRecoveryScreen() {
     !isSubmittingEmail &&
     !isRefreshingSession &&
     !isLinkingKakao;
+  const kakaoUiCopy = getKakaoUiCopy({
+    hasKakaoIdentity,
+    isLinkingKakao,
+    kakaoFeedback,
+    kakaoNickname,
+  });
 
   const handleRequestEmailLink = async () => {
     if (!canSubmitEmail) {
@@ -104,7 +203,7 @@ export function AccountRecoveryScreen() {
     }
 
     setErrorMessage(null);
-    setKakaoStatusMessage(null);
+    setKakaoFeedback(null);
     setIsSubmittingEmail(true);
 
     try {
@@ -124,7 +223,7 @@ export function AccountRecoveryScreen() {
     }
 
     setErrorMessage(null);
-    setKakaoStatusMessage(null);
+    setKakaoFeedback(null);
     setIsRefreshingSession(true);
 
     try {
@@ -147,7 +246,7 @@ export function AccountRecoveryScreen() {
 
     setEmail(pendingEmail);
     setErrorMessage(null);
-    setKakaoStatusMessage(null);
+    setKakaoFeedback(null);
     setIsSubmittingEmail(true);
 
     try {
@@ -165,7 +264,7 @@ export function AccountRecoveryScreen() {
     }
 
     setErrorMessage(null);
-    setKakaoStatusMessage(null);
+    setKakaoFeedback(null);
     setIsLinkingKakao(true);
 
     try {
@@ -173,19 +272,25 @@ export function AccountRecoveryScreen() {
 
       if (result.status === 'linked') {
         await refreshSession();
-        setKakaoStatusMessage(
-          '카카오가 현재 계정의 복구 수단으로 연결되었습니다.',
-        );
+        setKakaoFeedback({
+          type: 'success',
+          message: '카카오가 현재 계정의 복구 수단으로 연결되었습니다.',
+        });
         return;
       }
 
-      setKakaoStatusMessage(
-        result.status === 'cancelled'
-          ? '카카오 연결이 취소되었습니다.'
-          : '카카오 연결 창이 닫혔습니다.',
-      );
+      setKakaoFeedback({
+        type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
+        message:
+          result.status === 'cancelled'
+            ? '카카오 연결이 취소되었습니다. 기록은 그대로 유지됩니다.'
+            : '카카오 연결 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
+      });
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setKakaoFeedback({
+        type: 'error',
+        message: getErrorMessage(error),
+      });
     } finally {
       setIsLinkingKakao(false);
     }
@@ -335,11 +440,47 @@ export function AccountRecoveryScreen() {
               ) : null}
 
               <View style={styles.kakaoBlock}>
-                <Text style={styles.formLabel}>카카오 복구 수단</Text>
-                <Text style={styles.helperText}>
-                  현재 익명 계정에 카카오를 연결해 기록을 잃지 않도록
-                  준비합니다. 이메일 권한이 없어도 카카오 연결만으로 복구
-                  수단을 만들 수 있습니다.
+                <View style={styles.kakaoHeaderRow}>
+                  <View style={styles.kakaoTitleBlock}>
+                    <Text style={styles.formLabel}>카카오 복구 수단</Text>
+                    <Text style={styles.kakaoStateTitle}>
+                      {kakaoUiCopy.title}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.kakaoStateBadge,
+                      kakaoUiCopy.state === 'linked' ||
+                      kakaoUiCopy.state === 'success'
+                        ? styles.kakaoStateBadgeSuccess
+                        : kakaoUiCopy.state === 'cancelled' ||
+                            kakaoUiCopy.state === 'dismissed'
+                          ? styles.kakaoStateBadgeNeutral
+                          : kakaoUiCopy.state === 'error'
+                            ? styles.kakaoStateBadgeError
+                            : styles.kakaoStateBadgeDefault,
+                    ]}
+                  >
+                    <Text style={styles.kakaoStateBadgeText}>
+                      {kakaoUiCopy.state === 'linked' ||
+                      kakaoUiCopy.state === 'success'
+                        ? '연결됨'
+                        : kakaoUiCopy.state === 'linking'
+                          ? '진행 중'
+                          : kakaoUiCopy.state === 'error'
+                            ? '오류'
+                            : kakaoUiCopy.state === 'cancelled' ||
+                                kakaoUiCopy.state === 'dismissed'
+                              ? '미완료'
+                              : '미연결'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.helperText}>{kakaoUiCopy.description}</Text>
+                <Text style={styles.kakaoFallbackText}>
+                  이메일 복구는 별도 예비 수단입니다. 카카오와 이메일은 서로
+                  대체 경로이며, 둘 중 하나만 연결되어도 기록 복구에 사용할 수
+                  있습니다.
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -355,15 +496,20 @@ export function AccountRecoveryScreen() {
                     <ActivityIndicator color="#181600" />
                   ) : (
                     <Text style={styles.kakaoButtonText}>
-                      {hasKakaoIdentity
-                        ? '카카오 복구 수단 연결됨'
-                        : '카카오로 복구 수단 연결'}
+                      {kakaoUiCopy.buttonLabel}
                     </Text>
                   )}
                 </Pressable>
-                {kakaoStatusMessage ? (
-                  <Text style={styles.kakaoStatusText}>
-                    {kakaoStatusMessage}
+                {kakaoFeedback ? (
+                  <Text
+                    style={[
+                      styles.kakaoStatusText,
+                      kakaoFeedback.type === 'error'
+                        ? styles.kakaoStatusTextError
+                        : undefined,
+                    ]}
+                  >
+                    {kakaoFeedback.message}
                   </Text>
                 ) : null}
               </View>
@@ -553,6 +699,55 @@ const styles = StyleSheet.create({
     marginTop: 18,
     padding: 14,
   },
+  kakaoHeaderRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  kakaoTitleBlock: {
+    flex: 1,
+    gap: 6,
+  },
+  kakaoStateTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    lineHeight: 21,
+  },
+  kakaoStateBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  kakaoStateBadgeDefault: {
+    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: 'rgba(148, 163, 184, 0.24)',
+  },
+  kakaoStateBadgeSuccess: {
+    backgroundColor: 'rgba(34, 197, 94, 0.16)',
+    borderColor: 'rgba(74, 222, 128, 0.3)',
+  },
+  kakaoStateBadgeNeutral: {
+    backgroundColor: 'rgba(250, 204, 21, 0.12)',
+    borderColor: 'rgba(250, 204, 21, 0.26)',
+  },
+  kakaoStateBadgeError: {
+    backgroundColor: 'rgba(244, 63, 94, 0.13)',
+    borderColor: 'rgba(251, 113, 133, 0.28)',
+  },
+  kakaoStateBadgeText: {
+    color: '#f8fafc',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  kakaoFallbackText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
   kakaoButton: {
     alignItems: 'center',
     backgroundColor: '#fee500',
@@ -571,6 +766,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     lineHeight: 19,
+  },
+  kakaoStatusTextError: {
+    color: '#fecdd3',
   },
   helperText: {
     color: '#9ca3af',
