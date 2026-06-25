@@ -274,6 +274,8 @@ After a development session reports that a build is complete, do not immediately
 send a new development-session prompt. First give the Founder only the QA steps
 needed for that build and wait for the Founder’s QA result. After the Founder
 reports the result, then decide whether to send a development-session follow-up.
+When presenting build QA to the Founder, show the install/build link separately
+first, then provide the QA checklist.
 
 Session closeout rule:
 
