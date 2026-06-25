@@ -138,7 +138,7 @@ function getKakaoUiCopy({
         state,
         title: '카카오 복구 수단 연결',
         description:
-          '이 기기의 익명 기록을 카카오 계정과 연결해 재설치나 기기 변경에 대비합니다.',
+          '이 기기의 익명 기록에 카카오 복구 수단을 연결합니다.',
         buttonLabel: '카카오로 복구 수단 연결',
       };
   }
@@ -184,7 +184,7 @@ function getAccountStatusCopy({
     return {
       title: '익명 기기 계정',
       description:
-        '현재 라이딩 기록은 이 기기의 익명 계정에 안전하게 묶여 있습니다. 카카오나 이메일을 연결하면 재설치 후에도 복구할 수 있습니다.',
+        '현재 라이딩 기록은 이 기기의 익명 계정에 묶여 있습니다. 카카오나 이메일을 복구 수단으로 연결할 수 있습니다.',
     };
   }
 
@@ -327,7 +327,6 @@ export function AccountRecoveryScreen() {
       const result = await linkKakaoIdentity();
 
       if (result.status === 'linked') {
-        await refreshSession();
         setKakaoFeedback({
           type: 'success',
           message: '카카오가 현재 계정의 복구 수단으로 연결되었습니다.',

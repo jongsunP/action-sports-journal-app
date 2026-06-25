@@ -53,7 +53,28 @@ async function refreshSupabaseSession() {
     return null;
   }
 
-  return data.session ?? null;
+  const currentSession = data.session ?? null;
+
+  if (!currentSession) {
+    return null;
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.warn(
+      'Supabase user refresh failed:',
+      userError instanceof Error ? userError.message : 'Unknown error',
+    );
+    return currentSession;
+  }
+
+  return userData.user
+    ? {
+        ...currentSession,
+        user: userData.user,
+      }
+    : currentSession;
 }
 
 export function AuthSessionProvider({ children }: { children: ReactNode }) {

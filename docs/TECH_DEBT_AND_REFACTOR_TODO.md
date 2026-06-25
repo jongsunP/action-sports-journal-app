@@ -343,6 +343,11 @@ Follow-up backlog:
 - Moment ownership continuity: rerun with a user that already has Moments. The
   Build 75 QA user had `moments` count `0`, so preservation was verified by
   ownership structure, not by a real existing Moment sample.
+- Kakao recovery sign-in: current Kakao work links a recovery method to the
+  current anonymous-first account. App delete/reinstall clears the local
+  Supabase session and starts a new anonymous session; a separate "recover
+  existing account with Kakao" sign-in flow is still required before the UI can
+  promise reinstall/new-device recovery.
 
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
