@@ -428,9 +428,11 @@ Single CTA Recovery UX.
 Backlog after Push Token Account-switch Policy and product UX review:
 
 - Product UX Baseline P1: Unified User-Facing Status Resolver. Completed.
+- Kakao Single CTA Recovery UX: implemented as a single Kakao section/CTA while
+  preserving internal link/recover separation. Simulator UI review and future
+  standalone OAuth E2E remain follow-up validation, not blockers for the code
+  path.
 - Home v2 / Journal UX first slice after status consistency.
-- Kakao Single CTA Recovery UX: show one simple Kakao action to users while
-  keeping internal link/recover branching.
 - Detail menu / Retry Eligibility polish.
 - Upload Entry UX bottom sheet.
 - Analysis trust UX: Trick Review and visual summary candidates.
@@ -441,6 +443,24 @@ Backlog after Push Token Account-switch Policy and product UX review:
 - Initial Loading / Video Tab Spinner Observability.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
   verified, and Kakao Recovery Sign-in P1 is verified on Build 81.
+
+Kakao Single CTA Recovery UX implementation notes:
+
+- `AccountRecoveryScreen` no longer shows separate "카카오 복구 수단" and
+  "기존 기록 복구하기" blocks.
+- User-facing Kakao language is now centered on one CTA: "카카오로 계속하기".
+- First press defaults to `linkKakaoIdentity` so a current anonymous account can
+  be protected without creating a login wall.
+- If Kakao linking reports that the Kakao identity may already belong to another
+  account, the same Kakao section moves to a recover-ready state and the next
+  press runs `recoverWithKakao`.
+- The existing `checkRecoveryLocalWorkGuard()` still blocks recovery session
+  switching when local upload/reconciliation work is active.
+- `npm run typecheck` passed. No EAS build, paid AI call, DB migration, or
+  external console change was performed.
+- Simulator UI was not launched because no Metro/Expo session or booted
+  simulator was active. Standalone-device OAuth/deep-link QA remains a later
+  validation item if this UX needs real Kakao flow confirmation.
 
 Response/collaboration rules updated:
 

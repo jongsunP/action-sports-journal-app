@@ -191,13 +191,14 @@ Current stable workstream list:
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)은 외부 사용자 API no-token 401 차단으로 완료
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)는 같은 Expo token을 현재 authenticated owner로 이동하는 정책으로 완료
 - Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)는 진행중/완료/실패 UI 표시 통합으로 완료
+- Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)는 단일 Kakao 섹션/CTA 구현 완료, simulator UI와 standalone OAuth E2E는 후속 검증
 
 바로 앞 작업:
 - Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)
 
 가까운 후속:
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)
-- Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)
+- Kakao Single CTA Recovery UX Simulator/Standalone QA(카카오 단일 CTA 복구 UX 검증)
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)
 - Analysis Trust UX(분석 신뢰 UX)
 - Recovery Attempt Observability(복구 시도 관측성)

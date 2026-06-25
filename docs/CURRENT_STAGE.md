@@ -200,6 +200,31 @@ Implementation result:
 - `npm run typecheck` passed. No EAS build, paid AI call, DB migration, or
   external console change was performed.
 
+Kakao Single CTA Recovery UX, 2026-06-26:
+
+The account/recovery screen now presents Kakao as one user-facing action instead
+of separate "connect" and "recover" blocks. The visible CTA is centered on
+"카카오로 계속하기" and the copy explains that Kakao can either protect the
+current record or return the rider to an existing Kakao-linked record.
+
+Internal ownership boundaries remain separate:
+
+- Default path starts with `linkIdentity` to protect the current anonymous
+  account and its existing local/remote records.
+- If Kakao appears to be linked to another account, the same Kakao section moves
+  into a recover-ready state and the next CTA press uses the existing
+  `recoverWithKakao` / `signInWithOAuth` recovery path.
+- The local unsynced/uploading work guard still runs before recovery session
+  switching.
+- Already-linked users see a protected/connected state instead of another
+  recovery action.
+
+`npm run typecheck` passed. There was no EAS build, paid AI call, DB migration,
+or external console change. Simulator UI was not launched in this pass because
+no Metro/Expo session or booted simulator was active; OAuth/deep-link E2E still
+requires a later standalone-device QA pass when a build is intentionally
+scheduled.
+
 Build 74 Push QA / milestone closeout, 2026-06-24:
 
 Build 74 confirmed the remaining Auth Phase 2 Push observation. The Build 73

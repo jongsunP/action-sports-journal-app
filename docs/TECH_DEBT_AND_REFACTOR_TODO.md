@@ -206,7 +206,7 @@ Kakao Recovery UX:
 - Current state: Kakao linking and Kakao recovery sign-in are technically
   separate and both verified, but exposing both as separate user choices can
   feel unnecessarily complex.
-- Do soon: consider one user-facing Kakao CTA that internally branches between
+- Implemented: one user-facing Kakao section/CTA now internally branches between
   connecting the current anonymous account and recovering an existing
   Kakao-linked account.
 - Guardrail: keep local unsynced/uploading work protection and do not blur the
@@ -268,6 +268,43 @@ Follow-up:
   backlog item.
 - Home v2 / Journal UX first slice, Upload Entry bottom sheet, Analysis trust
   UX, and Media / Share UX remain separate follow-up work.
+
+## Kakao Single CTA Recovery UX - 2026-06-26
+
+### Decision
+
+User-facing Kakao recovery/account protection should be one action, not two
+separate product concepts. The user should not need to decide between "connect"
+and "recover"; the app can guide the branch while keeping internal ownership
+semantics explicit.
+
+### Implemented scope
+
+- `AccountRecoveryScreen` now shows one Kakao section with a single CTA.
+- Default CTA path runs `linkKakaoIdentity` first, preserving the current
+  anonymous/device-first account and protecting its records.
+- If link returns a not-linked result that implies the Kakao identity may
+  already belong to another account, the same section enters recover-ready mode.
+- The recover-ready CTA then uses the existing `recoverWithKakao` /
+  `signInWithOAuth` path to switch to the existing Kakao-linked account.
+- The existing `checkRecoveryLocalWorkGuard()` remains in front of recovery
+  session switching, so local unsynced/uploading work is still protected.
+- Separate Email Recovery UI remains baseline/fallback and was not expanded.
+
+### Validation
+
+- `npm run typecheck` passed.
+- No EAS build, paid AI call, DB migration, or external console change was
+  performed.
+- Simulator UI was not launched because no Metro/Expo session or booted
+  simulator was active.
+
+### Follow-up
+
+- Run simulator UI review for the single CTA copy/state rendering.
+- If the single CTA UX needs real OAuth confirmation, schedule a standalone
+  Kakao QA build intentionally and validate link -> recover-ready -> recover
+  behavior on device.
 
 ## Email Recovery / Account Linking QA - 2026-06-24
 
