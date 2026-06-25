@@ -349,6 +349,50 @@ Follow-up backlog:
   existing account with Kakao" sign-in flow is still required before the UI can
   promise reinstall/new-device recovery.
 
+Kakao Recovery Sign-in P1 design:
+
+This is the next recovery gap after successful Kakao account linking. Keep
+`linkIdentity` and `signInWithOAuth` separate:
+
+- `linkIdentity`: connect Kakao to the currently signed-in anonymous/device-first
+  account. This is the "복구 수단 연결" path.
+- `signInWithOAuth`: recover an existing Kakao-linked Auth user after
+  reinstall/new-device. This is the "기존 기록 복구하기" path.
+
+P1 implementation candidates:
+
+1. Add a `kakaoRecoverySignIn` helper separate from the current linking helper.
+2. Add a distinct "기존 기록 복구하기" section to `AccountRecoveryScreen`.
+3. Keep the linking CTA and recovery sign-in CTA separate in copy and layout.
+4. On recovery success, replace/refresh the Supabase session and user.
+5. Before recovery, check for unsynced/uploading local work and block or warn.
+6. After recovery, refresh Home/Video/Detail, re-register the Push token under
+   the recovered owner, and verify Realtime resubscription.
+
+Risks / QA gates:
+
+- Wrong-account merge: do not automatically merge the fresh anonymous
+  `public.users` row into the recovered account in P1.
+- Local work loss: do not silently discard drafts, uploading sessions, or
+  local-only Moments during recovery.
+- No-token/default-user regression: recovered-session API calls must carry the
+  recovered bearer token.
+- Push owner mismatch: device token should be registered to the recovered app
+  user after session switch.
+- Realtime mismatch: the app should leave the old auth channel and subscribe to
+  `analysis-updates:auth:{authUserId}` for the recovered Auth user.
+- UI confusion: "복구 수단 연결" and "기존 기록 복구하기" must not look like the same
+  action.
+
+Non-goals:
+
+- No Auth-wide refactor.
+- No DB schema change.
+- No automatic `public.users` merge.
+- No Email Recovery productization.
+- No Apple/Google provider expansion.
+- No Push/Realtime redesign beyond verification after session switch.
+
 ## Build 65 Upload Recovery / Local-only Failure Follow-up - 2026-06-23
 
 Current baseline:

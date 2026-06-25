@@ -166,14 +166,16 @@ Current stable workstream list:
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
 - Kakao Recovery / Account Linking(카카오 복구 / 계정 연결) 성공
+- Kakao Recovery Sign-in(카카오 기존 기록 복구 로그인)은 설계 완료, 구현 전
 - Email Recovery(이메일 복구)는 baseline/fallback으로 유지
 - Email Recovery(이메일 복구) 제품화는 deep link / redirect 전략 필요
-- Kakao Linking UI(카카오 연결 UI)는 성공/실패 표시 개선 필요
+- Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 
 바로 앞 작업:
-- Kakao Linking UI(카카오 연결 UI) 성공/실패 표시 개선
+- Kakao Recovery Sign-in(카카오 기존 기록 복구 로그인) 설계 결정 문서화
 
 가까운 후속:
+- Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차) 구현
 - Kakao display_name Sync(카카오 이름 동기화) 여부 결정
 - 기존 Moment(기록) 있는 계정으로 Ownership Continuity(소유권 유지) 재확인
 - Foundation Safety Check(기반 안전 점검)
@@ -376,6 +378,48 @@ Auth/DB checks confirmed the Kakao identity is linked to existing Auth user
 `6b03b289-a6aa-4f26-aa66-6730e1cca2fe`, with push-token owner and Realtime
 basis preserved. The QA account had no existing Moments, so rerun Moment
 ownership continuity later with a pre-existing Moment sample.
+
+Kakao Recovery Sign-in decision:
+
+Kakao Linking and Kakao Recovery Sign-in are separate product flows.
+`linkIdentity` remains the mechanism for connecting Kakao as a recovery method
+to the currently signed-in anonymous/device-first account. It belongs only in
+the "복구 수단 연결" surface. It must not become the reinstall/new-device
+restore mechanism.
+
+The reinstall/new-device restore flow is "기존 기록 복구하기 -> Kakao로 복구".
+That flow should use `signInWithOAuth` to sign into the existing Kakao-linked
+Supabase Auth user and replace the current fresh anonymous session with that
+recovered session. After the session switch, normal bearer-token requests should
+resolve to the existing `public.users` row; Home, Video, and Detail should
+refresh from the remote source of truth; Push token registration should move to
+the recovered owner; and Realtime should resubscribe to
+`analysis-updates:auth:{authUserId}` for the recovered Auth user.
+
+P1 implementation scope:
+
+1. Add a Kakao recovery sign-in helper separate from the existing Kakao linking
+   helper.
+2. Add a "기존 기록 복구하기" section to `AccountRecoveryScreen`.
+3. Keep the current account-linking CTA and recovery sign-in CTA visually and
+   semantically separate.
+4. On recovery success, refresh and replace the Supabase session/user.
+5. If unsynced/uploading local work exists, block or clearly warn before
+   recovery so local work is not silently lost.
+6. QA cancel/failure behavior in the Simulator first. Create standalone builds
+   only after Founder/CTO approval.
+
+Non-goals for P1:
+
+- Do not replace `linkIdentity` with `signInWithOAuth`.
+- Do not refactor the whole Auth/session structure.
+- Do not change DB schema.
+- Do not automatically merge the fresh anonymous user's `public.users` row into
+  the recovered account.
+- Do not productize Email Recovery in this pass.
+- Do not add Apple/Google recovery providers.
+- Do not redesign Push or Realtime. Only verify token re-registration and
+  channel resubscription after the session switch.
 
 ## 2026-06-25 Daily Wrap-up
 

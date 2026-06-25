@@ -443,6 +443,50 @@ Kakao follow-ups:
   `public.users.display_name` currently stayed as `parksunl7@naver.com`.
 - Re-check ownership continuity on an account that already has Moments.
 
+Kakao Recovery Sign-in design decision:
+
+Kakao Linking and Kakao Recovery Sign-in must stay separate.
+
+- `linkIdentity` is for the current anonymous/device-first account. It connects
+  Kakao as a recovery method and belongs in the "복구 수단 연결" area.
+- `signInWithOAuth` is for reinstall/new-device recovery. It belongs in a
+  separate "기존 기록 복구하기" area and should sign the app into the existing
+  Kakao-linked Auth user.
+
+The product flow remains Anonymous-first / Recovery-later. First use creates an
+anonymous session. After the rider creates records, they can connect Kakao as a
+recovery method. If they later delete/reinstall the app or use a new device, the
+correct flow is "기존 기록 복구하기 -> Kakao로 복구", which switches the app session
+to the existing Kakao-linked Supabase Auth user. After that session switch,
+normal bearer-token requests should resolve through `resolveRequestUser` to the
+existing `public.users` row, remote Moments should refresh into Home/Video/Detail,
+Push token registration should move to the recovered owner, and Realtime should
+resubscribe to `analysis-updates:auth:{authUserId}` for the recovered user.
+
+Kakao Recovery Sign-in P1 scope:
+
+1. Add a new Kakao recovery sign-in helper, separate from `kakaoLinking.ts`.
+2. Add a "기존 기록 복구하기" section to `AccountRecoveryScreen`.
+3. Keep the current account-linking CTA and recovery sign-in CTA visually and
+   semantically separate.
+4. On recovery success, replace/refresh the Supabase session and user.
+5. If unsynced/uploading local work exists, block recovery or clearly warn
+   before proceeding.
+6. Run Simulator QA for cancel/failure first; create a standalone build only
+   after Founder/CTO approval.
+
+Kakao Recovery Sign-in P1 non-goals:
+
+- Do not replace `linkIdentity` with `signInWithOAuth`.
+- Do not refactor the whole Auth/session structure.
+- Do not change DB schema.
+- Do not automatically merge the fresh anonymous `public.users` row into the
+  recovered account.
+- Do not productize Email Recovery.
+- Do not add Apple/Google recovery providers.
+- Do not redesign Push or Realtime; only verify re-registration and
+  resubscription after the session switch.
+
 Kakao linkIdentity implementation plan:
 
 - Implementation readiness check: current dependencies do not include
