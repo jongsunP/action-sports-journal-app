@@ -144,6 +144,56 @@ function getKakaoUiCopy({
   }
 }
 
+function getAccountStatusCopy({
+  currentEmail,
+  hasKakaoIdentity,
+  isAnonymousUser,
+  kakaoNickname,
+}: {
+  currentEmail: string | null;
+  hasKakaoIdentity: boolean;
+  isAnonymousUser: boolean;
+  kakaoNickname: string | null;
+}) {
+  if (currentEmail && hasKakaoIdentity) {
+    return {
+      title: '기기 계정 보호됨',
+      description: kakaoNickname
+        ? `현재 라이딩 기록은 이 기기의 계정에 묶여 있고, ${kakaoNickname} 카카오 계정과 ${currentEmail} 이메일을 복구 수단으로 사용할 수 있습니다.`
+        : `현재 라이딩 기록은 이 기기의 계정에 묶여 있고, 카카오 계정과 ${currentEmail} 이메일을 복구 수단으로 사용할 수 있습니다.`,
+    };
+  }
+
+  if (hasKakaoIdentity) {
+    return {
+      title: '기기 계정 보호됨',
+      description: kakaoNickname
+        ? `현재 라이딩 기록은 이 기기의 계정에 묶여 있고, ${kakaoNickname} 카카오 계정이 복구 수단으로 연결되어 있습니다.`
+        : '현재 라이딩 기록은 이 기기의 계정에 묶여 있고, 카카오 복구 수단이 연결되어 있습니다.',
+    };
+  }
+
+  if (currentEmail) {
+    return {
+      title: '기기 계정 보호됨',
+      description: `현재 라이딩 기록은 이 기기의 계정에 묶여 있고, ${currentEmail} 이메일이 복구 수단으로 연결되어 있습니다.`,
+    };
+  }
+
+  if (isAnonymousUser) {
+    return {
+      title: '익명 기기 계정',
+      description:
+        '현재 라이딩 기록은 이 기기의 익명 계정에 안전하게 묶여 있습니다. 카카오나 이메일을 연결하면 재설치 후에도 복구할 수 있습니다.',
+    };
+  }
+
+  return {
+    title: '계정 상태 확인 필요',
+    description: '인증 세션을 확인한 뒤 복구 수단을 연결할 수 있습니다.',
+  };
+}
+
 export function AccountRecoveryScreen() {
   const navigation =
     useNavigation<
@@ -194,6 +244,12 @@ export function AccountRecoveryScreen() {
     hasKakaoIdentity,
     isLinkingKakao,
     kakaoFeedback,
+    kakaoNickname,
+  });
+  const accountStatusCopy = getAccountStatusCopy({
+    currentEmail,
+    hasKakaoIdentity,
+    isAnonymousUser,
     kakaoNickname,
   });
 
@@ -330,21 +386,9 @@ export function AccountRecoveryScreen() {
         >
           <View style={styles.statusPanel}>
             <Text style={styles.panelEyebrow}>현재 상태</Text>
-            <Text style={styles.panelTitle}>
-              {currentEmail || hasKakaoIdentity
-                ? '복구 수단 연결됨'
-                : '익명 기기 계정'}
-            </Text>
+            <Text style={styles.panelTitle}>{accountStatusCopy.title}</Text>
             <Text style={styles.panelText}>
-              {currentEmail
-                ? `${currentEmail} 주소가 이 계정에 연결되어 있습니다.`
-                : hasKakaoIdentity
-                  ? kakaoNickname
-                    ? `${kakaoNickname} 카카오 계정이 이 기록의 복구 수단으로 연결되어 있습니다.`
-                    : '카카오 계정이 이 기록의 복구 수단으로 연결되어 있습니다.'
-                : isAnonymousUser
-                  ? '현재 라이딩 기록은 이 기기의 익명 계정에 안전하게 묶여 있습니다.'
-                  : '인증 세션을 확인한 뒤 복구 이메일을 연결할 수 있습니다.'}
+              {accountStatusCopy.description}
             </Text>
           </View>
 
