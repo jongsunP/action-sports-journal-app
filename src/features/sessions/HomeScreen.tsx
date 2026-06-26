@@ -983,13 +983,18 @@ export function HomeScreen() {
               limit: MOMENT_LIST_PAGE_SIZE,
             });
             const remoteMoments = remoteMomentPage.moments;
+            const previousRemoteMomentSyncStatus = remoteMomentSyncStatus;
             const completedRealtimeSession = findNewRealtimeCompletedSession({
               remoteMomentIdsBySessionId,
               remoteMoments,
               sessions,
             });
             syncRemoteMoments(remoteMoments);
-            markRemoteMomentSyncCompleted();
+            markRemoteMomentSyncCompleted({
+              count: remoteMoments.length,
+              hasMore: remoteMomentPage.hasMore,
+              recoveredFrom: previousRemoteMomentSyncStatus,
+            });
             if (currentReason === 'realtime') {
               pendingRealtimeCompletionNoticeRef.current =
                 completedRealtimeSession;
@@ -1021,6 +1026,7 @@ export function HomeScreen() {
       applyVideoArchiveFirstPage,
       markRemoteMomentSyncCompleted,
       remoteMomentIdsBySessionId,
+      remoteMomentSyncStatus,
       recoverUnfinalizedUploadCandidates,
       sessions,
       syncRemoteMoments,
@@ -1606,6 +1612,13 @@ export function HomeScreen() {
         ),
     [sessionSummaryById, videoArchiveSessionIds],
   );
+  const shouldUseVideoArchiveSessionFallback =
+    videoArchiveSessionSummaries.length === 0 &&
+    homeSessionSummaries.length > 0 &&
+    !hasLoadedVideoArchiveFirstPage;
+  const visibleVideoArchiveSessionSummaries = shouldUseVideoArchiveSessionFallback
+    ? homeSessionSummaries
+    : videoArchiveSessionSummaries;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
 
@@ -1982,14 +1995,22 @@ export function HomeScreen() {
         mode: authMode,
       },
       boot: remoteMomentSyncDiagnostics,
+      counts: {
+        home: homeSessionSummaries.length,
+        videoArchive: videoArchiveSessionSummaries.length,
+        videoShown: visibleVideoArchiveSessionSummaries.length,
+      },
       video: videoArchiveDiagnostics,
     }),
     [
       authMode,
+      homeSessionSummaries.length,
       isAuthLoading,
       remoteMomentSyncDiagnostics,
       user,
       videoArchiveDiagnostics,
+      videoArchiveSessionSummaries.length,
+      visibleVideoArchiveSessionSummaries.length,
     ],
   );
 
@@ -2132,7 +2153,10 @@ export function HomeScreen() {
         <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
         <Text style={styles.title}>영상</Text>
         <Text style={styles.headerMeta}>
-          {videoArchiveSessionSummaries.length}개 로드됨 · 날짜별/기술별 분류 예정
+          {visibleVideoArchiveSessionSummaries.length}개 표시됨
+          {shouldUseVideoArchiveSessionFallback
+            ? ' · 홈 기록 기준, 아카이브 동기화 중'
+            : ' · 날짜별/기술별 분류 예정'}
         </Text>
       </View>
 
@@ -2153,15 +2177,17 @@ export function HomeScreen() {
       header={renderVideoArchiveHeader()}
       isLoadingMore={isLoadingMoreVideoArchiveMoments}
       loadState={
-        isLoadingVideoArchiveInitialPage ||
-        (isSessionListLoading && videoArchiveSessionSummaries.length === 0)
+        shouldUseVideoArchiveSessionFallback
+          ? 'ready'
+          : isLoadingVideoArchiveInitialPage ||
+              (isSessionListLoading && videoArchiveSessionSummaries.length === 0)
           ? 'loading'
           : videoArchiveLoadState
       }
       onEndReached={handleLoadMoreVideoArchiveMoments}
       onOpenSession={openEvidenceSheet}
       onRetry={handleRetryVideoArchiveFirstPage}
-      sessions={videoArchiveSessionSummaries}
+      sessions={visibleVideoArchiveSessionSummaries}
       styles={styles}
     />
   );
@@ -2281,6 +2307,11 @@ function QADebugPanel({
       status: string;
       updatedAt: number | null;
     };
+    counts: {
+      home: number;
+      videoArchive: number;
+      videoShown: number;
+    };
     video: RequestDiagnostics;
   };
   styles: Record<string, object>;
@@ -2342,6 +2373,10 @@ function QADebugPanel({
       <Text style={styles.qaDebugLine}>
         Video at {formatDebugTimestamp(snapshot.video.updatedAt)} · reason{' '}
         {compactDebugReason(snapshot.video.reason)}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Counts home {snapshot.counts.home} · archive{' '}
+        {snapshot.counts.videoArchive} · shown {snapshot.counts.videoShown}
       </Text>
     </View>
   );

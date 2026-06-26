@@ -57,6 +57,7 @@ export type RemoteMomentSyncStatus =
   | 'failed'
   | 'loading'
   | 'not_configured'
+  | 'recovered_after_timeout'
   | 'timeout'
   | 'waiting_for_storage';
 export type RemoteMomentPageInfo = {
@@ -348,17 +349,53 @@ export function useBootSync({
     !isRemoteMomentSyncConfigured ||
     remoteMomentSyncStatus === 'completed' ||
     remoteMomentSyncStatus === 'failed' ||
+    remoteMomentSyncStatus === 'recovered_after_timeout' ||
     remoteMomentSyncStatus === 'timeout';
   const hasCompletedInitialRemoteMomentSync =
-    !isRemoteMomentSyncConfigured || remoteMomentSyncStatus === 'completed';
+    !isRemoteMomentSyncConfigured ||
+    remoteMomentSyncStatus === 'completed' ||
+    remoteMomentSyncStatus === 'recovered_after_timeout';
   const hasFinishedInitialRemoteMomentSync =
     !isRemoteMomentSyncConfigured ||
     remoteMomentSyncStatus === 'completed' ||
     remoteMomentSyncStatus === 'failed' ||
+    remoteMomentSyncStatus === 'recovered_after_timeout' ||
     remoteMomentSyncStatus === 'timeout';
-  const markRemoteMomentSyncCompleted = useCallback(() => {
-    setRemoteMomentSyncStatus('completed');
-  }, []);
+  const markRemoteMomentSyncCompleted = useCallback(
+    (diagnostics?: {
+      count?: number;
+      durationMs?: number;
+      hasMore?: boolean;
+      reason?: string | null;
+      recoveredFrom?: RemoteMomentSyncStatus;
+    }) => {
+      setRemoteMomentSyncStatus((currentStatus) => {
+        const status =
+          diagnostics?.recoveredFrom === 'timeout' ||
+          diagnostics?.recoveredFrom === 'failed' ||
+          currentStatus === 'timeout' ||
+          currentStatus === 'failed'
+            ? 'recovered_after_timeout'
+            : 'completed';
+
+        setRemoteMomentSyncDiagnostics((current) => ({
+          count: diagnostics?.count ?? current.count,
+          durationMs: diagnostics?.durationMs ?? current.durationMs,
+          hasMore: diagnostics?.hasMore ?? current.hasMore,
+          reason:
+            diagnostics?.reason ??
+            (status === 'recovered_after_timeout'
+              ? 'Remote moment sync recovered after timeout.'
+              : null),
+          status,
+          updatedAt: Date.now(),
+        }));
+
+        return status;
+      });
+    },
+    [],
+  );
 
   return {
     isLoadingInitialMoments:

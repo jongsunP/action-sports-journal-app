@@ -467,8 +467,12 @@ Backlog after Push Token Account-switch Policy and product UX review:
   not the reinstall/new-device Email Recovery Sign-in flow.
 - Kakao display_name sync.
 - Initial Loading / Video Tab Spinner Observability: Build 85 real-device QA
-  passed for the current P1 scope. Use QA panel values first if the issue
-  recurs.
+  passed for the initial P1 scope. Build 85/86 real-use logs later showed
+  healthy Auth with boot remote sync timeout and Home/Video archive state
+  divergence. A P1 minimum fix now records boot retry/recovery as
+  `recovered_after_timeout`, lets Video show Home sessions as a temporary
+  archive fallback while first-page sync catches up, and adds QA Debug
+  home/archive/shown counts.
 - QA Debug Overlay/Panel: Build 85 real-device QA passed for the current P1
   scope. Define hide/remove policy before production distribution.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
@@ -606,10 +610,11 @@ keeps the email connection. This build does not validate app delete/reinstall
 email sign-in recovery and does not use `signInWithOtp`.
 
 Startup / Video Tab Loading Observability P1 is complete for the current
-preview/internal QA scope. If slow startup or spinner behavior recurs, ask for
-the QA panel values first instead of guessing. Auth bootstrap
-timeout/observability and production hide/remove policy for the QA Debug Panel
-remain follow-up backlog items.
+preview/internal QA scope, with a follow-up Real-use Loading Diagnosis P1
+minimum fix applied after Build 85/86 logs. If slow startup or spinner behavior
+recurs, ask for the QA panel values first and compare Boot status, Video status,
+and home/archive/shown counts before guessing. Production hide/remove policy
+for the QA Debug Panel remains a follow-up backlog item.
 
 Build 82 details:
 

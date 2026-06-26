@@ -335,6 +335,27 @@ Current follow-up:
 - Auth bootstrap timeout/observability remains a later backlog item.
 - QA Debug Panel needs a hide/remove policy before production distribution.
 
+Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1
+minimum fix, 2026-06-26:
+
+- Build 85/86 QA logs showed Auth was healthy while boot remote Moment sync hit
+  the 8 second timeout. Home could still show existing sessions later, while
+  the Video tab could appear loading/empty because it used a separate archive
+  first-page order.
+- The app now records retry/recovery success after a boot timeout as
+  `recovered_after_timeout` in boot diagnostics instead of leaving QA Debug
+  stuck on the original timeout.
+- Video tab now falls back to Home session summaries when archive first-page
+  data has not loaded yet but Home already has sessions. The header labels this
+  as "홈 기록 기준, 아카이브 동기화 중" so the user is not shown an empty archive
+  while records exist elsewhere.
+- QA Debug now separates counts as home / archive / shown so future captures
+  can distinguish Home data from Video archive first-page data.
+- `npm run typecheck` and `git diff --check` passed. Simulator UI verification
+  could not run in this session because local `xcrun simctl` did not respond.
+  No EAS build, paid AI call, DB/schema change, or external console change was
+  performed.
+
 Detail Menu / Retry Eligibility Polish, 2026-06-26:
 
 Moment Detail now exposes a clearer action area instead of relying on a small

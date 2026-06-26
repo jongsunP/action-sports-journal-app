@@ -567,6 +567,33 @@ reason data to classify the failure path.
 3. Auth bootstrap timeout/observability remains a later backlog item.
 4. QA Debug Panel needs a hide/remove policy before production distribution.
 
+### Real-use Loading Diagnosis P1 minimum fix - 2026-06-26
+
+Build 85/86 real-use logs showed a case where Auth was healthy, boot remote
+Moment sync timed out around 8 seconds, Home later showed existing sessions, and
+the Video tab could still look loading/empty because archive first-page state is
+separate from the Home sessions cache.
+
+Implemented minimum fix:
+
+- Boot diagnostics now mark successful retry/recovery after timeout as
+  `recovered_after_timeout` instead of leaving QA Debug stuck on the original
+  timeout state.
+- Video archive uses Home session summaries as a temporary display fallback
+  when archive first-page data has not loaded yet but Home already has records.
+- Video header copy indicates this fallback as "홈 기록 기준, 아카이브 동기화 중".
+- QA Debug now shows home / archive / shown counts so future screenshots can
+  identify whether the issue is data absence, archive ordering, or display
+  fallback.
+
+Validation:
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Simulator UI verification was attempted but local `xcrun simctl` did not
+  respond in this session, so the remaining UI confirmation should happen in
+  the next simulator/device QA pass.
+
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated

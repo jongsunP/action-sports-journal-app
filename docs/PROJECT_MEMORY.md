@@ -185,7 +185,7 @@ Current stable workstream list:
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차)은 구현 완료, Supabase Site URL 수정 완료, Build 86 재QA 대기
 - Email Recovery Sign-in(이메일 기존 기록 복구 로그인)은 아직 미구현. 앱 삭제/재설치 후 이메일로 기존 기록 복구는 후속 별도 범위
 - Fresh email로 confirmation link 클릭 시 `actionsportsjournal://auth/email/change` 앱 복귀, Email linked 상태, relaunch persistence 확인
-- Real-use Loading Diagnosis(실사용 로딩 진단): QA Debug 로그에서 `Remote moment sync timed out` 재관찰, 개발 세션 분석 진행 중
+- Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)은 최소 수정 완료. Boot timeout 이후 retry/recovery success가 QA Debug boot diagnostics에 `recovered_after_timeout`으로 반영되고, Video 탭은 archive first-page가 아직 없어도 Home sessions가 있으면 홈 기록 기준 fallback을 표시한다.
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책)
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
