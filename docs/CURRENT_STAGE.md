@@ -51,16 +51,23 @@ Kakao-linked account recovered. Build 81 used build number `81`, EAS Build ID
 `24ca707e-f248-4533-9953-2cc7912af651`, and install/log URL
 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`.
 
-Email Recovery Connection P1 is implemented and Build 86 is ready for standalone
-iPhone QA. The flow remains scoped to connecting a recovery email to the
-current anonymous/device-first account. It does not implement reinstall/new
-device email recovery sign-in. The app now passes an explicit redirect target
-for `updateUser({ email })`: `actionsportsjournal://auth/email/change`. The app
-also listens for initial/runtime email-change callback URLs, handles code
-exchange or hash session payloads, and refreshes session/user state with
-`getSession` + `getUser` after callback completion. Build 86 should verify the
-real email click path, app return, connected-state convergence, and persistence
-after relaunch.
+Email Recovery Connection P1 is implemented and has partial Build 87 standalone
+iPhone QA coverage. The flow remains scoped to connecting a recovery email to
+the current anonymous/device-first account. It does not implement reinstall/new
+device email recovery sign-in. The app passes an explicit redirect target for
+`updateUser({ email })`: `actionsportsjournal://auth/email/change`, listens for
+initial/runtime email-change callback URLs, handles code exchange or hash
+session payloads, and refreshes session/user state with `getSession` +
+`getUser` after callback completion.
+
+Build 87 QA confirmed that entering an already registered email returns the
+expected `A user with this email address has already been registered.` style
+error. This supports that Supabase Auth is enforcing existing email ownership.
+Fresh-email confirmation-link QA could not be completed in this pass because
+the hosted email sender hit rate limits. Defer the remaining fresh email link
+click -> ASJ app return -> connected state -> relaunch persistence check until
+the rate limit clears or a new approved fresh email is available. Do not keep
+repeating `updateUser({ email })` attempts while rate-limited.
 
 Email Recovery deep-link / redirect status, 2026-06-26:
 

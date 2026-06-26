@@ -202,8 +202,8 @@ Current stable workstream list:
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
-- Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 86 재QA 대기
-- Email Recovery Connection P1 QA: fresh email confirmation link 클릭 시 `actionsportsjournal://auth/email/change` 앱 복귀, Email linked 상태, relaunch persistence 확인
+- Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 87 부분 QA 완료
+- Email Recovery Connection P1 QA: 이미 등록된 이메일 입력 시 `A user with this email address has already been registered.` 계열 에러 확인. Fresh email confirmation link 앱 복귀 / Email linked 상태 / relaunch persistence는 hosted email rate limit 때문에 후속 재확인
 - Real-use Loading Diagnosis P1 QA(실사용 로딩 진단 1차 QA): simulator 확인은 개발 세션에서 미확인으로 남았고, 다음 QA build에서 Boot status `recovered_after_timeout`, Counts home / archive / shown, Video fallback copy 확인 필요
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책)

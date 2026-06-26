@@ -291,9 +291,14 @@ Email Recovery:
     `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/c7527f7e-d122-4f80-a743-c0a4560670f5`
   - IPA URL:
     `https://expo.dev/artifacts/eas/pRMYnAqjOPyGlX2B9b0EzQ6flIj-_Ulatmb1JpsYVMA.ipa`
-- Build 86 QA is pending. Do not record Email Recovery Connection as passed
-  until the Founder confirms email link -> ASJ app return -> connected state ->
-  relaunch persistence on device.
+- Build 87 later partially exercised Email Recovery Connection. Entering an
+  already registered email showed the expected
+  `A user with this email address has already been registered.` style error,
+  confirming the Auth existing-email guard path. Fresh email confirmation-link
+  QA could not be completed because hosted email sending hit rate limits.
+  Remaining verification is fresh email link -> ASJ app return -> connected
+  state -> relaunch persistence. Do not repeat `updateUser({ email })` while
+  rate-limited.
 
 Foundation Safety Check:
 

@@ -602,17 +602,18 @@ recovery sign-in.
 
 Current P1 status:
 
-1. Email Recovery Connection P1 is implemented and Build 86 is ready for
-   standalone iPhone QA. The latest implementation passes explicit
+1. Email Recovery Connection P1 is implemented and Build 87 has partial
+   standalone iPhone QA coverage. The latest implementation passes explicit
    `emailRedirectTo=actionsportsjournal://auth/email/change` to
    `updateUser({ email })`.
 2. The app handles initial and runtime email-change callback URLs, supports code
    exchange and hash session payloads, refreshes session/user state after
    callback completion, and does not treat expired/error/missing-payload
    callbacks as success.
-3. Build 86 must verify the real email click path with a fresh email:
-   confirmation link -> ASJ app return -> connected state -> relaunch
-   persistence.
+3. Build 87 confirmed the already-registered email guard path:
+   `A user with this email address has already been registered.` Fresh email
+   confirmation-link QA is still pending because hosted email sending hit rate
+   limits in this pass.
 4. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run
@@ -628,11 +629,10 @@ Current P1 status:
 Current blocker:
 
 Email Recovery Connection P1 is no longer blocked at the code/redirect strategy
-step. It is now waiting for Build 86 standalone QA. The remaining blocker is
-real-device link-validity-window verification with a fresh email, not email send
-availability or missing app callback code. Keep Email Recovery as a
-baseline/fallback path while Kakao Recovery remains the currently verified path
-for Korean-market UX.
+step. The remaining blocker is real-device link-validity-window verification
+with a fresh email after hosted sender rate limits clear, not missing app
+callback code. Keep Email Recovery as a baseline/fallback path while Kakao
+Recovery remains the currently verified path for Korean-market UX.
 
 Deep-link / redirect investigation result:
 
