@@ -9,6 +9,11 @@ status and stable workstream list live in `docs/PROJECT_MEMORY.md`. Historical
 or focused docs under `docs/` are references and should be opened only when the
 current task needs them.
 
+For documentation edits, follow the `README.md` "Where To Write" map. Do not
+write ASJ product state into personal context, duplicate the stable workstream
+list, or create a new `.md` for status/handoff information when an existing
+canonical document applies.
+
 ## Collaboration Response Format
 
 Always answer in Korean honorifics.

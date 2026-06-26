@@ -41,6 +41,23 @@ section from that file and keep the two-section format:
 Do not treat build numbers, typecheck, simulator QA, or temporary development
 session checkpoints as standalone product workstreams.
 
+## Where To Write
+
+Use these write locations. Do not create a new `.md` or duplicate the same
+state elsewhere unless the Founder explicitly asks for a separate artifact.
+
+- `docs/PROJECT_MEMORY.md`: canonical product memory, durable decisions,
+  stable workstream list, and backlog.
+- `docs/CURRENT_STAGE.md`: current implementation and QA state.
+- `docs/HANDOFF.md`: latest next-session handoff and immediate starting point.
+- `docs/TECH_DEBT_AND_REFACTOR_TODO.md`: technical debt, refactor tasks, and
+  deferred engineering follow-ups.
+- `AGENTS.md`: project-specific agent behavior and collaboration rules.
+- `README.md`: documentation entry point and source-of-truth map only.
+
+For cross-project Codex working rules, update `codex-personal-context`.
+For ASJ product state, update this project repository, not personal context.
+
 ## Personal Context Boundary
 
 Cross-project Codex working rules live in:
