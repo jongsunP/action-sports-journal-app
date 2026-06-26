@@ -73,6 +73,8 @@ section from that file and keep this format:
 
 Do not treat build numbers, typecheck, simulator QA, or temporary development
 session checkpoints as standalone product workstreams.
+Unless the Founder explicitly asks for a summary, subset, or priority-only
+answer, show the full canonical list, including the complete `완료` section.
 
 ## Where To Write
 

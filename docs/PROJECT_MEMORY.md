@@ -159,6 +159,9 @@ it with these two sections:
 ```
 
 Keep this summary concise and easy to scan.
+Unless the Founder explicitly asks for a summary, subset, or priority-only
+answer, show the full canonical list. Do not shorten the completed section to a
+partial list just because the immediate discussion is about the next task.
 For workstream names, prefer paired labels in the form
 `English term(한국어 설명)` when an English term is a known project term. Use
 plain Korean only when there is no useful English project term. Do not force
