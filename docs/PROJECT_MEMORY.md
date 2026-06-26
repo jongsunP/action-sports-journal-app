@@ -202,11 +202,12 @@ Current stable workstream list:
 - Initial Loading / Video Tab Spinner Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
 - QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)
 - Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)
+- Email Recovery Connection P1(이메일 복구 수단 연결 1차): Build 89 fresh-link QA 성공
+- Compression / Upload Optimization POC(영상 압축 / 업로드 최적화 POC): Build 89 실기기 QA 성공
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
-- Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 87 부분 QA 완료
-- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 88에서 `parksunl77@daum.net`으로 Auth/public DB 연결 성공 확인. 남은 문제는 링크 복귀/앱 재실행 시 UI가 자동으로 linked 상태를 복구하지 못하던 표시 문제였고, session restore/getUser 보강과 AccountRecoveryScreen linked state 재구성 최소 수정 완료. 다음 preview/internal build에서 재QA 필요
+- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 89에서 `parksunl77@daum.net`으로 메일 링크 클릭 -> ASJ 앱 복귀 -> 수동 갱신 없는 "복구 준비 완료" 표시 -> 앱 완전 종료 후 재실행 연결 상태 유지까지 성공. 현재-account Email Recovery Connection P1은 완료
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): 테스트 중에는 계속 필요하므로 유지. 실서비스 배포 직전에 숨김/제거 정책 적용
 - Recovery Attempt Observability P1(복구 시도 관측성 1차): 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. Migration 적용 완료, authenticated insert smoke 완료, 개인정보 redaction 및 no-token 401 확인 완료
@@ -223,7 +224,8 @@ Current stable workstream list:
 - Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
-- Compression / Upload Optimization(영상 압축 / 업로드 최적화): POC 구현 완료, native build-required. 다음 iOS preview/internal build에서 원본/압축 후 fileSize, 감소율, duration, MIME, compressed URI, 최종 파일 기준 upload target payload, sanitized uploadProcessing metadata를 확인
+- Compression / Upload Optimization(영상 압축 / 업로드 최적화): POC는 Build 89에서 성공. 정식 upload flow로 승격할지, 언제 압축할지, 대기 UX와 AI 품질 영향을 어떻게 검증할지는 다음 제품 판단 항목
+- Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): `aa89f14`로 수정 완료. Build 89에는 미포함이므로 다음 빌드에서 count 0 + boot timeout/failed 시 "영상 기록 동기화가 지연 중입니다" 표시와 retry 버튼을 확인
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)
 - Google Login(구글 로그인)
@@ -1219,10 +1221,11 @@ Compression measurement / benchmark record:
   - try conservative compression only for larger videos;
   - avoid excessive frame-rate reduction;
   - use a 1080p-oriented optimization candidate before lower-quality presets.
-- Compression / Upload Optimization POC now exists as a build-required QA-only
-  path using `react-native-compressor`. It is not part of production upload and
-  should only measure local size reduction/final-file metadata after a
-  dev-client or standalone build.
+- Compression / Upload Optimization POC now exists as a QA-only path using
+  `react-native-compressor`. Build 89 real-device QA confirmed the action is
+  visible in preview/internal, compression runs, file size decreases, and final
+  file metadata plus sanitized `uploadProcessing` payload can be inspected. It is
+  not part of production upload.
 - AI quality comparison must cover edge load, approach, board angle, rope
   tension, pop, rotation axis, landing, and trick identification.
 - Priority implication: run Compression measurement/benchmark before Auth if

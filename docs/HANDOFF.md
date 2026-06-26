@@ -308,8 +308,12 @@ Email Recovery:
   relaunch could look disconnected until manual refresh. A minimum fix now
   refreshes `getUser()` into restored sessions, rebuilds AccountRecoveryScreen
   linked state from `user.email`, and records callback success when refreshed
-  Auth email is present. Re-test in the next preview/internal build; do not call
-  `updateUser({ email })` again before that build QA.
+  Auth email is present.
+- Build 89 QA completed Email Recovery Connection P1 with `parksunl77@daum.net`:
+  email link returned to ASJ, "복구 준비 완료" appeared without manual refresh, and
+  the linked state persisted after full app relaunch. Treat current-account Email
+  Recovery Connection P1 as complete. Reinstall/new-device Email Recovery Sign-in
+  remains a separate later flow.
 
 Foundation Safety Check:
 
@@ -486,8 +490,9 @@ Backlog after Push Token Account-switch Policy and product UX review:
   no-token requests still return 401.
 - Email Recovery deep link / redirect.
 - Email Recovery Connection: implemented for current-account recovery email
-  linking and prepared as Build 86 for standalone email-link callback QA. This is
-  not the reinstall/new-device Email Recovery Sign-in flow.
+  linking. Build 89 fresh-link QA passed with app return, no-manual-refresh
+  linked state, and relaunch persistence. This is not the reinstall/new-device
+  Email Recovery Sign-in flow.
 - Kakao display_name sync.
 - Initial Loading / Video Tab Spinner Observability: Build 85 real-device QA
   passed for the initial P1 scope. Build 85/86 real-use logs later showed
@@ -617,7 +622,7 @@ Upload File Handling Policy P1, 2026-06-27:
   `too_large`, `too_long`, `unsupported_type`, `empty_file`, `invalid_duration`.
 - FE maps those policy codes to clear Korean copy. The Upload screen now states
   "30MB / 15초 이하" for current development/QA.
-- Compression / Upload Optimization POC is implemented but build-required:
+- Compression / Upload Optimization POC is implemented and Build 89 QA passed:
   `react-native-compressor` and `react-native-nitro-modules` are installed,
   `app.json` includes the `react-native-compressor` plugin, and UploadScreen has
   a QA/debug-gated action labeled "QA 압축 메타 확인".
@@ -635,19 +640,25 @@ Upload File Handling Policy P1, 2026-06-27:
   metadata for observation/debug response only. Backend policy remains based on
   the final upload file's `fileSize`, `durationMs`, and `mimeType`; the metadata
   is not used for policy decisions and is not persisted to DB in this step.
-- Expo Go should not be used to judge the POC. The native module requires a
-  dev-client/standalone build. Stop at typecheck/local static validation until
-  CTO/user approves bundling this with the next build-required batch.
-- Next standalone build QA checklist for the POC:
-  - select a short local video and tap the QA-gated "QA 압축 메타 확인" action;
-  - confirm original file size, compressed file size, and reduction ratio;
-  - confirm duration is preserved for the final upload metadata;
-  - confirm MIME type remains uploadable;
-  - confirm the compressed URI is a local file URI usable as the future upload
+- Build 89 real-device QA confirmed the QA-gated action is visible, compression
+  runs successfully, compressed file size decreases, duration / MIME /
+  compressed URI are visible, and the upload-target payload plus
+  `uploadProcessing` metadata reflect the final compressed file. Treat the
+  Compression / Upload Optimization POC as successful.
+- Next product decision: whether to promote compression from QA-only POC into the
+  normal upload flow. Do not do that automatically; it needs product/quality
+  judgment, including when to compress, how to explain wait time, and whether AI
+  result quality remains acceptable.
+- Historical standalone QA checklist for the POC:
+  - selected a short local video and tapped the QA-gated "QA 압축 메타 확인" action;
+  - confirmed original file size, compressed file size, and reduction ratio;
+  - confirmed duration is preserved for the final upload metadata;
+  - confirmed MIME type remains uploadable;
+  - confirmed the compressed URI is a local file URI usable as the future upload
     source;
-  - confirm the displayed upload-target payload uses the compressed final file
+  - confirmed the displayed upload-target payload uses the compressed final file
     metadata;
-  - confirm optional `uploadProcessing` shows `source`, original/compressed file
+  - confirmed optional `uploadProcessing` shows `source`, original/compressed file
     sizes, compression ratio, and compression duration without raw URI/token
     values;
   - do not submit a real upload, Storage write, or AI analysis from this POC

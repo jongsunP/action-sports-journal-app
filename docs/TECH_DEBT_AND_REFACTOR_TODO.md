@@ -635,8 +635,8 @@ recovery sign-in.
 
 Current P1 status:
 
-1. Email Recovery Connection P1 is implemented and Build 87 has partial
-   standalone iPhone QA coverage. The latest implementation passes explicit
+1. Email Recovery Connection P1 is implemented and Build 89 standalone iPhone QA
+   passed. The latest implementation passes explicit
    `emailRedirectTo=actionsportsjournal://auth/email/change` to
    `updateUser({ email })`.
 2. The app handles initial and runtime email-change callback URLs, supports code
@@ -645,36 +645,31 @@ Current P1 status:
    callbacks as success.
 3. Build 87 confirmed the already-registered email guard path:
    `A user with this email address has already been registered.` Fresh email
-   confirmation-link QA is deferred to a later backlog recheck because hosted
-   email sending hit rate limits in this pass.
-   A 2026-06-27 build-prep pass did not spend another updateUser call from a
-   detached/local script. Preserve the next single retry for the installed app
-   session with an owner-approved fresh email and complete the link click inside
-   the magic-link validity window.
+   confirmation-link QA was later retried with an owner-approved fresh email.
    Build 88 later confirmed Auth/public DB success with
    `parksunl77@daum.net`, but UI state did not automatically recover after link
-   return/relaunch. A minimal session restore/UI state fix is implemented and
-   should be rechecked in the next preview/internal build before another
-   `updateUser({ email })` attempt.
+   return/relaunch. A minimal session restore/UI state fix was implemented.
+   Build 89 then confirmed email link return to ASJ, "복구 준비 완료" without manual
+   refresh, and linked-state persistence after full app relaunch.
 4. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run
    within the magic-link validity window.
-5. Confirm email linking keeps the same Supabase Auth user id and the same
-   `public.users.id`.
-6. Confirm existing Moments, upload targets, push tokens, and Realtime channel
-   ownership stay under the linked user after email verification.
+5. Current-account email recovery-method connection is complete. Future
+   reinstall/new-device Email Recovery Sign-in remains a separate flow.
+6. If Email Recovery Sign-in is implemented later, confirm existing Moments,
+   upload targets, push tokens, and Realtime channel ownership stay under the
+   recovered user after email verification/sign-in.
 7. Add the actual recovery sign-in path for reinstall/new-device restore after
    account linking is verified.
 8. Keep no-token default user fallback internal-only throughout this work.
 
 Current blocker:
 
-Email Recovery Connection P1 is no longer blocked at the code/redirect strategy
-step. The fresh email link-validity-window verification should be treated as a
-later backlog recheck after hosted sender rate limits clear, not as an
-immediate blocker. Keep Email Recovery as a baseline/fallback path while Kakao
-Recovery remains the currently verified path for Korean-market UX.
+Email Recovery Connection P1 is no longer blocked at the code/redirect strategy,
+hosted sender, or fresh-link QA step. Build 89 closed the current-account
+connection path. Keep Email Recovery as a baseline/fallback path while Kakao
+Recovery remains the stronger verified path for Korean-market UX.
 
 Deep-link / redirect investigation result:
 
@@ -1745,14 +1740,15 @@ POC implementation status, 2026-06-27:
   decisions still use only the final file `fileSize`, `durationMs`, and
   `mimeType`; no raw URI/token values are accepted and the metadata is not
   persisted to DB in this step.
-- Status: build-required. A dev-client or standalone EAS preview/internal build
-  is required before real compression behavior can be measured on iPhone.
-- Before the next build, keep the POC QA action hidden from production unless an
-  explicit public debug flag is enabled, and verify the build checklist on
-  device: original/compressed file size, reduction ratio, duration preservation,
-  MIME type, compressed URI, upload-target payload based on the compressed final
-  file, and sanitized `uploadProcessing` metadata. Do not use this POC to
-  perform real Storage upload or AI analysis without a separate approval.
+- Build 89 real-device QA succeeded: the QA action was visible in the
+  preview/internal build, compression executed, compressed file size decreased,
+  duration / MIME / compressed URI were visible, and the upload-target payload
+  plus sanitized `uploadProcessing` metadata reflected the compressed final file.
+- Status: POC successful. Do not use this POC to perform real Storage upload or
+  AI analysis without a separate approval.
+- Next product decision: whether to promote compression into the normal upload
+  flow, when to trigger it, how to explain processing time, and how to validate
+  AI quality impact.
 
 Decision:
 

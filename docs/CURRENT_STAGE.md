@@ -81,16 +81,15 @@ Build 87 follow-up closeout, 2026-06-27:
 - Upload File Handling Policy P1 is complete for the current build-prep scope:
   30MB / 15 seconds final-file policy, FE basic validation, backend policy
   authority, error-code mapping, and simulator/local UI check are complete.
-- Compression / Upload Optimization POC is ready for the next standalone build:
-  `react-native-compressor` / `react-native-nitro-modules`, QA-only compression
-  metadata check, and optional sanitized `uploadProcessing` payload structure
-  are in place.
-- Email Recovery fresh-link QA was not re-run from this development session. It
-  should be initiated from the installed app session with an owner-approved fresh
-  email and completed inside the magic-link validity window; preserve the single
-  allowed `updateUser({ email })` retry for that QA.
+- Compression / Upload Optimization POC reached successful Build 89 real-device
+  QA: the QA-only compression action was visible, compression ran, file size
+  decreased, and final-file metadata / sanitized `uploadProcessing` could be
+  inspected.
+- Email Recovery fresh-link QA reached successful Build 89 real-device QA with
+  `parksunl77@daum.net`: ASJ app return, no-manual-refresh linked state, and
+  relaunch persistence all passed.
 
-Build 88 Email Recovery fresh-link QA follow-up, 2026-06-27:
+Build 88/89 Email Recovery fresh-link QA follow-up, 2026-06-27:
 
 - Fresh-link QA with `parksunl77@daum.net` confirmed backend/Auth success:
   Auth email is linked, `new_email` is null, `email_confirmed_at` exists,
@@ -102,9 +101,22 @@ Build 88 Email Recovery fresh-link QA follow-up, 2026-06-27:
   refresh `getUser()` into `session.user`; AccountRecoveryScreen rebuilds linked
   UI state whenever `user.email` is present; callback results with a refreshed
   email are normalized as succeeded for recovery attempt observability.
-- Next validation: include this in the next preview/internal build and recheck
-  email-link return plus app relaunch display. Do not send another recovery email
-  until that build is installed for the intended QA.
+- Build 89 QA completed the fresh-link flow with `parksunl77@daum.net`: the email
+  link returned to ASJ, the screen showed "복구 준비 완료" without manual refresh,
+  and the linked state persisted after full app relaunch. Email Recovery
+  Connection P1 is complete for current-account recovery-method connection.
+
+Build 89 Compression / Upload Optimization POC QA, 2026-06-27:
+
+- Build 89 exposed the QA-only "QA 압축 메타 확인" action in the iOS
+  preview/internal app.
+- Real-device QA confirmed local compression execution, reduced file size after
+  compression, preserved/available duration and MIME information, a compressed
+  local URI, final-file upload target payload, and sanitized `uploadProcessing`
+  metadata.
+- The POC is successful as a measurement/proof path. It is not yet promoted to
+  the normal upload flow, and actual Storage upload / AI analysis remains outside
+  this POC unless explicitly approved.
 
 Build QA Video tab loading-state follow-up, 2026-06-27:
 
@@ -120,7 +132,10 @@ Build QA Video tab loading-state follow-up, 2026-06-27:
   underlying Boot/Video diagnostics and now also shows the actual Video UI state.
 - Validation: `npm run typecheck` passed. Next standalone QA should verify that
   timeout + count 0 shows "영상 기록 동기화가 지연 중입니다" rather than
-  "Wake Board Loading...".
+  "Wake Board Loading...". This fix is commit
+  `aa89f14 fix: avoid indefinite video loading after sync timeout`; it was not
+  included in Build 89 and is a next-build verification candidate. The Video tab
+  loading issue did not reproduce during Build 89 QA.
 
 Email Recovery deep-link / redirect status, 2026-06-26:
 
@@ -555,8 +570,7 @@ Implemented:
   seconds.
 - Compression / Upload Optimization POC is now implemented as a QA-only
   development path with `react-native-compressor`. It is not connected to the
-  production upload path and needs a dev-client/standalone native build before
-  real compression can be executed.
+  production upload path.
 - The POC records original size, compressed size, reduction ratio, duration,
   MIME type, compressed URI, and the upload-target payload that would be sent
   for the final compressed file.
@@ -564,6 +578,12 @@ Implemented:
   observation only. Backend policy decisions still use only the final upload
   `fileSize`, `durationMs`, and `mimeType`; `uploadProcessing` is sanitized and
   is not persisted to DB in this step.
+- Build 89 real-device QA confirmed that the QA compression action is visible,
+  compression executes, compressed file size decreases, duration / MIME /
+  compressed URI are available, and final-file upload target payload plus
+  sanitized `uploadProcessing` metadata are visible.
+- Compression POC is successful; promotion into the normal upload flow remains a
+  separate product/quality decision.
 
 Analysis Trust UX, 2026-06-26:
 
