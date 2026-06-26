@@ -341,7 +341,10 @@ Current follow-up:
 - Render/Supabase plan upgrade should only be considered after QA panel values
   point to infrastructure latency.
 - Auth bootstrap timeout/observability remains a later backlog item.
-- QA Debug Panel needs a hide/remove policy before production distribution.
+- QA Debug Panel should remain available during current testing because it is
+  useful for timing/network-dependent issues. Hide/remove policy should be
+  applied right before real service production distribution, not during current
+  QA.
 
 Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1
 minimum fix, 2026-06-26:

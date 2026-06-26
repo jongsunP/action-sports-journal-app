@@ -208,7 +208,7 @@ Current stable workstream list:
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 87 부분 QA 완료
 - Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): 이미 등록된 이메일 입력 시 `A user with this email address has already been registered.` 계열 에러 확인. Fresh email confirmation link 앱 복귀 / Email linked 상태 / relaunch persistence는 hosted email rate limit 때문에 지금 진행하지 않고 한참 뒤 재확인 백로그로 보관
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
-- QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Real-use Loading Diagnosis는 Build 87에서 문제없음 확인. 다만 단발 QA이므로 QA panel 기반 지속 관찰은 유지
+- QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): 테스트 중에는 계속 필요하므로 유지. 실서비스 배포 직전에 숨김/제거 정책 적용
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토

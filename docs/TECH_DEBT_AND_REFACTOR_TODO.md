@@ -565,7 +565,8 @@ reason data to classify the failure path.
 2. Consider Render/Supabase plan upgrade only if QA panel values point to
    infrastructure latency.
 3. Auth bootstrap timeout/observability remains a later backlog item.
-4. QA Debug Panel needs a hide/remove policy before production distribution.
+4. QA Debug Panel should stay available during current testing and be hidden or
+   removed right before real service production distribution.
 
 ### Real-use Loading Diagnosis P1 minimum fix - 2026-06-26
 

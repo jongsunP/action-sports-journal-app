@@ -482,7 +482,8 @@ Backlog after Push Token Account-switch Policy and product UX review:
   archive fallback while first-page sync catches up, and adds QA Debug
   home/archive/shown counts.
 - QA Debug Overlay/Panel: Build 85 real-device QA passed for the current P1
-  scope. Define hide/remove policy before production distribution.
+  scope. Keep it available during current testing; apply hide/remove policy
+  right before real service production distribution.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
   verified, and Kakao Recovery Sign-in P1 is verified on Build 81.
 
@@ -621,8 +622,9 @@ Startup / Video Tab Loading Observability P1 is complete for the current
 preview/internal QA scope, with a follow-up Real-use Loading Diagnosis P1
 minimum fix applied after Build 85/86 logs. If slow startup or spinner behavior
 recurs, ask for the QA panel values first and compare Boot status, Video status,
-and home/archive/shown counts before guessing. Production hide/remove policy
-for the QA Debug Panel remains a follow-up backlog item.
+and home/archive/shown counts before guessing. Keep the QA Debug Panel during
+current testing and apply hide/remove policy right before real service
+production distribution.
 Build 87 real-device QA found no issue in the Real-use Loading Diagnosis path.
 Treat it as complete for now, with continued observation through the QA Debug
 panel rather than repeated immediate fixes.
@@ -2728,8 +2730,9 @@ If the issue recurs:
    start, or Supabase latency.
 3. Only consider Render/Supabase plan upgrades after panel evidence points to
    infrastructure.
-4. Keep Auth bootstrap timeout/observability and QA Debug Panel production
-   hide/remove policy as separate follow-up backlog.
+4. Keep Auth bootstrap timeout/observability as a follow-up backlog. Keep the
+   QA Debug Panel during current testing and apply hide/remove policy right
+   before real service production distribution.
 
 ## Related Personal Context Repo
 
