@@ -23,6 +23,11 @@ import type { UploadProgressState } from './uploadProgress';
 
 type HomeScreenStyles = Record<string, any>;
 
+const ENABLE_UPLOAD_COMPRESSION_POC =
+  __DEV__ ||
+  process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true' ||
+  process.env.EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC === 'true';
+
 export type UploadContentProps = {
   canUploadSession: boolean;
   formatVideoMeta: (video: SessionVideoAsset) => string;
@@ -67,7 +72,10 @@ export function UploadContent({
     ? `${uploadProgress?.label ?? '영상 전송 중'} ${uploadPercentLabel}`
     : uploadProgress?.label;
   const canRunCompressionPoc =
-    __DEV__ && Boolean(visibleVideo) && !isSubmitting && !isRunningCompressionPoc;
+    ENABLE_UPLOAD_COMPRESSION_POC &&
+    Boolean(visibleVideo) &&
+    !isSubmitting &&
+    !isRunningCompressionPoc;
 
   const handleRunCompressionPoc = async () => {
     if (!visibleVideo || isSubmitting || isRunningCompressionPoc) {
@@ -153,7 +161,7 @@ export function UploadContent({
                     이하 클립만 지원합니다.
                   </Text>
                 </View>
-                {__DEV__ ? (
+                {ENABLE_UPLOAD_COMPRESSION_POC ? (
                   <CompressionPocPanel
                     canRun={canRunCompressionPoc}
                     error={compressionPocError}

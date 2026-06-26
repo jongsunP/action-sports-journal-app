@@ -616,7 +616,13 @@ Upload File Handling Policy P1, 2026-06-27:
 - Compression / Upload Optimization POC is implemented but build-required:
   `react-native-compressor` and `react-native-nitro-modules` are installed,
   `app.json` includes the `react-native-compressor` plugin, and UploadScreen has
-  a `__DEV__` QA-only action labeled "QA 압축 메타 확인".
+  a QA/debug-gated action labeled "QA 압축 메타 확인".
+- Build 88 showed this action was hidden on iOS preview because the first gate
+  used `__DEV__` only. The gate now allows `__DEV__`,
+  `EXPO_PUBLIC_ENABLE_DEBUG_VIEWER=true`, or
+  `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`, so preview/internal QA can
+  expose it while production stays hidden unless an explicit public debug flag is
+  enabled.
 - The POC does not upload to Storage or start analysis. It only attempts local
   compression, re-reads the compressed file size, preserves the selected video's
   duration, infers an uploadable MIME type, and displays the upload-target
@@ -629,7 +635,7 @@ Upload File Handling Policy P1, 2026-06-27:
   dev-client/standalone build. Stop at typecheck/local static validation until
   CTO/user approves bundling this with the next build-required batch.
 - Next standalone build QA checklist for the POC:
-  - select a short local video and tap the `__DEV__` "QA 압축 메타 확인" action;
+  - select a short local video and tap the QA-gated "QA 압축 메타 확인" action;
   - confirm original file size, compressed file size, and reduction ratio;
   - confirm duration is preserved for the final upload metadata;
   - confirm MIME type remains uploadable;

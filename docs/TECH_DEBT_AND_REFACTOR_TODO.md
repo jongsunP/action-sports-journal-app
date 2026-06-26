@@ -1699,8 +1699,10 @@ POC implementation status, 2026-06-27:
 - `src/features/sessions/uploadCompressionPoc.ts` dynamically imports
   `react-native-compressor` so the native dependency is only touched when the
   QA-only POC action is pressed.
-- UploadScreen shows the `__DEV__` QA-only action "QA 압축 메타 확인" after a
-  video is selected.
+- UploadScreen shows the QA/debug-gated action "QA 압축 메타 확인" after a video is
+  selected. Build 88 hid it because the first gate used `__DEV__` only; the gate
+  now also allows `EXPO_PUBLIC_ENABLE_DEBUG_VIEWER=true` or
+  `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true` for preview/internal QA.
 - The POC records:
   - original file size;
   - compressed file size;
@@ -1719,12 +1721,12 @@ POC implementation status, 2026-06-27:
   persisted to DB in this step.
 - Status: build-required. A dev-client or standalone EAS preview/internal build
   is required before real compression behavior can be measured on iPhone.
-- Before the next build, keep the POC QA action `__DEV__`-only and verify the
-  build checklist on device: original/compressed file size, reduction ratio,
-  duration preservation, MIME type, compressed URI, upload-target payload based
-  on the compressed final file, and sanitized `uploadProcessing` metadata. Do
-  not use this POC to perform real Storage upload or AI analysis without a
-  separate approval.
+- Before the next build, keep the POC QA action hidden from production unless an
+  explicit public debug flag is enabled, and verify the build checklist on
+  device: original/compressed file size, reduction ratio, duration preservation,
+  MIME type, compressed URI, upload-target payload based on the compressed final
+  file, and sanitized `uploadProcessing` metadata. Do not use this POC to
+  perform real Storage upload or AI analysis without a separate approval.
 
 Decision:
 
