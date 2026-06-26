@@ -406,6 +406,93 @@ app.post("/api/push-tokens", async (request, response) => {
   }
 });
 
+app.post("/api/recovery-attempts", async (request, response) => {
+  try {
+    if (!readBearerToken(request)) {
+      throw new AuthRequiredRequestError();
+    }
+
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    const requestUser = await resolveRequestUser(request);
+
+    if (requestUser.authMode !== "authenticated" || !requestUser.authUserId) {
+      throw new AuthRequiredRequestError(
+        "Recovery attempt logging requires an authenticated Supabase user.",
+      );
+    }
+
+    const provider = nullableString(request.body?.provider);
+    const flow = nullableString(request.body?.flow);
+    const event = nullableString(request.body?.event);
+    const status = nullableString(request.body?.status);
+    const reasonCode = nullableString(request.body?.reasonCode);
+    const errorCode = nullableString(request.body?.errorCode);
+    const metadata = sanitizeRecoveryAttemptMetadata(request.body?.metadata);
+
+    if (!isRecoveryAttemptProvider(provider)) {
+      response.status(400).json({ error: "A valid recovery provider is required." });
+      return;
+    }
+
+    if (!isRecoveryAttemptFlow(flow)) {
+      response.status(400).json({ error: "A valid recovery flow is required." });
+      return;
+    }
+
+    if (!event) {
+      response.status(400).json({ error: "A recovery attempt event is required." });
+      return;
+    }
+
+    if (!isRecoveryAttemptStatus(status)) {
+      response.status(400).json({ error: "A valid recovery status is required." });
+      return;
+    }
+
+    const { data, error } = await client
+      .from("recovery_attempts")
+      .insert({
+        auth_user_id: requestUser.authUserId,
+        error_code: errorCode,
+        event,
+        flow,
+        metadata,
+        provider,
+        reason_code: reasonCode,
+        status,
+        user_id: requestUser.userId,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to record recovery attempt: ${error.message}`);
+    }
+
+    response.json({
+      id: nullableString(data?.id),
+      ok: true,
+    });
+  } catch (error) {
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Recovery attempt logging failed.";
+    console.error("Recovery attempt logging failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
 app.post("/api/push-receipts/check-pending", async (request, response) => {
   try {
     if (!isInternalDevEndpointAllowed(request)) {
@@ -6950,6 +7037,143 @@ function maskExpoPushToken(token: string) {
   }
 
   return `${token.slice(0, 8)}...${token.slice(-4)}`;
+}
+
+function isRecoveryAttemptProvider(value: string | null): value is "email" | "kakao" {
+  return value === "email" || value === "kakao";
+}
+
+function isRecoveryAttemptFlow(
+  value: string | null,
+): value is "email_callback" | "email_connection" | "link" | "recovery_sign_in" {
+  return (
+    value === "email_callback" ||
+    value === "email_connection" ||
+    value === "link" ||
+    value === "recovery_sign_in"
+  );
+}
+
+function isRecoveryAttemptStatus(
+  value: string | null,
+): value is "blocked" | "cancelled" | "dismissed" | "failed" | "started" | "succeeded" {
+  return (
+    value === "blocked" ||
+    value === "cancelled" ||
+    value === "dismissed" ||
+    value === "failed" ||
+    value === "started" ||
+    value === "succeeded"
+  );
+}
+
+function sanitizeRecoveryAttemptMetadata(value: unknown): Record<string, unknown> {
+  const sanitized = sanitizeRecoveryAttemptMetadataValue(value, 0);
+
+  return sanitized && typeof sanitized === "object" && !Array.isArray(sanitized)
+    ? (sanitized as Record<string, unknown>)
+    : {};
+}
+
+function sanitizeRecoveryAttemptMetadataValue(
+  value: unknown,
+  depth: number,
+): unknown {
+  if (depth > 3) {
+    return null;
+  }
+
+  if (value === null || typeof value === "boolean" || typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return sanitizeRecoveryAttemptMetadataString(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .slice(0, 20)
+      .map((item) => sanitizeRecoveryAttemptMetadataValue(item, depth + 1))
+      .filter((item) => item !== null && item !== undefined);
+  }
+
+  if (typeof value !== "object") {
+    return null;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
+    if (isForbiddenRecoveryAttemptMetadataKey(key)) {
+      continue;
+    }
+
+    if (key === "maskedEmail") {
+      const maskedEmail = nullableString(entryValue);
+
+      if (maskedEmail?.includes("*") && !maskedEmail.includes("://")) {
+        sanitized[key] = maskedEmail.slice(0, 120);
+      }
+      continue;
+    }
+
+    if (key === "emailDomain") {
+      const emailDomain = nullableString(entryValue);
+
+      if (emailDomain && !emailDomain.includes("@") && !emailDomain.includes("/")) {
+        sanitized[key] = emailDomain.slice(0, 120).toLowerCase();
+      }
+      continue;
+    }
+
+    const sanitizedValue = sanitizeRecoveryAttemptMetadataValue(
+      entryValue,
+      depth + 1,
+    );
+
+    if (sanitizedValue !== null && sanitizedValue !== undefined) {
+      sanitized[key.slice(0, 80)] = sanitizedValue;
+    }
+  }
+
+  return sanitized;
+}
+
+function isForbiddenRecoveryAttemptMetadataKey(key: string) {
+  const normalized = key.toLowerCase();
+
+  return (
+    normalized.includes("token") ||
+    normalized.includes("code") ||
+    normalized.includes("url") ||
+    normalized.includes("callback") ||
+    normalized === "email" ||
+    normalized === "rawemail"
+  );
+}
+
+function sanitizeRecoveryAttemptMetadataString(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (
+    trimmed.includes("://") ||
+    trimmed.includes("access_token") ||
+    trimmed.includes("refresh_token") ||
+    looksLikeRawEmail(trimmed)
+  ) {
+    return "[redacted]";
+  }
+
+  return trimmed.slice(0, 500);
+}
+
+function looksLikeRawEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 function readStringUserMetadata(value: unknown) {

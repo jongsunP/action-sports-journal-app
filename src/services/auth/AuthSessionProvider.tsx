@@ -26,6 +26,11 @@ import {
   signInWithKakaoRecovery,
   type KakaoRecoverySignInResult,
 } from './kakaoRecoverySignIn';
+import {
+  getRecoveryErrorCode,
+  getRecoveryReasonCode,
+  recordRecoveryAttempt,
+} from './recoveryAttempts';
 import { supabase } from '../supabase/client';
 
 type AuthSessionState = {
@@ -205,6 +210,12 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       handledRecoveryEmailUrlsRef.current.add(url);
 
       try {
+        void recordRecoveryAttempt({
+          event: 'email_connection_callback_received',
+          flow: 'email_callback',
+          provider: 'email',
+          status: 'started',
+        });
         const result = await completeRecoveryEmailChangeFromUrl(url);
 
         if (isDisposed) {
@@ -212,6 +223,18 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         }
 
         setLastRecoveryEmailCompletion(result);
+
+        void recordRecoveryAttempt({
+          event:
+            result.status === 'completed'
+              ? 'email_connection_callback_succeeded'
+              : 'email_connection_callback_failed',
+          flow: 'email_callback',
+          provider: 'email',
+          reasonCode:
+            result.status === 'completed' ? undefined : result.reason,
+          status: result.status === 'completed' ? 'succeeded' : 'failed',
+        });
 
         if (result.session) {
           setSession(
@@ -230,6 +253,14 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
 
         const { data: sessionData } = await client.auth.getSession();
         const { data: userData } = await client.auth.getUser();
+        void recordRecoveryAttempt({
+          errorCode: getRecoveryErrorCode(error),
+          event: 'email_connection_callback_failed',
+          flow: 'email_callback',
+          provider: 'email',
+          reasonCode: getRecoveryReasonCode(error),
+          status: 'failed',
+        });
         setLastRecoveryEmailCompletion({
           status: 'notCompleted',
           reason: 'callback_error',

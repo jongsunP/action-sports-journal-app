@@ -17,6 +17,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { normalizeRecoveryEmail } from '../../services/auth/accountRecovery';
 import { useAuthSession } from '../../services/auth/AuthSessionProvider';
+import {
+  getRecoveryEmailDomain,
+  getRecoveryErrorCode,
+  getRecoveryReasonCode,
+  maskRecoveryEmail,
+  recordRecoveryAttempt,
+} from '../../services/auth/recoveryAttempts';
 import { checkRecoveryLocalWorkGuard } from './recoveryLocalWorkGuard';
 
 type RecoveryStep = 'idle' | 'emailSent' | 'linked';
@@ -79,6 +86,13 @@ function getKakaoNickname(metadata: unknown) {
     readMetadataText(metadata, 'nickname') ??
     readMetadataText(metadata, 'preferred_username')
   );
+}
+
+function getRecoveryEmailMetadata(email: string) {
+  return {
+    emailDomain: getRecoveryEmailDomain(email),
+    maskedEmail: maskRecoveryEmail(email),
+  };
 }
 
 function getKakaoUiCopy({
@@ -349,10 +363,40 @@ export function AccountRecoveryScreen() {
     setIsSubmittingEmail(true);
 
     try {
+      void recordRecoveryAttempt({
+        event: 'email_connection_started',
+        flow: 'email_connection',
+        metadata: getRecoveryEmailMetadata(normalizedEmail),
+        provider: 'email',
+        status: 'started',
+      });
       await requestRecoveryEmailLink(normalizedEmail);
+      void recordRecoveryAttempt({
+        event: 'email_connection_email_sent',
+        flow: 'email_connection',
+        metadata: getRecoveryEmailMetadata(normalizedEmail),
+        provider: 'email',
+        status: 'succeeded',
+      });
       setPendingEmail(normalizedEmail);
       setStep('emailSent');
     } catch (error) {
+      const reasonCode = getRecoveryReasonCode(error);
+
+      void recordRecoveryAttempt({
+        errorCode: getRecoveryErrorCode(error),
+        event:
+          reasonCode === 'email_exists'
+            ? 'email_exists'
+            : reasonCode === 'rate_limited'
+              ? 'rate_limited'
+              : 'email_connection_failed',
+        flow: 'email_connection',
+        metadata: getRecoveryEmailMetadata(normalizedEmail),
+        provider: 'email',
+        reasonCode,
+        status: 'failed',
+      });
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSubmittingEmail(false);
@@ -392,8 +436,38 @@ export function AccountRecoveryScreen() {
     setIsSubmittingEmail(true);
 
     try {
+      void recordRecoveryAttempt({
+        event: 'email_connection_started',
+        flow: 'email_connection',
+        metadata: getRecoveryEmailMetadata(pendingEmail),
+        provider: 'email',
+        status: 'started',
+      });
       await requestRecoveryEmailLink(pendingEmail);
+      void recordRecoveryAttempt({
+        event: 'email_connection_email_sent',
+        flow: 'email_connection',
+        metadata: getRecoveryEmailMetadata(pendingEmail),
+        provider: 'email',
+        status: 'succeeded',
+      });
     } catch (error) {
+      const reasonCode = getRecoveryReasonCode(error);
+
+      void recordRecoveryAttempt({
+        errorCode: getRecoveryErrorCode(error),
+        event:
+          reasonCode === 'email_exists'
+            ? 'email_exists'
+            : reasonCode === 'rate_limited'
+              ? 'rate_limited'
+              : 'email_connection_failed',
+        flow: 'email_connection',
+        metadata: getRecoveryEmailMetadata(pendingEmail),
+        provider: 'email',
+        reasonCode,
+        status: 'failed',
+      });
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSubmittingEmail(false);
@@ -406,9 +480,25 @@ export function AccountRecoveryScreen() {
     setIsRecoveringWithKakao(true);
 
     try {
+      void recordRecoveryAttempt({
+        event: 'kakao_recovery_started',
+        flow: 'recovery_sign_in',
+        provider: 'kakao',
+        status: 'started',
+      });
       const guard = await checkRecoveryLocalWorkGuard();
 
       if (!guard.canRecover) {
+        void recordRecoveryAttempt({
+          event: 'kakao_recovery_blocked',
+          flow: 'recovery_sign_in',
+          metadata: {
+            blockingCount: guard.blockingCount,
+          },
+          provider: 'kakao',
+          reasonCode: 'local_work_guard',
+          status: 'blocked',
+        });
         setKakaoContinueMode('link');
         setKakaoFeedback({
           type: 'blocked',
@@ -420,6 +510,15 @@ export function AccountRecoveryScreen() {
       const result = await recoverWithKakao();
 
       if (result.status === 'recovered') {
+        void recordRecoveryAttempt({
+          event: 'kakao_recovery_succeeded',
+          flow: 'recovery_sign_in',
+          metadata: {
+            hasKakaoIdentity: hasKakaoProviderIdentity(result.user),
+          },
+          provider: 'kakao',
+          status: 'succeeded',
+        });
         setKakaoContinueMode('recover');
         setEmail(result.user.email ?? '');
         setStep(result.user.email ? 'linked' : 'idle');
@@ -431,6 +530,13 @@ export function AccountRecoveryScreen() {
       }
 
       if (result.status === 'notRecovered') {
+        void recordRecoveryAttempt({
+          event: 'kakao_recovery_failed',
+          flow: 'recovery_sign_in',
+          provider: 'kakao',
+          reasonCode: result.reason,
+          status: 'failed',
+        });
         setKakaoContinueMode('link');
         setKakaoFeedback({
           type: 'error',
@@ -440,6 +546,15 @@ export function AccountRecoveryScreen() {
       }
 
       setKakaoContinueMode('link');
+      void recordRecoveryAttempt({
+        event:
+          result.status === 'cancelled'
+            ? 'kakao_recovery_cancelled'
+            : 'kakao_recovery_dismissed',
+        flow: 'recovery_sign_in',
+        provider: 'kakao',
+        status: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
+      });
       setKakaoFeedback({
         type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
         message:
@@ -448,6 +563,14 @@ export function AccountRecoveryScreen() {
             : '카카오 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
       });
     } catch (error) {
+      void recordRecoveryAttempt({
+        errorCode: getRecoveryErrorCode(error),
+        event: 'kakao_recovery_failed',
+        flow: 'recovery_sign_in',
+        provider: 'kakao',
+        reasonCode: getRecoveryReasonCode(error),
+        status: 'failed',
+      });
       setKakaoContinueMode('link');
       setKakaoFeedback({
         type: 'error',
@@ -481,9 +604,24 @@ export function AccountRecoveryScreen() {
     setIsLinkingKakao(true);
 
     try {
+      void recordRecoveryAttempt({
+        event: 'kakao_link_started',
+        flow: 'link',
+        provider: 'kakao',
+        status: 'started',
+      });
       const result = await linkKakaoIdentity();
 
       if (result.status === 'linked' && hasKakaoProviderIdentity(result.user)) {
+        void recordRecoveryAttempt({
+          event: 'kakao_link_succeeded',
+          flow: 'link',
+          metadata: {
+            hasKakaoIdentity: true,
+          },
+          provider: 'kakao',
+          status: 'succeeded',
+        });
         setKakaoContinueMode('link');
         setKakaoFeedback({
           type: 'success',
@@ -493,6 +631,13 @@ export function AccountRecoveryScreen() {
       }
 
       if (result.status === 'notLinked') {
+        void recordRecoveryAttempt({
+          event: 'kakao_link_failed',
+          flow: 'link',
+          provider: 'kakao',
+          reasonCode: result.reason,
+          status: 'failed',
+        });
         if (result.reason === 'already_linked_to_other_account') {
           await runKakaoRecovery();
         } else {
@@ -506,6 +651,13 @@ export function AccountRecoveryScreen() {
       }
 
       if (result.status === 'linked') {
+        void recordRecoveryAttempt({
+          event: 'kakao_link_failed',
+          flow: 'link',
+          provider: 'kakao',
+          reasonCode: 'missing_kakao_identity',
+          status: 'failed',
+        });
         setKakaoContinueMode('link');
         setKakaoFeedback({
           type: 'error',
@@ -515,6 +667,15 @@ export function AccountRecoveryScreen() {
       }
 
       setKakaoContinueMode('link');
+      void recordRecoveryAttempt({
+        event:
+          result.status === 'cancelled'
+            ? 'kakao_link_cancelled'
+            : 'kakao_link_dismissed',
+        flow: 'link',
+        provider: 'kakao',
+        status: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
+      });
       setKakaoFeedback({
         type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
         message:
@@ -523,6 +684,14 @@ export function AccountRecoveryScreen() {
             : '카카오 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
       });
     } catch (error) {
+      void recordRecoveryAttempt({
+        errorCode: getRecoveryErrorCode(error),
+        event: 'kakao_link_failed',
+        flow: 'link',
+        provider: 'kakao',
+        reasonCode: getRecoveryReasonCode(error),
+        status: 'failed',
+      });
       setKakaoContinueMode('link');
       setKakaoFeedback({
         type: 'error',

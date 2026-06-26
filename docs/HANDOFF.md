@@ -468,7 +468,9 @@ Backlog after Push Token Account-switch Policy and product UX review:
   bottom sheet clearly improves a real pre-submit choice.
 - Analysis trust UX: Trick Review and visual summary candidates.
 - Media / Share UX later.
-- Recovery attempt observability row/log design, if desired.
+- Recovery Attempt Observability P1: minimum implementation is in place with a
+  `recovery_attempts` SQL file, authenticated BFF endpoint, client helper, and
+  Kakao/Email recovery/linking events. The migration has not been applied yet.
 - Email Recovery deep link / redirect.
 - Email Recovery Connection: implemented for current-account recovery email
   linking and prepared as Build 86 for standalone email-link callback QA. This is

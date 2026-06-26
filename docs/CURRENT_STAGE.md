@@ -144,7 +144,9 @@ The check classified the current foundation as usable with several watch items:
   careful item.
 - Observability: WATCH. Upload, analysis, sync, Push, and recovery have enough
   logs/rows for current QA, and Push observability does not duplicate raw Expo
-  tokens. Recovery attempts do not yet have a dedicated structured DB row.
+  tokens. Recovery Attempt Observability P1 now has a proposed
+  `recovery_attempts` migration SQL, BFF endpoint, and client event helper, but
+  the DB migration has not been applied yet.
 - Recovery / Account Linking: PASS with WATCH follow-up. Kakao Account Linking
   and Kakao Recovery Sign-in P1 have passed real-device QA without splitting
   known ownership. Email Recovery remains baseline/fallback and still needs
@@ -205,7 +207,8 @@ build, paid AI call, DB migration, or external console change was performed.
 `npm run typecheck` passed.
 
 No BLOCKED foundation item was found. The next foundation follow-ups are
-optional recovery-attempt observability and Email Recovery deep-link strategy.
+Email Recovery deep-link strategy and applying the recovery-attempt migration
+after user/CTO confirmation.
 Kakao display-name sync has been investigated. Current Auth metadata provides
 Kakao name candidates and the current `public.users.display_name` is already a
 Kakao-name value, so immediate implementation is not needed. Keep only

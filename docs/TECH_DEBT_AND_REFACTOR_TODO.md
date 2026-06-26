@@ -130,8 +130,9 @@ WATCH:
   deferred until retry/recovery semantics are rechecked.
 - Source video cleanup after completed analysis is explicit, but QA/debugging
   expectations must account for cleaned-up source objects.
-- Recovery failures are currently diagnosable through UI state/logs, but there
-  is no dedicated structured recovery-attempt table yet.
+- Recovery Attempt Observability P1 has a dedicated `recovery_attempts`
+  migration SQL file, authenticated BFF endpoint, and client helper. The SQL has
+  not been applied to Supabase yet, so successful DB-write QA remains pending.
 - Email Recovery remains a baseline/fallback path. It is no longer blocked by
   sender rate limits, but redirect URL / deep-link strategy and link-validity QA
   are still needed before productization.
@@ -146,7 +147,8 @@ FIX NEEDED:
 
 Needs separate CTO/user alignment before implementation:
 
-1. Optional structured recovery-attempt observability.
+1. Apply `recovery_attempts` migration after user/CTO confirmation, then run
+   authenticated write smoke.
 2. Email Recovery redirect/deep-link productization.
 
 BLOCKED:
