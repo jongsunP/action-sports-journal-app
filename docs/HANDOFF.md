@@ -439,9 +439,10 @@ Backlog after Push Token Account-switch Policy and product UX review:
 
 - Product UX Baseline P1: Unified User-Facing Status Resolver. Completed.
 - Kakao Single CTA Recovery UX: implemented as a single Kakao section/CTA while
-  preserving internal link/recover separation. Simulator UI review and future
-  standalone OAuth E2E remain follow-up validation, not blockers for the code
-  path.
+  preserving internal link/recover separation. Build 84 real-device QA passed:
+  one app-internal `카카오로 계속하기` press recovered the existing Kakao-linked
+  account without exposing the previous `확인 필요` or `기존 기록으로 계속하기`
+  second CTA.
 - Detail menu / Retry Eligibility polish: implemented in Moment Detail with a
   visible action panel, disabled retry reasons, and delete in the same action
   area.
@@ -453,7 +454,8 @@ Backlog after Push Token Account-switch Policy and product UX review:
 - Recovery attempt observability row/log design, if desired.
 - Email Recovery deep link / redirect.
 - Kakao display_name sync.
-- Initial Loading / Video Tab Spinner Observability.
+- Initial Loading / Video Tab Spinner Observability. This is the next active
+  investigation after Build 84.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
   verified, and Kakao Recovery Sign-in P1 is verified on Build 81.
 
@@ -465,8 +467,8 @@ Kakao Single CTA Recovery UX implementation notes:
 - First press defaults to `linkKakaoIdentity` so a current anonymous account can
   be protected without creating a login wall.
 - If Kakao linking reports that the Kakao identity may already belong to another
-  account, the same Kakao section moves to a recover-ready state and the next
-  press runs `recoverWithKakao`.
+  account, the same handler now immediately continues into `recoverWithKakao`
+  instead of showing a recover-ready intermediate state.
 - The existing `checkRecoveryLocalWorkGuard()` still blocks recovery session
   switching when local upload/reconciliation work is active.
 - `npm run typecheck` passed. No EAS build, paid AI call, DB migration, or
@@ -480,6 +482,12 @@ Kakao Single CTA Recovery UX implementation notes:
   pressing the CTA showed the iOS OAuth confirmation prompt, and cancel returned
   to ASJ with a clear "카카오 진행이 취소됨" state. No real Kakao login/deep-link
   completion was performed.
+- Build 84 standalone iPhone QA later passed. The app-internal one-click path
+  successfully recovered the existing Kakao-linked account; Home, Video, and
+  Detail showed the existing remote data; relaunch preserved recovery state.
+  The remaining OAuth-layer friction is that Kakao/iOS may still feel like it
+  asks for `계속` twice outside the ASJ screen. Track that as a backlog item,
+  not a failure of the ASJ one-click CTA.
 
 Detail Menu / Retry Eligibility Polish implementation notes:
 
@@ -575,9 +583,10 @@ Analysis Trust UX implementation notes:
 
 Next starting point:
 
-Build 82 User QA Result Review is the next starting point. Build 82 has already
-been created for post-foundation UX QA, so wait for the Founder to share
-real-device QA results before giving a new development-session prompt.
+Startup / Video Tab Loading Observability P1 is the next starting point. Build
+84 Kakao one-click recovery passed, and the next known user pain is slow startup
+or Video/List spinner behavior after time/network changes. Start with read-only
+flow investigation before implementing.
 
 Build 82 details:
 
@@ -597,10 +606,9 @@ Build 82 includes:
 - Upload Entry UX Polish
 - Analysis Trust UX
 
-If the Founder reports QA as clean, the next planning discussion can choose
-between recovery-attempt observability, Email Recovery deep-link strategy,
-or the next Journal/Analysis/Media UX slice. Upload Entry Bottom Sheet should
-remain deferred unless a real pre-submit choice appears.
+Build 82 led to the later Kakao routing and one-click recovery fixes, completed
+through Build 84. Upload Entry Bottom Sheet should remain deferred unless a real
+pre-submit choice appears.
 
 Response/collaboration rules updated:
 
@@ -2631,17 +2639,19 @@ If the backend URL changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
-Do not add unrelated product features yet. Continue from the current Supabase
-Phase 1 and async analysis transition work unless the user explicitly switches
-back to AI evidence truthfulness or UX QA.
+Do not add unrelated product features yet. Build 84 Kakao one-click recovery QA
+passed, so the next active work is Startup / Video Tab Loading Observability P1.
 
-1. Correct the local Gemini API key before real linked Evidence Extraction
-   verification.
-2. Run a real Evidence Extraction request with a linked `momentId`.
-3. Confirm the created `evidence_results` row and linked Moment latest IDs.
-4. Use `docs/ASYNC_ANALYSIS_PLAN.md` to start the async analysis transition.
-5. Keep Auth UI, Storage, Push, Queue, scoring, and coaching expansion out of
-   scope until explicitly requested.
+Start with read-only investigation:
+
+1. Map auth/session/bootstrap loading in `AuthSessionProvider`.
+2. Map local storage restore and initial remote Moment sync in `useBootSync`.
+3. Map Video Archive first-page loading and pagination state in `HomeScreen` and
+   `sessionComponents`.
+4. Separate acceptable infrastructure latency from app-side missing timeout,
+   missing error/empty state, or infinite spinner behavior.
+5. Do not change Upload, Kakao/Auth, DB, EAS build number, or AI paths during
+   the first observability investigation.
 
 ## Related Personal Context Repo
 

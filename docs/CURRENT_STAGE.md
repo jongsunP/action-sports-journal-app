@@ -211,9 +211,9 @@ Internal ownership boundaries remain separate:
 
 - Default path starts with `linkIdentity` to protect the current anonymous
   account and its existing local/remote records.
-- If Kakao appears to be linked to another account, the same Kakao section moves
-  into a recover-ready state and the next CTA press uses the existing
-  `recoverWithKakao` / `signInWithOAuth` recovery path.
+- If Kakao appears to be linked to another account, the same CTA now continues
+  directly into the existing `recoverWithKakao` / `signInWithOAuth` recovery
+  path instead of exposing a recover-ready intermediate app state.
 - The local unsynced/uploading work guard still runs before recovery session
   switching.
 - Already-linked users see a protected/connected state instead of another
@@ -239,6 +239,26 @@ Simulator UI check follow-up:
   the "카카오 진행이 취소됨" / "미완료" state.
 - No actual Kakao login/deep-link completion was performed. Standalone OAuth
   E2E remains a later intentional build/QA item.
+
+Build 84 real-device QA result:
+
+- Build 84 passed the Kakao one-click recovery QA on the user's iPhone.
+- Inside ASJ, one press on `카카오로 계속하기` successfully recovered the
+  existing Kakao-linked account.
+- The app did not expose the previous intermediate `확인 필요` state or
+  `기존 기록으로 계속하기` second CTA during this path.
+- Home, Video, and Detail restored under the existing account's remote data.
+- Relaunching the app preserved the recovered state.
+- The user still perceived two `계속` actions in the Kakao/iOS OAuth layer, but
+  the app-internal one-click goal is met.
+- Whether the OAuth-layer perceived steps can be reduced remains a separate
+  backlog item, not a blocker for the ASJ one-click CTA requirement.
+
+Next investigation:
+
+- Startup / Video Tab Loading Observability P1. Separate acceptable
+  infrastructure cold start or network latency from app-side missing timeout,
+  missing error/empty state, or infinite loading bugs.
 
 Detail Menu / Retry Eligibility Polish, 2026-06-26:
 
@@ -399,10 +419,11 @@ Included QA surface:
 - Upload Entry UX Polish
 - Analysis Trust UX
 
-Next starting point:
+Current follow-up status:
 
-Wait for the Founder to share Build 82 QA results. Do not send a new
-development-session prompt before reviewing the user's QA result.
+Build 82 led to the Kakao Single CTA recovery routing work that was completed
+through Build 84. The active next work is no longer Build 82 review; it is
+Startup / Video Tab Loading Observability P1.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 

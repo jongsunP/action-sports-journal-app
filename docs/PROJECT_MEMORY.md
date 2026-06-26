@@ -181,6 +181,7 @@ Current stable workstream list:
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)
 - Upload Entry UX Polish(업로드 진입 UX 정리)
 - Analysis Trust UX(분석 신뢰 UX)
+- Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -195,18 +196,18 @@ Current stable workstream list:
 - External No-Token Finalization(외부 무토큰 경로 최종 정리)은 외부 사용자 API no-token 401 차단으로 완료
 - Push Token Account-switch Policy(푸시 토큰 계정 전환 정책)는 같은 Expo token을 현재 authenticated owner로 이동하는 정책으로 완료
 - Product UX Baseline P1 - Unified User-Facing Status Resolver(사용자 표시 상태 통합)는 진행중/완료/실패 UI 표시 통합으로 완료
-- Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)는 단일 Kakao 섹션/CTA 구현 완료, simulator UI와 standalone OAuth E2E는 후속 검증
+- Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)는 Build 84 실기기 QA 통과. 앱 내부 `카카오로 계속하기` 한 번 클릭으로 기존 Kakao-linked 계정 복구 성공
 - Detail Menu / Retry Eligibility Polish(상세 메뉴 / 재시도 가능 조건 정리)는 Moment Detail 작업 패널과 재시도 disabled reason으로 완료
 - Home v2 / Journal UX First Slice(홈 v2 / 저널 UX 1차)는 Home 상단 Journal Snapshot, 최근 인사이트, 최근 기록 문맥으로 완료
 - Upload Entry UX Polish(업로드 진입 UX 정리)는 route-backed Upload 화면 유지, 빠른 영상 선택/확인/업로드 안내 copy로 완료
 - Analysis Trust UX(분석 신뢰 UX)는 Detail 분석 요약의 신뢰 안내, 판단 근거, 확인 필요 표시 정리로 완료
-- Build 82 Post-foundation UX QA(빌드 82 기반 이후 UX QA)는 iOS preview/internal build 생성 완료, 사용자 실기기 QA 결과 대기
+- Build 84 Kakao One-click Recovery QA(빌드 84 카카오 원클릭 복구 QA)는 실기기 통과. OAuth 계층의 `계속` 체감 단계 줄이기는 후속 backlog
 
 바로 앞 작업:
-- Build 82 User QA Result Review(빌드 82 사용자 QA 결과 검토)
+- Build 84 Kakao One-click Recovery QA Result Recording(빌드 84 카카오 원클릭 복구 결과 기록)
 
 가까운 후속:
-- Kakao Single CTA Recovery UX Standalone QA(카카오 단일 CTA standalone QA)는 Build 82 QA 중 선택 확인
+- Startup / Video Tab Loading Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
@@ -215,6 +216,7 @@ Current stable workstream list:
 - Kakao display_name Sync(카카오 이름 동기화)
 - Media / Share UX(미디어 / 공유 경험)
 - Future Media UX Improvements(향후 미디어 경험 개선)
+- OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
 
 장기 보관 목록:
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)

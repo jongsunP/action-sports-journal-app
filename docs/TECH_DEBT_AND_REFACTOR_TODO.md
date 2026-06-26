@@ -474,9 +474,8 @@ semantics explicit.
 - Default CTA path runs `linkKakaoIdentity` first, preserving the current
   anonymous/device-first account and protecting its records.
 - If link returns a not-linked result that implies the Kakao identity may
-  already belong to another account, the same section enters recover-ready mode.
-- The recover-ready CTA then uses the existing `recoverWithKakao` /
-  `signInWithOAuth` path to switch to the existing Kakao-linked account.
+  already belong to another account, the same CTA now continues directly into
+  the existing `recoverWithKakao` / `signInWithOAuth` path.
 - The existing `checkRecoveryLocalWorkGuard()` remains in front of recovery
   session switching, so local unsynced/uploading work is still protected.
 - Separate Email Recovery UI remains baseline/fallback and was not expanded.
@@ -488,13 +487,56 @@ semantics explicit.
   performed.
 - Simulator UI was not launched because no Metro/Expo session or booted
   simulator was active.
+- Build 84 real-device QA passed for the app-internal one-click goal:
+  `카카오로 계속하기` recovered the existing Kakao-linked account without
+  exposing the previous recover-ready state or second CTA, and Home / Video /
+  Detail restored under the recovered account.
 
 ### Follow-up
 
-- Run simulator UI review for the single CTA copy/state rendering.
-- If the single CTA UX needs real OAuth confirmation, schedule a standalone
-  Kakao QA build intentionally and validate link -> recover-ready -> recover
-  behavior on device.
+- OAuth Step Reduction Investigation: Kakao/iOS may still feel like two
+  external `계속` actions even though ASJ's own CTA is now one-click. Investigate
+  whether this can be reduced without breaking Supabase OAuth, but keep it
+  separate from the completed ASJ one-click requirement.
+
+## Startup / Video Tab Loading Observability P1 - 2026-06-26
+
+### Problem
+
+After time passes or the user changes location/network, startup can feel slow
+and the Video/List tab can appear to keep spinning. This may be acceptable
+Render/Supabase/free-plan cold start or network latency, but it may also reveal
+an app-side missing timeout, missing error state, missing empty state, or
+infinite loading bug.
+
+### Investigation scope
+
+- Auth/session/bootstrap loading.
+- Local persisted session restore.
+- Initial remote Moment page sync.
+- Video Archive first-page loading.
+- Foreground, Push response, Realtime, and manual refresh effects on the same
+  state.
+- User-facing loading, empty, timeout, and error states.
+
+### Known starting points
+
+- `AuthSessionProvider` controls initial auth loading and anonymous session
+  creation.
+- `useBootSync` controls local storage restore and first remote Moment sync,
+  with an 8 second remote Moment list timeout.
+- `HomeScreen` blocks the initial app surface while auth or initial Moment sync
+  is loading.
+- `VideoArchiveList` shows an ActivityIndicator when its first page is loading,
+  but current copy does not distinguish slow infrastructure, empty archive,
+  timeout, or request failure.
+
+### Desired outcome
+
+Separate infrastructure latency from app bugs by adding or confirming
+observability before changing UX. P0/P1 fixes should focus on preventing
+indefinite loading, showing a clear retry/error/empty state, and logging enough
+reason data to classify the failure path.
 
 ## Email Recovery / Account Linking QA - 2026-06-24
 
