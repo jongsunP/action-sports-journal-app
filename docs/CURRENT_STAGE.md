@@ -592,12 +592,15 @@ Implemented:
   If optimization fails, the original file can still upload when it satisfies
   the 30MB / 15 seconds policy. The QA compression metadata button remains
   preview/internal only for now.
-- Build 90 is prepared as the first real-device QA build for the promoted
-  compression upload flow. QA should confirm that an over-20MB short clip is
-  optimized before upload target creation, the compressed final file uploads,
-  backend 30MB / 15 seconds / MIME policy is evaluated against that final file,
-  `uploadProcessing` metadata is visible, and analysis continues after upload.
-  This QA is technical flow validation, not AI quality evaluation.
+- Build 90 real-device QA/read-only follow-up confirmed the promoted compression
+  upload flow works for an over-20MB short clip. A user-uploaded roughly 25MB
+  original produced `FullSizeRender.compressed.mp4`; the final uploaded metadata
+  stored on `moments` / `upload_targets` was 12,776,723 bytes, 12.83 seconds,
+  `video/mp4`, and the upload target was finalized. Analysis continued through a
+  completed Gemini job/evidence result. The source video object had already been
+  deleted by retention/cleanup when checked, so Storage object size could not be
+  re-read. `uploadProcessing` remains response/debug metadata only and is not
+  persisted to DB; persist it later only if upload observability needs it.
 
 Analysis Trust UX, 2026-06-26:
 

@@ -1761,13 +1761,17 @@ POC implementation status, 2026-06-27:
   source for observation only; backend policy does not use it.
 - The QA metadata action remains temporarily available in preview/internal builds
   and hidden from production by default.
-- Next standalone QA should verify automatic optimization, final upload target
-  payload, `uploadProcessing`, and fallback/error copy before considering broader
-  rollout. AI quality impact remains a separate validation item.
-- Build 90 is prepared for this standalone QA batch. It should verify the
-  promoted compression flow with a real iPhone clip and also confirm the already
-  committed Video no-records timeout UI fix. Do not treat this as AI quality
-  acceptance; it is upload/metadata/analysis-continuation flow QA.
+- Build 90 real-device QA/read-only follow-up verified the promoted compression
+  flow with a real iPhone clip: an approximately 25MB original became
+  `FullSizeRender.compressed.mp4` with final stored metadata of 12,776,723 bytes,
+  12.83 seconds, and `video/mp4`; the upload target finalized and Gemini
+  analysis completed. This is technical upload/metadata/analysis-continuation
+  validation, not AI quality acceptance.
+- Remaining observability gap: `uploadProcessing` is sanitized and returned on
+  the upload-target response/debug path, but is not persisted to DB. If later
+  operations need after-the-fact original/compressed ratio auditing, add a small
+  upload observability persistence path instead of changing backend policy
+  semantics.
 
 Decision:
 

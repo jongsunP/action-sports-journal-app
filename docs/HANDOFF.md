@@ -660,15 +660,20 @@ Upload File Handling Policy P1, 2026-06-27:
     block upload with the existing user-facing policy copy.
 - The QA metadata action remains temporarily visible only in preview/internal QA
   builds. Production remains hidden unless an explicit public debug flag is set.
-- Next standalone QA should verify automatic optimization on an over-20MB short
-  clip, final-file upload target payload, `uploadProcessing` metadata, and the
-  existing 30MB / 15 seconds policy failure copy. Do not run paid AI solely for
-  compression validation.
+- Build 90 real-device QA/read-only follow-up verified automatic optimization on
+  an over-20MB short clip. The user uploaded an approximately 25MB original; the
+  stored final upload metadata was `FullSizeRender.compressed.mp4`,
+  12,776,723 bytes, 12.83 seconds, and `video/mp4`. The upload target finalized
+  and analysis completed with Gemini. `uploadProcessing` was visible in the
+  upload target response/debug path by design, but it is not persisted in
+  `upload_targets` / `moments`, so DB-only after-the-fact checks cannot recover
+  original/compressed ratio fields.
 - Build 90 is the closeout preview/internal build for this QA batch. It includes
   the promoted compression upload flow and the Video no-records timeout UI fix
-  (`ui delayed` / retry instead of an indefinite loading card). Use it to validate
-  actual iPhone behavior; the compression flow uses native modules and cannot be
-  fully judged in Expo Go.
+  (`ui delayed` / retry instead of an indefinite loading card). Compression
+  upload flow is now validated at the technical flow level; Video timeout UI fix
+  still remains a normal next-build/watch item if it was not explicitly rechecked
+  in the same QA pass.
 - Historical standalone QA checklist for the POC:
   - selected a short local video and tapped the QA-gated "QA 압축 메타 확인" action;
   - confirmed original file size, compressed file size, and reduction ratio;
