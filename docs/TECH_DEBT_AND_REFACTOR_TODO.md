@@ -593,6 +593,9 @@ Validation:
 - Simulator UI verification was attempted but local `xcrun simctl` did not
   respond in this session, so the remaining UI confirmation should happen in
   the next simulator/device QA pass.
+- Build 87 real-device QA found no issue. Keep observing via QA Debug because
+  the original symptom depends on timing/network conditions, but do not keep it
+  as an active blocker.
 
 ## Email Recovery / Account Linking QA - 2026-06-24
 

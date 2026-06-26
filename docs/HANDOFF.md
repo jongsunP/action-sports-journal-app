@@ -623,6 +623,9 @@ minimum fix applied after Build 85/86 logs. If slow startup or spinner behavior
 recurs, ask for the QA panel values first and compare Boot status, Video status,
 and home/archive/shown counts before guessing. Production hide/remove policy
 for the QA Debug Panel remains a follow-up backlog item.
+Build 87 real-device QA found no issue in the Real-use Loading Diagnosis path.
+Treat it as complete for now, with continued observation through the QA Debug
+panel rather than repeated immediate fixes.
 
 Build 82 details:
 

@@ -362,6 +362,9 @@ minimum fix, 2026-06-26:
   could not run in this session because local `xcrun simctl` did not respond.
   No EAS build, paid AI call, DB/schema change, or external console change was
   performed.
+- Build 87 real-device QA found no issue in this path. Treat the P1 fix as
+  complete for now, but continue monitoring through the QA Debug panel because
+  the original symptom depended on timing/network conditions.
 
 Detail Menu / Retry Eligibility Polish, 2026-06-26:
 
