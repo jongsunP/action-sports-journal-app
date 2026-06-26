@@ -90,6 +90,22 @@ Build 87 follow-up closeout, 2026-06-27:
   email and completed inside the magic-link validity window; preserve the single
   allowed `updateUser({ email })` retry for that QA.
 
+Build 88 Email Recovery fresh-link QA follow-up, 2026-06-27:
+
+- Fresh-link QA with `parksunl77@daum.net` confirmed backend/Auth success:
+  Auth email is linked, `new_email` is null, `email_confirmed_at` exists,
+  `public.users.email` is synchronized, and the same app user has one push token.
+- User-facing issue: after the email link returned to ASJ, the screen did not
+  automatically switch to "복구 준비 완료"; manual "연결 상태 새로고침" showed the
+  correct linked state, and app relaunch could look disconnected.
+- Minimal fix applied: initial Auth session restore and auth-state changes now
+  refresh `getUser()` into `session.user`; AccountRecoveryScreen rebuilds linked
+  UI state whenever `user.email` is present; callback results with a refreshed
+  email are normalized as succeeded for recovery attempt observability.
+- Next validation: include this in the next preview/internal build and recheck
+  email-link return plus app relaunch display. Do not send another recovery email
+  until that build is installed for the intended QA.
+
 Email Recovery deep-link / redirect status, 2026-06-26:
 
 - Email Recovery send path exists and current-account email connection

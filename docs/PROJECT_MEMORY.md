@@ -206,7 +206,7 @@ Current stable workstream list:
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 87 부분 QA 완료
-- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): 이미 등록된 이메일 입력 시 `A user with this email address has already been registered.` 계열 에러 확인. Fresh email confirmation link 앱 복귀 / Email linked 상태 / relaunch persistence는 아직 미완료. 다음 재시도는 설치된 앱 세션에서 owner-approved fresh email로 1회만 실행하고, 링크 유효시간 안에 클릭해야 함
+- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 88에서 `parksunl77@daum.net`으로 Auth/public DB 연결 성공 확인. 남은 문제는 링크 복귀/앱 재실행 시 UI가 자동으로 linked 상태를 복구하지 못하던 표시 문제였고, session restore/getUser 보강과 AccountRecoveryScreen linked state 재구성 최소 수정 완료. 다음 preview/internal build에서 재QA 필요
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): 테스트 중에는 계속 필요하므로 유지. 실서비스 배포 직전에 숨김/제거 정책 적용
 - Recovery Attempt Observability P1(복구 시도 관측성 1차): 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. Migration 적용 완료, authenticated insert smoke 완료, 개인정보 redaction 및 no-token 401 확인 완료

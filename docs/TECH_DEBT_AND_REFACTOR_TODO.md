@@ -625,6 +625,11 @@ Current P1 status:
    detached/local script. Preserve the next single retry for the installed app
    session with an owner-approved fresh email and complete the link click inside
    the magic-link validity window.
+   Build 88 later confirmed Auth/public DB success with
+   `parksunl77@daum.net`, but UI state did not automatically recover after link
+   return/relaunch. A minimal session restore/UI state fix is implemented and
+   should be rechecked in the next preview/internal build before another
+   `updateUser({ email })` attempt.
 4. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run

@@ -93,6 +93,33 @@ async function refreshSupabaseSession() {
     : currentSession;
 }
 
+function hasRecoveryEmailLinked(result: RecoveryEmailCompletionResult) {
+  return Boolean(result.user?.email ?? result.session?.user.email);
+}
+
+function normalizeRecoveryEmailCompletion(
+  result: RecoveryEmailCompletionResult,
+): RecoveryEmailCompletionResult {
+  if (result.status === 'completed' || !hasRecoveryEmailLinked(result)) {
+    return result;
+  }
+
+  const user = result.user ?? result.session?.user;
+
+  if (!result.session || !user) {
+    return result;
+  }
+
+  return {
+    status: 'completed',
+    session: {
+      ...result.session,
+      user,
+    },
+    user,
+  };
+}
+
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,7 +155,13 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         }
 
         if (data.session) {
-          setSession(data.session);
+          const refreshedSession = await refreshSupabaseSession();
+
+          if (!isMounted) {
+            return;
+          }
+
+          setSession(refreshedSession ?? data.session);
           return;
         }
 
@@ -176,6 +209,13 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         }
 
         setSession(nextSession ?? null);
+        if (nextSession) {
+          void refreshSupabaseSession().then((refreshedSession) => {
+            if (isMounted && refreshedSession) {
+              setSession(refreshedSession);
+            }
+          });
+        }
         if (hasCompletedInitialAuthLoad || nextSession) {
           setIsLoading(false);
         }
@@ -216,7 +256,9 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
           provider: 'email',
           status: 'started',
         });
-        const result = await completeRecoveryEmailChangeFromUrl(url);
+        const result = normalizeRecoveryEmailCompletion(
+          await completeRecoveryEmailChangeFromUrl(url),
+        );
 
         if (isDisposed) {
           return;

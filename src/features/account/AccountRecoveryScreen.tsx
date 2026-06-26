@@ -336,6 +336,17 @@ export function AccountRecoveryScreen() {
   });
 
   useEffect(() => {
+    if (!currentEmail) {
+      return;
+    }
+
+    setEmail(currentEmail);
+    setPendingEmail('');
+    setStep('linked');
+    setErrorMessage(null);
+  }, [currentEmail]);
+
+  useEffect(() => {
     if (!lastRecoveryEmailCompletion) {
       return;
     }

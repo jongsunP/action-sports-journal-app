@@ -303,6 +303,13 @@ Email Recovery:
   development session. Preserve the one allowed `updateUser({ email })` call for
   the installed app session with an owner-approved fresh email, then complete the
   link click inside the magic-link validity window.
+- Build 88 fresh-link QA with `parksunl77@daum.net` confirmed Auth/public DB
+  success but exposed a UI/session restore display bug: email link return and
+  relaunch could look disconnected until manual refresh. A minimum fix now
+  refreshes `getUser()` into restored sessions, rebuilds AccountRecoveryScreen
+  linked state from `user.email`, and records callback success when refreshed
+  Auth email is present. Re-test in the next preview/internal build; do not call
+  `updateUser({ email })` again before that build QA.
 
 Foundation Safety Check:
 
