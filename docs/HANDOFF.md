@@ -600,10 +600,17 @@ Upload File Handling Policy P1, 2026-06-27:
   `too_large`, `too_long`, `unsupported_type`, `empty_file`, `invalid_duration`.
 - FE maps those policy codes to clear Korean copy. The Upload screen now states
   "30MB / 15초 이하" for current development/QA.
-- Compression is still not implemented. For Expo SDK 54 / iOS standalone,
-  practical local video compression likely requires a native module and therefore
-  a new standalone/dev-client build; Expo Go should not be treated as sufficient
-  for that future work.
+- Compression / Upload Optimization POC is implemented but build-required:
+  `react-native-compressor` and `react-native-nitro-modules` are installed,
+  `app.json` includes the `react-native-compressor` plugin, and UploadScreen has
+  a `__DEV__` QA-only action labeled "QA 압축 메타 확인".
+- The POC does not upload to Storage or start analysis. It only attempts local
+  compression, re-reads the compressed file size, preserves the selected video's
+  duration, infers an uploadable MIME type, and displays the upload-target
+  payload that would be sent for the final file.
+- Expo Go should not be used to judge the POC. The native module requires a
+  dev-client/standalone build. Stop at typecheck/local static validation until
+  CTO/user approves bundling this with the next build-required batch.
 
 Analysis Trust UX implementation notes:
 

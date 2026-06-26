@@ -500,8 +500,13 @@ Implemented:
   generic upload failure.
 - Upload screen copy now says the current development/QA limit is 30MB / 15
   seconds.
-- Compression / Upload Optimization was not implemented. It remains a later
-  measurement and native-library decision.
+- Compression / Upload Optimization POC is now implemented as a QA-only
+  development path with `react-native-compressor`. It is not connected to the
+  production upload path and needs a dev-client/standalone native build before
+  real compression can be executed.
+- The POC records original size, compressed size, reduction ratio, duration,
+  MIME type, compressed URI, and the upload-target payload that would be sent
+  for the final compressed file.
 
 Analysis Trust UX, 2026-06-26:
 

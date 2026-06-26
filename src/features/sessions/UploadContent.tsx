@@ -15,6 +15,10 @@ import {
   getVideoFromUploadDraft,
   type UploadDraft,
 } from './uploadDraftStorage';
+import {
+  runUploadCompressionPoc,
+  type UploadCompressionPocResult,
+} from './uploadCompressionPoc';
 import type { UploadProgressState } from './uploadProgress';
 
 type HomeScreenStyles = Record<string, any>;
@@ -46,6 +50,12 @@ export function UploadContent({
   uploadDraft,
   uploadProgress,
 }: UploadContentProps) {
+  const [compressionPocError, setCompressionPocError] = useState<string | null>(
+    null,
+  );
+  const [compressionPocResult, setCompressionPocResult] =
+    useState<UploadCompressionPocResult | null>(null);
+  const [isRunningCompressionPoc, setIsRunningCompressionPoc] = useState(false);
   const visibleVideo =
     selectedVideo ?? (uploadDraft ? getVideoFromUploadDraft(uploadDraft) : null);
   const hasUploadFailed = uploadDraft?.status === 'upload_failed';
@@ -56,6 +66,31 @@ export function UploadContent({
   const uploadTitle = uploadPercentLabel
     ? `${uploadProgress?.label ?? '영상 전송 중'} ${uploadPercentLabel}`
     : uploadProgress?.label;
+  const canRunCompressionPoc =
+    __DEV__ && Boolean(visibleVideo) && !isSubmitting && !isRunningCompressionPoc;
+
+  const handleRunCompressionPoc = async () => {
+    if (!visibleVideo || isSubmitting || isRunningCompressionPoc) {
+      return;
+    }
+
+    setCompressionPocError(null);
+    setCompressionPocResult(null);
+    setIsRunningCompressionPoc(true);
+
+    try {
+      const result = await runUploadCompressionPoc(visibleVideo);
+      setCompressionPocResult(result);
+    } catch (error) {
+      setCompressionPocError(
+        error instanceof Error
+          ? error.message
+          : '압축 POC를 실행하지 못했습니다.',
+      );
+    } finally {
+      setIsRunningCompressionPoc(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.uploadSheetBackdrop}>
@@ -122,6 +157,16 @@ export function UploadContent({
                     이하 클립만 지원합니다.
                   </Text>
                 </View>
+                {__DEV__ ? (
+                  <CompressionPocPanel
+                    canRun={canRunCompressionPoc}
+                    error={compressionPocError}
+                    isRunning={isRunningCompressionPoc}
+                    onRun={handleRunCompressionPoc}
+                    result={compressionPocResult}
+                    styles={styles}
+                  />
+                ) : null}
               </View>
             </>
           ) : (
@@ -256,6 +301,95 @@ function UploadStepItem({
       <Text style={styles.uploadStepText}>{label}</Text>
     </View>
   );
+}
+
+function CompressionPocPanel({
+  canRun,
+  error,
+  isRunning,
+  onRun,
+  result,
+  styles,
+}: {
+  canRun: boolean;
+  error: string | null;
+  isRunning: boolean;
+  onRun: () => void;
+  result: UploadCompressionPocResult | null;
+  styles: HomeScreenStyles;
+}) {
+  return (
+    <View style={styles.selectedVideoHelper}>
+      <Text style={styles.selectedVideoHelperTitle}>
+        QA 전용 · 업로드 전 최적화 POC
+      </Text>
+      <Text style={styles.selectedVideoHelperText}>
+        실제 업로드 없이 로컬 압축 결과와 upload target 요청 직전 메타만
+        확인합니다.
+      </Text>
+      <Pressable
+        accessibilityLabel="압축 POC 실행"
+        accessibilityRole="button"
+        disabled={!canRun}
+        onPress={onRun}
+        style={({ pressed }) => [
+          styles.uploadPageSecondaryButton,
+          !canRun ? styles.uploadSheetSubmitButtonDisabled : undefined,
+          pressed ? styles.buttonPressed : undefined,
+        ]}
+      >
+        <Text style={styles.uploadPageSecondaryText}>
+          {isRunning ? '최적화 확인 중...' : 'QA 압축 메타 확인'}
+        </Text>
+      </Pressable>
+      {isRunning ? (
+        <Text style={styles.uploadSubmittingHint}>
+          업로드 전 영상을 최적화하고 있습니다.
+        </Text>
+      ) : null}
+      {error ? (
+        <Text style={styles.uploadSubmittingHint}>{error}</Text>
+      ) : null}
+      {result ? (
+        <View>
+          <Text style={styles.selectedVideoHelperText}>
+            원본: {formatBytesForPoc(result.original.fileSize)} · 압축 후:{' '}
+            {formatBytesForPoc(result.compressed.fileSize)} · 감소율:{' '}
+            {formatPercentForPoc(result.reductionRatio)}
+          </Text>
+          <Text style={styles.selectedVideoHelperText}>
+            최종 payload: {result.backendUploadTargetPayload.mimeType} ·{' '}
+            {formatBytesForPoc(result.backendUploadTargetPayload.fileSize)} ·{' '}
+            {formatDurationForPoc(result.backendUploadTargetPayload.durationMs)}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function formatBytesForPoc(value: number | null) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '-';
+  }
+
+  return `${Math.round((value / 1024 / 1024) * 10) / 10} MB`;
+}
+
+function formatDurationForPoc(value: number | null) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '-';
+  }
+
+  return `${Math.round(value / 100) / 10}s`;
+}
+
+function formatPercentForPoc(value: number | null) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '-';
+  }
+
+  return `${value}%`;
 }
 
 function LocalUploadVideoPreview({

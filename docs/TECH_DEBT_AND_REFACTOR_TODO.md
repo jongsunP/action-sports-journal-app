@@ -1681,6 +1681,30 @@ Expo / React Native / iOS standalone compression investigation, 2026-06-27:
   candidate requires native modules. A standalone/dev-client build would likely
   be needed.
 
+POC implementation status, 2026-06-27:
+
+- `react-native-compressor@2.0.2` and `react-native-nitro-modules@0.35.10`
+  are installed.
+- `app.json` includes the `react-native-compressor` config plugin.
+- `src/features/sessions/uploadCompressionPoc.ts` dynamically imports
+  `react-native-compressor` so the native dependency is only touched when the
+  QA-only POC action is pressed.
+- UploadScreen shows the `__DEV__` QA-only action "QA 압축 메타 확인" after a
+  video is selected.
+- The POC records:
+  - original file size;
+  - compressed file size;
+  - reduction ratio;
+  - duration carried into final metadata;
+  - inferred uploadable MIME type;
+  - compressed URI;
+  - example `POST /api/video-upload-targets` payload for the compressed final
+    file.
+- It intentionally does not submit the upload target request, upload to Storage,
+  run analysis, or call paid AI.
+- Status: build-required. A dev-client or standalone EAS preview/internal build
+  is required before real compression behavior can be measured on iPhone.
+
 Decision:
 
 Compression is likely needed, but do not implement it before measurement and

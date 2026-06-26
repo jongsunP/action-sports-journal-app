@@ -40,6 +40,7 @@
         }
       ],
       "expo-notifications",
+      "react-native-compressor",
       "expo-video",
       "expo-web-browser"
     ],

@@ -1219,6 +1219,10 @@ Compression measurement / benchmark record:
   - try conservative compression only for larger videos;
   - avoid excessive frame-rate reduction;
   - use a 1080p-oriented optimization candidate before lower-quality presets.
+- Compression / Upload Optimization POC now exists as a build-required QA-only
+  path using `react-native-compressor`. It is not part of production upload and
+  should only measure local size reduction/final-file metadata after a
+  dev-client or standalone build.
 - AI quality comparison must cover edge load, approach, board angle, rope
   tension, pop, rotation axis, landing, and trick identification.
 - Priority implication: run Compression measurement/benchmark before Auth if
