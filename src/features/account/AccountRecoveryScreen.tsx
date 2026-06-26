@@ -381,6 +381,72 @@ export function AccountRecoveryScreen() {
     }
   };
 
+  const runKakaoRecovery = async () => {
+    setErrorMessage(null);
+    setKakaoFeedback(null);
+    setIsRecoveringWithKakao(true);
+
+    try {
+      const guard = await checkRecoveryLocalWorkGuard();
+
+      if (!guard.canRecover) {
+        setKakaoContinueMode('link');
+        setKakaoFeedback({
+          type: 'blocked',
+          message: guard.message,
+        });
+        return;
+      }
+
+      const result = await recoverWithKakao();
+
+      if (result.status === 'recovered') {
+        setKakaoContinueMode('recover');
+        setEmail(result.user.email ?? '');
+        setStep(result.user.email ? 'linked' : 'idle');
+        setKakaoFeedback({
+          type: 'success',
+          message: '카카오 계정의 기존 기록으로 돌아왔습니다.',
+        });
+        return;
+      }
+
+      if (result.status === 'notRecovered') {
+        setKakaoContinueMode('link');
+        setKakaoFeedback({
+          type: 'error',
+          message: result.message,
+        });
+        return;
+      }
+
+      setKakaoContinueMode('link');
+      setKakaoFeedback({
+        type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
+        message:
+          result.status === 'cancelled'
+            ? '카카오 진행이 취소되었습니다. 현재 기기 계정은 그대로 유지됩니다.'
+            : '카카오 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
+      });
+    } catch (error) {
+      setKakaoContinueMode('link');
+      setKakaoFeedback({
+        type: 'error',
+        message: getErrorMessage(error),
+      });
+    } finally {
+      setIsRecoveringWithKakao(false);
+    }
+  };
+
+  const handleRecoverWithKakao = async () => {
+    if (!canContinueWithKakao) {
+      return;
+    }
+
+    await runKakaoRecovery();
+  };
+
   const handleContinueWithKakao = async () => {
     if (!canContinueWithKakao) {
       return;
@@ -409,13 +475,9 @@ export function AccountRecoveryScreen() {
 
       if (result.status === 'notLinked') {
         if (result.reason === 'already_linked_to_other_account') {
-          setKakaoContinueMode('recover');
-          setKakaoFeedback({
-            type: 'recoverReady',
-            message:
-              '이 카카오는 기존 기록에 연결되어 있을 수 있습니다. 기존 기록을 불러오려면 한 번 더 진행해주세요.',
-          });
+          await runKakaoRecovery();
         } else {
+          setKakaoContinueMode('link');
           setKakaoFeedback({
             type: 'error',
             message: result.message,
@@ -425,6 +487,7 @@ export function AccountRecoveryScreen() {
       }
 
       if (result.status === 'linked') {
+        setKakaoContinueMode('link');
         setKakaoFeedback({
           type: 'error',
           message: '카카오로 계속하지 못했습니다. 다시 시도해주세요.',
@@ -432,6 +495,7 @@ export function AccountRecoveryScreen() {
         return;
       }
 
+      setKakaoContinueMode('link');
       setKakaoFeedback({
         type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
         message:
@@ -440,69 +504,13 @@ export function AccountRecoveryScreen() {
             : '카카오 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
       });
     } catch (error) {
+      setKakaoContinueMode('link');
       setKakaoFeedback({
         type: 'error',
         message: getErrorMessage(error),
       });
     } finally {
       setIsLinkingKakao(false);
-    }
-  };
-
-  const handleRecoverWithKakao = async () => {
-    if (!canContinueWithKakao) {
-      return;
-    }
-
-    setErrorMessage(null);
-    setKakaoFeedback(null);
-    setIsRecoveringWithKakao(true);
-
-    try {
-      const guard = await checkRecoveryLocalWorkGuard();
-
-      if (!guard.canRecover) {
-        setKakaoFeedback({
-          type: 'blocked',
-          message: guard.message,
-        });
-        return;
-      }
-
-      const result = await recoverWithKakao();
-
-      if (result.status === 'recovered') {
-        setEmail(result.user.email ?? '');
-        setStep(result.user.email ? 'linked' : 'idle');
-        setKakaoFeedback({
-          type: 'success',
-          message: '카카오 계정의 기존 기록으로 돌아왔습니다.',
-        });
-        return;
-      }
-
-      if (result.status === 'notRecovered') {
-        setKakaoFeedback({
-          type: 'error',
-          message: result.message,
-        });
-        return;
-      }
-
-      setKakaoFeedback({
-        type: result.status === 'cancelled' ? 'cancelled' : 'dismissed',
-        message:
-          result.status === 'cancelled'
-            ? '카카오 진행이 취소되었습니다. 현재 기기 계정은 그대로 유지됩니다.'
-            : '카카오 창이 닫혔습니다. 필요할 때 다시 시도할 수 있습니다.',
-      });
-    } catch (error) {
-      setKakaoFeedback({
-        type: 'error',
-        message: getErrorMessage(error),
-      });
-    } finally {
-      setIsRecoveringWithKakao(false);
     }
   };
 
