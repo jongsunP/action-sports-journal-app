@@ -8,8 +8,25 @@ analysis, recovery, and long-term growth history.
 For humans and AI agents, this repository has many historical design documents.
 Do not try to reconstruct the current state by reading every `.md` file.
 
-Read these first, in this exact order. Do not skip or reorder them unless a
-file is genuinely missing:
+When starting from any device or any new AI/Codex session, first pull and read
+the personal context repository. This project expects the cross-project Codex
+workflow rules to be loaded before ASJ-specific docs.
+
+Full read order:
+
+1. `~/repository/codex-personal-context/AGENTS.md`
+2. `~/repository/codex-personal-context/SESSION_WORKFLOW.md`
+3. `~/repository/codex-personal-context/projects/action-sports-journal-app.md`
+4. `README.md`
+5. `AGENTS.md`
+6. `docs/PROJECT_MEMORY.md`
+7. `docs/CURRENT_STAGE.md`
+8. `docs/HANDOFF.md`
+9. `docs/TECH_DEBT_AND_REFACTOR_TODO.md`
+
+Do not skip or reorder these unless a file is genuinely missing.
+
+Within this project repository, the key docs are:
 
 1. `AGENTS.md` - collaboration rules, response format, and session workflow.
 2. `docs/PROJECT_MEMORY.md` - canonical ASJ product memory, stable workstream

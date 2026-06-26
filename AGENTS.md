@@ -4,10 +4,12 @@ An iOS-first React Native application for action sports athletes.
 
 ## Documentation Entry Point
 
-For current project understanding, read `README.md` first. The canonical ASJ
-status and stable workstream list live in `docs/PROJECT_MEMORY.md`. Historical
-or focused docs under `docs/` are references and should be opened only when the
-current task needs them.
+For current project understanding, first pull and read
+`~/repository/codex-personal-context` according to this project's `README.md`.
+Then read `README.md` and continue in the exact order listed there. The
+canonical ASJ status and stable workstream list live in
+`docs/PROJECT_MEMORY.md`. Historical or focused docs under `docs/` are
+references and should be opened only when the current task needs them.
 
 For documentation edits, follow the `README.md` "Where To Write" map. Do not
 write ASJ product state into personal context, duplicate the stable workstream
