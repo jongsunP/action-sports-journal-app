@@ -117,6 +117,10 @@ in project/personal docs when durable, but do not overload ordinary
 development-session prompts with these meta rules. Development prompts should
 include only the product, technical, QA, safety, and workflow details needed to
 execute that development task.
+When the Founder discusses both development and setup/workflow topics, first
+classify the turn. Apply development context to product/technical work, and
+apply setup/workflow context to session behavior, memory, formatting, syncing,
+or documentation rules.
 
 After a development session reports that a build is complete, do not immediately
 send a new development-session prompt. First give the Founder only the QA steps
