@@ -597,7 +597,10 @@ Current foundation readout:
   Account Linking and Kakao Recovery Sign-in P1 remain separated and verified.
 - WATCH: source/orphan cleanup caution, optional recovery-attempt
   observability, and Email Recovery redirect/deep-link productization.
-- FIXED: local 20MB upload size guard.
+- FIXED: local upload policy guard. Current Upload File Handling Policy P1 uses
+  final upload file metadata, not original-file metadata. Backend policy is
+  30MB / 15 seconds / supported video MIME type for the file that will actually
+  be uploaded.
 - BLOCKED: none.
 
 Follow-up QA update: the Founder completed an existing-Moment recovery smoke.

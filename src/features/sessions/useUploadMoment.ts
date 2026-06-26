@@ -43,8 +43,18 @@ import {
 import { classifyUploadFailure } from './uploadStateMachine';
 
 const MULTIPART_FALLBACK_UPLOAD_TIMEOUT_MS = 30000;
-const MAX_UPLOAD_VIDEO_BYTES = 20 * 1024 * 1024;
+const MAX_UPLOAD_VIDEO_BYTES = 30 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_MB = Math.round(MAX_UPLOAD_VIDEO_BYTES / 1024 / 1024);
+const MAX_UPLOAD_VIDEO_DURATION_MS = 15_000;
+const MAX_UPLOAD_VIDEO_DURATION_SECONDS = Math.round(
+  MAX_UPLOAD_VIDEO_DURATION_MS / 1000,
+);
+const ALLOWED_UPLOAD_VIDEO_MIME_TYPES = new Set([
+  'video/mp4',
+  'video/quicktime',
+  'video/x-m4v',
+  'video/mov',
+]);
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 
@@ -273,15 +283,15 @@ export function useUploadMoment({
       return false;
     }
 
-    if (
-      typeof asset.fileSize === 'number' &&
-      Number.isFinite(asset.fileSize) &&
-      asset.fileSize > MAX_UPLOAD_VIDEO_BYTES
-    ) {
-      Alert.alert(
-        '영상 용량이 너무 큽니다',
-        `현재 분석 업로드는 ${MAX_UPLOAD_VIDEO_MB}MB 이하 영상만 지원합니다. 더 짧은 클립을 선택해주세요.`,
-      );
+    const validationAlert = getUploadPolicyAlertForVideo({
+      duration: asset.duration,
+      fileSize: asset.fileSize,
+      mimeType: asset.mimeType,
+      uri: asset.uri,
+    });
+
+    if (validationAlert) {
+      Alert.alert(validationAlert.title, validationAlert.message);
       return false;
     }
 
@@ -660,6 +670,17 @@ export function useUploadMoment({
             title: '영상 파일을 다시 선택해 주세요',
             uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
           });
+        } else if (isUploadPolicyFailure(error)) {
+          const policyCopy = getUploadPolicyFailureCopy(error);
+          await showUploadFailureAlertIfActive({
+            localSessionId: nextSession.id,
+            message: policyCopy.message,
+            reason: errorMessage,
+            shouldSuppressAlert: shouldSuppressUploadFailureAlert,
+            stage: usedUploadFallback ? 'fallback_upload' : 'upload_policy',
+            title: policyCopy.title,
+            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+          });
         } else if (isUploadTargetRateLimitFailure(error)) {
           await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
@@ -898,10 +919,12 @@ async function createMomentFromDirectUpload({
 
     return storedMoment;
   } catch (error) {
-    if (isUploadTargetRateLimitFailure(error)) {
+    if (isUploadTargetRateLimitFailure(error) || isUploadPolicyFailure(error)) {
       console.info('[upload_timing]', {
         draftId: draft.draftId,
-        event: 'upload_target_rate_limited',
+        event: isUploadTargetRateLimitFailure(error)
+          ? 'upload_target_rate_limited'
+          : 'upload_policy_rejected',
         fallback_will_run: false,
         localSessionId: session.id,
         reason: error instanceof Error ? error.message : 'unknown',
@@ -931,6 +954,121 @@ async function createMomentFromDirectUpload({
 
 function isUploadTargetRateLimitFailure(error: unknown) {
   return error instanceof RemoteRequestError && error.status === 429;
+}
+
+function isUploadPolicyFailure(error: unknown) {
+  return (
+    error instanceof RemoteRequestError &&
+    (error.code === 'too_large' ||
+      error.code === 'too_long' ||
+      error.code === 'unsupported_type' ||
+      error.code === 'empty_file' ||
+      error.code === 'invalid_duration')
+  );
+}
+
+function getUploadPolicyFailureCopy(error: unknown) {
+  const code = error instanceof RemoteRequestError ? error.code : undefined;
+
+  switch (code) {
+    case 'too_large':
+      return {
+        message: `현재 업로드는 ${MAX_UPLOAD_VIDEO_MB}MB 이하 클립만 지원합니다. 더 짧거나 작은 영상을 선택해주세요.`,
+        title: '영상 용량이 너무 큽니다',
+      };
+    case 'too_long':
+      return {
+        message: `현재 업로드는 ${MAX_UPLOAD_VIDEO_DURATION_SECONDS}초 이하 클립만 지원합니다. 더 짧은 클립을 선택해주세요.`,
+        title: '영상이 너무 깁니다',
+      };
+    case 'unsupported_type':
+      return {
+        message:
+          '현재는 MP4 또는 MOV 계열 영상만 업로드할 수 있습니다. 다른 영상 파일을 선택해주세요.',
+        title: '지원하지 않는 영상 형식입니다',
+      };
+    case 'empty_file':
+      return {
+        message:
+          '선택한 영상 파일 크기를 확인할 수 없습니다. 영상을 다시 선택해주세요.',
+        title: '영상 파일을 확인할 수 없습니다',
+      };
+    case 'invalid_duration':
+      return {
+        message:
+          '선택한 영상 길이를 확인할 수 없습니다. 영상을 다시 선택해주세요.',
+        title: '영상 길이를 확인할 수 없습니다',
+      };
+    default:
+      return {
+        message:
+          '선택한 영상이 현재 업로드 기준에 맞지 않습니다. 다른 영상을 선택해주세요.',
+        title: '영상을 업로드할 수 없습니다',
+      };
+  }
+}
+
+function getUploadPolicyAlertForVideo({
+  duration,
+  fileSize,
+  mimeType,
+  uri,
+}: {
+  duration?: number | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  uri?: string | null;
+}) {
+  if (!uri) {
+    return {
+      message: '선택한 영상 파일 경로를 확인할 수 없습니다. 영상을 다시 선택해주세요.',
+      title: '영상 파일을 확인할 수 없습니다',
+    };
+  }
+
+  if (!mimeType || !ALLOWED_UPLOAD_VIDEO_MIME_TYPES.has(mimeType)) {
+    return getUploadPolicyFailureCopy(
+      new RemoteRequestError('unsupported video type', 400, {
+        code: 'unsupported_type',
+      }),
+    );
+  }
+
+  if (
+    typeof fileSize !== 'number' ||
+    !Number.isFinite(fileSize) ||
+    fileSize <= 0
+  ) {
+    return getUploadPolicyFailureCopy(
+      new RemoteRequestError('empty file', 400, { code: 'empty_file' }),
+    );
+  }
+
+  if (fileSize > MAX_UPLOAD_VIDEO_BYTES) {
+    return getUploadPolicyFailureCopy(
+      new RemoteRequestError('video too large', 413, { code: 'too_large' }),
+    );
+  }
+
+  if (
+    typeof duration !== 'number' ||
+    !Number.isFinite(duration) ||
+    duration <= 0
+  ) {
+    return getUploadPolicyFailureCopy(
+      new RemoteRequestError('invalid duration', 400, {
+        code: 'invalid_duration',
+      }),
+    );
+  }
+
+  if (duration > MAX_UPLOAD_VIDEO_DURATION_MS) {
+    return getUploadPolicyFailureCopy(
+      new RemoteRequestError('video too long', 400, { code: 'too_long' }),
+    );
+  }
+
+  return null;
 }
 
 function withUploadTimeout<T>(

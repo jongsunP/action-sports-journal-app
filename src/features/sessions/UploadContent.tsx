@@ -118,8 +118,8 @@ export function UploadContent({
                     빠르게 기록을 시작합니다
                   </Text>
                   <Text style={styles.selectedVideoHelperText}>
-                    메모 입력 없이 먼저 분석합니다. 현재 업로드는 20MB 이하
-                    클립만 지원합니다.
+                    메모 입력 없이 먼저 분석합니다. 현재 업로드는 30MB / 15초
+                    이하 클립만 지원합니다.
                   </Text>
                 </View>
               </View>

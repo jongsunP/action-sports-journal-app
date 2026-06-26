@@ -43,7 +43,7 @@ const UPLOAD_PROGRESS_COPY: Record<
     label: '분석 준비 중',
   },
   fallback_upload: {
-    detail: '잠시만 기다려 주세요.',
+    detail: '기본 업로드가 지연되어 다른 경로로 영상을 전송하고 있습니다.',
     label: '영상 업로드 중',
   },
 };

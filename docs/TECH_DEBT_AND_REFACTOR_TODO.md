@@ -386,10 +386,10 @@ Reasoning:
 - Reframed selected-video metadata as "선택한 라이딩 영상".
 - Added a compact "영상 확인 -> 업로드 -> 분석 시작" step strip.
 - Added helper copy that analysis can start without a memo step and that the
-  current limit is 20MB.
+  current limit is 30MB / 15 seconds.
 - Updated the primary action to "업로드하고 분석 시작".
 - Preserved picker, upload submit, upload progress, upload failure alert/retry,
-  route-backed `UploadScreen`, and existing 20MB pre-upload validation.
+  route-backed `UploadScreen`, and existing pre-upload validation.
 
 ### Validation
 
@@ -1628,14 +1628,21 @@ cost, and user friction as ASJ grows.
 
 Related near-term UX guard:
 
-`Upload File-size Validation` has a first-pass guard as of the 2026-06-26
-Foundation Safety Check: when the picker exposes a selected video's file size
-and it exceeds the current 20MB server/storage limit, the app blocks the upload
-before submit and shows a clear message. The current 20MB ceiling is a
-conservative safety policy, not proof that larger videos are impossible. If a
-platform does not expose file size, server/storage validation remains the final
-guard. Compression and larger-file policy remain separate product/technical
-decisions.
+`Upload File Handling Policy P1` is in place as of 2026-06-27. The app now
+validates the selected video before UploadScreen when possible, and the backend
+is the authority for the final file that will actually be uploaded:
+
+- max final upload file size: 30MB;
+- max final upload duration: 15 seconds;
+- allowed MIME types: MP4/MOV family;
+- backend error codes: `too_large`, `too_long`, `unsupported_type`,
+  `empty_file`, `invalid_duration`.
+
+Important policy decision: the backend does not need to know whether the file is
+the original camera video or a future FE-compressed/downsized file. If FE
+compression is implemented later, it must happen before requesting a signed
+upload URL, and the signed upload request must send the final file's size,
+duration, and MIME type.
 
 Cause:
 
@@ -1651,6 +1658,28 @@ Options:
 - Upload original first and compress on the server.
 - Use a hybrid: only large videos get conservative client optimization, while
   the server can later generate playback/share proxies.
+
+Expo / React Native / iOS standalone compression investigation, 2026-06-27:
+
+- Expo SDK 54's current built-in upload stack can pick videos and report
+  metadata, but ASJ does not currently have an Expo-managed video compression
+  API in use.
+- `react-native-compressor` is the most plausible client-side candidate to
+  investigate later because it targets image/video compression on React Native,
+  but it is a native dependency. Expect a config plugin/prebuild/dev-client or
+  standalone EAS build path rather than Expo Go-only validation.
+- FFmpeg-based mobile options are powerful but heavier and higher-risk for app
+  size, native build complexity, iOS performance, and processing time.
+- Server-side compression remains possible, but it does not solve the initial
+  upload bandwidth/wait problem because the original bytes would still need to
+  reach the server first.
+- Required future checks before implementation: output file URI readability,
+  MIME type, duration, file size re-read after compression, processing time on
+  real iPhone, cancellation/failure copy, and whether compression preserves
+  enough visual detail for later AI quality validation.
+- Expo Go should not be considered enough for a real compression POC if the
+  candidate requires native modules. A standalone/dev-client build would likely
+  be needed.
 
 Decision:
 

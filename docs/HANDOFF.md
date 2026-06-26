@@ -568,12 +568,12 @@ Upload Entry UX Polish implementation notes:
   meaningful pre-submit title/description/caption choice. The desired path is
   fast media selection -> upload/analyze -> optional note later.
 - Home upload CTA, picker opening, selected-video confirmation, upload
-  progress, failure/retry, and 20MB pre-upload validation are preserved.
+  progress, failure/retry, and pre-upload validation are preserved.
 - `UploadContent` now frames the screen as "새 기록 만들기".
 - Selected video metadata is labeled "선택한 라이딩 영상".
 - A compact step strip shows "영상 확인 -> 업로드 -> 분석 시작".
 - Helper copy clarifies that analysis can start without a memo step and that
-  the current upload limit is 20MB.
+  the current upload limit is 30MB / 15 seconds.
 - Primary action copy is now "업로드하고 분석 시작".
 - `npm run typecheck` and `git diff --check` passed.
 - Expo Go / iPhone 17 Simulator confirmed the Home upload CTA opens the iOS
@@ -582,6 +582,28 @@ Upload Entry UX Polish implementation notes:
   this pass.
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
+
+Upload File Handling Policy P1, 2026-06-27:
+
+- Backend policy now treats the file submitted for upload as the final upload
+  file. It does not distinguish original camera media from a future FE-compressed
+  or downsized file.
+- If local compression is added later, it must run before
+  `POST /api/video-upload-targets`; the app must request the signed upload URL
+  using the compressed file's final `fileSize`, `duration`, and `mimeType`.
+- Current final-file upload policy: 30MB max, 15 seconds max, supported video
+  MIME types only.
+- FE picker validation now blocks missing URI, unsupported MIME type, empty or
+  unknown file size, invalid duration, too-large files, and too-long clips before
+  opening UploadScreen when metadata is available.
+- Backend remains the authority and returns policy codes:
+  `too_large`, `too_long`, `unsupported_type`, `empty_file`, `invalid_duration`.
+- FE maps those policy codes to clear Korean copy. The Upload screen now states
+  "30MB / 15초 이하" for current development/QA.
+- Compression is still not implemented. For Expo SDK 54 / iOS standalone,
+  practical local video compression likely requires a native module and therefore
+  a new standalone/dev-client build; Expo Go should not be treated as sufficient
+  for that future work.
 
 Analysis Trust UX implementation notes:
 

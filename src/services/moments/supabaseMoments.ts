@@ -127,15 +127,32 @@ export type RemoteMomentRecord = {
 };
 
 type RemoteErrorResponse = {
+  code?: unknown;
   error?: unknown;
+  maxDurationMs?: unknown;
+  maxSizeBytes?: unknown;
 };
 
 export class RemoteRequestError extends Error {
+  code?: string;
+  maxDurationMs?: number;
+  maxSizeBytes?: number;
   status: number;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    details?: {
+      code?: string;
+      maxDurationMs?: number;
+      maxSizeBytes?: number;
+    },
+  ) {
     super(message);
     this.name = 'RemoteRequestError';
+    this.code = details?.code;
+    this.maxDurationMs = details?.maxDurationMs;
+    this.maxSizeBytes = details?.maxSizeBytes;
     this.status = status;
   }
 }
@@ -208,11 +225,12 @@ export async function requestUploadTarget(
   });
 
   if (!response.ok) {
-    const message = await readRemoteErrorMessage(response);
+    const remoteError = await readRemoteError(response);
 
     throw new RemoteRequestError(
-      message ?? `Upload target creation failed with ${response.status}`,
+      remoteError.message ?? `Upload target creation failed with ${response.status}`,
       response.status,
+      remoteError,
     );
   }
 
@@ -880,12 +898,28 @@ export async function listMoments(options: ListMomentsOptions = {}) {
 }
 
 async function readRemoteErrorMessage(response: Response) {
+  const remoteError = await readRemoteError(response);
+
+  return remoteError.message;
+}
+
+async function readRemoteError(response: Response) {
   try {
     const data = (await response.json()) as RemoteErrorResponse;
 
-    return typeof data.error === 'string' ? data.error : undefined;
+    return {
+      code: asString(data.code),
+      maxDurationMs: asNumber(data.maxDurationMs),
+      maxSizeBytes: asNumber(data.maxSizeBytes),
+      message: typeof data.error === 'string' ? data.error : undefined,
+    };
   } catch {
-    return undefined;
+    return {
+      code: undefined,
+      maxDurationMs: undefined,
+      maxSizeBytes: undefined,
+      message: undefined,
+    };
   }
 }
 

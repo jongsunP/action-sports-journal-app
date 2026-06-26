@@ -451,14 +451,14 @@ must fill in title/description before starting.
 Implemented:
 
 - Kept the Home upload CTA, picker, route-backed `UploadScreen`, selected-video
-  confirmation, upload progress, failure/retry, and 20MB pre-upload validation
+  confirmation, upload progress, failure/retry, and pre-upload validation
   flows intact.
 - Added a clear Upload header: "새 기록 만들기" with short copy that explains
   the fast video-to-analysis path.
 - Reframed selected video metadata as "선택한 라이딩 영상".
 - Added a compact step strip: "영상 확인 -> 업로드 -> 분석 시작".
 - Added short helper copy that analysis starts without a memo/title step and
-  that the current upload limit is 20MB.
+  that the current upload limit is 30MB / 15 seconds.
 - Updated the primary action copy to "업로드하고 분석 시작".
 - Kept the upload safety message: upload can continue to server analysis after
   upload finishes, but the app should not be closed during the upload step.
@@ -471,9 +471,37 @@ Validation:
   picker from a populated Home state.
 - The selected-video Upload screen rendering was verified by code path and
   typecheck; the simulator picker did not complete selection during this pass.
-- The 20MB guard remains in `useUploadMoment` and was not rewritten.
+- This section was later superseded by Upload File Handling Policy P1, which
+  makes the current final-file policy 30MB / 15 seconds.
 - No EAS build, paid AI call, DB migration, or external console change was
   performed.
+
+Upload File Handling Policy P1, 2026-06-27:
+
+Upload policy is now explicit: the backend does not try to know whether a file
+is the user's original video or a future FE-compressed/downsized version. It only
+evaluates the final file metadata that the app is about to upload. If ASJ later
+adds local compression, that processing must happen before requesting a signed
+upload URL, and the app must send the final file's `fileSize`, `duration`, and
+`mimeType` to the backend.
+
+Implemented:
+
+- FE picker validation now requires a video asset with URI, supported MIME type,
+  positive file size, and positive duration before opening UploadScreen.
+- The current product upload policy is 30MB / 15 seconds for the final upload
+  file.
+- Backend upload target creation is the authority for final policy decisions:
+  max size 30MB, max duration 15 seconds, and allowed MIME type.
+- Backend policy violations now return clear `code` values:
+  `too_large`, `too_long`, `unsupported_type`, `empty_file`, and
+  `invalid_duration`.
+- FE maps those backend codes to rider-facing Korean copy instead of showing a
+  generic upload failure.
+- Upload screen copy now says the current development/QA limit is 30MB / 15
+  seconds.
+- Compression / Upload Optimization was not implemented. It remains a later
+  measurement and native-library decision.
 
 Analysis Trust UX, 2026-06-26:
 

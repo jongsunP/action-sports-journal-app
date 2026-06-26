@@ -46,7 +46,16 @@ const openAiModel = process.env.OPENAI_ANALYSIS_MODEL ?? "gpt-5.5";
 const geminiMaxVideoBytes = readNumberEnv("MAX_VIDEO_MB", 20) * 1024 * 1024;
 const openAiMaxVideoBytes =
   readNumberEnv("OPENAI_MAX_VIDEO_MB", 50) * 1024 * 1024;
-const uploadMaxVideoBytes = Math.max(geminiMaxVideoBytes, openAiMaxVideoBytes);
+const uploadPolicyMaxVideoBytes =
+  readNumberEnv("UPLOAD_POLICY_MAX_VIDEO_MB", 30) * 1024 * 1024;
+const uploadPolicyMaxDurationMs = readNumberEnv(
+  "UPLOAD_POLICY_MAX_DURATION_SECONDS",
+  15,
+) * 1000;
+const uploadMaxVideoBytes = Math.max(
+  uploadPolicyMaxVideoBytes,
+  openAiMaxVideoBytes,
+);
 const dailyUsageLimitEnabled = process.env.NODE_ENV === "production";
 const dailyAnalysisLimit = Math.max(
   readNumberEnv("DAILY_ANALYSIS_LIMIT", 30),
@@ -218,6 +227,24 @@ const allowedVideoMimeTypes = new Set([
   "video/x-m4v",
   "video/mov",
 ]);
+type UploadPolicyErrorCode =
+  | "empty_file"
+  | "invalid_duration"
+  | "too_large"
+  | "too_long"
+  | "unsupported_type";
+
+class UploadPolicyError extends Error {
+  code: UploadPolicyErrorCode;
+  status: number;
+
+  constructor(code: UploadPolicyErrorCode, status = 400) {
+    super(getUploadPolicyErrorMessage(code));
+    this.name = "UploadPolicyError";
+    this.code = code;
+    this.status = status;
+  }
+}
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 const dailyUsage = new Map<string, number>();
 const analysisRateLimit = createRateLimit("analysis", {
@@ -298,6 +325,12 @@ app.get("/health", (_request, response) => {
     limits: {
       geminiMaxVideoMb: Math.round(geminiMaxVideoBytes / 1024 / 1024),
       openAiMaxVideoMb: Math.round(openAiMaxVideoBytes / 1024 / 1024),
+      uploadPolicyMaxDurationSeconds: Math.round(
+        uploadPolicyMaxDurationMs / 1000,
+      ),
+      uploadPolicyMaxVideoMb: Math.round(
+        uploadPolicyMaxVideoBytes / 1024 / 1024,
+      ),
       dailyUsageLimitEnabled,
       dailyAnalysisLimit,
       rateLimitWindowMs,
@@ -579,19 +612,27 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
     }
 
     if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
-      response.status(400).json({ error: "Unsupported or missing video type." });
+      sendUploadPolicyError(response, 400, "unsupported_type");
       return;
     }
 
     if (!Number.isFinite(fileSize) || fileSize <= 0) {
-      response.status(400).json({ error: "fileSize is required." });
+      sendUploadPolicyError(response, 400, "empty_file");
       return;
     }
 
-    if (fileSize > geminiMaxVideoBytes) {
-      response.status(413).json({
-        error: `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
-      });
+    if (fileSize > uploadPolicyMaxVideoBytes) {
+      sendUploadPolicyError(response, 413, "too_large");
+      return;
+    }
+
+    if (!Number.isFinite(durationMs) || durationMs <= 0) {
+      sendUploadPolicyError(response, 400, "invalid_duration");
+      return;
+    }
+
+    if (durationMs > uploadPolicyMaxDurationMs) {
+      sendUploadPolicyError(response, 400, "too_long");
       return;
     }
 
@@ -760,6 +801,10 @@ app.post(
         return;
       }
 
+      if (sendUploadPolicyErrorResponse(response, error)) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -855,10 +900,13 @@ app.post(
         return;
       }
 
-      if (request.file.size > geminiMaxVideoBytes) {
-        response.status(413).json({
-          error: `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
-        });
+      if (request.file.size <= 0) {
+        sendUploadPolicyError(response, 400, "empty_file");
+        return;
+      }
+
+      if (request.file.size > uploadPolicyMaxVideoBytes) {
+        sendUploadPolicyError(response, 413, "too_large");
         return;
       }
 
@@ -967,10 +1015,13 @@ app.post(
         mimeType: request.file.mimetype,
       });
 
-      if (request.file.size > geminiMaxVideoBytes) {
-        response.status(413).json({
-          error: `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
-        });
+      if (request.file.size <= 0) {
+        sendUploadPolicyError(response, 400, "empty_file");
+        return;
+      }
+
+      if (request.file.size > uploadPolicyMaxVideoBytes) {
+        sendUploadPolicyError(response, 413, "too_large");
         return;
       }
 
@@ -1026,6 +1077,10 @@ app.post(
       });
     } catch (error) {
       if (sendAuthRequiredResponse(response, error)) {
+        return;
+      }
+
+      if (sendUploadPolicyErrorResponse(response, error)) {
         return;
       }
 
@@ -4127,6 +4182,14 @@ async function createStoredMomentFromSourceVideo({
   const momentId = randomUUID();
   const now = new Date().toISOString();
   const sessionId = getField(body?.sessionId, "");
+  const durationMs = Number(body?.durationMs);
+
+  assertUploadFilePolicy({
+    durationMs,
+    fileSize: file.size,
+    mimeType: file.mimetype,
+  });
+
   const extension =
     extensionForFileName(file.originalname) ?? extensionForMimeType(file.mimetype);
   const storagePath = `users/${userId}/moments/${momentId}/source${extension}`;
@@ -4147,7 +4210,6 @@ async function createStoredMomentFromSourceVideo({
     storagePath,
   });
 
-  const durationMs = Number(body?.durationMs);
   const occurredAt = getField(body?.occurredAt, now);
   const momentPayload = {
     id: momentId,
@@ -4255,6 +4317,7 @@ async function createStoredMomentFromUploadedSource({
     nullableString(body?.storageProvider) ?? sourceVideoStorageProvider;
   const mimeType = nullableString(body?.mimeType);
   const expectedFileSize = Number(body?.fileSize);
+  const durationMs = Number(body?.durationMs);
 
   if (!isUuid(uploadId)) {
     throw new Error("Invalid uploadId.");
@@ -4269,9 +4332,11 @@ async function createStoredMomentFromUploadedSource({
       throw new Error("Invalid storage bucket.");
     }
 
-    if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
-      throw new Error("Unsupported or missing video type.");
-    }
+    assertUploadFilePolicy({
+      durationMs,
+      fileSize: expectedFileSize,
+      mimeType,
+    });
 
     const expectedPrefix = `users/${userId}/uploads/${uploadId}/source`;
 
@@ -4339,11 +4404,9 @@ async function createStoredMomentFromUploadedSource({
 
     if (
       typeof storedObjectMetadata.size === "number" &&
-      storedObjectMetadata.size > geminiMaxVideoBytes
+      storedObjectMetadata.size > uploadPolicyMaxVideoBytes
     ) {
-      throw new Error(
-        `Video is too large. Max size is ${Math.round(geminiMaxVideoBytes / 1024 / 1024)}MB.`,
-      );
+      throw new UploadPolicyError("too_large", 413);
     }
 
     const { data: existingMoment, error: existingMomentError } = await client
@@ -4395,7 +4458,6 @@ async function createStoredMomentFromUploadedSource({
     const momentId = randomUUID();
     const now = new Date().toISOString();
     const sessionId = getField(body?.sessionId, "");
-    const durationMs = Number(body?.durationMs);
     const occurredAt = getField(body?.occurredAt, now);
     const momentPayload = {
       id: momentId,
@@ -7210,6 +7272,76 @@ function sendAuthRequiredResponse(
     message: error.message,
   });
   return true;
+}
+
+function sendUploadPolicyError(
+  response: express.Response,
+  status: number,
+  code: UploadPolicyErrorCode,
+) {
+  response.status(status).json({
+    code,
+    error: getUploadPolicyErrorMessage(code),
+    maxDurationMs: uploadPolicyMaxDurationMs,
+    maxSizeBytes: uploadPolicyMaxVideoBytes,
+  });
+}
+
+function sendUploadPolicyErrorResponse(
+  response: express.Response,
+  error: unknown,
+) {
+  if (!(error instanceof UploadPolicyError)) {
+    return false;
+  }
+
+  sendUploadPolicyError(response, error.status, error.code);
+  return true;
+}
+
+function getUploadPolicyErrorMessage(code: UploadPolicyErrorCode) {
+  switch (code) {
+    case "empty_file":
+      return "Video file size must be greater than 0 bytes.";
+    case "invalid_duration":
+      return "Video duration must be greater than 0 seconds.";
+    case "too_large":
+      return `Video is too large. Max size is ${Math.round(uploadPolicyMaxVideoBytes / 1024 / 1024)}MB.`;
+    case "too_long":
+      return `Video is too long. Max duration is ${Math.round(uploadPolicyMaxDurationMs / 1000)} seconds.`;
+    case "unsupported_type":
+      return "Unsupported or missing video type.";
+  }
+}
+
+function assertUploadFilePolicy({
+  durationMs,
+  fileSize,
+  mimeType,
+}: {
+  durationMs: number;
+  fileSize: number;
+  mimeType: string | null;
+}) {
+  if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
+    throw new UploadPolicyError("unsupported_type");
+  }
+
+  if (!Number.isFinite(fileSize) || fileSize <= 0) {
+    throw new UploadPolicyError("empty_file");
+  }
+
+  if (fileSize > uploadPolicyMaxVideoBytes) {
+    throw new UploadPolicyError("too_large", 413);
+  }
+
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    throw new UploadPolicyError("invalid_duration");
+  }
+
+  if (durationMs > uploadPolicyMaxDurationMs) {
+    throw new UploadPolicyError("too_long");
+  }
 }
 
 function getSupabaseServerClient() {
