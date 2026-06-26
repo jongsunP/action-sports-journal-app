@@ -573,73 +573,93 @@ The first implementation links a recovery email to the current authenticated
 anonymous Supabase user. It does not yet implement reinstall/new-device
 recovery sign-in.
 
-TODO before calling Email Recovery complete:
+Current P1 status:
 
-1. Resolve the remaining E2E blocker: the latest smoke with
-   `parksunl88@nate.com` proved `updateUser({ email })` can succeed and email
-   can be delivered, but the clicked magic link redirected to
-   `http://localhost:3000/#error=access_denied&error_code=otp_expired...`
-   instead of completing in-app linking. The 2026-06-26 read-only investigation
-   concluded that Supabase redirect/template settings must be confirmed before
-   code implementation.
-2. Do not run more repeated `updateUser({ email })` tests with
+1. Email Recovery Connection P1 is implemented and Build 86 is ready for
+   standalone iPhone QA. The latest implementation passes explicit
+   `emailRedirectTo=actionsportsjournal://auth/email/change` to
+   `updateUser({ email })`.
+2. The app handles initial and runtime email-change callback URLs, supports code
+   exchange and hash session payloads, refreshes session/user state after
+   callback completion, and does not treat expired/error/missing-payload
+   callbacks as success.
+3. Build 86 must verify the real email click path with a fresh email:
+   confirmation link -> ASJ app return -> connected state -> relaunch
+   persistence.
+4. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run
    within the magic-link validity window.
-3. Define the redirect URL / deep-link strategy for Change Email links. The OTP
-   input / `verifyOtp` UI has been removed, and the current baseline is
-   `updateUser({ email })` -> magic-link pending UI -> user clicks email link
-   -> app `refreshSession()`. Candidate app redirects are
-   `actionsportsjournal://auth/email`,
-   `actionsportsjournal://auth/email/change`, and
-   `actionsportsjournal://auth/email/recovery`.
-4. Confirm email linking keeps the same Supabase Auth user id and the same
+5. Confirm email linking keeps the same Supabase Auth user id and the same
    `public.users.id`.
-5. Confirm existing Moments, upload targets, push tokens, and Realtime channel
+6. Confirm existing Moments, upload targets, push tokens, and Realtime channel
    ownership stay under the linked user after email verification.
-6. Add the actual recovery sign-in path for reinstall/new-device restore after
+7. Add the actual recovery sign-in path for reinstall/new-device restore after
    account linking is verified.
-7. Keep no-token default user fallback internal-only throughout this work.
+8. Keep no-token default user fallback internal-only throughout this work.
 
 Current blocker:
 
-Email Recovery's code/structure/UI baseline should remain in place, but E2E
-completion is not closed. It was first blocked by Supabase hosted email rate
-limits, then by using an already-registered test email. The latest fresh-email
-smoke passed the sending/rate-limit stage but failed final linking because the
-magic link opened a localhost redirect after expiry. The remaining product
-blocker is redirect/deep-link strategy plus link-validity-window QA, not email
-send availability. Keep Email Recovery as a baseline/fallback path while Kakao
-Recovery remains the currently verified path for Korean-market UX.
+Email Recovery Connection P1 is no longer blocked at the code/redirect strategy
+step. It is now waiting for Build 86 standalone QA. The remaining blocker is
+real-device link-validity-window verification with a fresh email, not email send
+availability or missing app callback code. Keep Email Recovery as a
+baseline/fallback path while Kakao Recovery remains the currently verified path
+for Korean-market UX.
 
 Deep-link / redirect investigation result:
 
-- Status: investigated, design/configuration confirmation pending.
-- The send path exists, but productized app deep-link completion does not.
+- Status: investigated and current-account connection P1 implemented.
+- The send path exists, and productized app deep-link completion is now ready
+  for standalone QA.
 - `updateUser({ email })` is the current-account email recovery-method
   connection path, not reinstall/new-device recovery sign-in.
 - Reinstall/new-device recovery needs a separate flow, likely
   `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
 - Email must follow the same product separation as Kakao: connect a recovery
   method versus recover existing records.
-- Current Email path has no Kakao-style callback helper, initial URL handler, or
-  runtime URL listener.
-- `updateUser({ email })` currently passes no explicit redirect target and
-  depends on Supabase Site URL / Email Template settings.
+- Current Email connection path now has a callback helper, initial URL handler,
+  and runtime URL listener.
+- `updateUser({ email })` now passes explicit
+  `emailRedirectTo=actionsportsjournal://auth/email/change`.
 - App scheme `actionsportsjournal` exists and is verified by Kakao standalone
   OAuth E2E.
-- Candidate app redirects: `actionsportsjournal://auth/email`,
-  `actionsportsjournal://auth/email/change`,
-  `actionsportsjournal://auth/email/recovery`.
+- Selected P1 app redirect: `actionsportsjournal://auth/email/change`.
 - Candidate Supabase redirect allowlist: `actionsportsjournal://**` or narrower
   `actionsportsjournal://auth/email/**`.
-- Confirm the Email Template callback shape before coding: `token_hash` +
-  `verifyOtp`, `code` exchange, or hash access/refresh token.
+- The callback handler accepts both `code` exchange and hash access/refresh
+  token payloads; token values must never be logged.
 - Email QA requires a fresh test email, link-validity-window execution, and
   awareness of hosted email rate limits.
-- Next action: Supabase Dashboard read-only confirmation of Site URL, Redirect
-  URLs, Change Email template, and Magic Link template. Implementation requires
-  separate approval after that.
+- Next action: Build 86 real-device QA. App delete/reinstall email recovery
+  sign-in remains a separate backlog item.
+
+Email Recovery Connection P1 implementation checkpoint, 2026-06-26:
+
+- Status: implemented, Build 86 QA pending.
+- Product meaning: connect a recovery email to the current device-first account.
+  This is not reinstall/new-device Email Recovery Sign-in.
+- Email Change redirect target is explicit:
+  `actionsportsjournal://auth/email/change`.
+- Email callback handling covers initial URL and runtime URL events.
+- Callback completion refreshes session/user state.
+- AccountRecoveryScreen copy was reduced so users do not read this as
+  reinstall/new-device recovery.
+- Build 86 was created for standalone email-link callback QA:
+  - build number: `86`
+  - EAS Build ID: `c7527f7e-d122-4f80-a743-c0a4560670f5`
+  - implementation commit: `5a66ce3 feat: complete email recovery linking redirect`
+  - build commit: `473c131 chore: prepare email recovery qa build`
+- QA pending:
+  1. Send recovery email from AccountRecoveryScreen with a fresh email if
+     possible.
+  2. Open the received confirmation link from Mail/Gmail.
+  3. Confirm the link opens ASJ rather than localhost.
+  4. Confirm Email section converges to the connected/recovery-ready state.
+  5. Confirm Kakao recovery state is not broken.
+  6. Confirm relaunch preserves the email-connected state.
+- Follow-up: Email Recovery Sign-in for reinstall/new-device recovery and Site
+  URL / production fallback policy remain separate.
 
 Fresh-email magic-link smoke result:
 

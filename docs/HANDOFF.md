@@ -277,11 +277,26 @@ Email Recovery:
 
 - `parksunl88@nate.com` confirmed `updateUser({ email })` success, email receipt,
   and Supabase Change Email as a magic-link flow.
-- Final link completion failed because the clicked link redirected to
+- The earlier smoke failed completion because the clicked link redirected to
   `http://localhost:3000/#error=access_denied&error_code=otp_expired...`.
-- Email Recovery is no longer blocked by hosted sender rate limits or the
-  earlier `email_exists` test case, but productization needs redirect URL /
-  deep-link strategy and link-validity-window QA.
+- Email Recovery Connection P1 is now implemented for standalone QA. This is
+  current-account recovery-method connection only, not reinstall/new-device
+  email recovery sign-in.
+- `updateUser({ email })` now passes explicit
+  `emailRedirectTo=actionsportsjournal://auth/email/change`.
+- The app handles initial and runtime email-change callback URLs, exchanges a
+  returned code or hash session payload when present, and refreshes session/user
+  through `getSession` + `getUser`.
+- Build 86 was created for standalone iOS QA:
+  - Build number: `86`
+  - EAS Build ID: `c7527f7e-d122-4f80-a743-c0a4560670f5`
+  - Install/log URL:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/c7527f7e-d122-4f80-a743-c0a4560670f5`
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/pRMYnAqjOPyGlX2B9b0EzQ6flIj-_Ulatmb1JpsYVMA.ipa`
+- Build 86 QA is pending. Do not record Email Recovery Connection as passed
+  until the Founder confirms email link -> ASJ app return -> connected state ->
+  relaunch persistence on device.
 
 Foundation Safety Check:
 
@@ -453,6 +468,9 @@ Backlog after Push Token Account-switch Policy and product UX review:
 - Media / Share UX later.
 - Recovery attempt observability row/log design, if desired.
 - Email Recovery deep link / redirect.
+- Email Recovery Connection: implemented for current-account recovery email
+  linking and prepared as Build 86 for standalone email-link callback QA. This is
+  not the reinstall/new-device Email Recovery Sign-in flow.
 - Kakao display_name sync.
 - Initial Loading / Video Tab Spinner Observability: Build 85 real-device QA
   passed for the current P1 scope. Use QA panel values first if the issue
@@ -586,12 +604,16 @@ Analysis Trust UX implementation notes:
 
 Next starting point:
 
+Install Build 86 and run Email Recovery Connection QA. Use a fresh email that
+has not already been used in ASJ/Supabase if possible. Verify the confirmation
+link returns to ASJ instead of localhost, the top account card and Email section
+converge to a connected state, Kakao status is not disturbed, and relaunch
+keeps the email connection. This build does not validate app delete/reinstall
+email sign-in recovery and does not use `signInWithOtp`.
+
 Startup / Video Tab Loading Observability P1 is complete for the current
-preview/internal QA scope. Build 85 confirmed that the QA button appears, the QA
-panel exposes auth / boot sync / Video archive first-page state, Video does not
-remain trapped in an indefinite spinner on the tested path, and timeout/error
-states have a retryable UI path. If slow startup or spinner behavior recurs,
-ask for the QA panel values first instead of guessing. Auth bootstrap
+preview/internal QA scope. If slow startup or spinner behavior recurs, ask for
+the QA panel values first instead of guessing. Auth bootstrap
 timeout/observability and production hide/remove policy for the QA Debug Panel
 remain follow-up backlog items.
 

@@ -51,18 +51,21 @@ Kakao-linked account recovered. Build 81 used build number `81`, EAS Build ID
 `24ca707e-f248-4533-9953-2cc7912af651`, and install/log URL
 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/24ca707e-f248-4533-9953-2cc7912af651`.
 
-Email Recovery is no longer blocked at the email-send/rate-limit step. The fresh
-test email `parksunl88@nate.com` confirmed `updateUser({ email })` success,
-email receipt, and magic-link template behavior. Final linking did not complete
-because the clicked link landed on
-`http://localhost:3000/#error=access_denied&error_code=otp_expired...`. Email
-Recovery remains a baseline/fallback path and needs redirect URL / deep-link
-strategy plus a link-validity-window QA pass before productization.
+Email Recovery Connection P1 is implemented and Build 86 is ready for standalone
+iPhone QA. The flow remains scoped to connecting a recovery email to the
+current anonymous/device-first account. It does not implement reinstall/new
+device email recovery sign-in. The app now passes an explicit redirect target
+for `updateUser({ email })`: `actionsportsjournal://auth/email/change`. The app
+also listens for initial/runtime email-change callback URLs, handles code
+exchange or hash session payloads, and refreshes session/user state with
+`getSession` + `getUser` after callback completion. Build 86 should verify the
+real email click path, app return, connected-state convergence, and persistence
+after relaunch.
 
-Email Recovery deep-link / redirect investigation, 2026-06-26:
+Email Recovery deep-link / redirect status, 2026-06-26:
 
-- Email Recovery send path exists, but productized app deep-link completion is
-  not implemented.
+- Email Recovery send path exists and current-account email connection
+  completion is now implemented for standalone QA.
 - `updateUser({ email })` should be treated as "connect an email recovery
   method to the current anonymous/device-first account".
 - App delete/reinstall or new-device recovery requires a separate email
@@ -70,24 +73,41 @@ Email Recovery deep-link / redirect investigation, 2026-06-26:
   `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
 - Email needs the same product separation as Kakao: recovery-method connection
   versus existing-record recovery.
-- The current Email path has no Kakao-style callback handler, initial URL
-  handler, or runtime URL listener.
-- `updateUser({ email })` does not pass an explicit redirect target and
-  therefore depends on Supabase Site URL / Email Template settings.
-- The previous localhost / `otp_expired` smoke means redirect configuration and
-  link-validity-window QA must be fixed before productizing Email.
+- The current Email connection path now has an app callback handler, initial URL
+  handler, and runtime URL listener for `actionsportsjournal://auth/email/change`.
+- `updateUser({ email })` now passes an explicit `emailRedirectTo` so it should
+  no longer fall back to Supabase Site URL / localhost for this connection flow.
+- The previous localhost / `otp_expired` smoke remains useful history, but
+  Build 86 is the first standalone QA build for the fixed redirect path.
 - The app scheme `actionsportsjournal` already exists and is verified by Kakao
   standalone OAuth E2E.
-- Candidate redirects are `actionsportsjournal://auth/email`,
-  `actionsportsjournal://auth/email/change`, and
-  `actionsportsjournal://auth/email/recovery`.
+- The selected P1 redirect is `actionsportsjournal://auth/email/change`.
 - Candidate Supabase allowlist values are `actionsportsjournal://**` or
   `actionsportsjournal://auth/email/**`.
-- Supabase Email Template callback shape must be confirmed before coding:
-  `token_hash` + `verifyOtp`, `code` exchange, or hash access/refresh token.
-- Next step is Supabase Dashboard read-only confirmation of Site URL, Redirect
-  URLs, Change Email template, and Magic Link template. Implementation should
-  wait for separate approval.
+- The callback handler accepts code exchange and hash access/refresh token
+  payloads; error/expired/missing-payload callbacks do not show success.
+- Next step is Build 86 real-device QA with a fresh email. App delete/reinstall
+  email recovery sign-in remains out of scope.
+
+Email Recovery Connection P1, 2026-06-26:
+
+- Current-account recovery email connection is implemented for the preview QA
+  path.
+- `updateUser({ email })` now passes an explicit app redirect target for the
+  Email Change flow: `actionsportsjournal://auth/email/change`.
+- The app handles both initial URL and runtime URL callbacks for the Email
+  Change path, then refreshes session/user state with the existing auth provider.
+- AccountRecoveryScreen copy was polished so this P1 reads as "connect a
+  recovery email to the current device-first account", not as reinstall/new
+  device recovery.
+- Build 86 was created for standalone iPhone QA because Expo Go cannot validate
+  the ASJ custom scheme email callback E2E. QA is pending from the Founder.
+- Build 86 details: build number `86`, EAS Build ID
+  `c7527f7e-d122-4f80-a743-c0a4560670f5`, implementation commit
+  `5a66ce3 feat: complete email recovery linking redirect`, build commit
+  `473c131 chore: prepare email recovery qa build`.
+- This build only validates current-account Email Recovery Connection. Email
+  Recovery Sign-in after reinstall/new-device remains a separate follow-up.
 
 Foundation Safety Check, 2026-06-26:
 

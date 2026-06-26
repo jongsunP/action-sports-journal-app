@@ -189,8 +189,8 @@ Current stable workstream list:
 - Anonymous-first(익명 사용자 우선) 구조 유지
 - Kakao Recovery / Account Linking(카카오 복구 / 계정 연결) 성공
 - Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차)은 Build 81 실기기 QA 통과
-- Email Recovery(이메일 복구)는 baseline/fallback으로 유지
-- Email Recovery deep link / redirect(이메일 복구 딥링크 / 리다이렉트)는 조사 완료. 제품화 전 Supabase 설정 확인과 설계 고정 필요
+- Email Recovery Connection P1(이메일 복구 수단 연결 1차)은 구현 완료, Build 86 실기기 QA 대기
+- Email Recovery Sign-in(이메일 기존 기록 복구 로그인)은 아직 미구현. 앱 삭제/재설치 후 이메일로 기존 기록 복구는 후속 별도 범위
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 - Foundation Safety Check(기반 안전 점검)는 2026-06-26 완료
 - Upload File-size Validation(업로드 용량 초과 사전 차단)은 20MB 사전 차단으로 반영
@@ -208,16 +208,19 @@ Current stable workstream list:
 - QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)는 현재 preview/internal QA 범위에서 완료. access token, refresh token, full callback URL, email/name/full user id 미노출 확인
 
 바로 앞 작업:
-- Build 85 Startup / Video Loading Observability QA Result Recording(빌드 85 초기 로딩 / 영상 탭 관측성 QA 결과 기록)
+- Build 86 Email Recovery Connection QA Build(빌드 86 이메일 복구 수단 연결 QA 빌드)
 
 가까운 후속:
+- Build 86 설치 후 Email Recovery Connection(현재 계정에 이메일 복구 수단 연결) 실기기 QA
+- Fresh email로 confirmation link 클릭 시 `actionsportsjournal://auth/email/change` 앱 복귀, Email linked 상태, relaunch persistence 확인
 - 실제 느린 초기 부팅 / Video spinner 재발 시 QA panel 값으로 원인 분리
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책)
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Recovery Attempt Observability(복구 시도 관측성)
-- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 조사 완료. 다음은 Supabase Dashboard read-only 설정 확인
+- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
+- Email Recovery Connection(복구 이메일 연결)은 구현 완료 후 Build 86으로 실기기 QA 대기. 현재 기기 계정에 복구 이메일을 연결하고 `actionsportsjournal://auth/email/change`로 앱 복귀하는 P1 범위이며, 재설치/새 기기 이메일 복구 로그인은 별도 후속
 - Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
 
 나중에 해도 좋은 것:
@@ -228,7 +231,7 @@ Current stable workstream list:
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
 
 장기 보관 목록:
-- Email Recovery Implementation(이메일 복구 구현): Supabase 설정 확인 후 별도 승인
+- Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화)
