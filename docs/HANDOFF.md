@@ -608,6 +608,10 @@ Upload File Handling Policy P1, 2026-06-27:
   compression, re-reads the compressed file size, preserves the selected video's
   duration, infers an uploadable MIME type, and displays the upload-target
   payload that would be sent for the final file.
+- The upload target request now accepts optional sanitized `uploadProcessing`
+  metadata for observation/debug response only. Backend policy remains based on
+  the final upload file's `fileSize`, `durationMs`, and `mimeType`; the metadata
+  is not used for policy decisions and is not persisted to DB in this step.
 - Expo Go should not be used to judge the POC. The native module requires a
   dev-client/standalone build. Stop at typecheck/local static validation until
   CTO/user approves bundling this with the next build-required batch.
@@ -620,6 +624,9 @@ Upload File Handling Policy P1, 2026-06-27:
     source;
   - confirm the displayed upload-target payload uses the compressed final file
     metadata;
+  - confirm optional `uploadProcessing` shows `source`, original/compressed file
+    sizes, compression ratio, and compression duration without raw URI/token
+    values;
   - do not submit a real upload, Storage write, or AI analysis from this POC
     until separately approved.
 

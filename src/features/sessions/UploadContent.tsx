@@ -358,6 +358,14 @@ function CompressionPocPanel({
             {formatBytesForPoc(result.backendUploadTargetPayload.fileSize)} ·{' '}
             {formatDurationForPoc(result.backendUploadTargetPayload.durationMs)}
           </Text>
+          <Text style={styles.selectedVideoHelperText}>
+            처리 메타: {result.backendUploadTargetPayload.uploadProcessing.source}{' '}
+            · 압축 시간{' '}
+            {formatDurationForPoc(
+              result.backendUploadTargetPayload.uploadProcessing
+                .compressionDurationMs ?? null,
+            )}
+          </Text>
         </View>
       ) : null}
     </View>

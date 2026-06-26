@@ -507,6 +507,10 @@ Implemented:
 - The POC records original size, compressed size, reduction ratio, duration,
   MIME type, compressed URI, and the upload-target payload that would be sent
   for the final compressed file.
+- Upload target request types now allow optional `uploadProcessing` metadata for
+  observation only. Backend policy decisions still use only the final upload
+  `fileSize`, `durationMs`, and `mimeType`; `uploadProcessing` is sanitized and
+  is not persisted to DB in this step.
 
 Analysis Trust UX, 2026-06-26:
 

@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
 import type { SessionVideoAsset } from '../../services/ai';
+import type { UploadProcessingMetadata } from '../../services/moments/supabaseMoments';
 
 type ReactNativeCompressorModule = {
   Video?: {
@@ -22,6 +23,7 @@ export type UploadCompressionPocPayload = {
   fileName: string;
   fileSize: number | null;
   mimeType: string;
+  uploadProcessing: UploadProcessingMetadata;
 };
 
 export type UploadCompressionPocResult = {
@@ -47,10 +49,12 @@ export async function runUploadCompressionPoc(
   const originalFileInfo = await FileSystem.getInfoAsync(video.uri);
   const originalFileSize = readFileSize(originalFileInfo);
   const compressor = await importReactNativeCompressor();
+  const compressionStartedAt = Date.now();
   const compressedUri = await compressor.Video.compress(video.uri, {
     compressionMethod: 'auto',
     minimumFileSizeForCompress: 0,
   });
+  const compressionDurationMs = Date.now() - compressionStartedAt;
   const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
   const compressedFileSize = readFileSize(compressedFileInfo);
   const compressedMimeType = inferUploadableVideoMimeType({
@@ -72,6 +76,16 @@ export async function runUploadCompressionPoc(
       ),
       fileSize: compressedFileSize,
       mimeType: compressedMimeType,
+      uploadProcessing: {
+        compressedFileSize,
+        compressionDurationMs,
+        compressionRatio: calculateCompressionRatio({
+          compressedFileSize,
+          originalFileSize: originalFileSize ?? video.fileSize ?? null,
+        }),
+        originalFileSize: originalFileSize ?? video.fileSize ?? null,
+        source: 'compressed',
+      },
     },
     compressed: {
       fileSize: compressedFileSize,
@@ -114,6 +128,26 @@ function readFileSize(fileInfo: FileSystem.FileInfo) {
     Number.isFinite(fileInfo.size)
     ? fileInfo.size
     : null;
+}
+
+function calculateCompressionRatio({
+  compressedFileSize,
+  originalFileSize,
+}: {
+  compressedFileSize: number | null;
+  originalFileSize: number | null;
+}) {
+  if (
+    typeof compressedFileSize !== 'number' ||
+    !Number.isFinite(compressedFileSize) ||
+    typeof originalFileSize !== 'number' ||
+    !Number.isFinite(originalFileSize) ||
+    originalFileSize <= 0
+  ) {
+    return null;
+  }
+
+  return compressedFileSize / originalFileSize;
 }
 
 function calculateReductionRatio({

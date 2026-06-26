@@ -605,6 +605,9 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
     const mimeType = nullableString(request.body?.mimeType);
     const fileSize = Number(request.body?.fileSize);
     const durationMs = Number(request.body?.durationMs);
+    const uploadProcessing = sanitizeUploadProcessingMetadata(
+      request.body?.uploadProcessing,
+    );
 
     if (!draftId) {
       response.status(400).json({ error: "draftId is required." });
@@ -718,6 +721,7 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
       mimeType,
       fileSize,
       durationMs: Number.isFinite(durationMs) ? Math.round(durationMs) : null,
+      uploadProcessing,
       thumbnailTarget,
     });
   } catch (error) {
@@ -7531,6 +7535,39 @@ function nullableString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
+}
+
+function sanitizeUploadProcessingMetadata(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const metadata = value as Record<string, unknown>;
+  const source = nullableString(metadata.source);
+
+  if (source !== "compressed" && source !== "original") {
+    return null;
+  }
+
+  return {
+    compressedFileSize: nullableNonNegativeNumber(metadata.compressedFileSize),
+    compressionDurationMs: nullableNonNegativeNumber(
+      metadata.compressionDurationMs,
+    ),
+    compressionRatio: nullableNonNegativeNumber(metadata.compressionRatio),
+    originalFileSize: nullableNonNegativeNumber(metadata.originalFileSize),
+    source,
+  };
+}
+
+function nullableNonNegativeNumber(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : null;
 }
 
 function buildCandidateTrace({

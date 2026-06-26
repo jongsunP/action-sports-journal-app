@@ -42,6 +42,7 @@ type UploadTargetResponse = {
   mimeType?: unknown;
   fileSize?: unknown;
   durationMs?: unknown;
+  uploadProcessing?: unknown;
   thumbnailTarget?: unknown;
 };
 
@@ -56,6 +57,7 @@ export type RequestUploadTargetInput = {
   fileSize?: number;
   mimeType?: string | null;
   durationMs?: number | null;
+  uploadProcessing?: UploadProcessingMetadata | null;
 };
 
 export type VideoUploadTarget = {
@@ -71,8 +73,17 @@ export type VideoUploadTarget = {
   mimeType?: string;
   fileSize?: number;
   durationMs?: number;
+  uploadProcessing?: UploadProcessingMetadata;
   thumbnailTarget?: ThumbnailUploadTarget;
   uploadedThumbnail?: UploadedThumbnailReference;
+};
+
+export type UploadProcessingMetadata = {
+  compressedFileSize?: number | null;
+  compressionDurationMs?: number | null;
+  compressionRatio?: number | null;
+  originalFileSize?: number | null;
+  source: 'compressed' | 'original';
 };
 
 export type ThumbnailUploadTarget = {
@@ -221,6 +232,9 @@ export async function requestUploadTarget(
         typeof input.durationMs === 'number' && Number.isFinite(input.durationMs)
           ? Math.round(input.durationMs)
           : null,
+      uploadProcessing: input.uploadProcessing
+        ? sanitizeUploadProcessingMetadataForRequest(input.uploadProcessing)
+        : null,
     }),
   });
 
@@ -266,6 +280,7 @@ export async function requestUploadTarget(
     mimeType: asString(data.mimeType),
     fileSize: asNumber(data.fileSize),
     durationMs: asNumber(data.durationMs),
+    uploadProcessing: normalizeUploadProcessingMetadata(data.uploadProcessing),
     thumbnailTarget: normalizeThumbnailUploadTarget(data.thumbnailTarget),
   };
 }
@@ -349,6 +364,65 @@ function normalizeThumbnailUploadTarget(
     signedUploadToken,
     signedUploadUrl: asString(record.signedUploadUrl),
   };
+}
+
+function normalizeUploadProcessingMetadata(
+  value: unknown,
+): UploadProcessingMetadata | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const source = asString(record.source);
+
+  if (source !== 'compressed' && source !== 'original') {
+    return undefined;
+  }
+
+  return {
+    compressedFileSize: asNullableNonNegativeNumber(record.compressedFileSize),
+    compressionDurationMs: asNullableNonNegativeNumber(
+      record.compressionDurationMs,
+    ),
+    compressionRatio: asNullableNonNegativeNumber(record.compressionRatio),
+    originalFileSize: asNullableNonNegativeNumber(record.originalFileSize),
+    source,
+  };
+}
+
+function sanitizeUploadProcessingMetadataForRequest(
+  metadata: UploadProcessingMetadata,
+) {
+  return {
+    compressedFileSize: sanitizeNullableNonNegativeNumber(
+      metadata.compressedFileSize,
+    ),
+    compressionDurationMs: sanitizeNullableNonNegativeNumber(
+      metadata.compressionDurationMs,
+    ),
+    compressionRatio: sanitizeNullableNonNegativeNumber(metadata.compressionRatio),
+    originalFileSize: sanitizeNullableNonNegativeNumber(metadata.originalFileSize),
+    source: metadata.source,
+  };
+}
+
+function sanitizeNullableNonNegativeNumber(value: number | null | undefined) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function asNullableNonNegativeNumber(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numericValue = asNumber(value);
+
+  return typeof numericValue === 'number' && numericValue >= 0
+    ? numericValue
+    : null;
 }
 
 export async function uploadVideoToSignedTarget(

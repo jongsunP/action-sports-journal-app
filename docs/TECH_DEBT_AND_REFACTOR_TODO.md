@@ -1702,13 +1702,19 @@ POC implementation status, 2026-06-27:
     file.
 - It intentionally does not submit the upload target request, upload to Storage,
   run analysis, or call paid AI.
+- `POST /api/video-upload-targets` now accepts optional sanitized
+  `uploadProcessing` metadata for observation/debug response only. Policy
+  decisions still use only the final file `fileSize`, `durationMs`, and
+  `mimeType`; no raw URI/token values are accepted and the metadata is not
+  persisted to DB in this step.
 - Status: build-required. A dev-client or standalone EAS preview/internal build
   is required before real compression behavior can be measured on iPhone.
 - Before the next build, keep the POC QA action `__DEV__`-only and verify the
   build checklist on device: original/compressed file size, reduction ratio,
-  duration preservation, MIME type, compressed URI, and the upload-target
-  payload based on the compressed final file. Do not use this POC to perform
-  real Storage upload or AI analysis without a separate approval.
+  duration preservation, MIME type, compressed URI, upload-target payload based
+  on the compressed final file, and sanitized `uploadProcessing` metadata. Do
+  not use this POC to perform real Storage upload or AI analysis without a
+  separate approval.
 
 Decision:
 
