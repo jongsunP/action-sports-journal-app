@@ -86,6 +86,16 @@ Short form:
 비용과 빌드는 아끼되, 검증의 현실성은 아끼지 않는다.
 ```
 
+Cost is not the real enemy. If a paid build, paid AI call, or infrastructure
+upgrade is the right move, ASJ should pay for it. The bigger risk is paying for
+infrastructure when the real problem is product logic, unclear state handling,
+or a user flow that does not make sense.
+
+Users can tolerate a process that is a little slow when the app explains what
+is happening and recovers predictably. They should not be asked to trust an
+unexplainable flow, an unknown loading state, or behavior that looks broken.
+Basic UX clarity is part of service reliability and user trust.
+
 ## User Action Instruction Format
 
 When any Codex or CTO session asks the user to do something, the instruction
