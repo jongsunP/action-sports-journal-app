@@ -49,6 +49,13 @@ type SessionSummary = {
 
 const HORIZONTAL_PRESS_CANCEL_PX = 10;
 
+export type VideoArchiveLoadState =
+  | 'empty'
+  | 'error'
+  | 'loading'
+  | 'ready'
+  | 'timeout';
+
 export function JournalSnapshot({
   activeCount,
   completedCount,
@@ -492,10 +499,11 @@ export function VideoArchiveList({
   getVideoArchiveDescription,
   hasMore = false,
   header,
-  isLoading = false,
   isLoadingMore = false,
+  loadState = 'empty',
   onEndReached,
   onOpenSession,
+  onRetry,
   sessions,
   styles,
 }: {
@@ -503,10 +511,11 @@ export function VideoArchiveList({
   getVideoArchiveDescription: (session: Session) => string;
   hasMore?: boolean;
   header?: ReactElement | null;
-  isLoading?: boolean;
   isLoadingMore?: boolean;
+  loadState?: VideoArchiveLoadState;
   onEndReached?: () => void;
   onOpenSession: (session: Session) => void;
+  onRetry?: () => void;
   sessions: SessionSummary[];
   styles: HomeScreenStyles;
 }) {
@@ -605,6 +614,42 @@ export function VideoArchiveList({
       </Pressable>
     );
   };
+  const emptyStateCopy = (() => {
+    switch (loadState) {
+      case 'loading':
+        return {
+          description: '라이딩 기록과 분석 결과를 준비하고 있습니다.',
+          showRetry: false,
+          showSpinner: true,
+          title: 'Wake Board Loading...',
+        };
+      case 'timeout':
+        return {
+          description:
+            '서버 응답이 지연되고 있습니다. 네트워크가 안정되면 다시 시도해주세요.',
+          showRetry: true,
+          showSpinner: false,
+          title: '영상 기록을 불러오지 못했습니다',
+        };
+      case 'error':
+        return {
+          description:
+            '영상 기록을 불러오는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.',
+          showRetry: true,
+          showSpinner: false,
+          title: '영상 기록을 불러오지 못했습니다',
+        };
+      case 'empty':
+      case 'ready':
+      default:
+        return {
+          description: '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.',
+          showRetry: false,
+          showSpinner: false,
+          title: '아직 영상 세션이 없습니다',
+        };
+    }
+  })();
 
   return (
     <FlatList
@@ -617,15 +662,24 @@ export function VideoArchiveList({
       keyExtractor={({ session }) => session.id}
       ListEmptyComponent={
         <View style={styles.emptyState}>
-          {isLoading ? <ActivityIndicator color="#9ca3af" /> : null}
-          <Text style={styles.emptyTitle}>
-            {isLoading ? 'Wake Board Loading...' : '아직 영상 세션이 없습니다'}
-          </Text>
-          <Text style={styles.emptyText}>
-            {isLoading
-              ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
-              : '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.'}
-          </Text>
+          {emptyStateCopy.showSpinner ? (
+            <ActivityIndicator color="#9ca3af" />
+          ) : null}
+          <Text style={styles.emptyTitle}>{emptyStateCopy.title}</Text>
+          <Text style={styles.emptyText}>{emptyStateCopy.description}</Text>
+          {emptyStateCopy.showRetry ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={isLoadingMore}
+              onPress={onRetry}
+              style={({ pressed }) => [
+                styles.textLinkButton,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Text style={styles.textLinkButtonText}>다시 불러오기</Text>
+            </Pressable>
+          ) : null}
         </View>
       }
       ListFooterComponent={

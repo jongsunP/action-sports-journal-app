@@ -64,6 +64,10 @@ export type RemoteMomentPageInfo = {
   nextCursor: string | null;
 };
 
+function getRemoteMomentSyncDuration(startedAt: number) {
+  return Date.now() - startedAt;
+}
+
 export function useBootSync({
   initialGroupId,
   initialRemoteMomentPageLimit,
@@ -208,6 +212,12 @@ export function useBootSync({
 
     async function loadRemoteMoments() {
       setRemoteMomentSyncStatus('loading');
+      const startedAt = Date.now();
+
+      console.info('[moment_sync]', {
+        event: 'boot_remote_moments_started',
+        limit: initialRemoteMomentPageLimit,
+      });
 
       try {
         const remoteMomentPage = await listMomentPageWithTimeout({
@@ -227,12 +237,24 @@ export function useBootSync({
         setHasInitialRemoteMomentPage(true);
         didFinishInitialRemoteSync = true;
         setRemoteMomentSyncStatus('completed');
+        console.info('[moment_sync]', {
+          count: remoteMomentPage.moments.length,
+          durationMs: getRemoteMomentSyncDuration(startedAt),
+          event: 'boot_remote_moments_completed',
+          hasMore: remoteMomentPage.hasMore,
+          status: 'completed',
+        });
       } catch (error) {
         if (isMounted) {
+          const status = isRemoteMomentSyncTimeout(error) ? 'timeout' : 'failed';
           didFinishInitialRemoteSync = true;
-          setRemoteMomentSyncStatus(
-            isRemoteMomentSyncTimeout(error) ? 'timeout' : 'failed',
-          );
+          setRemoteMomentSyncStatus(status);
+          console.info('[moment_sync]', {
+            durationMs: getRemoteMomentSyncDuration(startedAt),
+            event: 'boot_remote_moments_finished',
+            reason: error instanceof Error ? error.message : 'Unknown error',
+            status,
+          });
         }
         console.warn(
           'Supabase moment list failed:',
@@ -263,6 +285,11 @@ export function useBootSync({
     remoteMomentSyncStatus === 'timeout';
   const hasCompletedInitialRemoteMomentSync =
     !isRemoteMomentSyncConfigured || remoteMomentSyncStatus === 'completed';
+  const hasFinishedInitialRemoteMomentSync =
+    !isRemoteMomentSyncConfigured ||
+    remoteMomentSyncStatus === 'completed' ||
+    remoteMomentSyncStatus === 'failed' ||
+    remoteMomentSyncStatus === 'timeout';
   const markRemoteMomentSyncCompleted = useCallback(() => {
     setRemoteMomentSyncStatus('completed');
   }, []);
@@ -273,7 +300,7 @@ export function useBootSync({
       (isRemoteMomentSyncConfigured && remoteMomentSyncStatus === 'loading') ||
       remoteMomentSyncStatus === 'waiting_for_storage',
     isInitialRemoteMomentSyncPending:
-      isRemoteMomentSyncConfigured && !hasCompletedInitialRemoteMomentSync,
+      isRemoteMomentSyncConfigured && !hasFinishedInitialRemoteMomentSync,
     hasInitialRemoteMomentPage,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,

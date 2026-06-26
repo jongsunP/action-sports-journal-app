@@ -46,6 +46,7 @@ import {
   JournalSnapshot,
   PrimaryInsightCard,
   RecentSessionsRail,
+  type VideoArchiveLoadState,
   VideoArchiveList,
 } from './sessionComponents';
 import {
@@ -125,6 +126,17 @@ const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
 const UPLOAD_FAILURE_REMOTE_RECONCILE_RETRY_MS = 1_200;
 const ANALYSIS_REALTIME_INTERNAL_FALLBACK_CHANNEL =
   'analysis-updates:internal-default';
+
+function getRequestDurationMs(startedAt: number) {
+  return Date.now() - startedAt;
+}
+
+function isRemoteRequestTimeout(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().includes('timed out')
+  );
+}
 
 function ensureAnalysisPushRegistration(source: string) {
   if (!ENABLE_ANALYSIS_PUSH_NOTIFICATIONS) {
@@ -213,6 +225,8 @@ export function HomeScreen() {
   const [hasMountedVideoTab, setHasMountedVideoTab] = useState(false);
   const [isLoadingVideoArchiveInitialPage, setIsLoadingVideoArchiveInitialPage] =
     useState(false);
+  const [videoArchiveLoadState, setVideoArchiveLoadState] =
+    useState<VideoArchiveLoadState>('empty');
   const [
     isLoadingMoreVideoArchiveMoments,
     setIsLoadingMoreVideoArchiveMoments,
@@ -815,6 +829,7 @@ export function HomeScreen() {
       setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
       setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       setHasLoadedVideoArchiveFirstPage(true);
+      setVideoArchiveLoadState('ready');
     },
     [
       expireUnmatchedUploadReconciliationCandidates,
@@ -1254,6 +1269,13 @@ export function HomeScreen() {
     }
 
     setIsLoadingVideoArchiveInitialPage(true);
+    setVideoArchiveLoadState('loading');
+    const startedAt = Date.now();
+
+    console.info('[moment_sync]', {
+      event: 'video_archive_first_page_started',
+      limit: MOMENT_LIST_PAGE_SIZE,
+    });
 
     listMomentPageWithTimeout({
       limit: MOMENT_LIST_PAGE_SIZE,
@@ -1261,8 +1283,23 @@ export function HomeScreen() {
       .then((remoteMomentPage) => {
         syncRemoteMoments(remoteMomentPage.moments);
         applyVideoArchiveFirstPage(remoteMomentPage);
+        console.info('[moment_sync]', {
+          count: remoteMomentPage.moments.length,
+          durationMs: getRequestDurationMs(startedAt),
+          event: 'video_archive_first_page_completed',
+          hasMore: remoteMomentPage.hasMore,
+          status: 'completed',
+        });
       })
       .catch((error) => {
+        const status = isRemoteRequestTimeout(error) ? 'timeout' : 'error';
+        setVideoArchiveLoadState(status);
+        console.info('[moment_sync]', {
+          durationMs: getRequestDurationMs(startedAt),
+          event: 'video_archive_first_page_finished',
+          reason: error instanceof Error ? error.message : 'Unknown error',
+          status,
+        });
         console.warn(
           'Supabase video archive initial page failed:',
           error instanceof Error ? error.message : 'Unknown error',
@@ -1311,6 +1348,13 @@ export function HomeScreen() {
     }
 
     setIsLoadingMoreVideoArchiveMoments(true);
+    const startedAt = Date.now();
+
+    console.info('[moment_sync]', {
+      cursorPresent: Boolean(videoArchiveNextCursor),
+      event: 'video_archive_next_page_started',
+      limit: MOMENT_LIST_PAGE_SIZE,
+    });
 
     listMomentPageWithTimeout({
       cursor: videoArchiveNextCursor,
@@ -1330,8 +1374,21 @@ export function HomeScreen() {
         expireUnmatchedUploadReconciliationCandidates(remoteMomentPage.moments);
         setHasMoreVideoArchiveMoments(remoteMomentPage.hasMore);
         setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
+        console.info('[moment_sync]', {
+          count: remoteMomentPage.moments.length,
+          durationMs: getRequestDurationMs(startedAt),
+          event: 'video_archive_next_page_completed',
+          hasMore: remoteMomentPage.hasMore,
+          status: 'completed',
+        });
       })
       .catch((error) => {
+        console.info('[moment_sync]', {
+          durationMs: getRequestDurationMs(startedAt),
+          event: 'video_archive_next_page_finished',
+          reason: error instanceof Error ? error.message : 'Unknown error',
+          status: isRemoteRequestTimeout(error) ? 'timeout' : 'error',
+        });
         console.warn(
           'Supabase moment pagination failed:',
           error instanceof Error ? error.message : 'Unknown error',
@@ -1664,6 +1721,7 @@ export function HomeScreen() {
     setHasMoreVideoArchiveMoments(false);
     setHasLoadedVideoArchiveFirstPage(false);
     setHasMountedVideoTab(false);
+    setVideoArchiveLoadState('empty');
     setIsLoadingVideoArchiveInitialPage(false);
     setIsLoadingMoreVideoArchiveMoments(false);
 
@@ -1958,13 +2016,16 @@ export function HomeScreen() {
       getVideoArchiveDescription={getVideoArchiveDescription}
       hasMore={hasMoreVideoArchiveMoments}
       header={renderVideoArchiveHeader()}
-      isLoading={
+      isLoadingMore={isLoadingMoreVideoArchiveMoments}
+      loadState={
         isLoadingVideoArchiveInitialPage ||
         (isSessionListLoading && videoArchiveSessionSummaries.length === 0)
+          ? 'loading'
+          : videoArchiveLoadState
       }
-      isLoadingMore={isLoadingMoreVideoArchiveMoments}
       onEndReached={handleLoadMoreVideoArchiveMoments}
       onOpenSession={openEvidenceSheet}
+      onRetry={loadInitialVideoArchivePage}
       sessions={videoArchiveSessionSummaries}
       styles={styles}
     />
