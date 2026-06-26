@@ -1764,6 +1764,10 @@ POC implementation status, 2026-06-27:
 - Next standalone QA should verify automatic optimization, final upload target
   payload, `uploadProcessing`, and fallback/error copy before considering broader
   rollout. AI quality impact remains a separate validation item.
+- Build 90 is prepared for this standalone QA batch. It should verify the
+  promoted compression flow with a real iPhone clip and also confirm the already
+  committed Video no-records timeout UI fix. Do not treat this as AI quality
+  acceptance; it is upload/metadata/analysis-continuation flow QA.
 
 Decision:
 

@@ -664,6 +664,11 @@ Upload File Handling Policy P1, 2026-06-27:
   clip, final-file upload target payload, `uploadProcessing` metadata, and the
   existing 30MB / 15 seconds policy failure copy. Do not run paid AI solely for
   compression validation.
+- Build 90 is the closeout preview/internal build for this QA batch. It includes
+  the promoted compression upload flow and the Video no-records timeout UI fix
+  (`ui delayed` / retry instead of an indefinite loading card). Use it to validate
+  actual iPhone behavior; the compression flow uses native modules and cannot be
+  fully judged in Expo Go.
 - Historical standalone QA checklist for the POC:
   - selected a short local video and tapped the QA-gated "QA 압축 메타 확인" action;
   - confirmed original file size, compressed file size, and reduction ratio;

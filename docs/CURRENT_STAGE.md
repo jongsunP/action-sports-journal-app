@@ -592,6 +592,12 @@ Implemented:
   If optimization fails, the original file can still upload when it satisfies
   the 30MB / 15 seconds policy. The QA compression metadata button remains
   preview/internal only for now.
+- Build 90 is prepared as the first real-device QA build for the promoted
+  compression upload flow. QA should confirm that an over-20MB short clip is
+  optimized before upload target creation, the compressed final file uploads,
+  backend 30MB / 15 seconds / MIME policy is evaluated against that final file,
+  `uploadProcessing` metadata is visible, and analysis continues after upload.
+  This QA is technical flow validation, not AI quality evaluation.
 
 Analysis Trust UX, 2026-06-26:
 

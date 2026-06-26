@@ -225,6 +225,7 @@ Current stable workstream list:
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. 20MB 초과 short clip은 업로드 target 요청 전 보수적 로컬 최적화를 시도하고, 20MB 이하는 원본 업로드. Backend 정책은 계속 최종 파일 기준
+- Build 90 Compression Flow QA(빌드 90 압축 업로드 플로우 QA): 마감용 iOS preview/internal build 후보. 압축된 최종 파일 업로드, uploadProcessing metadata, AI 분석 연결, Video no-records timeout UI fix를 실기기에서 확인
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): `aa89f14`로 수정 완료. Build 89에는 미포함이므로 다음 빌드에서 count 0 + boot timeout/failed 시 "영상 기록 동기화가 지연 중입니다" 표시와 retry 버튼을 확인
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)
