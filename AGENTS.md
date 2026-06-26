@@ -45,18 +45,13 @@ cd ~/repository/action-sports-journal-app
 ```
 
 When the user asks what remains or asks for current status, do not list only
-recent chat items. Summarize by ASJ's larger workstreams and order the groups
-by time: completed/past first, then current, immediate next, near-term, later,
-and long-term. Include both the full remaining list and the immediate next
-work:
+recent chat items. Use the remote-backed stable ASJ workstream list as the
+canonical source. Do not improvise a new list structure per session. Show it in
+time order with only two sections:
 
 ```text
-완료된 기반:
-현재 상태:
-바로 앞 작업:
-가까운 후속:
-나중에 해도 좋은 것:
-장기 보관 목록:
+완료:
+남은 것:
 ```
 
 Keep this summary concise and easy to scan.
