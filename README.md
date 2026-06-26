@@ -12,10 +12,21 @@ When starting from any device or any new AI/Codex session, first pull and read
 the personal context repository. This project expects the cross-project Codex
 workflow rules to be loaded before ASJ-specific docs.
 
-ASJ follows the portable workspace principle: if a device has pulled both
-`codex-personal-context` and this project repo, agents should apply the same
-recorded communication style, workflow rules, and project source-of-truth
-structure on that device.
+ASJ follows the Codex Working Environment as Code principle. If a device has
+pulled both `codex-personal-context` and this project repo, agents should apply
+the same recorded communication style, workflow rules, read/write order, and
+project source-of-truth structure on that device.
+
+Expected loop:
+
+```text
+pull personal context
+pull project repo
+read in the documented order
+apply recorded rules
+write only to canonical locations
+commit and push durable changes
+```
 
 Full read order:
 
