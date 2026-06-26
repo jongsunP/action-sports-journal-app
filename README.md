@@ -63,6 +63,10 @@ session checkpoints as standalone product workstreams.
 Use these write locations. Do not create a new `.md` or duplicate the same
 state elsewhere unless the Founder explicitly asks for a separate artifact.
 
+Recorded rules are treated as source-of-truth. If a rule exists in the approved
+read path, follow it. If it is wrong or outdated, update the canonical location
+instead of adding a conflicting copy somewhere else.
+
 - `docs/PROJECT_MEMORY.md`: canonical product memory, durable decisions,
   stable workstream list, and backlog.
 - `docs/CURRENT_STAGE.md`: current implementation and QA state.
