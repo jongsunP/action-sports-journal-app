@@ -64,11 +64,16 @@ docs/PROJECT_MEMORY.md
 ```
 
 When asked for the project list, use the `Current stable workstream list`
-section from that file and keep the two-section format:
+section from that file and keep this format:
 
 ```text
-완료:
-남은 것:
+완료된 기반:
+지속 원칙:
+현재 상태:
+바로 앞 작업:
+가까운 후속:
+나중에 해도 좋은 것:
+장기 보관 목록:
 ```
 
 Do not treat build numbers, typecheck, simulator QA, or temporary development
