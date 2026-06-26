@@ -296,9 +296,9 @@ Email Recovery:
   `A user with this email address has already been registered.` style error,
   confirming the Auth existing-email guard path. Fresh email confirmation-link
   QA could not be completed because hosted email sending hit rate limits.
-  Remaining verification is fresh email link -> ASJ app return -> connected
-  state -> relaunch persistence. Do not repeat `updateUser({ email })` while
-  rate-limited.
+  Keep fresh email link -> ASJ app return -> connected state -> relaunch
+  persistence as a later backlog recheck, not an immediate next task. Do not
+  repeat `updateUser({ email })` while rate-limited.
 
 Foundation Safety Check:
 

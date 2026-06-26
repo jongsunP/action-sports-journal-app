@@ -615,8 +615,8 @@ Current P1 status:
    callbacks as success.
 3. Build 87 confirmed the already-registered email guard path:
    `A user with this email address has already been registered.` Fresh email
-   confirmation-link QA is still pending because hosted email sending hit rate
-   limits in this pass.
+   confirmation-link QA is deferred to a later backlog recheck because hosted
+   email sending hit rate limits in this pass.
 4. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run
@@ -632,9 +632,9 @@ Current P1 status:
 Current blocker:
 
 Email Recovery Connection P1 is no longer blocked at the code/redirect strategy
-step. The remaining blocker is real-device link-validity-window verification
-with a fresh email after hosted sender rate limits clear, not missing app
-callback code. Keep Email Recovery as a baseline/fallback path while Kakao
+step. The fresh email link-validity-window verification should be treated as a
+later backlog recheck after hosted sender rate limits clear, not as an
+immediate blocker. Keep Email Recovery as a baseline/fallback path while Kakao
 Recovery remains the currently verified path for Korean-market UX.
 
 Deep-link / redirect investigation result:

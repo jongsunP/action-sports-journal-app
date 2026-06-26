@@ -64,9 +64,9 @@ Build 87 QA confirmed that entering an already registered email returns the
 expected `A user with this email address has already been registered.` style
 error. This supports that Supabase Auth is enforcing existing email ownership.
 Fresh-email confirmation-link QA could not be completed in this pass because
-the hosted email sender hit rate limits. Defer the remaining fresh email link
-click -> ASJ app return -> connected state -> relaunch persistence check until
-the rate limit clears or a new approved fresh email is available. Do not keep
+the hosted email sender hit rate limits. This is not an immediate next task.
+Keep the remaining fresh email link click -> ASJ app return -> connected state
+-> relaunch persistence check as a later backlog item, and do not keep
 repeating `updateUser({ email })` attempts while rate-limited.
 
 Email Recovery deep-link / redirect status, 2026-06-26:
@@ -93,8 +93,9 @@ Email Recovery deep-link / redirect status, 2026-06-26:
   `actionsportsjournal://auth/email/**`.
 - The callback handler accepts code exchange and hash access/refresh token
   payloads; error/expired/missing-payload callbacks do not show success.
-- Next step is Build 86 real-device QA with a fresh email. App delete/reinstall
-  email recovery sign-in remains out of scope.
+- Fresh email link-validity QA is deferred to a later backlog item because the
+  hosted sender is rate-limited. App delete/reinstall email recovery sign-in
+  remains out of scope.
 
 Email Recovery Connection P1, 2026-06-26:
 
