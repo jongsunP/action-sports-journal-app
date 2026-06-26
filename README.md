@@ -8,7 +8,8 @@ analysis, recovery, and long-term growth history.
 For humans and AI agents, this repository has many historical design documents.
 Do not try to reconstruct the current state by reading every `.md` file.
 
-Read these first, in order:
+Read these first, in this exact order. Do not skip or reorder them unless a
+file is genuinely missing:
 
 1. `AGENTS.md` - collaboration rules, response format, and session workflow.
 2. `docs/PROJECT_MEMORY.md` - canonical ASJ product memory, stable workstream

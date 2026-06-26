@@ -4,9 +4,9 @@
 
 This file exists so a new Codex session can continue work without relying on chat history.
 
-`docs/PROJECT_MEMORY.md` is the primary source of truth and project operating
-system. Read it first. Then read this file after `AGENTS.md`,
-`docs/CURRENT_STAGE.md`, and `REVIEW.md`.
+Do not use this file as the first entry point. The required read order is
+defined in the project `README.md` and `AGENTS.md`. In that order, this file is
+read after `docs/PROJECT_MEMORY.md` and `docs/CURRENT_STAGE.md`.
 
 ## Project
 
@@ -102,18 +102,12 @@ If the development session can proceed directly and the Founder does not need
 to decide or act, do not add a user-facing action section.
 
 When the Founder asks what remains or asks for current status, do not list only
-recent chat items. Summarize by ASJ's larger workstreams and order the groups
-by time: completed/past first, then current, immediate next, near-term, later,
-and long-term. Include both the full remaining list and the immediate next
-work:
+recent chat items. Use `docs/PROJECT_MEMORY.md` as the canonical source and
+show the `Current stable workstream list` in the two-section format:
 
 ```text
-완료된 기반:
-현재 상태:
-바로 앞 작업:
-가까운 후속:
-나중에 해도 좋은 것:
-장기 보관 목록:
+완료:
+남은 것:
 ```
 
 Keep this summary concise and easy to scan.

@@ -2149,52 +2149,42 @@ Architecture:
 
 For a new GPT session:
 
-1. Read this file first.
-2. Read `docs/CURRENT_STAGE.md`.
-3. Read `docs/HANDOFF.md`.
-4. Read `docs/CONTINUITY_CHECKPOINT.md`.
-5. If working on wakeboard AI, read:
+1. Read the repository `README.md` first.
+2. Follow the exact read order defined there.
+3. If working on wakeboard AI, additionally read:
    - `docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md`
    - `docs/WAKEBOARD_VALIDATION_MATRIX.md`
    - `docs/AI_ANALYSIS_PIPELINE_DESIGN.md`
-6. Use explicit uncertainty labels.
-7. Do not propose implementation as completed work.
+4. Use explicit uncertainty labels.
+5. Do not propose implementation as completed work.
 
 Recommended opening prompt for a new GPT session:
 
 ```text
-Read docs/PROJECT_MEMORY.md as the primary source of truth for Action Sports
-Journal. Then read docs/CURRENT_STAGE.md, docs/HANDOFF.md, and
-docs/CONTINUITY_CHECKPOINT.md. Continue from the current resume point. Use
-Confirmed Fact / Observation / Hypothesis / Recommendation / Unknown labels
-when diagnosing. Do not imply anything is implemented unless the docs or code
-confirm it.
+Read README.md first and follow the exact ASJ read order defined there. Continue
+from the current resume point. Use Confirmed Fact / Observation / Hypothesis /
+Recommendation / Unknown labels when diagnosing. Do not imply anything is
+implemented unless the docs or code confirm it.
 ```
 
 For a new Codex session:
 
-1. Sync the personal context repository if required by local instructions.
-2. Open the project repository:
-   `~/repository/action-sports-journal-app`
-3. Read this file first.
-4. Read `AGENTS.md` if present, then:
-   - `docs/CURRENT_STAGE.md`
-   - `docs/HANDOFF.md`
-   - `docs/CONTINUITY_CHECKPOINT.md`
-5. Check git status before editing.
-6. Do not print secrets.
-7. Do not commit `.env.local` or any local secret file.
-8. Prefer small focused commits and push important checkpoints to
+1. Pull `codex-personal-context`.
+2. Pull the ASJ project repository.
+3. Read `README.md` and follow the exact read order defined there.
+4. Check git status before editing.
+5. Do not print secrets.
+6. Do not commit `.env.local` or any local secret file.
+7. Prefer small focused commits and push important checkpoints to
    `origin/master`.
 
 Recommended opening prompt for a new Codex session:
 
 ```text
-Open ~/repository/action-sports-journal-app. Read docs/PROJECT_MEMORY.md first
-as the primary source of truth, then read AGENTS.md if present,
-docs/CURRENT_STAGE.md, docs/HANDOFF.md, and docs/CONTINUITY_CHECKPOINT.md.
-Check git status before edits. Do not print secrets. Continue from the current
-resume point and keep changes scoped.
+Pull codex-personal-context and the ASJ project repository. Then open
+~/repository/action-sports-journal-app, read README.md, and follow the exact
+read order defined there. Check git status before edits. Do not print secrets.
+Continue from the current resume point and keep changes scoped.
 ```
 
 Current resume instruction:
