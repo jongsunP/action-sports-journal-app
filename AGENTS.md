@@ -2,6 +2,13 @@
 
 An iOS-first React Native application for action sports athletes.
 
+## Documentation Entry Point
+
+For current project understanding, read `README.md` first. The canonical ASJ
+status and stable workstream list live in `docs/PROJECT_MEMORY.md`. Historical
+or focused docs under `docs/` are references and should be opened only when the
+current task needs them.
+
 ## Collaboration Response Format
 
 Always answer in Korean honorifics.
