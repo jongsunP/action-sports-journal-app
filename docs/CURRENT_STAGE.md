@@ -582,8 +582,16 @@ Implemented:
   compression executes, compressed file size decreases, duration / MIME /
   compressed URI are available, and final-file upload target payload plus
   sanitized `uploadProcessing` metadata are visible.
-- Compression POC is successful; promotion into the normal upload flow remains a
-  separate product/quality decision.
+- Compression POC is successful and has now been promoted into the normal upload
+  submit path for conservative first use. When the selected final-file candidate
+  is over 20MB, the app attempts local optimization before requesting an upload
+  target; 20MB or smaller clips upload as the original. The backend still judges
+  only the final upload file metadata.
+- The first production-flow setting is deliberately mild: manual compression,
+  `maxSize` 1080, bitrate 8Mbps, and no compression for files at or below 20MB.
+  If optimization fails, the original file can still upload when it satisfies
+  the 30MB / 15 seconds policy. The QA compression metadata button remains
+  preview/internal only for now.
 
 Analysis Trust UX, 2026-06-26:
 

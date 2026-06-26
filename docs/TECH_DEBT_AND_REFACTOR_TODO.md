@@ -1744,19 +1744,34 @@ POC implementation status, 2026-06-27:
   preview/internal build, compression executed, compressed file size decreased,
   duration / MIME / compressed URI were visible, and the upload-target payload
   plus sanitized `uploadProcessing` metadata reflected the compressed final file.
-- Status: POC successful. Do not use this POC to perform real Storage upload or
-  AI analysis without a separate approval.
-- Next product decision: whether to promote compression into the normal upload
-  flow, when to trigger it, how to explain processing time, and how to validate
-  AI quality impact.
+- Status: POC successful and promoted into the normal upload submit path as a
+  conservative first pass. The app now prepares the final upload file before
+  requesting `/api/video-upload-targets`.
+- Automatic rule: 20MB or smaller clips upload as the original. Clips over 20MB
+  attempt local optimization before upload target creation. The current picker and
+  backend policy still cap final uploads at 30MB / 15 seconds.
+- Compression settings were softened from the Build 89 auto POC: normal upload
+  uses manual compression with `maxSize` 1080 and bitrate 8Mbps.
+- Failure policy: if optimization fails, upload the original only when it still
+  satisfies the 30MB / 15 seconds / MIME policy. Final file policy violations are
+  blocked with the existing user-facing copy.
+- The upload target payload uses the final upload file's `fileSize`,
+  `durationMs`, and `mimeType`. Optional sanitized `uploadProcessing` metadata
+  carries original/compressed size, compression ratio, compression duration, and
+  source for observation only; backend policy does not use it.
+- The QA metadata action remains temporarily available in preview/internal builds
+  and hidden from production by default.
+- Next standalone QA should verify automatic optimization, final upload target
+  payload, `uploadProcessing`, and fallback/error copy before considering broader
+  rollout. AI quality impact remains a separate validation item.
 
 Decision:
 
-Compression is likely needed, but do not implement it before measurement and
-benchmarking. Action-sports AI analysis depends on visual details such as edge
-load, board angle, rope tension, pop, rotation axis, and landing. A quick
-compression MVP could reduce upload cost while silently harming evidence
-quality.
+Compression is likely needed and now has a conservative first upload-flow
+implementation, but broader rollout should still wait for measurement and AI
+quality comparison. Action-sports AI analysis depends on visual details such as
+edge load, board angle, rope tension, pop, rotation axis, and landing. A stronger
+compression MVP could reduce upload cost while silently harming evidence quality.
 
 Measurement requirements:
 

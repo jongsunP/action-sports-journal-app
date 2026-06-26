@@ -2,6 +2,7 @@ import type { SessionVideoAsset } from '../../services/ai';
 import type {
   ThumbnailUploadTarget,
   UploadedThumbnailReference,
+  UploadProcessingMetadata,
 } from '../../services/moments';
 
 export type UploadDraftStatus =
@@ -29,11 +30,13 @@ export type UploadDraft = {
   storageBucket?: string;
   storagePath?: string;
   uploadedAt?: string;
+  uploadProcessing?: UploadProcessingMetadata;
 };
 
 export function createUploadDraftFromVideo(
   video: SessionVideoAsset,
   localThumbnailUri?: string | null,
+  uploadProcessing?: UploadProcessingMetadata | null,
 ): UploadDraft {
   const now = new Date().toISOString();
 
@@ -48,6 +51,7 @@ export function createUploadDraftFromVideo(
     createdAt: now,
     updatedAt: now,
     status: 'ready_to_upload',
+    uploadProcessing: uploadProcessing ?? undefined,
   };
 }
 

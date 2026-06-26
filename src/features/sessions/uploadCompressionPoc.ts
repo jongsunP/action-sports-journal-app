@@ -8,14 +8,20 @@ type ReactNativeCompressorModule = {
     compress: (
       uri: string,
       options?: {
+        bitrate?: number;
         compressionMethod?: 'auto' | 'manual';
         maxSize?: number;
         minimumFileSizeForCompress?: number;
+        progressDivider?: number;
       },
       onProgress?: (progress: number) => void,
     ) => Promise<string>;
   };
 };
+
+const AUTO_OPTIMIZE_THRESHOLD_BYTES = 20 * 1024 * 1024;
+const CONSERVATIVE_VIDEO_MAX_SIZE = 1080;
+const CONSERVATIVE_VIDEO_BITRATE = 8_000_000;
 
 export type UploadCompressionPocPayload = {
   draftId: string;
@@ -43,6 +49,14 @@ export type UploadCompressionPocResult = {
   reductionRatio: number | null;
 };
 
+export type PreparedUploadVideo = {
+  compressionAttempted: boolean;
+  compressionUsed: boolean;
+  originalFileSize: number | null;
+  uploadProcessing: UploadProcessingMetadata;
+  video: SessionVideoAsset;
+};
+
 export async function runUploadCompressionPoc(
   video: SessionVideoAsset,
 ): Promise<UploadCompressionPocResult> {
@@ -51,8 +65,11 @@ export async function runUploadCompressionPoc(
   const compressor = await importReactNativeCompressor();
   const compressionStartedAt = Date.now();
   const compressedUri = await compressor.Video.compress(video.uri, {
-    compressionMethod: 'auto',
+    bitrate: CONSERVATIVE_VIDEO_BITRATE,
+    compressionMethod: 'manual',
+    maxSize: CONSERVATIVE_VIDEO_MAX_SIZE,
     minimumFileSizeForCompress: 0,
+    progressDivider: 10,
   });
   const compressionDurationMs = Date.now() - compressionStartedAt;
   const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
@@ -106,6 +123,92 @@ export async function runUploadCompressionPoc(
   };
 }
 
+export async function prepareUploadVideoForUpload(
+  video: SessionVideoAsset,
+  options?: {
+    onProgress?: (progress: number) => void;
+  },
+): Promise<PreparedUploadVideo> {
+  const originalFileInfo = await FileSystem.getInfoAsync(video.uri);
+  const originalFileSize = readFileSize(originalFileInfo) ?? video.fileSize ?? null;
+
+  if (!shouldOptimizeUploadVideo(originalFileSize)) {
+    return buildOriginalUploadVideoResult(video, originalFileSize);
+  }
+
+  const compressor = await importReactNativeCompressor();
+  const compressionStartedAt = Date.now();
+
+  try {
+    const compressedUri = await compressor.Video.compress(
+      video.uri,
+      {
+        bitrate: CONSERVATIVE_VIDEO_BITRATE,
+        compressionMethod: 'manual',
+        maxSize: CONSERVATIVE_VIDEO_MAX_SIZE,
+        minimumFileSizeForCompress: 0,
+        progressDivider: 10,
+      },
+      options?.onProgress,
+    );
+    const compressionDurationMs = Date.now() - compressionStartedAt;
+    const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
+    const compressedFileSize = readFileSize(compressedFileInfo);
+
+    if (
+      typeof compressedFileSize !== 'number' ||
+      !Number.isFinite(compressedFileSize) ||
+      compressedFileSize <= 0 ||
+      (typeof originalFileSize === 'number' && compressedFileSize >= originalFileSize)
+    ) {
+      return buildOriginalUploadVideoResult(video, originalFileSize, true);
+    }
+
+    const compressedMimeType = inferUploadableVideoMimeType({
+      fallbackMimeType: video.mimeType,
+      uri: compressedUri,
+    });
+
+    return {
+      compressionAttempted: true,
+      compressionUsed: true,
+      originalFileSize,
+      uploadProcessing: {
+        compressedFileSize,
+        compressionDurationMs,
+        compressionRatio: calculateCompressionRatio({
+          compressedFileSize,
+          originalFileSize,
+        }),
+        originalFileSize,
+        source: 'compressed',
+      },
+      video: {
+        ...video,
+        fileName: inferCompressedFileName(video.fileName ?? undefined, compressedMimeType),
+        fileSize: compressedFileSize,
+        mimeType: compressedMimeType,
+        uri: compressedUri,
+      },
+    };
+  } catch (error) {
+    console.warn(
+      'Upload video optimization failed; falling back to original when policy allows:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+
+    return buildOriginalUploadVideoResult(video, originalFileSize, true);
+  }
+}
+
+export function shouldOptimizeUploadVideo(fileSize?: number | null) {
+  return (
+    typeof fileSize === 'number' &&
+    Number.isFinite(fileSize) &&
+    fileSize > AUTO_OPTIMIZE_THRESHOLD_BYTES
+  );
+}
+
 async function importReactNativeCompressor() {
   const module = (await import(
     'react-native-compressor'
@@ -119,6 +222,26 @@ async function importReactNativeCompressor() {
 
   return {
     Video: module.Video,
+  };
+}
+
+function buildOriginalUploadVideoResult(
+  video: SessionVideoAsset,
+  originalFileSize: number | null,
+  compressionAttempted = false,
+): PreparedUploadVideo {
+  return {
+    compressionAttempted,
+    compressionUsed: false,
+    originalFileSize,
+    uploadProcessing: {
+      compressedFileSize: null,
+      compressionDurationMs: null,
+      compressionRatio: null,
+      originalFileSize,
+      source: 'original',
+    },
+    video,
   };
 }
 

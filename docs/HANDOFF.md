@@ -645,10 +645,25 @@ Upload File Handling Policy P1, 2026-06-27:
   compressed URI are visible, and the upload-target payload plus
   `uploadProcessing` metadata reflect the final compressed file. Treat the
   Compression / Upload Optimization POC as successful.
-- Next product decision: whether to promote compression from QA-only POC into the
-  normal upload flow. Do not do that automatically; it needs product/quality
-  judgment, including when to compress, how to explain wait time, and whether AI
-  result quality remains acceptable.
+- Compression has now been promoted from QA-only POC into the normal upload submit
+  path with conservative first-use rules:
+  - if the selected file is 20MB or smaller, upload the original;
+  - if the selected file is over 20MB, attempt local optimization before requesting
+    the upload target;
+  - keep the backend authority at 30MB / 15 seconds / allowed MIME type, evaluated
+    against the final upload file only;
+  - use mild manual compression (`maxSize` 1080, bitrate 8Mbps) rather than the
+    stronger Build 89 POC auto setting;
+  - if optimization fails, continue with the original only when it still satisfies
+    the 30MB / 15 seconds policy;
+  - if the final file violates size, duration, MIME, URI, or empty-file policy,
+    block upload with the existing user-facing policy copy.
+- The QA metadata action remains temporarily visible only in preview/internal QA
+  builds. Production remains hidden unless an explicit public debug flag is set.
+- Next standalone QA should verify automatic optimization on an over-20MB short
+  clip, final-file upload target payload, `uploadProcessing` metadata, and the
+  existing 30MB / 15 seconds policy failure copy. Do not run paid AI solely for
+  compression validation.
 - Historical standalone QA checklist for the POC:
   - selected a short local video and tapped the QA-gated "QA 압축 메타 확인" action;
   - confirmed original file size, compressed file size, and reduction ratio;

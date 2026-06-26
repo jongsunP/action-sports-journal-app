@@ -43,6 +43,7 @@ export async function uploadDraftSourceVideoDirectly(
       fileSize: draft.fileSize,
       mimeType: draft.mimeType,
       durationMs: draft.durationMs,
+      uploadProcessing: draft.uploadProcessing,
     });
 
     if (!uploadTarget) {

@@ -36,6 +36,10 @@ import {
   type UploadDraft,
 } from './uploadDraftStorage';
 import {
+  prepareUploadVideoForUpload,
+  shouldOptimizeUploadVideo,
+} from './uploadCompressionPoc';
+import {
   buildUploadProgress,
   type UploadProgressStage,
   type UploadProgressState,
@@ -408,6 +412,8 @@ export function useUploadMoment({
       let directFailureReason: string | undefined;
       let directFailureStage: string | undefined;
       let fallbackThumbnailReference: UploadedThumbnailReference | undefined;
+      let uploadVideoForUpload = videoForUpload;
+      let activeUploadDraft = uploadDraft;
 
       try {
         setUploadDraftStatus('uploading');
@@ -426,12 +432,60 @@ export function useUploadMoment({
           return;
         }
 
+        if (shouldOptimizeUploadVideo(videoForUpload.fileSize)) {
+          setUploadProgressStage('optimizing_video');
+        }
+
+        const preparedUploadVideo = await prepareUploadVideoForUpload(videoForUpload, {
+          onProgress: (progress) => {
+            setUploadProgressStage('optimizing_video', progress * 100);
+          },
+        });
+        uploadVideoForUpload = preparedUploadVideo.video;
+
+        const finalPolicyFailure = getUploadPolicyFailureForVideo({
+          duration: uploadVideoForUpload.duration,
+          fileSize: uploadVideoForUpload.fileSize,
+          mimeType: uploadVideoForUpload.mimeType,
+          uri: uploadVideoForUpload.uri,
+        });
+
+        if (finalPolicyFailure) {
+          throw finalPolicyFailure;
+        }
+
+        activeUploadDraft = createUploadDraftFromVideo(
+          uploadVideoForUpload,
+          preparedThumbnailUri,
+          preparedUploadVideo.uploadProcessing,
+        );
+        setUploadDraft(activeUploadDraft);
+
+        if (uploadVideoForUpload.uri !== videoForUpload.uri) {
+          setVideoForSession(nextSession.id, uploadVideoForUpload);
+          setSessions((current) =>
+            current.map((session) =>
+              session.id === nextSession.id
+                ? {
+                    ...session,
+                    updatedAt: new Date().toISOString(),
+                    videoUri: uploadVideoForUpload.uri,
+                  }
+                : session,
+            ),
+          );
+        }
+
         uploadStartedAt = Date.now();
 
         console.info('[upload_timing]', {
+          compressionAttempted: preparedUploadVideo.compressionAttempted,
+          compressionUsed: preparedUploadVideo.compressionUsed,
           event: 'upload_start',
-          fileSize: videoForUpload.fileSize,
+          fileSize: uploadVideoForUpload.fileSize,
           localSessionId: nextSession.id,
+          originalFileSize: preparedUploadVideo.originalFileSize,
+          uploadProcessingSource: preparedUploadVideo.uploadProcessing.source,
         });
 
         const handleDirectUploadTarget = (uploadTarget: VideoUploadTarget) => {
@@ -444,20 +498,20 @@ export function useUploadMoment({
           onUploadReconciliationTargetResolved?.(
             nextSession.id,
             directUploadedTarget,
-            uploadDraft?.draftId,
+            activeUploadDraft?.draftId,
           );
         };
 
         let storedMoment = await createMomentFromDirectUpload({
-          draft: uploadDraft,
+          draft: activeUploadDraft,
           onDirectUploadTarget: handleDirectUploadTarget,
           onProgress: setUploadProgressStage,
           session: nextSession,
         });
 
-        if (!storedMoment && uploadDraft && directUploadedTarget) {
+        if (!storedMoment && activeUploadDraft && directUploadedTarget) {
           console.info('[upload_timing]', {
-            draftId: uploadDraft.draftId,
+            draftId: activeUploadDraft.draftId,
             event: 'direct_finalize_retry_started',
             localSessionId: nextSession.id,
             storagePath: directUploadedTarget.storagePath,
@@ -465,7 +519,7 @@ export function useUploadMoment({
           });
           try {
             storedMoment = await finalizeUploadedDraftSourceFromTarget(
-              uploadDraft,
+              activeUploadDraft,
               directUploadedTarget,
               nextSession,
               {
@@ -473,7 +527,7 @@ export function useUploadMoment({
               },
             );
             console.info('[upload_timing]', {
-              draftId: uploadDraft.draftId,
+              draftId: activeUploadDraft.draftId,
               event: 'direct_finalize_retry_success',
               localSessionId: nextSession.id,
               momentId: storedMoment?.momentId,
@@ -485,7 +539,7 @@ export function useUploadMoment({
             directFailureReason =
               error instanceof Error ? error.message : 'unknown';
             console.info('[upload_timing]', {
-              draftId: uploadDraft.draftId,
+              draftId: activeUploadDraft.draftId,
               event: 'direct_finalize_retry_failure',
               localSessionId: nextSession.id,
               reason: directFailureReason,
@@ -508,25 +562,25 @@ export function useUploadMoment({
           console.info('[upload_timing]', {
             directFailureReason,
             directFailureStage,
-            draftId: uploadDraft?.draftId,
+            draftId: activeUploadDraft?.draftId,
             event: 'upload_path_decided',
             localSessionId: nextSession.id,
             path: 'multipart_fallback',
             storagePath: directUploadedTarget?.storagePath,
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
           setUploadProgressStage('fallback_upload');
           console.info('[upload_timing]', {
             directFailureReason,
             directFailureStage,
-            draftId: uploadDraft?.draftId,
+            draftId: activeUploadDraft?.draftId,
             event: 'fallback_started',
             localSessionId: nextSession.id,
             storagePath: directUploadedTarget?.storagePath,
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
           storedMoment = await withUploadTimeout(
-            createMomentFromSourceVideo(nextSession, videoForUpload, {
+            createMomentFromSourceVideo(nextSession, uploadVideoForUpload, {
               thumbnailStorageProvider: fallbackThumbnailReference?.storageProvider,
               thumbnailStorageBucket: fallbackThumbnailReference?.storageBucket,
               thumbnailStoragePath: fallbackThumbnailReference?.storagePath,
@@ -535,12 +589,12 @@ export function useUploadMoment({
             'Multipart fallback upload timed out.',
           );
           console.info('[upload_timing]', {
-            draftId: uploadDraft?.draftId,
+            draftId: activeUploadDraft?.draftId,
             event: 'fallback_success',
             localSessionId: nextSession.id,
             momentId: storedMoment?.momentId,
             storagePath: storedMoment?.storagePath,
-            uploadId: uploadDraft?.uploadId,
+            uploadId: activeUploadDraft?.uploadId,
           });
         }
 
@@ -565,7 +619,7 @@ export function useUploadMoment({
             shouldSuppressAlert: shouldSuppressUploadFailureAlert,
             stage: 'stored_moment',
             title: '영상 업로드에 실패했습니다',
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
           return;
         }
@@ -584,12 +638,12 @@ export function useUploadMoment({
         console.info('[upload_timing]', {
           directFailureReason,
           directFailureStage,
-          draftId: uploadDraft?.draftId,
+          draftId: activeUploadDraft?.draftId,
           event: 'upload_path_decided',
           localSessionId: nextSession.id,
           path: uploadPath,
           storagePath: directUploadedTarget?.storagePath ?? storedMoment.storagePath,
-          uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+          uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
         });
 
         console.info('[upload_timing]', {
@@ -668,7 +722,7 @@ export function useUploadMoment({
             shouldSuppressAlert: shouldSuppressUploadFailureAlert,
             stage: usedUploadFallback ? 'fallback_upload' : 'local_video_access',
             title: '영상 파일을 다시 선택해 주세요',
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         } else if (isUploadPolicyFailure(error)) {
           const policyCopy = getUploadPolicyFailureCopy(error);
@@ -679,7 +733,7 @@ export function useUploadMoment({
             shouldSuppressAlert: shouldSuppressUploadFailureAlert,
             stage: usedUploadFallback ? 'fallback_upload' : 'upload_policy',
             title: policyCopy.title,
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         } else if (isUploadTargetRateLimitFailure(error)) {
           await showUploadFailureAlertIfActive({
@@ -690,7 +744,7 @@ export function useUploadMoment({
             shouldSuppressAlert: shouldSuppressUploadFailureAlert,
             stage: 'request_upload_target',
             title: '잠시 후 다시 시도해주세요',
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         } else {
           await showUploadFailureAlertIfActive({
@@ -701,7 +755,7 @@ export function useUploadMoment({
             shouldSuppressAlert: shouldSuppressUploadFailureAlert,
             stage: usedUploadFallback ? 'fallback_upload' : 'upload',
             title: '영상 업로드에 실패했습니다',
-            uploadId: directUploadedTarget?.uploadId ?? uploadDraft?.uploadId,
+            uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         }
       } finally {
@@ -963,7 +1017,8 @@ function isUploadPolicyFailure(error: unknown) {
       error.code === 'too_long' ||
       error.code === 'unsupported_type' ||
       error.code === 'empty_file' ||
-      error.code === 'invalid_duration')
+      error.code === 'invalid_duration' ||
+      error.code === 'missing_uri')
   );
 }
 
@@ -999,6 +1054,11 @@ function getUploadPolicyFailureCopy(error: unknown) {
           '선택한 영상 길이를 확인할 수 없습니다. 영상을 다시 선택해주세요.',
         title: '영상 길이를 확인할 수 없습니다',
       };
+    case 'missing_uri':
+      return {
+        message: '선택한 영상 파일 경로를 확인할 수 없습니다. 영상을 다시 선택해주세요.',
+        title: '영상 파일을 확인할 수 없습니다',
+      };
     default:
       return {
         message:
@@ -1019,19 +1079,37 @@ function getUploadPolicyAlertForVideo({
   mimeType?: string | null;
   uri?: string | null;
 }) {
+  const policyFailure = getUploadPolicyFailureForVideo({
+    duration,
+    fileSize,
+    mimeType,
+    uri,
+  });
+
+  return policyFailure ? getUploadPolicyFailureCopy(policyFailure) : null;
+}
+
+function getUploadPolicyFailureForVideo({
+  duration,
+  fileSize,
+  mimeType,
+  uri,
+}: {
+  duration?: number | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  uri?: string | null;
+}) {
   if (!uri) {
-    return {
-      message: '선택한 영상 파일 경로를 확인할 수 없습니다. 영상을 다시 선택해주세요.',
-      title: '영상 파일을 확인할 수 없습니다',
-    };
+    return new RemoteRequestError('missing video uri', 400, {
+      code: 'missing_uri',
+    });
   }
 
   if (!mimeType || !ALLOWED_UPLOAD_VIDEO_MIME_TYPES.has(mimeType)) {
-    return getUploadPolicyFailureCopy(
-      new RemoteRequestError('unsupported video type', 400, {
-        code: 'unsupported_type',
-      }),
-    );
+    return new RemoteRequestError('unsupported video type', 400, {
+      code: 'unsupported_type',
+    });
   }
 
   if (
@@ -1039,15 +1117,11 @@ function getUploadPolicyAlertForVideo({
     !Number.isFinite(fileSize) ||
     fileSize <= 0
   ) {
-    return getUploadPolicyFailureCopy(
-      new RemoteRequestError('empty file', 400, { code: 'empty_file' }),
-    );
+    return new RemoteRequestError('empty file', 400, { code: 'empty_file' });
   }
 
   if (fileSize > MAX_UPLOAD_VIDEO_BYTES) {
-    return getUploadPolicyFailureCopy(
-      new RemoteRequestError('video too large', 413, { code: 'too_large' }),
-    );
+    return new RemoteRequestError('video too large', 413, { code: 'too_large' });
   }
 
   if (
@@ -1055,17 +1129,13 @@ function getUploadPolicyAlertForVideo({
     !Number.isFinite(duration) ||
     duration <= 0
   ) {
-    return getUploadPolicyFailureCopy(
-      new RemoteRequestError('invalid duration', 400, {
-        code: 'invalid_duration',
-      }),
-    );
+    return new RemoteRequestError('invalid duration', 400, {
+      code: 'invalid_duration',
+    });
   }
 
   if (duration > MAX_UPLOAD_VIDEO_DURATION_MS) {
-    return getUploadPolicyFailureCopy(
-      new RemoteRequestError('video too long', 400, { code: 'too_long' }),
-    );
+    return new RemoteRequestError('video too long', 400, { code: 'too_long' });
   }
 
   return null;

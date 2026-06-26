@@ -158,7 +158,8 @@ export function UploadContent({
                   </Text>
                   <Text style={styles.selectedVideoHelperText}>
                     메모 입력 없이 먼저 분석합니다. 현재 업로드는 30MB / 15초
-                    이하 클립만 지원합니다.
+                    이하 클립만 지원하며, 20MB를 넘는 영상은 업로드 전에
+                    자동으로 최적화합니다.
                   </Text>
                 </View>
                 {ENABLE_UPLOAD_COMPRESSION_POC ? (

@@ -1,5 +1,6 @@
 export type UploadProgressStage =
   | 'preparing'
+  | 'optimizing_video'
   | 'creating_target'
   | 'uploading_video'
   | 'finalizing_upload'
@@ -25,6 +26,10 @@ const UPLOAD_PROGRESS_COPY: Record<
   preparing: {
     detail: '선택한 영상을 확인하고 업로드를 준비하고 있습니다.',
     label: '업로드 준비 중',
+  },
+  optimizing_video: {
+    detail: '최적화 후 업로드를 시작합니다.',
+    label: '업로드 전에 영상을 최적화하고 있습니다',
   },
   creating_target: {
     detail: '영상을 보낼 안전한 경로를 준비하고 있습니다.',
@@ -64,7 +69,7 @@ function normalizeUploadPercent(
   percent?: number,
 ) {
   if (
-    stage !== 'uploading_video' ||
+    (stage !== 'uploading_video' && stage !== 'optimizing_video') ||
     typeof percent !== 'number' ||
     !Number.isFinite(percent)
   ) {

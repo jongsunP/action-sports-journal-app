@@ -224,7 +224,7 @@ Current stable workstream list:
 - Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
-- Compression / Upload Optimization(영상 압축 / 업로드 최적화): POC는 Build 89에서 성공. 정식 upload flow로 승격할지, 언제 압축할지, 대기 UX와 AI 품질 영향을 어떻게 검증할지는 다음 제품 판단 항목
+- Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. 20MB 초과 short clip은 업로드 target 요청 전 보수적 로컬 최적화를 시도하고, 20MB 이하는 원본 업로드. Backend 정책은 계속 최종 파일 기준
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): `aa89f14`로 수정 완료. Build 89에는 미포함이므로 다음 빌드에서 count 0 + boot timeout/failed 시 "영상 기록 동기화가 지연 중입니다" 표시와 retry 버튼을 확인
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)
@@ -1221,11 +1221,14 @@ Compression measurement / benchmark record:
   - try conservative compression only for larger videos;
   - avoid excessive frame-rate reduction;
   - use a 1080p-oriented optimization candidate before lower-quality presets.
-- Compression / Upload Optimization POC now exists as a QA-only path using
-  `react-native-compressor`. Build 89 real-device QA confirmed the action is
-  visible in preview/internal, compression runs, file size decreases, and final
-  file metadata plus sanitized `uploadProcessing` payload can be inspected. It is
-  not part of production upload.
+- Compression / Upload Optimization now has a conservative production-flow first
+  pass using `react-native-compressor`. Build 89 confirmed the POC on real
+  iPhone, then the normal upload submit path was updated to prepare the final file
+  before requesting an upload target. The first rule is: keep <=20MB clips
+  original, optimize >20MB clips with mild manual settings (`maxSize` 1080,
+  bitrate 8Mbps), and keep backend policy based only on final `fileSize`,
+  `durationMs`, and `mimeType`. The QA metadata action remains preview/internal
+  only for now.
 - AI quality comparison must cover edge load, approach, board angle, rope
   tension, pop, rotation axis, landing, and trick identification.
 - Priority implication: run Compression measurement/benchmark before Auth if
