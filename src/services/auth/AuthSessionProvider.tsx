@@ -3,13 +3,18 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
+import * as Linking from 'expo-linking';
 import type { Session, User } from '@supabase/supabase-js';
 
 import {
+  completeRecoveryEmailChangeFromUrl,
+  isRecoveryEmailChangeUrl,
   requestRecoveryEmailLink,
+  type RecoveryEmailCompletionResult,
   verifyRecoveryEmailOtp,
 } from './accountRecovery';
 import { getAuthMode, type AuthMode } from './authPolicy';
@@ -28,6 +33,7 @@ type AuthSessionState = {
   authMode: AuthMode;
   isAuthenticated: boolean;
   isLoading: boolean;
+  lastRecoveryEmailCompletion: RecoveryEmailCompletionResult | null;
   linkKakaoIdentity: () => Promise<KakaoLinkResult>;
   requestRecoveryEmailLink: (email: string) => Promise<void>;
   recoverWithKakao: () => Promise<KakaoRecoverySignInResult>;
@@ -85,6 +91,9 @@ async function refreshSupabaseSession() {
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastRecoveryEmailCompletion, setLastRecoveryEmailCompletion] =
+    useState<RecoveryEmailCompletionResult | null>(null);
+  const handledRecoveryEmailUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!supabase) {
@@ -176,6 +185,76 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+
+    const client = supabase;
+    let isDisposed = false;
+
+    const handleRecoveryEmailUrl = async (url: string | null) => {
+      if (
+        !url ||
+        !isRecoveryEmailChangeUrl(url) ||
+        handledRecoveryEmailUrlsRef.current.has(url)
+      ) {
+        return;
+      }
+
+      handledRecoveryEmailUrlsRef.current.add(url);
+
+      try {
+        const result = await completeRecoveryEmailChangeFromUrl(url);
+
+        if (isDisposed) {
+          return;
+        }
+
+        setLastRecoveryEmailCompletion(result);
+
+        if (result.session) {
+          setSession(
+            result.status === 'completed'
+              ? {
+                  ...result.session,
+                  user: result.user ?? result.session.user,
+                }
+              : result.session,
+          );
+        }
+      } catch (error) {
+        if (isDisposed) {
+          return;
+        }
+
+        const { data: sessionData } = await client.auth.getSession();
+        const { data: userData } = await client.auth.getUser();
+        setLastRecoveryEmailCompletion({
+          status: 'notCompleted',
+          reason: 'callback_error',
+          message:
+            error instanceof Error && error.message
+              ? error.message
+              : '이메일 확인을 완료하지 못했습니다. 다시 시도해주세요.',
+          session: sessionData.session ?? null,
+          user: userData.user ?? null,
+        });
+      }
+    };
+
+    void Linking.getInitialURL().then(handleRecoveryEmailUrl);
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void handleRecoveryEmailUrl(url);
+    });
+
+    return () => {
+      isDisposed = true;
+      subscription.remove();
+    };
+  }, []);
+
   const value = useMemo<AuthSessionState>(
     () => ({
       accessToken: session?.access_token ?? null,
@@ -185,6 +264,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       }),
       isAuthenticated: Boolean(session?.access_token),
       isLoading,
+      lastRecoveryEmailCompletion,
       linkKakaoIdentity: async () => {
         const result = await linkKakaoIdentity();
 
@@ -262,7 +342,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         return null;
       },
     }),
-    [isLoading, session],
+    [isLoading, lastRecoveryEmailCompletion, session],
   );
 
   return (

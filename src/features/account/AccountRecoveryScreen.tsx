@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -262,6 +262,7 @@ export function AccountRecoveryScreen() {
   const {
     authMode,
     isLoading,
+    lastRecoveryEmailCompletion,
     linkKakaoIdentity,
     recoverWithKakao,
     requestRecoveryEmailLink,
@@ -319,6 +320,24 @@ export function AccountRecoveryScreen() {
     isAnonymousUser,
     kakaoNickname,
   });
+
+  useEffect(() => {
+    if (!lastRecoveryEmailCompletion) {
+      return;
+    }
+
+    if (lastRecoveryEmailCompletion.status === 'completed') {
+      const nextEmail = lastRecoveryEmailCompletion.user.email ?? '';
+
+      setErrorMessage(null);
+      setEmail(nextEmail);
+      setPendingEmail('');
+      setStep(nextEmail ? 'linked' : 'idle');
+      return;
+    }
+
+    setErrorMessage(lastRecoveryEmailCompletion.message);
+  }, [lastRecoveryEmailCompletion]);
 
   const handleRequestEmailLink = async () => {
     if (!canSubmitEmail) {
@@ -601,7 +620,7 @@ export function AccountRecoveryScreen() {
                   <Text style={styles.formLabel}>이메일 확인 대기 중</Text>
                   <Text style={styles.helperText}>
                     {pendingEmail} 주소로 보낸 메일에서 확인 링크를 눌러주세요.
-                    링크를 연 뒤 앱으로 돌아와 연결 상태를 새로고침하면 됩니다.
+                    링크를 열면 앱으로 돌아와 연결 상태를 확인합니다.
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -639,8 +658,7 @@ export function AccountRecoveryScreen() {
                 <View style={styles.successPanel}>
                   <Text style={styles.successTitle}>복구 준비 완료</Text>
                   <Text style={styles.successText}>
-                    앱을 다시 설치하거나 새 기기로 옮길 때 이 이메일을 복구
-                    수단으로 사용할 수 있습니다.
+                    이 이메일이 현재 기기 계정의 복구 수단으로 연결되었습니다.
                   </Text>
                 </View>
               ) : null}
