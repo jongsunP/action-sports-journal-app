@@ -132,7 +132,8 @@ WATCH:
   expectations must account for cleaned-up source objects.
 - Recovery Attempt Observability P1 has a dedicated `recovery_attempts`
   migration SQL file, authenticated BFF endpoint, and client helper. The SQL has
-  not been applied to Supabase yet, so successful DB-write QA remains pending.
+  been applied, authenticated insert smoke passed, metadata redaction was
+  confirmed, and no-token requests still return 401.
 - Email Recovery remains a baseline/fallback path. It is no longer blocked by
   sender rate limits, but redirect URL / deep-link strategy and link-validity QA
   are still needed before productization.
@@ -620,6 +621,10 @@ Current P1 status:
    `A user with this email address has already been registered.` Fresh email
    confirmation-link QA is deferred to a later backlog recheck because hosted
    email sending hit rate limits in this pass.
+   A 2026-06-27 build-prep pass did not spend another updateUser call from a
+   detached/local script. Preserve the next single retry for the installed app
+   session with an owner-approved fresh email and complete the link click inside
+   the magic-link validity window.
 4. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run

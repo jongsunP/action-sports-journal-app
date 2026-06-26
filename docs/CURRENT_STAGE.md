@@ -69,6 +69,27 @@ Keep the remaining fresh email link click -> ASJ app return -> connected state
 -> relaunch persistence check as a later backlog item, and do not keep
 repeating `updateUser({ email })` attempts while rate-limited.
 
+Build 87 follow-up closeout, 2026-06-27:
+
+- Real-use Loading Diagnosis P1 was checked after Build 87 and the user reported
+  no issue. Keep QA Debug observation available, but this is not an active
+  blocker.
+- Recovery Attempt Observability P1 has its `recovery_attempts` migration
+  applied and authenticated insert smoke completed. The smoke confirmed
+  `user_id` / `auth_user_id` linkage, sanitized metadata, no raw email/token/code
+  persistence, and no-token 401.
+- Upload File Handling Policy P1 is complete for the current build-prep scope:
+  30MB / 15 seconds final-file policy, FE basic validation, backend policy
+  authority, error-code mapping, and simulator/local UI check are complete.
+- Compression / Upload Optimization POC is ready for the next standalone build:
+  `react-native-compressor` / `react-native-nitro-modules`, QA-only compression
+  metadata check, and optional sanitized `uploadProcessing` payload structure
+  are in place.
+- Email Recovery fresh-link QA was not re-run from this development session. It
+  should be initiated from the installed app session with an owner-approved fresh
+  email and completed inside the magic-link validity window; preserve the single
+  allowed `updateUser({ email })` retry for that QA.
+
 Email Recovery deep-link / redirect status, 2026-06-26:
 
 - Email Recovery send path exists and current-account email connection

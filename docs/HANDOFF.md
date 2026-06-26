@@ -299,6 +299,10 @@ Email Recovery:
   Keep fresh email link -> ASJ app return -> connected state -> relaunch
   persistence as a later backlog recheck, not an immediate next task. Do not
   repeat `updateUser({ email })` while rate-limited.
+- 2026-06-27 build-prep note: the fresh-link retry was not run from this
+  development session. Preserve the one allowed `updateUser({ email })` call for
+  the installed app session with an owner-approved fresh email, then complete the
+  link click inside the magic-link validity window.
 
 Foundation Safety Check:
 
@@ -470,7 +474,9 @@ Backlog after Push Token Account-switch Policy and product UX review:
 - Media / Share UX later.
 - Recovery Attempt Observability P1: minimum implementation is in place with a
   `recovery_attempts` SQL file, authenticated BFF endpoint, client helper, and
-  Kakao/Email recovery/linking events. The migration has not been applied yet.
+  Kakao/Email recovery/linking events. The migration has been applied, the
+  authenticated insert smoke passed, metadata redaction was confirmed, and
+  no-token requests still return 401.
 - Email Recovery deep link / redirect.
 - Email Recovery Connection: implemented for current-account recovery email
   linking and prepared as Build 86 for standalone email-link callback QA. This is

@@ -206,10 +206,10 @@ Current stable workstream list:
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 87 부분 QA 완료
-- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): 이미 등록된 이메일 입력 시 `A user with this email address has already been registered.` 계열 에러 확인. Fresh email confirmation link 앱 복귀 / Email linked 상태 / relaunch persistence는 hosted email rate limit 때문에 지금 진행하지 않고 한참 뒤 재확인 백로그로 보관
+- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): 이미 등록된 이메일 입력 시 `A user with this email address has already been registered.` 계열 에러 확인. Fresh email confirmation link 앱 복귀 / Email linked 상태 / relaunch persistence는 아직 미완료. 다음 재시도는 설치된 앱 세션에서 owner-approved fresh email로 1회만 실행하고, 링크 유효시간 안에 클릭해야 함
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): 테스트 중에는 계속 필요하므로 유지. 실서비스 배포 직전에 숨김/제거 정책 적용
-- Recovery Attempt Observability P1(복구 시도 관측성 1차): 최소 구현 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. DB migration은 아직 적용하지 않음
+- Recovery Attempt Observability P1(복구 시도 관측성 1차): 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. Migration 적용 완료, authenticated insert smoke 완료, 개인정보 redaction 및 no-token 401 확인 완료
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
@@ -223,7 +223,7 @@ Current stable workstream list:
 - Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
-- Compression / Upload Optimization(영상 압축 / 업로드 최적화)
+- Compression / Upload Optimization(영상 압축 / 업로드 최적화): POC 구현 완료, native build-required. 다음 iOS preview/internal build에서 원본/압축 후 fileSize, 감소율, duration, MIME, compressed URI, 최종 파일 기준 upload target payload, sanitized uploadProcessing metadata를 확인
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)
 - Google Login(구글 로그인)
