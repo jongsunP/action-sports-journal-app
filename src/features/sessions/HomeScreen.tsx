@@ -1619,6 +1619,18 @@ export function HomeScreen() {
   const visibleVideoArchiveSessionSummaries = shouldUseVideoArchiveSessionFallback
     ? homeSessionSummaries
     : videoArchiveSessionSummaries;
+  const hasRemoteMomentSyncDelay =
+    remoteMomentSyncStatus === 'timeout' || remoteMomentSyncStatus === 'failed';
+  const videoArchiveUiLoadState: VideoArchiveLoadState =
+    shouldUseVideoArchiveSessionFallback
+      ? 'ready'
+      : hasRemoteMomentSyncDelay &&
+          visibleVideoArchiveSessionSummaries.length === 0
+        ? 'delayed'
+        : isLoadingVideoArchiveInitialPage ||
+            (isSessionListLoading && videoArchiveSessionSummaries.length === 0)
+          ? 'loading'
+          : videoArchiveLoadState;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
 
@@ -2001,6 +2013,7 @@ export function HomeScreen() {
         videoShown: visibleVideoArchiveSessionSummaries.length,
       },
       video: videoArchiveDiagnostics,
+      videoUiLoadState: videoArchiveUiLoadState,
     }),
     [
       authMode,
@@ -2010,6 +2023,7 @@ export function HomeScreen() {
       user,
       videoArchiveDiagnostics,
       videoArchiveSessionSummaries.length,
+      videoArchiveUiLoadState,
       visibleVideoArchiveSessionSummaries.length,
     ],
   );
@@ -2176,14 +2190,7 @@ export function HomeScreen() {
       hasMore={hasMoreVideoArchiveMoments}
       header={renderVideoArchiveHeader()}
       isLoadingMore={isLoadingMoreVideoArchiveMoments}
-      loadState={
-        shouldUseVideoArchiveSessionFallback
-          ? 'ready'
-          : isLoadingVideoArchiveInitialPage ||
-              (isSessionListLoading && videoArchiveSessionSummaries.length === 0)
-          ? 'loading'
-          : videoArchiveLoadState
-      }
+      loadState={videoArchiveUiLoadState}
       onEndReached={handleLoadMoreVideoArchiveMoments}
       onOpenSession={openEvidenceSheet}
       onRetry={handleRetryVideoArchiveFirstPage}
@@ -2313,6 +2320,7 @@ function QADebugPanel({
       videoShown: number;
     };
     video: RequestDiagnostics;
+    videoUiLoadState: VideoArchiveLoadState;
   };
   styles: Record<string, object>;
 }) {
@@ -2366,7 +2374,7 @@ function QADebugPanel({
       </Text>
       <Text style={styles.qaDebugLine}>
         Video {snapshot.video.status} · {snapshot.video.durationMs ?? '-'}ms ·
-        count {snapshot.video.count ?? '-'} · more{' '}
+        ui {snapshot.videoUiLoadState} · count {snapshot.video.count ?? '-'} · more{' '}
         {snapshot.video.hasMore === null ? '-' : snapshot.video.hasMore ? 'Y' : 'N'} ·
         retry {snapshot.video.retryCount}
       </Text>

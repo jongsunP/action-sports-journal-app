@@ -50,6 +50,7 @@ type SessionSummary = {
 const HORIZONTAL_PRESS_CANCEL_PX = 10;
 
 export type VideoArchiveLoadState =
+  | 'delayed'
   | 'empty'
   | 'error'
   | 'loading'
@@ -616,6 +617,14 @@ export function VideoArchiveList({
   };
   const emptyStateCopy = (() => {
     switch (loadState) {
+      case 'delayed':
+        return {
+          description:
+            '기록이 없거나 서버 응답이 늦어지고 있습니다. 잠시 후 다시 불러올 수 있습니다.',
+          showRetry: true,
+          showSpinner: false,
+          title: '영상 기록 동기화가 지연 중입니다',
+        };
       case 'loading':
         return {
           description: '라이딩 기록과 분석 결과를 준비하고 있습니다.',

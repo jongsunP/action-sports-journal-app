@@ -601,6 +601,32 @@ Validation:
   the original symptom depends on timing/network conditions, but do not keep it
   as an active blocker.
 
+### Video no-records timeout UI follow-up - 2026-06-27
+
+Build QA later found a narrower no-records case: after cleanup, home/archive/
+shown counts could all be 0 while boot remote Moment sync timed out, and the
+Video tab could still show the "Wake Board Loading..." card. This made a normal
+empty archive plus slow network look like an infinite loading bug.
+
+Implemented minimum fix:
+
+- `HomeScreen` now computes a separate Video UI load state instead of passing
+  request loading through directly.
+- If boot remote sync is `timeout` / `failed` and there are no visible Video
+  rows, the Video tab shows a retryable delayed-sync empty state rather than the
+  loading spinner.
+- `VideoArchiveList` has a dedicated `delayed` state with user-facing copy:
+  "영상 기록 동기화가 지연 중입니다".
+- QA Debug now shows both Video request diagnostics and the actual Video UI
+  state, so future screenshots can distinguish `Video loading` from `ui delayed`.
+
+Validation:
+
+- `npm run typecheck` passed.
+- `git diff --check` passed.
+- Simulator no-data Video tab should be rechecked in the next local/device QA
+  pass; no EAS build was run for this fix.
+
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated

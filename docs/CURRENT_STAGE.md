@@ -106,6 +106,22 @@ Build 88 Email Recovery fresh-link QA follow-up, 2026-06-27:
   email-link return plus app relaunch display. Do not send another recovery email
   until that build is installed for the intended QA.
 
+Build QA Video tab loading-state follow-up, 2026-06-27:
+
+- Build QA screenshots showed a no-records case where boot remote Moment sync
+  timed out around 8 seconds and the Video tab could still show the
+  "Wake Board Loading..." card even with home/archive/shown counts at 0.
+- Root cause: `VideoArchiveList` already supported timeout/error states, but
+  `HomeScreen` could still pass a user-facing `loading` state while boot sync
+  was already `timeout` / `failed` and no fallback sessions existed.
+- Minimal fix: Video tab now derives a separate UI load state. If boot sync is
+  delayed and there are no visible Video rows, it shows a retryable delayed-sync
+  empty state instead of an indefinite loading card. QA Debug still keeps the
+  underlying Boot/Video diagnostics and now also shows the actual Video UI state.
+- Validation: `npm run typecheck` passed. Next standalone QA should verify that
+  timeout + count 0 shows "영상 기록 동기화가 지연 중입니다" rather than
+  "Wake Board Loading...".
+
 Email Recovery deep-link / redirect status, 2026-06-26:
 
 - Email Recovery send path exists and current-account email connection

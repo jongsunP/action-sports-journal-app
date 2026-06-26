@@ -495,7 +495,11 @@ Backlog after Push Token Account-switch Policy and product UX review:
   divergence. A P1 minimum fix now records boot retry/recovery as
   `recovered_after_timeout`, lets Video show Home sessions as a temporary
   archive fallback while first-page sync catches up, and adds QA Debug
-  home/archive/shown counts.
+  home/archive/shown counts. A later Build QA screenshot found the no-records
+  timeout case could still show "Wake Board Loading..."; `HomeScreen` now maps
+  boot timeout/failed + zero visible Video rows to a retryable delayed-sync UI
+  state, and QA Debug prints the actual Video UI state separately from the fetch
+  diagnostics.
 - QA Debug Overlay/Panel: Build 85 real-device QA passed for the current P1
   scope. Keep it available during current testing; apply hide/remove policy
   right before real service production distribution.
