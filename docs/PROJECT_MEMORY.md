@@ -179,13 +179,13 @@ Current stable workstream list:
 - Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)
 - Initial Loading / Video Tab Spinner Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
 - QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)
+- Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 86 재QA 대기
 - Email Recovery Connection P1 QA: fresh email confirmation link 클릭 시 `actionsportsjournal://auth/email/change` 앱 복귀, Email linked 상태, relaunch persistence 확인
-- Real-use Loading Diagnosis(실사용 로딩 진단): QA Debug 로그에서 `Remote moment sync timed out` 재관찰, 개발 세션 분석/최소 수정 흐름 진행 중
-- Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차): 최소 수정 및 simulator/local 확인
+- Real-use Loading Diagnosis P1 QA(실사용 로딩 진단 1차 QA): simulator 확인은 개발 세션에서 미확인으로 남았고, 다음 QA build에서 Boot status `recovered_after_timeout`, Counts home / archive / shown, Video fallback copy 확인 필요
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책)
 - Recovery Attempt Observability(복구 시도 관측성)
