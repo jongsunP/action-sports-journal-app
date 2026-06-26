@@ -132,16 +132,11 @@ to decide or act, do not add a user-facing action section.
 When the Founder asks what remains or asks for current status, do not list only
 recent chat items. Use the remote-backed stable ASJ workstream list below as
 the canonical source. Do not improvise a new list structure per session. Show
-it in time order with these sections:
+it with these two sections:
 
 ```text
-완료된 기반:
-지속 원칙:
-현재 상태:
-바로 앞 작업:
-가까운 후속:
-나중에 해도 좋은 것:
-장기 보관 목록:
+완료:
+현재 남은 과제:
 ```
 
 Keep this summary concise and easy to scan.
@@ -158,7 +153,7 @@ blocked, deferred, or split, keep the item visible and mark its status.
 Current stable workstream list:
 
 ```text
-완료된 기반:
+완료:
 - Upload Part 1(업로드 1차)
 - Upload Reliability P0/P1(업로드 안정화)
 - State Sync / Polling Removal(상태 동기화 / 폴링 제거)
@@ -185,26 +180,17 @@ Current stable workstream list:
 - Initial Loading / Video Tab Spinner Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
 - QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)
 
-지속 원칙:
-- Anonymous-first Guardrail(익명 사용자 우선 원칙 유지)
-
-현재 상태:
-- Email Recovery Connection P1(이메일 복구 수단 연결 1차)은 구현 완료, Supabase Site URL 수정 완료, Build 86 재QA 대기
-- Fresh email로 confirmation link 클릭 시 `actionsportsjournal://auth/email/change` 앱 복귀, Email linked 상태, relaunch persistence 확인
+현재 남은 과제:
+- Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
+- Email Recovery Connection P1(이메일 복구 수단 연결 1차): 구현 완료, Supabase Site URL 수정 완료, Build 86 재QA 대기
+- Email Recovery Connection P1 QA: fresh email confirmation link 클릭 시 `actionsportsjournal://auth/email/change` 앱 복귀, Email linked 상태, relaunch persistence 확인
 - Real-use Loading Diagnosis(실사용 로딩 진단): QA Debug 로그에서 `Remote moment sync timed out` 재관찰, 개발 세션 분석/최소 수정 흐름 진행 중
-
-바로 앞 작업:
-- Build 86 Email Recovery Connection P1(이메일 복구 수단 연결 1차) 재QA
-- Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차) 최소 수정 및 simulator/local 확인
-
-가까운 후속:
+- Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차): 최소 수정 및 simulator/local 확인
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책)
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
-
-나중에 해도 좋은 것:
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
 - Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback)
@@ -212,8 +198,6 @@ Current stable workstream list:
 - Media / Share UX(미디어 / 공유 경험)
 - Future Media UX Improvements(향후 미디어 경험 개선)
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
-
-장기 보관 목록:
 - Email Recovery Sign-in(이메일 기존 기록 복구 로그인)은 아직 미구현. 앱 삭제/재설치 후 이메일로 기존 기록 복구는 후속 별도 범위
 - Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
 - Email Custom SMTP(이메일 발송 설정)
