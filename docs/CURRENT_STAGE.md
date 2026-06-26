@@ -254,11 +254,32 @@ Build 84 real-device QA result:
 - Whether the OAuth-layer perceived steps can be reduced remains a separate
   backlog item, not a blocker for the ASJ one-click CTA requirement.
 
-Next investigation:
+Build 85 Startup / Video Loading Observability QA result:
 
-- Startup / Video Tab Loading Observability P1. Separate acceptable
-  infrastructure cold start or network latency from app-side missing timeout,
-  missing error/empty state, or infinite loading bugs.
+- Build 85 passed real-device QA for Startup / Video Tab Loading
+  Observability P1 and the QA Debug Overlay/Panel.
+- The QA button is visible in the preview/internal build and does not
+  materially block the main tab interactions.
+- The QA panel exposes auth/bootstrap, boot remote sync, and Video archive
+  first-page state directly on device.
+- Boot sync status, durationMs, count, hasMore, reason, and update time are
+  visible.
+- Video first-page status, durationMs, count, hasMore, reason, retry count, and
+  update time are visible.
+- The Video tab no longer appears trapped in an indefinite spinner for the
+  tested path; timeout/error states now have a retryable UI path.
+- No sensitive values are shown in the panel: no access token, refresh token,
+  full callback URL, email/name, or full user id.
+
+Current follow-up:
+
+- If slow startup or Video spinner behavior recurs, capture the QA panel values
+  first and classify whether the cause is app state, network latency, Render
+  cold start, or Supabase latency.
+- Render/Supabase plan upgrade should only be considered after QA panel values
+  point to infrastructure latency.
+- Auth bootstrap timeout/observability remains a later backlog item.
+- QA Debug Panel needs a hide/remove policy before production distribution.
 
 Detail Menu / Retry Eligibility Polish, 2026-06-26:
 
@@ -422,8 +443,10 @@ Included QA surface:
 Current follow-up status:
 
 Build 82 led to the Kakao Single CTA recovery routing work that was completed
-through Build 84. The active next work is no longer Build 82 review; it is
-Startup / Video Tab Loading Observability P1.
+through Build 84. Build 85 then completed Startup / Video Tab Loading
+Observability P1 for the current preview/internal QA scope. Initial loading and
+Video spinner issues should now be triaged from QA panel values before changing
+product code or infrastructure.
 
 Build 74 Push QA / milestone closeout, 2026-06-24:
 

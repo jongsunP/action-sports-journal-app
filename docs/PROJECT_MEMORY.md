@@ -182,6 +182,8 @@ Current stable workstream list:
 - Upload Entry UX Polish(업로드 진입 UX 정리)
 - Analysis Trust UX(분석 신뢰 UX)
 - Kakao Single CTA Recovery UX(카카오 단일 CTA 복구 UX)
+- Initial Loading / Video Tab Spinner Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
+- QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)
 
 현재 상태:
 - Anonymous-first(익명 사용자 우선) 구조 유지
@@ -202,12 +204,17 @@ Current stable workstream list:
 - Upload Entry UX Polish(업로드 진입 UX 정리)는 route-backed Upload 화면 유지, 빠른 영상 선택/확인/업로드 안내 copy로 완료
 - Analysis Trust UX(분석 신뢰 UX)는 Detail 분석 요약의 신뢰 안내, 판단 근거, 확인 필요 표시 정리로 완료
 - Build 84 Kakao One-click Recovery QA(빌드 84 카카오 원클릭 복구 QA)는 실기기 통과. OAuth 계층의 `계속` 체감 단계 줄이기는 후속 backlog
+- Build 85 Startup / Video Loading Observability QA(빌드 85 초기 로딩 / 영상 탭 관측성 QA)는 실기기 통과. QA 버튼과 QA panel에서 auth / boot sync / video first page 상태, durationMs, count, reason, retry count 확인 가능
+- QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)는 현재 preview/internal QA 범위에서 완료. access token, refresh token, full callback URL, email/name/full user id 미노출 확인
 
 바로 앞 작업:
-- Build 84 Kakao One-click Recovery QA Result Recording(빌드 84 카카오 원클릭 복구 결과 기록)
+- Build 85 Startup / Video Loading Observability QA Result Recording(빌드 85 초기 로딩 / 영상 탭 관측성 QA 결과 기록)
 
 가까운 후속:
-- Startup / Video Tab Loading Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
+- 실제 느린 초기 부팅 / Video spinner 재발 시 QA panel 값으로 원인 분리
+- Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
+- QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책)
+- Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)

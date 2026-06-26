@@ -501,6 +501,9 @@ semantics explicit.
 
 ## Startup / Video Tab Loading Observability P1 - 2026-06-26
 
+Status: complete for the current P1 preview/internal QA scope. Build 85
+real-device QA passed.
+
 ### Problem
 
 After time passes or the user changes location/network, startup can feel slow
@@ -537,6 +540,32 @@ Separate infrastructure latency from app bugs by adding or confirming
 observability before changing UX. P0/P1 fixes should focus on preventing
 indefinite loading, showing a clear retry/error/empty state, and logging enough
 reason data to classify the failure path.
+
+### Build 85 QA result
+
+- Build 85 passed real-device QA for Startup / Video Tab Loading
+  Observability P1 and the QA Debug Overlay/Panel.
+- QA button visibility confirmed.
+- QA panel shows auth/bootstrap, boot remote sync, and Video archive first-page
+  state.
+- Boot sync displays status, durationMs, count, hasMore, reason, and updated
+  time.
+- Video first page displays status, durationMs, count, hasMore, reason, retry
+  count, and updated time.
+- Video tab did not remain trapped in an indefinite spinner on the tested path.
+- Timeout/error states have a retryable UI path instead of endless loading.
+- QA panel did not materially block major tab interactions.
+- Sensitive information was not exposed: no access token, refresh token, full
+  callback URL, email/name, or full user id.
+
+### Remaining follow-up
+
+1. If slow startup or Video spinner behavior recurs, collect QA panel values
+   before changing code or infrastructure.
+2. Consider Render/Supabase plan upgrade only if QA panel values point to
+   infrastructure latency.
+3. Auth bootstrap timeout/observability remains a later backlog item.
+4. QA Debug Panel needs a hide/remove policy before production distribution.
 
 ## Email Recovery / Account Linking QA - 2026-06-24
 

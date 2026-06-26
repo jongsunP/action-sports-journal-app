@@ -454,8 +454,11 @@ Backlog after Push Token Account-switch Policy and product UX review:
 - Recovery attempt observability row/log design, if desired.
 - Email Recovery deep link / redirect.
 - Kakao display_name sync.
-- Initial Loading / Video Tab Spinner Observability. This is the next active
-  investigation after Build 84.
+- Initial Loading / Video Tab Spinner Observability: Build 85 real-device QA
+  passed for the current P1 scope. Use QA panel values first if the issue
+  recurs.
+- QA Debug Overlay/Panel: Build 85 real-device QA passed for the current P1
+  scope. Define hide/remove policy before production distribution.
 - Keep Email Recovery as baseline/fallback; Kakao Recovery Method Linking is
   verified, and Kakao Recovery Sign-in P1 is verified on Build 81.
 
@@ -583,10 +586,14 @@ Analysis Trust UX implementation notes:
 
 Next starting point:
 
-Startup / Video Tab Loading Observability P1 is the next starting point. Build
-84 Kakao one-click recovery passed, and the next known user pain is slow startup
-or Video/List spinner behavior after time/network changes. Start with read-only
-flow investigation before implementing.
+Startup / Video Tab Loading Observability P1 is complete for the current
+preview/internal QA scope. Build 85 confirmed that the QA button appears, the QA
+panel exposes auth / boot sync / Video archive first-page state, Video does not
+remain trapped in an indefinite spinner on the tested path, and timeout/error
+states have a retryable UI path. If slow startup or spinner behavior recurs,
+ask for the QA panel values first instead of guessing. Auth bootstrap
+timeout/observability and production hide/remove policy for the QA Debug Panel
+remain follow-up backlog items.
 
 Build 82 details:
 
@@ -2639,19 +2646,20 @@ If the backend URL changes, update this EAS preview variable and rebuild.
 
 ## Recommended Next Step
 
-Do not add unrelated product features yet. Build 84 Kakao one-click recovery QA
-passed, so the next active work is Startup / Video Tab Loading Observability P1.
+Do not add unrelated product features yet. Build 85 Startup / Video Loading
+Observability QA passed, so initial loading / Video spinner work should now be
+treated as an observed baseline rather than an active unknown.
 
-Start with read-only investigation:
+If the issue recurs:
 
-1. Map auth/session/bootstrap loading in `AuthSessionProvider`.
-2. Map local storage restore and initial remote Moment sync in `useBootSync`.
-3. Map Video Archive first-page loading and pagination state in `HomeScreen` and
-   `sessionComponents`.
-4. Separate acceptable infrastructure latency from app-side missing timeout,
-   missing error/empty state, or infinite spinner behavior.
-5. Do not change Upload, Kakao/Auth, DB, EAS build number, or AI paths during
-   the first observability investigation.
+1. Capture QA panel values for auth/bootstrap, boot remote sync, and Video
+   first-page state.
+2. Classify whether the panel points to app state, network latency, Render cold
+   start, or Supabase latency.
+3. Only consider Render/Supabase plan upgrades after panel evidence points to
+   infrastructure.
+4. Keep Auth bootstrap timeout/observability and QA Debug Panel production
+   hide/remove policy as separate follow-up backlog.
 
 ## Related Personal Context Repo
 
