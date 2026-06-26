@@ -16,7 +16,13 @@ Before adding new memory, search the existing approved read path for the same
 idea. If the idea already exists, update or tighten the canonical section
 instead of appending another similar rule. Duplicate memory makes future CTO and
 development sessions drift, so durable notes should be merged into the existing
-source-of-truth whenever possible.
+source-of-truth whenever possible. This applies to every ASJ-related agent and
+session, including CTO, development, QA, and handoff sessions.
+
+The Founder may express the same principle in different words across sessions.
+Agents should normalize the intent, compare it with the existing canonical
+rules, and maintain one updated operating rule instead of preserving repeated
+phrasing as separate memories.
 
 ## Project Identity
 
