@@ -812,9 +812,9 @@ method connected state, and read-only DB/Auth checks confirmed:
 Follow-up backlog:
 
 - Kakao linking UX: make connected, failed, and cancelled states more explicit.
-- Kakao metadata sync: decide whether Kakao `name` / `full_name` should update
-  `public.users.display_name`; current QA kept display name as the email while
-  Kakao identity data contained `박종선`.
+- Kakao metadata sync: investigated on 2026-06-26. Auth `user_metadata`
+  contains Kakao name candidates and the current `public.users.display_name` is
+  already a Kakao-name value, so no immediate implementation is needed.
 - Moment ownership continuity: rerun with a user that already has Moments. The
   Build 75 QA user had `moments` count `0`, so preservation was verified by
   ownership structure, not by a real existing Moment sample.
@@ -858,9 +858,26 @@ Build 81 QA verified:
 
 Remaining follow-up checks:
 
-1. Decide whether Kakao name/full_name should sync to `public.users.display_name`.
+1. Kakao display_name sync: no immediate implementation needed. Later, add
+   `preferred_username` / `user_name` fallback only if smoke evidence shows
+   Kakao profiles missing `name` / `full_name`.
 2. Keep Realtime recovered-auth-channel verification in the ownership continuity
    follow-up if additional DB/log evidence is needed.
+
+Kakao display_name sync policy:
+
+- Use Auth `user_metadata` as the safer source for Kakao display names.
+  Supabase admin `listUsers` did not reliably expose `identities[]` in the
+  read-only check.
+- Current observed metadata includes `name`, `full_name`, `preferred_username`,
+  and `user_name`.
+- `AccountRecoveryScreen` already reads Kakao display copy from Auth
+  `user_metadata`, not from `public.users.display_name`.
+- `resolveRequestUser(request)` already syncs `user_metadata.full_name` /
+  `name` to `public.users.display_name` on authenticated API requests.
+- Kakao email is optional; do not require email for display_name sync.
+- If ASJ later adds user-editable display names, revisit overwrite policy so
+  Kakao metadata does not blindly replace a user-customized value.
 
 Risks / QA gates:
 

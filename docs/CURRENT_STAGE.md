@@ -148,7 +148,11 @@ build, paid AI call, DB migration, or external console change was performed.
 
 No BLOCKED foundation item was found. The next foundation follow-ups are
 optional recovery-attempt observability and Email Recovery deep-link strategy.
-Kakao display-name sync remains low urgency.
+Kakao display-name sync has been investigated. Current Auth metadata provides
+Kakao name candidates and the current `public.users.display_name` is already a
+Kakao-name value, so immediate implementation is not needed. Keep only
+`preferred_username` / `user_name` fallback and future user-edit overwrite
+policy as low-priority follow-up.
 
 Post-foundation Product UX Next-Step Review, 2026-06-26:
 
@@ -527,6 +531,25 @@ Server-side, `resolveRequestUser(request)` now updates the existing
 `public.users` profile email/display name when the bearer-token Supabase Auth
 user changes, instead of creating a new app user. QA still needs to verify the
 email template/OTP behavior and confirm ownership continuity after linking.
+
+Kakao display_name sync policy, 2026-06-26:
+
+- Supabase Auth `user_metadata` currently includes Kakao name candidates:
+  `name`, `full_name`, `preferred_username`, and `user_name`.
+- The current `public.users.display_name` is already synchronized to a
+  Kakao-name value, not an email fallback.
+- `AccountRecoveryScreen` reads Kakao display copy from Auth `user_metadata`,
+  not from `public.users.display_name`.
+- `resolveRequestUser(request)` syncs `user_metadata.full_name` / `name` into
+  `public.users.display_name` on authenticated API requests.
+- Therefore no immediate code implementation is needed.
+- `preferred_username` / `user_name` fallback is a low-priority follow-up.
+- If ASJ later adds user-editable display names, Kakao metadata must not
+  blindly overwrite a user-customized value.
+- Kakao email is optional and must not be required for display_name sync.
+- Supabase admin `listUsers` did not reliably expose `identities[]` in the
+  read-only check, so `user_metadata` is the safer sync source than
+  `identity_data`.
 
 Email Recovery E2E blocker, 2026-06-24:
 

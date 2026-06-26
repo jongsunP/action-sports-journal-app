@@ -634,8 +634,9 @@ Next start point:
 
 Post-push-token account-switch hardening. Start with optional recovery-attempt
 observability, Email Recovery deep-link strategy, or product UX work depending
-on CTO/user alignment. Kakao `name` / `full_name` ->
-`public.users.display_name` sync is low urgency.
+on CTO/user alignment. Kakao display_name sync has been investigated and does
+not need immediate implementation; keep only low-priority metadata fallback and
+future overwrite-policy work in backlog.
 
 Build 74 Push QA / current handoff, 2026-06-24:
 
@@ -834,9 +835,11 @@ Kakao follow-ups:
 
 - Improve the connected/error/cancel states so success and failure are more
   explicit to the user.
-- Decide whether Kakao `name` / `full_name` should update
-  `public.users.display_name`; the QA identity contained `박종선`, while
-  `public.users.display_name` currently stayed as `parksunl7@naver.com`.
+- Kakao display_name sync investigation is complete. Current Supabase Auth
+  `user_metadata` contains Kakao name candidates (`name`, `full_name`,
+  `preferred_username`, `user_name`), and the current `public.users.display_name`
+  is already synchronized to the Kakao-name family rather than an email value.
+  No immediate code change is required.
 - Re-check ownership continuity on an account that already has Moments.
 
 Kakao Recovery Sign-in design decision:
@@ -918,9 +921,11 @@ Kakao linkIdentity implementation plan:
   can sync display metadata into the existing `public.users` row.
 - `resolveRequestUser(request)` already syncs `email` and display name from
   `user_metadata.full_name` / `name`. Kakao without email should leave
-  `public.users.email` null. If Kakao nickname appears under a different
-  metadata key, update the server sync narrowly after smoke evidence identifies
-  the exact key.
+  `public.users.email` null. The 2026-06-26 read-only check found Kakao name
+  candidates in Auth `user_metadata` and confirmed `public.users.display_name`
+  was already a Kakao-name value. If future Kakao profiles only expose
+  `preferred_username` / `user_name`, add that fallback narrowly. Do not treat
+  Kakao email as required for display_name sync.
 - For no-email Kakao, UI should show "카카오 연결됨" and nickname if available.
   Do not imply email recovery when Kakao does not provide `account_email`.
 - Ownership continuity smoke must verify: Supabase Auth user id unchanged,

@@ -218,9 +218,11 @@ Current stable workstream list:
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Recovery Attempt Observability(복구 시도 관측성)
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
+- Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
 
 나중에 해도 좋은 것:
-- Kakao display_name Sync(카카오 이름 동기화)
+- Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback)
+- 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토
 - Media / Share UX(미디어 / 공유 경험)
 - Future Media UX Improvements(향후 미디어 경험 개선)
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
@@ -548,8 +550,9 @@ settled.
 
 Immediate next work:
 
-1. Decide whether Kakao `name` / `full_name` should sync to
-   `public.users.display_name`.
+1. Kakao display_name sync decision is complete: current Auth metadata and
+   `public.users.display_name` already use the Kakao-name family. No immediate
+   code implementation is needed.
 2. Keep Journal / Analysis / Media UX expansion behind the foundation-hardening
    queue.
 
