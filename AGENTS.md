@@ -116,6 +116,16 @@ reports the result, then decide whether to send a development-session follow-up.
 When presenting build QA to the Founder, show the install/build link separately
 first, then provide the QA checklist.
 
+Session start/resume rule:
+
+When the Founder says to start, resume, continue, or "작업을 재개하자", begin
+from remote-backed state. Pull `codex-personal-context` and this project repo,
+then read every known relevant source that can be checked: personal context,
+project `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/CURRENT_STAGE.md`,
+`docs/HANDOFF.md`, and relevant TODO/tech-debt docs. Do not rely only on local
+chat memory, because previous work may have happened from another device or
+session.
+
 Session closeout rule:
 
 The Founder may continue work from another device, so completed work must be

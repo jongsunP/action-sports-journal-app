@@ -307,6 +307,17 @@ when the change is a general workflow preference, the personal context
 repository too. Commit and push safe documentation changes before ending the
 session, and leave the next starting point clear.
 
+Session start/resume rule:
+
+When the Founder says to start, resume, continue, or "작업을 재개하자", the CTO
+session must first synchronize remote-backed context. Pull
+`codex-personal-context` and the ASJ project repository, then check every known
+relevant source that is available: personal context, project `AGENTS.md`,
+`docs/PROJECT_MEMORY.md`, `docs/CURRENT_STAGE.md`, `docs/HANDOFF.md`, and
+relevant TODO/tech-debt documents. Treat remote Git-backed information as the
+source of truth because prior work may have happened from another device or
+session. At closeout, push durable decisions and handoff state back to remote.
+
 For terminal tasks, always provide a copyable shell block that starts by
 changing into the project directory.
 
