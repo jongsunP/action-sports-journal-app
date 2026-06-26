@@ -96,6 +96,8 @@ import type { RemoteMomentRecord } from '../../services/moments';
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
+const ENABLE_QA_DEBUG_PANEL =
+  process.env.EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL !== 'false';
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 type RemoteRefreshReason =
@@ -112,6 +114,22 @@ type RemoteMomentFirstPage = {
   moments: RemoteMomentRecord[];
   hasMore: boolean;
   nextCursor: string | null;
+};
+type RequestDiagnosticsStatus =
+  | 'empty'
+  | 'error'
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'timeout';
+type RequestDiagnostics = {
+  count: number | null;
+  durationMs: number | null;
+  hasMore: boolean | null;
+  reason: string | null;
+  retryCount: number;
+  status: RequestDiagnosticsStatus;
+  updatedAt: number | null;
 };
 type AuthCacheOwnerKey =
   | 'internalFallback'
@@ -136,6 +154,26 @@ function isRemoteRequestTimeout(error: unknown) {
     error instanceof Error &&
     error.message.toLowerCase().includes('timed out')
   );
+}
+
+function compactDebugReason(reason: string | null) {
+  if (!reason) {
+    return '-';
+  }
+
+  return reason.replace(/\s+/g, ' ').slice(0, 72);
+}
+
+function formatDebugTimestamp(updatedAt: number | null) {
+  if (!updatedAt) {
+    return '-';
+  }
+
+  return new Date(updatedAt).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 function ensureAnalysisPushRegistration(source: string) {
@@ -227,6 +265,17 @@ export function HomeScreen() {
     useState(false);
   const [videoArchiveLoadState, setVideoArchiveLoadState] =
     useState<VideoArchiveLoadState>('empty');
+  const [isQADebugPanelOpen, setIsQADebugPanelOpen] = useState(false);
+  const [videoArchiveDiagnostics, setVideoArchiveDiagnostics] =
+    useState<RequestDiagnostics>({
+      count: null,
+      durationMs: null,
+      hasMore: null,
+      reason: null,
+      retryCount: 0,
+      status: 'empty',
+      updatedAt: null,
+    });
   const [
     isLoadingMoreVideoArchiveMoments,
     setIsLoadingMoreVideoArchiveMoments,
@@ -596,6 +645,7 @@ export function HomeScreen() {
     initialRemoteMomentPageInfo,
     initialRemoteMoments,
     markRemoteMomentSyncCompleted,
+    remoteMomentSyncDiagnostics,
     remoteMomentSyncStatus,
   } = useBootSync({
     initialGroupId: ACTIVE_WAKEBOARD_GROUP_ID,
@@ -830,6 +880,14 @@ export function HomeScreen() {
       setVideoArchiveNextCursor(remoteMomentPage.nextCursor);
       setHasLoadedVideoArchiveFirstPage(true);
       setVideoArchiveLoadState('ready');
+      setVideoArchiveDiagnostics((current) => ({
+        ...current,
+        count: remoteMomentPage.moments.length,
+        hasMore: remoteMomentPage.hasMore,
+        reason: null,
+        status: remoteMomentPage.moments.length > 0 ? 'ready' : 'empty',
+        updatedAt: Date.now(),
+      }));
     },
     [
       expireUnmatchedUploadReconciliationCandidates,
@@ -1233,6 +1291,15 @@ export function HomeScreen() {
       hasMore: initialRemoteMomentPageInfo.hasMore,
       nextCursor: initialRemoteMomentPageInfo.nextCursor,
     });
+    setVideoArchiveDiagnostics((current) => ({
+      ...current,
+      count: initialRemoteMoments.length,
+      durationMs: remoteMomentSyncDiagnostics.durationMs,
+      hasMore: initialRemoteMomentPageInfo.hasMore,
+      reason: remoteMomentSyncDiagnostics.reason,
+      status: initialRemoteMoments.length > 0 ? 'ready' : 'empty',
+      updatedAt: Date.now(),
+    }));
   }, [
     applyVideoArchiveFirstPage,
     canUseRemoteApi,
@@ -1241,6 +1308,8 @@ export function HomeScreen() {
     initialRemoteMomentPageInfo.hasMore,
     initialRemoteMomentPageInfo.nextCursor,
     initialRemoteMoments,
+    remoteMomentSyncDiagnostics.durationMs,
+    remoteMomentSyncDiagnostics.reason,
     remoteMomentSyncStatus,
   ]);
   const appendVideoArchiveSessionIds = useCallback((sessionIds: string[]) => {
@@ -1271,6 +1340,15 @@ export function HomeScreen() {
     setIsLoadingVideoArchiveInitialPage(true);
     setVideoArchiveLoadState('loading');
     const startedAt = Date.now();
+    setVideoArchiveDiagnostics((current) => ({
+      ...current,
+      count: null,
+      durationMs: null,
+      hasMore: null,
+      reason: null,
+      status: 'loading',
+      updatedAt: startedAt,
+    }));
 
     console.info('[moment_sync]', {
       event: 'video_archive_first_page_started',
@@ -1283,6 +1361,15 @@ export function HomeScreen() {
       .then((remoteMomentPage) => {
         syncRemoteMoments(remoteMomentPage.moments);
         applyVideoArchiveFirstPage(remoteMomentPage);
+        setVideoArchiveDiagnostics((current) => ({
+          ...current,
+          count: remoteMomentPage.moments.length,
+          durationMs: getRequestDurationMs(startedAt),
+          hasMore: remoteMomentPage.hasMore,
+          reason: null,
+          status: remoteMomentPage.moments.length > 0 ? 'ready' : 'empty',
+          updatedAt: Date.now(),
+        }));
         console.info('[moment_sync]', {
           count: remoteMomentPage.moments.length,
           durationMs: getRequestDurationMs(startedAt),
@@ -1293,16 +1380,26 @@ export function HomeScreen() {
       })
       .catch((error) => {
         const status = isRemoteRequestTimeout(error) ? 'timeout' : 'error';
+        const reason = error instanceof Error ? error.message : 'Unknown error';
         setVideoArchiveLoadState(status);
+        setVideoArchiveDiagnostics((current) => ({
+          ...current,
+          count: null,
+          durationMs: getRequestDurationMs(startedAt),
+          hasMore: null,
+          reason,
+          status,
+          updatedAt: Date.now(),
+        }));
         console.info('[moment_sync]', {
           durationMs: getRequestDurationMs(startedAt),
           event: 'video_archive_first_page_finished',
-          reason: error instanceof Error ? error.message : 'Unknown error',
+          reason,
           status,
         });
         console.warn(
           'Supabase video archive initial page failed:',
-          error instanceof Error ? error.message : 'Unknown error',
+          reason,
         );
       })
       .finally(() => {
@@ -1315,6 +1412,14 @@ export function HomeScreen() {
     isLoadingVideoArchiveInitialPage,
     syncRemoteMoments,
   ]);
+  const handleRetryVideoArchiveFirstPage = useCallback(() => {
+    setVideoArchiveDiagnostics((current) => ({
+      ...current,
+      retryCount: current.retryCount + 1,
+      updatedAt: Date.now(),
+    }));
+    loadInitialVideoArchivePage();
+  }, [loadInitialVideoArchivePage]);
 
   useEffect(() => {
     if (
@@ -1722,6 +1827,15 @@ export function HomeScreen() {
     setHasLoadedVideoArchiveFirstPage(false);
     setHasMountedVideoTab(false);
     setVideoArchiveLoadState('empty');
+    setVideoArchiveDiagnostics({
+      count: null,
+      durationMs: null,
+      hasMore: null,
+      reason: null,
+      retryCount: 0,
+      status: 'empty',
+      updatedAt: Date.now(),
+    });
     setIsLoadingVideoArchiveInitialPage(false);
     setIsLoadingMoreVideoArchiveMoments(false);
 
@@ -1857,6 +1971,27 @@ export function HomeScreen() {
     uploadDraft,
     uploadProgress,
   ]);
+  const qaDebugSnapshot = useMemo(
+    () => ({
+      auth: {
+        hasUser: Boolean(user),
+        isAnonymous: Boolean(
+          (user as { is_anonymous?: boolean } | null)?.is_anonymous,
+        ),
+        isLoading: isAuthLoading,
+        mode: authMode,
+      },
+      boot: remoteMomentSyncDiagnostics,
+      video: videoArchiveDiagnostics,
+    }),
+    [
+      authMode,
+      isAuthLoading,
+      remoteMomentSyncDiagnostics,
+      user,
+      videoArchiveDiagnostics,
+    ],
+  );
 
   if (isAuthLoading || isLoadingInitialMoments) {
     return (
@@ -2025,7 +2160,7 @@ export function HomeScreen() {
       }
       onEndReached={handleLoadMoreVideoArchiveMoments}
       onOpenSession={openEvidenceSheet}
-      onRetry={loadInitialVideoArchivePage}
+      onRetry={handleRetryVideoArchiveFirstPage}
       sessions={videoArchiveSessionSummaries}
       styles={styles}
     />
@@ -2113,7 +2248,102 @@ export function HomeScreen() {
           </View>
         </Pressable>
       ) : null}
+      <QADebugPanel
+        isOpen={isQADebugPanelOpen}
+        onToggle={() => setIsQADebugPanelOpen((current) => !current)}
+        snapshot={qaDebugSnapshot}
+        styles={styles}
+      />
     </SafeAreaView>
+  );
+}
+
+function QADebugPanel({
+  isOpen,
+  onToggle,
+  snapshot,
+  styles,
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+  snapshot: {
+    auth: {
+      hasUser: boolean;
+      isAnonymous: boolean;
+      isLoading: boolean;
+      mode: string;
+    };
+    boot: {
+      count: number | null;
+      durationMs: number | null;
+      hasMore: boolean | null;
+      reason: string | null;
+      status: string;
+      updatedAt: number | null;
+    };
+    video: RequestDiagnostics;
+  };
+  styles: Record<string, object>;
+}) {
+  if (!ENABLE_QA_DEBUG_PANEL) {
+    return null;
+  }
+
+  if (!isOpen) {
+    return (
+      <Pressable
+        accessibilityLabel="QA debug panel 열기"
+        accessibilityRole="button"
+        onPress={onToggle}
+        style={({ pressed }) => [
+          styles.qaDebugCollapsed,
+          pressed ? styles.buttonPressed : undefined,
+        ]}
+      >
+        <Text style={styles.qaDebugCollapsedText}>QA</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.qaDebugPanel}>
+      <Pressable
+        accessibilityLabel="QA debug panel 닫기"
+        accessibilityRole="button"
+        onPress={onToggle}
+        style={({ pressed }) => [
+          styles.qaDebugHeader,
+          pressed ? styles.buttonPressed : undefined,
+        ]}
+      >
+        <Text style={styles.qaDebugTitle}>QA Debug</Text>
+        <Text style={styles.qaDebugCollapseHint}>접기</Text>
+      </Pressable>
+      <Text style={styles.qaDebugLine}>
+        Auth {snapshot.auth.mode} · loading {snapshot.auth.isLoading ? 'Y' : 'N'} ·
+        user {snapshot.auth.hasUser ? 'Y' : 'N'} · anon{' '}
+        {snapshot.auth.isAnonymous ? 'Y' : 'N'}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Boot {snapshot.boot.status} · {snapshot.boot.durationMs ?? '-'}ms · count{' '}
+        {snapshot.boot.count ?? '-'} · more{' '}
+        {snapshot.boot.hasMore === null ? '-' : snapshot.boot.hasMore ? 'Y' : 'N'}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Boot at {formatDebugTimestamp(snapshot.boot.updatedAt)} · reason{' '}
+        {compactDebugReason(snapshot.boot.reason)}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video {snapshot.video.status} · {snapshot.video.durationMs ?? '-'}ms ·
+        count {snapshot.video.count ?? '-'} · more{' '}
+        {snapshot.video.hasMore === null ? '-' : snapshot.video.hasMore ? 'Y' : 'N'} ·
+        retry {snapshot.video.retryCount}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video at {formatDebugTimestamp(snapshot.video.updatedAt)} · reason{' '}
+        {compactDebugReason(snapshot.video.reason)}
+      </Text>
+    </View>
   );
 }
 
@@ -2255,6 +2485,66 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 16,
     marginTop: 2,
+  },
+  qaDebugCollapsed: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderColor: 'rgba(148, 163, 184, 0.42)',
+    borderRadius: 999,
+    borderWidth: 1,
+    bottom: 88,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    position: 'absolute',
+    right: 16,
+    zIndex: 70,
+  },
+  qaDebugCollapsedText: {
+    color: '#bae6fd',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+  },
+  qaDebugPanel: {
+    backgroundColor: 'rgba(2, 6, 23, 0.92)',
+    borderColor: 'rgba(148, 163, 184, 0.34)',
+    borderRadius: 14,
+    borderWidth: 1,
+    bottom: 88,
+    maxWidth: 330,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    position: 'absolute',
+    right: 14,
+    width: '82%',
+    zIndex: 70,
+  },
+  qaDebugHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  qaDebugTitle: {
+    color: '#f8fafc',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  qaDebugCollapseHint: {
+    color: '#38bdf8',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  qaDebugLine: {
+    color: '#cbd5e1',
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: undefined,
+    }),
+    fontSize: 9,
+    lineHeight: 13,
   },
   bottomTabBar: {
     alignItems: 'center',

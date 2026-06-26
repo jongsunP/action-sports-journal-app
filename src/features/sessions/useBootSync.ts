@@ -63,6 +63,14 @@ export type RemoteMomentPageInfo = {
   hasMore: boolean;
   nextCursor: string | null;
 };
+export type RemoteMomentSyncDiagnostics = {
+  count: number | null;
+  durationMs: number | null;
+  hasMore: boolean | null;
+  reason: string | null;
+  status: RemoteMomentSyncStatus;
+  updatedAt: number | null;
+};
 
 function getRemoteMomentSyncDuration(startedAt: number) {
   return Date.now() - startedAt;
@@ -102,6 +110,17 @@ export function useBootSync({
     useState<RemoteMomentSyncStatus>(
       isRemoteMomentSyncConfigured ? 'waiting_for_storage' : 'not_configured',
     );
+  const [remoteMomentSyncDiagnostics, setRemoteMomentSyncDiagnostics] =
+    useState<RemoteMomentSyncDiagnostics>({
+      count: null,
+      durationMs: null,
+      hasMore: null,
+      reason: null,
+      status: isRemoteMomentSyncConfigured
+        ? 'waiting_for_storage'
+        : 'not_configured',
+      updatedAt: null,
+    });
   const previousRemoteMomentSyncEnabledRef = useRef(remoteMomentSyncEnabled);
   const hasStartedInitialRemoteSyncRef = useRef(false);
 
@@ -113,6 +132,12 @@ export function useBootSync({
     if (!remoteMomentSyncEnabled) {
       hasStartedInitialRemoteSyncRef.current = false;
       setRemoteMomentSyncStatus('not_configured');
+      setRemoteMomentSyncDiagnostics((current) => ({
+        ...current,
+        reason: null,
+        status: 'not_configured',
+        updatedAt: Date.now(),
+      }));
       return;
     }
 
@@ -127,6 +152,16 @@ export function useBootSync({
       setRemoteMomentSyncStatus(
         hasConfiguredSupabaseMoments() ? 'waiting_for_storage' : 'not_configured',
       );
+      setRemoteMomentSyncDiagnostics({
+        count: null,
+        durationMs: null,
+        hasMore: null,
+        reason: null,
+        status: hasConfiguredSupabaseMoments()
+          ? 'waiting_for_storage'
+          : 'not_configured',
+        updatedAt: Date.now(),
+      });
       return;
     }
 
@@ -135,6 +170,12 @@ export function useBootSync({
       remoteMomentSyncStatus === 'not_configured'
     ) {
       setRemoteMomentSyncStatus('waiting_for_storage');
+      setRemoteMomentSyncDiagnostics((current) => ({
+        ...current,
+        reason: null,
+        status: 'waiting_for_storage',
+        updatedAt: Date.now(),
+      }));
     }
   }, [remoteMomentSyncEnabled, remoteMomentSyncStatus]);
 
@@ -213,6 +254,14 @@ export function useBootSync({
     async function loadRemoteMoments() {
       setRemoteMomentSyncStatus('loading');
       const startedAt = Date.now();
+      setRemoteMomentSyncDiagnostics({
+        count: null,
+        durationMs: null,
+        hasMore: null,
+        reason: null,
+        status: 'loading',
+        updatedAt: startedAt,
+      });
 
       console.info('[moment_sync]', {
         event: 'boot_remote_moments_started',
@@ -237,6 +286,14 @@ export function useBootSync({
         setHasInitialRemoteMomentPage(true);
         didFinishInitialRemoteSync = true;
         setRemoteMomentSyncStatus('completed');
+        setRemoteMomentSyncDiagnostics({
+          count: remoteMomentPage.moments.length,
+          durationMs: getRemoteMomentSyncDuration(startedAt),
+          hasMore: remoteMomentPage.hasMore,
+          reason: null,
+          status: 'completed',
+          updatedAt: Date.now(),
+        });
         console.info('[moment_sync]', {
           count: remoteMomentPage.moments.length,
           durationMs: getRemoteMomentSyncDuration(startedAt),
@@ -247,12 +304,21 @@ export function useBootSync({
       } catch (error) {
         if (isMounted) {
           const status = isRemoteMomentSyncTimeout(error) ? 'timeout' : 'failed';
+          const reason = error instanceof Error ? error.message : 'Unknown error';
           didFinishInitialRemoteSync = true;
           setRemoteMomentSyncStatus(status);
+          setRemoteMomentSyncDiagnostics({
+            count: null,
+            durationMs: getRemoteMomentSyncDuration(startedAt),
+            hasMore: null,
+            reason,
+            status,
+            updatedAt: Date.now(),
+          });
           console.info('[moment_sync]', {
             durationMs: getRemoteMomentSyncDuration(startedAt),
             event: 'boot_remote_moments_finished',
-            reason: error instanceof Error ? error.message : 'Unknown error',
+            reason,
             status,
           });
         }
@@ -307,6 +373,7 @@ export function useBootSync({
     initialRemoteMoments,
     initialRemoteMomentPageInfo,
     markRemoteMomentSyncCompleted,
+    remoteMomentSyncDiagnostics,
     remoteMomentSyncStatus,
   };
 }
