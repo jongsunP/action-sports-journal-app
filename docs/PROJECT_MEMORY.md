@@ -12,6 +12,12 @@ Use this document as the primary source of truth for project identity,
 collaboration rules, product philosophy, AI architecture direction, wakeboard
 domain constraints, current priorities, and recovery instructions.
 
+Before adding new memory, search the existing approved read path for the same
+idea. If the idea already exists, update or tighten the canonical section
+instead of appending another similar rule. Duplicate memory makes future CTO and
+development sessions drift, so durable notes should be merged into the existing
+source-of-truth whenever possible.
+
 ## Project Identity
 
 Project name:
@@ -87,14 +93,11 @@ Short form:
 ```
 
 Cost is not the real enemy. If a paid build, paid AI call, or infrastructure
-upgrade is the right move, ASJ should pay for it. The bigger risk is paying for
-infrastructure when the real problem is product logic, unclear state handling,
-or a user flow that does not make sense.
-
+upgrade is the right move, ASJ should pay for it. First verify that the issue
+is not product logic, unclear state handling, or an unintelligible UX flow.
 Users can tolerate a process that is a little slow when the app explains what
-is happening and recovers predictably. They should not be asked to trust an
-unexplainable flow, an unknown loading state, or behavior that looks broken.
-Basic UX clarity is part of service reliability and user trust.
+is happening and recovers predictably; unexplained loading or broken-looking
+behavior is a trust problem, not merely a cost problem.
 
 ## User Action Instruction Format
 
