@@ -408,12 +408,19 @@ export function AccountRecoveryScreen() {
       }
 
       if (result.status === 'notLinked') {
-        setKakaoContinueMode('recover');
-        setKakaoFeedback({
-          type: 'recoverReady',
-          message:
-            '이 카카오는 이미 다른 기록에 연결되어 있을 수 있습니다. 기존 기록으로 계속하려면 한 번 더 진행해주세요.',
-        });
+        if (result.reason === 'already_linked_to_other_account') {
+          setKakaoContinueMode('recover');
+          setKakaoFeedback({
+            type: 'recoverReady',
+            message:
+              '이 카카오는 기존 기록에 연결되어 있을 수 있습니다. 기존 기록을 불러오려면 한 번 더 진행해주세요.',
+          });
+        } else {
+          setKakaoFeedback({
+            type: 'error',
+            message: result.message,
+          });
+        }
         return;
       }
 

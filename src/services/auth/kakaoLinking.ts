@@ -7,6 +7,12 @@ import { supabase } from '../supabase/client';
 const KAKAO_REDIRECT_PATH = 'auth/kakao';
 const KAKAO_SCHEME = 'actionsportsjournal';
 
+type KakaoNotLinkedReason =
+  | 'already_linked_to_other_account'
+  | 'callback_error'
+  | 'missing_auth_payload'
+  | 'missing_kakao_identity';
+
 export type KakaoLinkResult =
   | {
       status: 'linked';
@@ -15,7 +21,7 @@ export type KakaoLinkResult =
     }
   | {
       status: 'notLinked';
-      reason: 'callback_error' | 'missing_auth_payload' | 'missing_kakao_identity';
+      reason: KakaoNotLinkedReason;
       message: string;
       session: Session | null;
       user: User | null;
@@ -60,6 +66,30 @@ function hasKakaoIdentity(user: User | null) {
   );
 }
 
+function getKakaoLinkFailureReason({
+  error,
+  errorCode,
+  errorDescription,
+}: {
+  error: string | null;
+  errorCode: string | null;
+  errorDescription: string | null;
+}): KakaoNotLinkedReason {
+  const detail = `${error ?? ''} ${errorCode ?? ''} ${
+    errorDescription ?? ''
+  }`.toLowerCase();
+
+  if (
+    detail.includes('already') ||
+    detail.includes('exists') ||
+    detail.includes('identity')
+  ) {
+    return 'already_linked_to_other_account';
+  }
+
+  return 'callback_error';
+}
+
 function getKakaoCallbackFailureMessage({
   error,
   errorCode,
@@ -84,6 +114,22 @@ function getKakaoCallbackFailureMessage({
   return '카카오 연결을 완료하지 못했습니다. 다시 시도해주세요.';
 }
 
+async function readCurrentSessionAndUser() {
+  if (!supabase) {
+    return { session: null, user: null };
+  }
+
+  const [{ data: sessionData }, { data: userData }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabase.auth.getUser(),
+  ]);
+
+  return {
+    session: sessionData.session ?? null,
+    user: userData.user ?? null,
+  };
+}
+
 async function completeKakaoLinkFromRedirectUrl(url: string) {
   if (!supabase) {
     throw new KakaoLinkingError('Supabase client is not configured.');
@@ -106,29 +152,46 @@ async function completeKakaoLinkFromRedirectUrl(url: string) {
     errorCode ||
     errorDescription
   ) {
-    throw new KakaoLinkingError(
-      getKakaoCallbackFailureMessage({
-        error: queryError ?? error,
-        errorCode: queryErrorCode ?? errorCode,
-        errorDescription: queryErrorDescription ?? errorDescription,
+    const callbackError = queryError ?? error;
+    const callbackErrorCode = queryErrorCode ?? errorCode;
+    const callbackErrorDescription =
+      queryErrorDescription ?? errorDescription;
+
+    return {
+      status: 'notLinked' as const,
+      reason: getKakaoLinkFailureReason({
+        error: callbackError,
+        errorCode: callbackErrorCode,
+        errorDescription: callbackErrorDescription,
       }),
-    );
+      message: getKakaoCallbackFailureMessage({
+        error: callbackError,
+        errorCode: callbackErrorCode,
+        errorDescription: callbackErrorDescription,
+      }),
+    };
   }
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      throw new KakaoLinkingError(
-        getKakaoCallbackFailureMessage({
+      return {
+        status: 'notLinked' as const,
+        reason: getKakaoLinkFailureReason({
           error: error.name,
           errorCode: error.code ?? null,
           errorDescription: error.message,
         }),
-      );
+        message: getKakaoCallbackFailureMessage({
+          error: error.name,
+          errorCode: error.code ?? null,
+          errorDescription: error.message,
+        }),
+      };
     }
 
-    return;
+    return { status: 'completed' as const };
   }
 
   if (accessToken && refreshToken) {
@@ -141,12 +204,14 @@ async function completeKakaoLinkFromRedirectUrl(url: string) {
       throw error;
     }
 
-    return;
+    return { status: 'completed' as const };
   }
 
-  throw new KakaoLinkingError(
-    '카카오 연결 결과를 확인하지 못했습니다. 다시 시도해주세요.',
-  );
+  return {
+    status: 'notLinked' as const,
+    reason: 'missing_auth_payload' as const,
+    message: '카카오 연결 결과를 확인하지 못했습니다. 다시 시도해주세요.',
+  };
 }
 
 export async function linkKakaoIdentity(): Promise<KakaoLinkResult> {
@@ -164,7 +229,23 @@ export async function linkKakaoIdentity(): Promise<KakaoLinkResult> {
   });
 
   if (error) {
-    throw error;
+    const { session, user } = await readCurrentSessionAndUser();
+
+    return {
+      status: 'notLinked',
+      reason: getKakaoLinkFailureReason({
+        error: error.name,
+        errorCode: error.code ?? null,
+        errorDescription: error.message,
+      }),
+      message: getKakaoCallbackFailureMessage({
+        error: error.name,
+        errorCode: error.code ?? null,
+        errorDescription: error.message,
+      }),
+      session,
+      user,
+    };
   }
 
   if (!data?.url) {
@@ -185,7 +266,17 @@ export async function linkKakaoIdentity(): Promise<KakaoLinkResult> {
     return { status: 'dismissed' };
   }
 
-  await completeKakaoLinkFromRedirectUrl(result.url);
+  const completion = await completeKakaoLinkFromRedirectUrl(result.url);
+
+  if (completion.status === 'notLinked') {
+    const { session, user } = await readCurrentSessionAndUser();
+
+    return {
+      ...completion,
+      session,
+      user,
+    };
+  }
 
   const [{ data: sessionData, error: sessionError }, { data: userData, error: userError }] =
     await Promise.all([supabase.auth.getSession(), supabase.auth.getUser()]);
@@ -204,7 +295,7 @@ export async function linkKakaoIdentity(): Promise<KakaoLinkResult> {
   if (!hasKakaoIdentity(nextUser)) {
     return {
       status: 'notLinked',
-      reason: 'missing_kakao_identity',
+      reason: 'already_linked_to_other_account',
       message:
         '카카오 연결을 완료하지 못했습니다. 이미 다른 기기 계정에 연결된 카카오일 수 있습니다.',
       session: nextSession,
