@@ -601,6 +601,15 @@ Implemented:
   deleted by retention/cleanup when checked, so Storage object size could not be
   re-read. `uploadProcessing` remains response/debug metadata only and is not
   persisted to DB; persist it later only if upload observability needs it.
+- Remaining upload bug: source files over 30MB are still blocked at selection
+  before the compression path can run. This is a FE validation-order issue, not
+  evidence that compression failed. Later, allow eligible source videos into the
+  Upload screen and apply the 30MB size policy to the final optimized file.
+- Occasional first-open slowness now looks more like Render free cold start than
+  local app cache when it only appears after idle time. This is still an
+  observation, not proof. The Video tab infinite-loading symptom was a separate
+  UI state bug and has already been fixed; later, consider a short Render plan
+  A/B check if cold-start evidence remains important.
 
 Analysis Trust UX, 2026-06-26:
 

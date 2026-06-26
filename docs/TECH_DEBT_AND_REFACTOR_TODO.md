@@ -1772,6 +1772,25 @@ POC implementation status, 2026-06-27:
   operations need after-the-fact original/compressed ratio auditing, add a small
   upload observability persistence path instead of changing backend policy
   semantics.
+- Remaining validation-order bug: source clips over 30MB are still blocked at
+  selection before compression can run. Move source-size blocking out of the
+  picker stage and enforce the 30MB limit after optimization on the final upload
+  file.
+
+## Render Free Cold Start Watch
+
+Founder observation: the app feels slow mainly on the first open after a long
+idle period, then becomes faster on later opens. That pattern fits Render free
+cold start better than local app cache alone, but this is not proven.
+
+Decision:
+
+- Do not upgrade infrastructure yet.
+- Treat Video tab infinite loading as a separate UI state bug; that path has
+  already been fixed with delayed/retry state instead of an indefinite loading
+  card.
+- When core flows stabilize, optionally run a short Render plan A/B check to
+  compare first-open boot/sync timings and timeout frequency.
 
 Decision:
 
