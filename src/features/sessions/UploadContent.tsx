@@ -82,11 +82,7 @@ export function UploadContent({
       const result = await runUploadCompressionPoc(visibleVideo);
       setCompressionPocResult(result);
     } catch (error) {
-      setCompressionPocError(
-        error instanceof Error
-          ? error.message
-          : '압축 POC를 실행하지 못했습니다.',
-      );
+      setCompressionPocError(getCompressionPocDisplayError(error));
     } finally {
       setIsRunningCompressionPoc(false);
     }
@@ -366,6 +362,22 @@ function CompressionPocPanel({
       ) : null}
     </View>
   );
+}
+
+function getCompressionPocDisplayError(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes('react-native-compressor') ||
+    normalizedMessage.includes('native') ||
+    normalizedMessage.includes('dev-client') ||
+    normalizedMessage.includes('standalone')
+  ) {
+    return '이 확인은 native build에서만 실행됩니다. 다음 standalone QA에서 확인해주세요.';
+  }
+
+  return '압축 메타를 확인하지 못했습니다. 다른 짧은 영상으로 다시 확인해주세요.';
 }
 
 function formatBytesForPoc(value: number | null) {

@@ -611,6 +611,17 @@ Upload File Handling Policy P1, 2026-06-27:
 - Expo Go should not be used to judge the POC. The native module requires a
   dev-client/standalone build. Stop at typecheck/local static validation until
   CTO/user approves bundling this with the next build-required batch.
+- Next standalone build QA checklist for the POC:
+  - select a short local video and tap the `__DEV__` "QA 압축 메타 확인" action;
+  - confirm original file size, compressed file size, and reduction ratio;
+  - confirm duration is preserved for the final upload metadata;
+  - confirm MIME type remains uploadable;
+  - confirm the compressed URI is a local file URI usable as the future upload
+    source;
+  - confirm the displayed upload-target payload uses the compressed final file
+    metadata;
+  - do not submit a real upload, Storage write, or AI analysis from this POC
+    until separately approved.
 
 Analysis Trust UX implementation notes:
 

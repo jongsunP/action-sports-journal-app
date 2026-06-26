@@ -1704,6 +1704,11 @@ POC implementation status, 2026-06-27:
   run analysis, or call paid AI.
 - Status: build-required. A dev-client or standalone EAS preview/internal build
   is required before real compression behavior can be measured on iPhone.
+- Before the next build, keep the POC QA action `__DEV__`-only and verify the
+  build checklist on device: original/compressed file size, reduction ratio,
+  duration preservation, MIME type, compressed URI, and the upload-target
+  payload based on the compressed final file. Do not use this POC to perform
+  real Storage upload or AI analysis without a separate approval.
 
 Decision:
 
