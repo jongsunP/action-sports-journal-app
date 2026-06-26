@@ -579,7 +579,9 @@ TODO before calling Email Recovery complete:
    `parksunl88@nate.com` proved `updateUser({ email })` can succeed and email
    can be delivered, but the clicked magic link redirected to
    `http://localhost:3000/#error=access_denied&error_code=otp_expired...`
-   instead of completing in-app linking.
+   instead of completing in-app linking. The 2026-06-26 read-only investigation
+   concluded that Supabase redirect/template settings must be confirmed before
+   code implementation.
 2. Do not run more repeated `updateUser({ email })` tests with
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run
@@ -587,7 +589,10 @@ TODO before calling Email Recovery complete:
 3. Define the redirect URL / deep-link strategy for Change Email links. The OTP
    input / `verifyOtp` UI has been removed, and the current baseline is
    `updateUser({ email })` -> magic-link pending UI -> user clicks email link
-   -> app `refreshSession()`.
+   -> app `refreshSession()`. Candidate app redirects are
+   `actionsportsjournal://auth/email`,
+   `actionsportsjournal://auth/email/change`, and
+   `actionsportsjournal://auth/email/recovery`.
 4. Confirm email linking keeps the same Supabase Auth user id and the same
    `public.users.id`.
 5. Confirm existing Moments, upload targets, push tokens, and Realtime channel
@@ -606,6 +611,35 @@ magic link opened a localhost redirect after expiry. The remaining product
 blocker is redirect/deep-link strategy plus link-validity-window QA, not email
 send availability. Keep Email Recovery as a baseline/fallback path while Kakao
 Recovery remains the currently verified path for Korean-market UX.
+
+Deep-link / redirect investigation result:
+
+- Status: investigated, design/configuration confirmation pending.
+- The send path exists, but productized app deep-link completion does not.
+- `updateUser({ email })` is the current-account email recovery-method
+  connection path, not reinstall/new-device recovery sign-in.
+- Reinstall/new-device recovery needs a separate flow, likely
+  `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
+- Email must follow the same product separation as Kakao: connect a recovery
+  method versus recover existing records.
+- Current Email path has no Kakao-style callback helper, initial URL handler, or
+  runtime URL listener.
+- `updateUser({ email })` currently passes no explicit redirect target and
+  depends on Supabase Site URL / Email Template settings.
+- App scheme `actionsportsjournal` exists and is verified by Kakao standalone
+  OAuth E2E.
+- Candidate app redirects: `actionsportsjournal://auth/email`,
+  `actionsportsjournal://auth/email/change`,
+  `actionsportsjournal://auth/email/recovery`.
+- Candidate Supabase redirect allowlist: `actionsportsjournal://**` or narrower
+  `actionsportsjournal://auth/email/**`.
+- Confirm the Email Template callback shape before coding: `token_hash` +
+  `verifyOtp`, `code` exchange, or hash access/refresh token.
+- Email QA requires a fresh test email, link-validity-window execution, and
+  awareness of hosted email rate limits.
+- Next action: Supabase Dashboard read-only confirmation of Site URL, Redirect
+  URLs, Change Email template, and Magic Link template. Implementation requires
+  separate approval after that.
 
 Fresh-email magic-link smoke result:
 

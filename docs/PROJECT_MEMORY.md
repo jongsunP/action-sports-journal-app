@@ -190,7 +190,7 @@ Current stable workstream list:
 - Kakao Recovery / Account Linking(카카오 복구 / 계정 연결) 성공
 - Kakao Recovery Sign-in P1(카카오 기존 기록 복구 로그인 1차)은 Build 81 실기기 QA 통과
 - Email Recovery(이메일 복구)는 baseline/fallback으로 유지
-- Email Recovery(이메일 복구) 제품화는 deep link / redirect 전략 필요
+- Email Recovery deep link / redirect(이메일 복구 딥링크 / 리다이렉트)는 조사 완료. 제품화 전 Supabase 설정 확인과 설계 고정 필요
 - Kakao Linking UI(카카오 연결 UI)는 false success 방지와 실패 UX polish 완료
 - Foundation Safety Check(기반 안전 점검)는 2026-06-26 완료
 - Upload File-size Validation(업로드 용량 초과 사전 차단)은 20MB 사전 차단으로 반영
@@ -217,7 +217,7 @@ Current stable workstream list:
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Recovery Attempt Observability(복구 시도 관측성)
-- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
+- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 조사 완료. 다음은 Supabase Dashboard read-only 설정 확인
 - Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
 
 나중에 해도 좋은 것:
@@ -228,7 +228,7 @@ Current stable workstream list:
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
 
 장기 보관 목록:
-- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)
+- Email Recovery Implementation(이메일 복구 구현): Supabase 설정 확인 후 별도 승인
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화)
@@ -410,6 +410,26 @@ Current Email Recovery result:
   window.
 - Reinstall/new-device recovery sign-in is not implemented yet. This first pass
   only links an email to the current anonymous user.
+
+Email Recovery deep-link / redirect decision:
+
+- Email send path exists, but productized deep-link completion is not done.
+- `updateUser({ email })` is current-account recovery-method connection.
+- Reinstall/new-device recovery needs a separate email sign-in flow, likely
+  `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
+- Email must separate "connect recovery method" from "recover existing records",
+  matching the Kakao product split.
+- Current Email path lacks callback helper, initial URL handler, and runtime URL
+  listener.
+- `updateUser({ email })` has no explicit redirect target, so it relies on
+  Supabase Site URL / Email Template settings.
+- Candidate redirects: `actionsportsjournal://auth/email`,
+  `actionsportsjournal://auth/email/change`,
+  `actionsportsjournal://auth/email/recovery`.
+- Candidate allowlist: `actionsportsjournal://**` or
+  `actionsportsjournal://auth/email/**`.
+- Before implementation, confirm Supabase Site URL, Redirect URLs, Change Email
+  template, and Magic Link template read-only.
 
 Long-term recovery strategy:
 

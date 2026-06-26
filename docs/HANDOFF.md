@@ -637,6 +637,8 @@ observability, Email Recovery deep-link strategy, or product UX work depending
 on CTO/user alignment. Kakao display_name sync has been investigated and does
 not need immediate implementation; keep only low-priority metadata fallback and
 future overwrite-policy work in backlog.
+Email Recovery deep-link / redirect has also been investigated and should stay
+in design/configuration-confirmation mode before implementation.
 
 Build 74 Push QA / current handoff, 2026-06-24:
 
@@ -748,6 +750,37 @@ Email Recovery QA history:
   needs redirect URL/deep-link strategy and a QA pass within the link validity
   window. Kakao Recovery is already verified on Build 75 and remains the
   stronger current recovery path; keep Email Recovery as baseline/fallback.
+
+Email Recovery deep-link / redirect investigation, 2026-06-26:
+
+- The existing Email Recovery send path is present, but productized deep-link
+  completion is not implemented.
+- Current `updateUser({ email })` is an email recovery-method connection flow
+  for the current anonymous/device-first account.
+- Reinstall/new-device recovery needs a separate email recovery sign-in flow,
+  likely `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
+- Like Kakao, Email must separate "connect recovery method" from "recover
+  existing records".
+- Email currently has no Kakao-style callback helper, initial URL handler, or
+  runtime URL listener.
+- `updateUser({ email })` does not currently pass an explicit redirect target,
+  so it depends on Supabase Site URL / Email Template settings.
+- Previous smoke redirected to localhost with `otp_expired`, so Supabase
+  redirect and template settings must be confirmed before coding.
+- App scheme `actionsportsjournal` exists and has been verified through Kakao
+  standalone OAuth E2E.
+- Candidate app redirects: `actionsportsjournal://auth/email`,
+  `actionsportsjournal://auth/email/change`, and
+  `actionsportsjournal://auth/email/recovery`.
+- Candidate Supabase allowlist: `actionsportsjournal://**` or narrower
+  `actionsportsjournal://auth/email/**`.
+- Supabase Email Template payload shape must be confirmed before implementation:
+  `token_hash` + `verifyOtp`, `code` exchange, or hash access/refresh token.
+- Email QA requires a fresh test email, link-validity-window execution, and
+  awareness of hosted email rate limits.
+- Next step is Supabase Dashboard read-only confirmation of Site URL, Redirect
+  URLs, Change Email template, and Magic Link template. Implementation needs a
+  separate approval after that.
 - Link an email on a fresh anonymous Build and verify the same Auth user/app
   user/Moment/Push/Realtime ownership continues after linking.
 - Implement actual reinstall/new-device recovery sign-in only after the current

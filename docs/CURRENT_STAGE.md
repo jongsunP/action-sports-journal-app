@@ -59,6 +59,36 @@ because the clicked link landed on
 Recovery remains a baseline/fallback path and needs redirect URL / deep-link
 strategy plus a link-validity-window QA pass before productization.
 
+Email Recovery deep-link / redirect investigation, 2026-06-26:
+
+- Email Recovery send path exists, but productized app deep-link completion is
+  not implemented.
+- `updateUser({ email })` should be treated as "connect an email recovery
+  method to the current anonymous/device-first account".
+- App delete/reinstall or new-device recovery requires a separate email
+  recovery sign-in flow, likely based on
+  `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
+- Email needs the same product separation as Kakao: recovery-method connection
+  versus existing-record recovery.
+- The current Email path has no Kakao-style callback handler, initial URL
+  handler, or runtime URL listener.
+- `updateUser({ email })` does not pass an explicit redirect target and
+  therefore depends on Supabase Site URL / Email Template settings.
+- The previous localhost / `otp_expired` smoke means redirect configuration and
+  link-validity-window QA must be fixed before productizing Email.
+- The app scheme `actionsportsjournal` already exists and is verified by Kakao
+  standalone OAuth E2E.
+- Candidate redirects are `actionsportsjournal://auth/email`,
+  `actionsportsjournal://auth/email/change`, and
+  `actionsportsjournal://auth/email/recovery`.
+- Candidate Supabase allowlist values are `actionsportsjournal://**` or
+  `actionsportsjournal://auth/email/**`.
+- Supabase Email Template callback shape must be confirmed before coding:
+  `token_hash` + `verifyOtp`, `code` exchange, or hash access/refresh token.
+- Next step is Supabase Dashboard read-only confirmation of Site URL, Redirect
+  URLs, Change Email template, and Magic Link template. Implementation should
+  wait for separate approval.
+
 Foundation Safety Check, 2026-06-26:
 
 Foundation Safety Check has run against the current code/docs/QA baseline before
