@@ -1777,6 +1777,13 @@ POC implementation status, 2026-06-27:
   picker keeps basic video / URI / positive file size / positive duration / MIME
   checks plus the 15 second duration limit. The 30MB limit is enforced after
   optimization on the final upload file.
+- Build 91 is complete and is the next real-device QA checkpoint. QA should
+  verify: source files over 30MB and under 15 seconds can reach UploadScreen,
+  upload submit triggers optimization, final files under 30MB upload and continue
+  to analysis, final files still over 30MB show user-facing failure copy, progress
+  appears as one "영상 기록을 만들고 있습니다" flow, the QA compression metadata
+  action remains preview/internal only, and the Video no-records timeout UI shows
+  delayed/retry instead of indefinite loading.
 
 ## Render Free Cold Start Watch
 

@@ -14,6 +14,24 @@ Action Sports Journal is an iOS-first React Native app for action sports athlete
 
 This is an Action Sports Life Log platform, not an AI-only analysis app.
 
+## Current Resume Point
+
+Build 91 iOS preview/internal build is complete.
+
+- Build number: `91`.
+- Build commit: `4775fab chore: bump ios build number to 91`.
+- EAS build page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/1a54b6f7-6c95-4c5c-9d78-09035306360b`.
+- Install/archive URL:
+  `https://expo.dev/artifacts/eas/DVcaOrdwyk6f-8WEneGF1xY8wcmuQLzZpM695elWf1I.ipa`.
+- Included changes:
+  - Upload Unified Progress UX.
+  - Upload Selection Size Validation Fix.
+  - Compression Upload Flow P1.
+  - Video no-records timeout UI fix.
+- Next starting point: collect Build 91 real-device QA results. Do not start a new
+  implementation thread until the QA result is known.
+
 ## Collaboration Model
 
 The user is the Product Owner / Founder / Domain Expert.

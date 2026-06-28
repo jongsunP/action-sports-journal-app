@@ -14,6 +14,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 91 closeout, 2026-06-29:
+
+- iOS preview/internal Build 91 completed successfully.
+- Build number: `91`.
+- Build commit: `4775fab chore: bump ios build number to 91`.
+- EAS build page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/1a54b6f7-6c95-4c5c-9d78-09035306360b`.
+- Install/archive URL:
+  `https://expo.dev/artifacts/eas/DVcaOrdwyk6f-8WEneGF1xY8wcmuQLzZpM695elWf1I.ipa`.
+- Build 91 includes Upload Unified Progress UX, Upload Selection Size Validation
+  Fix, Compression Upload Flow P1, and Video no-records timeout UI fix.
+- Next starting point: wait for Build 91 real-device QA results. Confirm Upload /
+  Compression closeout scenarios and Video no-records timeout UI before deciding
+  whether to do more upload work or move to the next product/UX workstream.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.
