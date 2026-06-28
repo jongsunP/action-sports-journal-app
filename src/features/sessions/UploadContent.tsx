@@ -68,9 +68,7 @@ export function UploadContent({
     typeof uploadProgress?.percent === 'number'
       ? `${uploadProgress.percent}%`
       : undefined;
-  const uploadTitle = uploadPercentLabel
-    ? `${uploadProgress?.label ?? '영상 전송 중'} ${uploadPercentLabel}`
-    : uploadProgress?.label;
+  const uploadTitle = uploadProgress?.label;
   const canRunCompressionPoc =
     ENABLE_UPLOAD_COMPRESSION_POC &&
     Boolean(visibleVideo) &&
@@ -189,7 +187,7 @@ export function UploadContent({
           {isSubmitting ? (
             <View style={styles.uploadSubmittingPanel}>
               <Text style={styles.uploadSubmittingTitle}>
-                {uploadTitle ?? '영상을 서버에 업로드하고 있습니다.'}
+                {uploadTitle ?? '영상 기록을 만들고 있습니다'}
               </Text>
               <Text style={styles.uploadSubmittingHint}>
                 {uploadProgress?.detail ??
@@ -241,7 +239,7 @@ export function UploadContent({
                 ]}
               >
                 {isSubmitting
-                  ? '업로드 중...'
+                  ? '기록 생성 중...'
                   : isPreparingThumbnail
                     ? '준비 중...'
                     : '업로드하고 분석 시작'}
@@ -257,7 +255,7 @@ export function UploadContent({
             <View style={styles.uploadBlockingCard}>
               <ActivityIndicator color="#f8fafc" size="large" />
               <Text style={styles.uploadBlockingTitle}>
-                {uploadTitle ?? '영상을 업로드하고 있습니다.'}
+                {uploadTitle ?? '영상 기록을 만들고 있습니다'}
               </Text>
               {typeof uploadProgress?.percent === 'number' ? (
                 <View style={styles.uploadProgressTrack}>
@@ -278,7 +276,7 @@ export function UploadContent({
               ) : null}
               <Text style={styles.uploadBlockingText}>
                 {uploadProgress?.detail ??
-                  '업로드가 끝날 때까지 앱을 닫지 않는 것이 안전합니다.'}
+                  '앱을 닫지 말고 잠시만 기다려주세요.'}
               </Text>
               <Text style={styles.uploadBlockingText}>
                 업로드가 완료되면 분석은 서버에서 계속됩니다.

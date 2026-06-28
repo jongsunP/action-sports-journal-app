@@ -24,32 +24,32 @@ const UPLOAD_PROGRESS_COPY: Record<
   { detail: string; label: string }
 > = {
   preparing: {
-    detail: '선택한 영상을 확인하고 업로드를 준비하고 있습니다.',
-    label: '업로드 준비 중',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
   optimizing_video: {
-    detail: '최적화 후 업로드를 시작합니다.',
-    label: '업로드 전에 영상을 최적화하고 있습니다',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
   creating_target: {
-    detail: '영상을 보낼 안전한 경로를 준비하고 있습니다.',
-    label: '업로드 준비 중',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
   uploading_video: {
-    detail: '원본 영상을 전송하고 있습니다.',
-    label: '영상 전송 중',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
   finalizing_upload: {
-    detail: '영상 전송이 완료되었습니다. 서버에서 분석을 시작할 준비를 하고 있습니다.',
-    label: '분석 준비 중',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
   requesting_analysis: {
-    detail: '서버에서 분석을 계속할 수 있도록 요청을 등록하고 있습니다.',
-    label: '분석 준비 중',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
   fallback_upload: {
-    detail: '기본 업로드가 지연되어 다른 경로로 영상을 전송하고 있습니다.',
-    label: '영상 업로드 중',
+    detail: '영상 준비와 업로드를 진행하고 있습니다. 앱을 닫지 말고 잠시만 기다려주세요.',
+    label: '영상 기록을 만들고 있습니다',
   },
 };
 
@@ -68,13 +68,25 @@ function normalizeUploadPercent(
   stage: UploadProgressStage,
   percent?: number,
 ) {
-  if (
-    (stage !== 'uploading_video' && stage !== 'optimizing_video') ||
-    typeof percent !== 'number' ||
-    !Number.isFinite(percent)
-  ) {
-    return undefined;
-  }
+  const boundedPercent =
+    typeof percent === 'number' && Number.isFinite(percent)
+      ? Math.max(0, Math.min(100, percent))
+      : undefined;
 
-  return Math.max(0, Math.min(100, Math.round(percent)));
+  switch (stage) {
+    case 'preparing':
+      return 5;
+    case 'optimizing_video':
+      return Math.round(5 + ((boundedPercent ?? 25) / 100) * 20);
+    case 'creating_target':
+      return 30;
+    case 'uploading_video':
+      return Math.round(30 + ((boundedPercent ?? 10) / 100) * 55);
+    case 'fallback_upload':
+      return 70;
+    case 'finalizing_upload':
+      return 92;
+    case 'requesting_analysis':
+      return 100;
+  }
 }
