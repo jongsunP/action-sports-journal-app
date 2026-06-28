@@ -74,6 +74,10 @@ Policy:
 - If a behavior can be checked in the simulator, check it there first.
 - If a physical iPhone must be used but an EAS build is not required, prefer
   the non-build path first.
+- If native code/config must be tested repeatedly, consider an ASJ Development
+  Build or Local EAS Build before continuing many cloud preview/internal builds.
+  A Development Build is especially relevant after native dependencies such as
+  Kakao deep links, Push, or `react-native-compressor` enter the project.
 - When a build is genuinely needed, consider whether small, safe, already
   reviewed UI/copy fixes can ship with the same build. Do not bundle unrelated
   changes that would blur the QA purpose.
@@ -84,6 +88,18 @@ Policy:
 - Do not confuse AI-provider bypass with mock-data testing. The backend should
   still receive real requests and return a realistic success response for the
   pipeline stage being tested.
+
+Build cost retrospective:
+
+- The high ASJ iOS build count was partly justified by real standalone-only
+  validation needs: Kakao OAuth/deep links, Email Recovery link return, Push,
+  app deletion/reinstall recovery, ownership continuity, and native compression.
+- It was not perfectly optimized. Some later QA builds could likely have been
+  reduced by grouping small UI/copy/state fixes and by moving earlier toward a
+  Development Build / Local Build workflow once the native shell stabilized.
+- Future policy: do not try to recover sunk cost. Improve the process from this
+  point forward by treating EAS preview/internal builds as focused bundled QA
+  checkpoints, not as the default check for every small change.
 
 Principle:
 
