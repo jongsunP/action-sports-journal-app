@@ -291,6 +291,7 @@ export function useUploadMoment({
       duration: asset.duration,
       fileSize: asset.fileSize,
       mimeType: asset.mimeType,
+      skipMaxSize: true,
       uri: asset.uri,
     });
 
@@ -1028,7 +1029,7 @@ function getUploadPolicyFailureCopy(error: unknown) {
   switch (code) {
     case 'too_large':
       return {
-        message: `현재 업로드는 ${MAX_UPLOAD_VIDEO_MB}MB 이하 클립만 지원합니다. 더 짧거나 작은 영상을 선택해주세요.`,
+        message: `영상을 준비했지만 아직 업로드 가능한 크기(${MAX_UPLOAD_VIDEO_MB}MB)를 넘었습니다. 더 짧거나 작은 영상을 선택해주세요.`,
         title: '영상 용량이 너무 큽니다',
       };
     case 'too_long':
@@ -1072,17 +1073,20 @@ function getUploadPolicyAlertForVideo({
   duration,
   fileSize,
   mimeType,
+  skipMaxSize,
   uri,
 }: {
   duration?: number | null;
   fileSize?: number | null;
   mimeType?: string | null;
+  skipMaxSize?: boolean;
   uri?: string | null;
 }) {
   const policyFailure = getUploadPolicyFailureForVideo({
     duration,
     fileSize,
     mimeType,
+    skipMaxSize,
     uri,
   });
 
@@ -1093,11 +1097,13 @@ function getUploadPolicyFailureForVideo({
   duration,
   fileSize,
   mimeType,
+  skipMaxSize,
   uri,
 }: {
   duration?: number | null;
   fileSize?: number | null;
   mimeType?: string | null;
+  skipMaxSize?: boolean;
   uri?: string | null;
 }) {
   if (!uri) {
@@ -1120,7 +1126,7 @@ function getUploadPolicyFailureForVideo({
     return new RemoteRequestError('empty file', 400, { code: 'empty_file' });
   }
 
-  if (fileSize > MAX_UPLOAD_VIDEO_BYTES) {
+  if (!skipMaxSize && fileSize > MAX_UPLOAD_VIDEO_BYTES) {
     return new RemoteRequestError('video too large', 413, { code: 'too_large' });
   }
 
