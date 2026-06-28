@@ -674,10 +674,10 @@ Upload File Handling Policy P1, 2026-06-27:
   upload flow is now validated at the technical flow level; Video timeout UI fix
   still remains a normal next-build/watch item if it was not explicitly rechecked
   in the same QA pass.
-- Follow-up: source files over 30MB are currently blocked during file selection,
-  before the compression path can run. This is a validation-order bug. Fix later
-  by allowing otherwise eligible source videos into UploadScreen and enforcing
-  30MB on the final optimized upload file.
+- Upload Selection Size Validation Fix is complete in code. Source files over
+  30MB can reach UploadScreen when they pass basic video / URI / positive file
+  size / positive duration / MIME checks and the 15 second duration limit. The
+  30MB limit is now enforced on the final optimized upload file.
 - Infra watch: first-open slowness after a long idle period is consistent with
   Render free cold start, but it is not proven. Do not upgrade infrastructure
   yet. The user-facing Video spinner issue was a UI state problem and has been

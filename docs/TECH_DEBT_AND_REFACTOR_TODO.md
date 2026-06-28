@@ -1772,10 +1772,11 @@ POC implementation status, 2026-06-27:
   operations need after-the-fact original/compressed ratio auditing, add a small
   upload observability persistence path instead of changing backend policy
   semantics.
-- Remaining validation-order bug: source clips over 30MB are still blocked at
-  selection before compression can run. Move source-size blocking out of the
-  picker stage and enforce the 30MB limit after optimization on the final upload
-  file.
+- Upload Selection Size Validation Fix is complete in code. Source clips over
+  30MB are no longer blocked only because of source size at picker time; the
+  picker keeps basic video / URI / positive file size / positive duration / MIME
+  checks plus the 15 second duration limit. The 30MB limit is enforced after
+  optimization on the final upload file.
 
 ## Render Free Cold Start Watch
 
