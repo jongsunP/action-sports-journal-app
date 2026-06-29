@@ -185,9 +185,13 @@ export async function prepareUploadVideoForUpload(
       },
       video: {
         ...video,
-        fileName: inferCompressedFileName(video.fileName ?? undefined, compressedMimeType),
+        fileName: inferCompressedFileName(
+          video.fileName ?? undefined,
+          compressedMimeType,
+        ),
         fileSize: compressedFileSize,
         mimeType: compressedMimeType,
+        previewSource: 'compressed',
         uri: compressedUri,
       },
     };
@@ -241,7 +245,10 @@ function buildOriginalUploadVideoResult(
       originalFileSize,
       source: 'original',
     },
-    video,
+    video: {
+      ...video,
+      previewSource: video.previewSource ?? 'original',
+    },
   };
 }
 

@@ -15,6 +15,41 @@ export function getVideoAssetFromSession(session: Session): SessionVideoAsset | 
   };
 }
 
+export function getUserFacingDetailVideo({
+  momentStatus,
+  sourceVideoStorageStatus,
+  thumbnailUri,
+  video,
+}: {
+  momentStatus?: MomentStatus;
+  sourceVideoStorageStatus?: string;
+  thumbnailUri?: string;
+  video?: SessionVideoAsset | null;
+}) {
+  if (!video) {
+    return null;
+  }
+
+  if (
+    momentStatus === 'completed' &&
+    thumbnailUri &&
+    sourceVideoStorageStatus === 'deleted' &&
+    isCompressedPreviewVideo(video)
+  ) {
+    return null;
+  }
+
+  return video;
+}
+
+function isCompressedPreviewVideo(video: SessionVideoAsset) {
+  if (video.previewSource === 'compressed') {
+    return true;
+  }
+
+  return Boolean(video.fileName?.includes('.compressed.'));
+}
+
 export function formatVideoMeta(video: SessionVideoAsset) {
   const parts = [
     video.duration ? `${Math.round(video.duration / 1000)}s` : null,

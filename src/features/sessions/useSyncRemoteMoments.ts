@@ -7,6 +7,7 @@ import {
   applyRemoteMomentIds,
   applyRemoteEvidence,
   applyRemoteSessions,
+  applyRemoteSourceVideoStorageStatuses,
   applyRemoteThumbnails,
   applyRemoteVideos,
   buildRemoteMomentSessionIdMap,
@@ -31,6 +32,9 @@ type UseSyncRemoteMomentsParams = {
   >;
   setRemoteMomentIdsBySessionId: Dispatch<SetStateAction<Record<string, string>>>;
   setSessions: Dispatch<SetStateAction<Session[]>>;
+  setSourceVideoStorageStatusBySessionId?: Dispatch<
+    SetStateAction<Record<string, string>>
+  >;
   setThumbnailsBySessionId: Dispatch<SetStateAction<Record<string, string>>>;
   setVideosBySessionId: Dispatch<
     SetStateAction<Record<string, SessionVideoAsset>>
@@ -45,6 +49,7 @@ export function useSyncRemoteMoments({
   setGeminiEvidenceBySessionId,
   setRemoteMomentIdsBySessionId,
   setSessions,
+  setSourceVideoStorageStatusBySessionId,
   setThumbnailsBySessionId,
   setVideosBySessionId,
 }: UseSyncRemoteMomentsParams) {
@@ -102,6 +107,14 @@ export function useSyncRemoteMoments({
         }),
       );
 
+      setSourceVideoStorageStatusBySessionId?.((current) =>
+        applyRemoteSourceVideoStorageStatuses({
+          current,
+          remoteMoments,
+          sessionResolutionByRemoteMomentId: sessionIdByRemoteMomentId,
+        }),
+      );
+
       setVideosBySessionId((current) =>
         applyRemoteVideos({
           current,
@@ -133,6 +146,7 @@ export function useSyncRemoteMoments({
       onRemoteMomentReconciled,
       setGeminiEvidenceBySessionId,
       setRemoteMomentIdsBySessionId,
+      setSourceVideoStorageStatusBySessionId,
       setSessions,
       setThumbnailsBySessionId,
       setVideosBySessionId,

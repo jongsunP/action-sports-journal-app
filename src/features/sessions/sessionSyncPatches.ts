@@ -180,3 +180,30 @@ export function applyRemoteThumbnails({
 
   return next;
 }
+
+export function applyRemoteSourceVideoStorageStatuses({
+  current,
+  remoteMoments,
+  sessionResolutionByRemoteMomentId,
+}: {
+  current: Record<string, string>;
+  remoteMoments: RemoteMomentRecord[];
+  sessionResolutionByRemoteMomentId: Map<string, RemoteMomentSessionResolution>;
+}) {
+  const next = { ...current };
+
+  for (const remoteMoment of remoteMoments) {
+    if (!remoteMoment.sourceVideoStorageStatus) {
+      continue;
+    }
+
+    const sessionId =
+      sessionResolutionByRemoteMomentId.get(remoteMoment.remoteMomentId)
+        ?.sessionId ??
+      remoteMoment.session.id;
+
+    next[sessionId] = remoteMoment.sourceVideoStorageStatus;
+  }
+
+  return next;
+}

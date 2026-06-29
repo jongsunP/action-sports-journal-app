@@ -132,6 +132,7 @@ export type UploadedMomentSourceVideo = {
 export type RemoteMomentRecord = {
   remoteMomentId: string;
   session: Session;
+  sourceVideoStorageStatus?: string;
   video?: SessionVideoAsset;
   thumbnailUri?: string;
   evidence?: GeminiEvidenceResult;
@@ -1071,6 +1072,7 @@ function normalizeRemoteMoment(value: unknown): RemoteMomentRecord | null {
   return {
     remoteMomentId,
     session,
+    sourceVideoStorageStatus,
     video,
     thumbnailUri: asString(moment.thumbnailUri),
     evidence,

@@ -396,7 +396,10 @@ export function useUploadMoment({
       uploadId: uploadDraft?.uploadId,
     });
 
-    setVideoForSession(nextSession.id, videoForUpload);
+    setVideoForSession(nextSession.id, {
+      ...videoForUpload,
+      previewSource: videoForUpload.previewSource ?? 'original',
+    });
     const preparedThumbnailUri =
       selectedVideoThumbnailUriRef.current ?? selectedVideoThumbnailUri;
 

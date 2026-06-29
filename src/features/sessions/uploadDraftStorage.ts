@@ -64,6 +64,8 @@ export function getVideoFromUploadDraft(
     fileSize: draft.fileSize,
     mimeType: draft.mimeType,
     duration: draft.durationMs,
+    previewSource:
+      draft.uploadProcessing?.source === 'compressed' ? 'compressed' : 'original',
   };
 }
 

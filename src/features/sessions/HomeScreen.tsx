@@ -287,6 +287,10 @@ export function HomeScreen() {
     uploadReconciliationCandidatesBySessionId,
     setUploadReconciliationCandidatesBySessionId,
   ] = useState<Record<string, UploadReconciliationCandidate>>({});
+  const [
+    sourceVideoStorageStatusBySessionId,
+    setSourceVideoStorageStatusBySessionId,
+  ] = useState<Record<string, string>>({});
   const [videoArchiveNextCursor, setVideoArchiveNextCursor] = useState<
     string | null
   >(null);
@@ -632,6 +636,7 @@ export function HomeScreen() {
     setGeminiEvidenceBySessionId,
     setRemoteMomentIdsBySessionId,
     setSessions,
+    setSourceVideoStorageStatusBySessionId,
     setThumbnailsBySessionId,
     setVideosBySessionId,
   });
@@ -1950,6 +1955,7 @@ export function HomeScreen() {
       handleExtractEvidence,
       isReady: true,
       sessions,
+      sourceVideoStorageStatusBySessionId,
       styles,
       thumbnailsBySessionId,
       videosBySessionId,
@@ -1963,6 +1969,7 @@ export function HomeScreen() {
     handleDeleteSession,
     handleExtractEvidence,
     sessions,
+    sourceVideoStorageStatusBySessionId,
     thumbnailsBySessionId,
     videosBySessionId,
   ]);

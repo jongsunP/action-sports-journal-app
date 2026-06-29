@@ -12,6 +12,7 @@ export type SessionVideoAsset = {
   fileSize?: number;
   mimeType?: string | null;
   duration?: number | null;
+  previewSource?: 'original' | 'compressed' | 'remote';
 };
 
 export type AnalyzeSessionVideoInput = {
