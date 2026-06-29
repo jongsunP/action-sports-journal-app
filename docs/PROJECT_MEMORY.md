@@ -269,7 +269,6 @@ Current remaining work classification:
 핵심 / 진행 순서:
 - Media / Share UX(미디어 / 공유 경험): 실제 외부 공유 활성화는 AI 신뢰도 이후. 지금은 공유 가능한 Moment 표현력, 카드, detail/media presentation 기반을 준비하는 범위.
 - Future Media UX(향후 미디어 경험): Detail Media State Polish는 완료. 다음 후보는 Archive Card Visual Hierarchy 또는 export/share route이며, 미디어 저장 정책이나 AI Calibration과 섞지 않는다.
-- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트): 필요 시 후속 재검토. 현재 필수는 아님.
 - AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
 
 QA / 검증 대기:
@@ -298,6 +297,7 @@ QA / 검증 대기:
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리): Kakao 운영 설정 정리. 급하지 않음.
 
 옵션 / 장기:
+- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트): 현재 업로드 진입 흐름이 안정적이므로 필수 과제가 아니라 장기 UX 옵션으로 유지.
 - Apple Login(애플 로그인)
 - Google Login(구글 로그인)
 - Phone/SMS Recovery(전화번호 / 문자 복구)
