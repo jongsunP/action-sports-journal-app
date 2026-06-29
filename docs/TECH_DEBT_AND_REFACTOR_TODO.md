@@ -232,9 +232,14 @@ Kakao Recovery UX:
 Media / Share UX:
 
 - Current state: Instagram-led growth remains strategically important, but share
-  surfaces are not yet the core blocker.
-- Do later: Build share/media UX after Journal and Detail surfaces have stronger
-  story cards worth sharing.
+  surfaces should start from share-worthy Moment presentation, not direct social
+  integration.
+- Media / Share UX P1 is implemented as a Moment Detail share-ready preview
+  card for completed evidence. It intentionally does not add Instagram/Kakao
+  direct share, image export, native share sheet, server share pages, public
+  feeds, ShareResult persistence, or ShareResult routes.
+- Do next only after product approval: choose one of image export, native share
+  sheet, or ShareResult route.
 
 ### Minimum next implementation scope
 
@@ -1797,6 +1802,12 @@ POC implementation status, 2026-06-27:
   migrate old AsyncStorage state, change Supabase Storage policy, or add remote
   video playback. Standalone iPhone QA is still needed later, but it can be
   bundled into the next relevant build rather than run immediately.
+- Media / Share UX P1 is implemented as a presentation-only share-ready card in
+  Moment Detail. Completed Moments with visible evidence now have a "공유
+  미리보기" card below the media area and above the rider-facing analysis card.
+  It uses thumbnail, date/session title, rider-facing analysis title,
+  confidence label, short summary, up to two confirmed signals, and ASJ branding.
+  External sharing/export remains a separate future scope.
 
 ## Render Free Cold Start Watch
 

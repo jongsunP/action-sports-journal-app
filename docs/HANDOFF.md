@@ -50,14 +50,19 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
     connection still uses `updateUser({ email })`, while reinstall/new-device
     recovery uses `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`
     and the `actionsportsjournal://auth/email/recovery` callback path.
+  - Media / Share UX P1 is implemented as a Detail share-ready preview card for
+    completed Moments with visible evidence. This is a presentation foundation,
+    not Instagram/Kakao direct sharing, image export, native share sheet, or
+    ShareResult persistence.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
 - Next starting point: decide whether to create a standalone QA build for Email
   Recovery Sign-in P1. The build should verify email link click -> ASJ app
   return -> existing email-linked Auth user session switch -> Home/Video/Detail
-  reload. Media Preview Policy P1 standalone QA can be bundled into that later
-  build, but it is not urgent. Do not start infra upgrades solely from
+  reload. Media Preview Policy P1 and Media / Share UX P1 visual QA can be
+  bundled into that later build, but neither is urgent as a standalone build
+  reason. Do not start infra upgrades solely from
   first-open slowness without A/B evidence.
 - Keep QA Debug Panel visible until the Founder explicitly says to remove it or
   ASJ is preparing for App Store / real-service release. Media Preview P1 QA

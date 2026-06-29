@@ -164,6 +164,9 @@ export function MomentDetailContent({
   const shouldShowTrickReviewAction = shouldShowTrickConfirmationAction(
     visibleEvidence,
   );
+  const riderFacingAnalysis = visibleEvidence
+    ? buildRiderFacingAnalysis(visibleEvidence)
+    : null;
   const handleOpenTrickReview = () => {
     Alert.alert(
       '기술명 확인',
@@ -321,10 +324,15 @@ export function MomentDetailContent({
                 </Text>
               </View>
             ) : null}
-            {visibleEvidence ? (
+            {visibleEvidence && riderFacingAnalysis ? (
               <>
+                <SharePreviewCard
+                  analysis={riderFacingAnalysis}
+                  session={session}
+                  thumbnailUri={thumbnailUri}
+                />
                 <RiderFacingAnalysisCard
-                  analysis={buildRiderFacingAnalysis(visibleEvidence)}
+                  analysis={riderFacingAnalysis}
                 />
                 <GeminiEvidenceView evidence={visibleEvidence} />
               </>
@@ -358,6 +366,69 @@ export function MomentDetailContent({
         </View>
       ) : null}
     </SafeAreaView>
+  );
+}
+
+function SharePreviewCard({
+  analysis,
+  session,
+  thumbnailUri,
+}: {
+  analysis: RiderFacingAnalysis;
+  session: Session;
+  thumbnailUri?: string;
+}) {
+  const title = getSessionDisplayTitle(session);
+  const signals = analysis.confirmedSignals.slice(0, 2);
+
+  return (
+    <View style={styles.sharePreviewCard}>
+      <View style={styles.sharePreviewHeaderRow}>
+        <Text style={styles.sharePreviewEyebrow}>공유 미리보기</Text>
+        <Text style={styles.sharePreviewBrand}>ASJ</Text>
+      </View>
+      {thumbnailUri ? (
+        <Image
+          resizeMode="cover"
+          source={{ uri: thumbnailUri }}
+          style={styles.sharePreviewImage}
+        />
+      ) : (
+        <View style={styles.sharePreviewImageFallback}>
+          <Text style={styles.sharePreviewImageFallbackText}>
+            오늘의 라이딩 기록
+          </Text>
+        </View>
+      )}
+      <View style={styles.sharePreviewBody}>
+        <View style={styles.sharePreviewMetaRow}>
+          <Text style={styles.sharePreviewMeta} numberOfLines={1}>
+            {formatSessionDateTime(session.occurredAt)}
+          </Text>
+          <Text style={styles.sharePreviewBadge}>
+            {analysis.confidenceLabel}
+          </Text>
+        </View>
+        <Text style={styles.sharePreviewTitle} numberOfLines={2}>
+          {title}
+        </Text>
+        <Text style={styles.sharePreviewAnalysisTitle} numberOfLines={2}>
+          {analysis.title}
+        </Text>
+        <Text style={styles.sharePreviewSummary} numberOfLines={2}>
+          {analysis.summary}
+        </Text>
+        {signals.length > 0 ? (
+          <View style={styles.sharePreviewSignalList}>
+            {signals.map((signal) => (
+              <Text key={signal} style={styles.sharePreviewSignal} numberOfLines={2}>
+                - {signal}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }
 

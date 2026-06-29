@@ -230,6 +230,7 @@ Current stable workstream list:
 - Compression Upload Flow P1(압축 업로드 플로우 1차): Build 91 실기기 QA 성공. 압축된 영상 업로드 후 분석 완료까지 정상 확인
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
 - Media Preview Policy P1(미디어 미리보기 정책 1차): 구현 완료. completed + thumbnail 존재 + source storage deleted + compressed local asset 조건에서는 Detail이 압축 영상 재생 대신 thumbnail-only로 전환
+- Media / Share UX P1(미디어 / 공유 경험 1차): 구현 완료. 외부 공유 기능이 아니라 Moment Detail의 completed evidence 아래 share-ready preview card 기반을 추가
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
@@ -242,7 +243,7 @@ Current stable workstream list:
 - Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
 - Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback)
 - 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토
-- Media / Share UX(미디어 / 공유 경험)
+- Media / Share UX Next Step(미디어 / 공유 경험 다음 단계): image export, native share sheet, ShareResult route 중 하나를 별도 승인 후 선택
 - Future Media UX Improvements(향후 미디어 경험 개선)
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요

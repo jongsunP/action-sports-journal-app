@@ -95,6 +95,24 @@ Auth Bootstrap Timeout / Observability and Email Recovery Sign-in P1,
   -> tap email link -> ASJ app return -> session switches to existing
   email-linked user -> Home/Video/Detail reload under that owner.
 
+Media / Share UX P1 implementation, 2026-06-29:
+
+- Media / Share UX P1 is implemented as a share-ready presentation foundation,
+  not an external sharing feature.
+- Completed Moments with visible evidence now show a "공유 미리보기" card in
+  Moment Detail, directly below the media area and above the rider-facing
+  analysis card.
+- The preview uses the existing thumbnail when available, with a text fallback
+  when no thumbnail exists. It includes date/session title, rider-facing
+  analysis title, confidence label, one-line summary, up to two confirmed
+  signals, and light ASJ branding.
+- No Instagram/Kakao direct share, image export, native share sheet, server
+  share page, public feed, ShareResult persistence, ShareResult route, AI
+  calibration, or MediaPipe work was added.
+- Next candidates remain image export, native share sheet, or ShareResult route,
+  but those need separate product/QA approval and likely standalone build
+  validation.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.
