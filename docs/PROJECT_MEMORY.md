@@ -253,9 +253,8 @@ Current stable workstream list:
 - Upload Selection Size Validation Fix(업로드 선택 단계 용량 검증 순서 보정): 코드 반영 완료. 30MB 초과 소스도 기본 video/URI/fileSize/duration/MIME 및 15초 제한을 통과하면 Upload 화면까지 허용하고, 30MB 정책은 압축/최적화 후 최종 업로드 파일 기준으로 적용
 - Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과. Upload Unified Progress UX, Upload Selection Size Validation Fix, Compression Upload Flow P1, Video no-records timeout UI fix가 모두 통과했고 압축된 영상 업로드 후 분석까지 정상 완료
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): Store 배포 전 별도 확인. 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높으므로, 유료 플랜으로 짧게 비교해 근거를 만든다
-- AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): AI 고도화의 첫 단계는 트릭 전체 정답률보다 Toe-side / Heel-side 판정 안정화로 잡는다. Gemini/GPT 분석만으로 밀지 말고, 실제 ASJ 샘플에서 MediaPipe Pose/Landmark가 라이더 자세, 어깨/골반 방향, 접근 edge, takeoff 직전 움직임의 보조 근거가 될 수 있는지 feasibility spike로 검증한다. MediaPipe는 단독 판정기가 아니라 Motion Evidence Extraction(동작 근거 추출)의 후보 신호다
 - EverEx Reference for AI Motion Productization(EverEx 참고): EverEx는 의료/재활 중심이라 ASJ의 직접 경쟁사는 아니지만, AI motion analysis를 신뢰 가능한 개인 맞춤 피드백과 장기 변화 추적으로 제품화하는 참고 사례다. ASJ AI Develop 때는 의료/재활 포지션을 따라가지 말고, moment evidence, rider growth, readable next-step feedback, progress tracking 관점만 참고한다
-- AI Calibration(AI 분석 정확도 보정)
+- AI Calibration(AI 분석 정확도 보정): 첫 진입은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 보정으로 시작한다. Gemini/GPT 분석만으로 밀지 말고, 실제 ASJ 샘플에서 MediaPipe Pose/Landmark가 보조 근거가 될 수 있는지 feasibility spike로 검증한다. MediaPipe는 단독 판정기가 아니라 Motion Evidence Extraction(동작 근거 추출)의 후보 신호다
 - Apple Login(애플 로그인)
 - Google Login(구글 로그인)
 - Phone/SMS Recovery(전화번호 / 문자 복구)
@@ -269,8 +268,7 @@ Current remaining work classification:
 - Media / Share UX(미디어 / 공유 경험): 실제 외부 공유 활성화는 AI 신뢰도 이후. 지금은 공유 가능한 Moment 표현력, 카드, detail/media presentation 기반을 준비하는 범위.
 - Future Media UX Improvements(향후 미디어 경험 개선): 미디어 표시, preview, share-ready presentation 후속.
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트): 필요 시 후속 재검토. 현재 필수는 아님.
-- AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): 다음 큰 제품 품질 작업. AI 고도화는 broad trick-name accuracy보다 TS/HS evidence 안정화부터 시작한다.
-- AI Calibration(AI 분석 정확도 보정): TS/HS Evidence 이후의 더 넓은 분석 정확도 개선.
+- AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
 
 QA / 검증 대기:
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): Email Recovery Sign-in P1 코드는 구현 완료. 다음 standalone build에서 이메일 링크 -> ASJ 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload 확인.
