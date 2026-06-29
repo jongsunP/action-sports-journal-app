@@ -30,8 +30,10 @@ Build 91 closeout, 2026-06-29:
   timeout UI fix, and compressed-video upload through completed analysis.
 - User feedback after Build 91:
   - First launch can still feel slow after idle time, while later opens are
-    acceptable once the backend is awake. Keep this as Render Plan Upgrade A/B
-    Check candidate, not an immediate app fix.
+    acceptable once the backend is awake. New decision: after the current
+    AI-before-baseline build QA, upgrade the Render Web Service to Starter
+    ($7/mo) before AI Calibration so the free-plan cold start variable is
+    removed during upload/analysis debugging.
   - After deleting the original iOS Photos video, a compressed-video preview can
     still play. Read-only investigation shows the completed Moment source
     Storage object is deleted, thumbnails remain in `moment-thumbnails`, and DB

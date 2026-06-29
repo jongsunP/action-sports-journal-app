@@ -1840,17 +1840,21 @@ idle period, then becomes faster on later opens. That pattern fits Render free
 cold start better than local app cache alone, but this is not proven.
 
 Build 91 update: the same pattern was observed again. Core upload/compression
-flows passed, so keep this as a Render/backend cold-start A/B candidate rather
-than an immediate app-state fix.
+flows passed, and after later AI-before-baseline cleanup the Founder decided to
+remove the Render free-plan cold-start variable before AI Calibration.
 
 Decision:
 
-- Do not upgrade infrastructure yet.
+- After the current AI-before-baseline build QA, upgrade the Render Web Service
+  from Free to Starter ($7/mo) before AI Calibration. The goal is not more CPU
+  first; it is to remove the free-plan sleep/cold-start variable while debugging
+  upload and analysis behavior.
 - Treat Video tab infinite loading as a separate UI state bug; that path has
   already been fixed with delayed/retry state instead of an indefinite loading
   card.
-- When core flows stabilize, optionally run a short Render plan A/B check to
-  compare first-open boot/sync timings and timeout frequency.
+- App code, app env, and EAS build settings should not need to change for this
+  plan upgrade. Render may restart the service once when the instance type
+  changes.
 
 Decision:
 

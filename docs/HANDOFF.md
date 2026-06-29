@@ -33,8 +33,9 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   compressed-video upload through completed analysis.
 - Current follow-up observations:
   - First launch can still be slow after idle time, then improves after the
-    backend wakes. Keep Render Plan Upgrade A/B Check as an evidence-gated
-    candidate.
+    backend wakes. New decision: after the current baseline build QA and before
+    AI Calibration, change the Render Web Service instance from Free to Starter
+    ($7/mo) to remove the free-plan cold start variable.
   - Media Preview Policy P1 is implemented in
     `a395d37 fix: prefer thumbnails for completed compressed previews`.
     Completed Moments with a thumbnail, deleted source Storage, and compressed
@@ -71,14 +72,17 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
-- Next starting point: decide whether to create a standalone QA build for Email
+- Next starting point: finish the current standalone QA build, then upgrade the
+  Render Web Service to Starter before AI Calibration. This should not require
+  app code/env/build changes; it is an infrastructure setting change intended to
+  separate free-plan sleep from real upload/analysis issues.
+- The build should verify Email
   Recovery Sign-in P1. The build should verify email link click -> ASJ app
   return -> existing email-linked Auth user session switch -> Home/Video/Detail
   reload. Media Preview Policy P1, Media / Share UX P1, Detail media state
   polish, and Archive Card Visual Hierarchy P1 visual QA can be bundled into
   that later build, but none is urgent as a standalone build reason.
-  Do not start infra upgrades solely from
-  first-open slowness without A/B evidence.
+  After the build QA, Render Starter is the agreed next infrastructure step.
 - Store-before-release OAuth follow-up is configuration review only: Kakao app
   display, Supabase redirect allowlist, and consent wording. Do not rewrite
   Kakao linking/recovery semantics just to reduce provider prompts.
