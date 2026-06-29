@@ -149,6 +149,26 @@ Archive Card Visual Hierarchy P1, 2026-06-29:
   and Archive Card Visual Hierarchy P1 complete, the next major product-quality
   candidate can move to AI Calibration, starting with TS/HS Evidence.
 
+Kakao display_name fallback and OAuth step reduction closeout, 2026-06-29:
+
+- Kakao display_name fallback is implemented in the authenticated server user
+  resolver. `public.users.display_name` now uses `full_name`, `name`,
+  `preferred_username`, `user_name`, then email when syncing metadata from the
+  authenticated Supabase user.
+- This remains safe for the current product because ASJ does not yet expose
+  user-edited display names. When user-custom display names are introduced, the
+  metadata overwrite policy must be revisited.
+- OAuth Step Reduction Investigation is complete for the current scope. The ASJ
+  app already keeps Kakao continue one-click inside the app, but the remaining
+  Kakao/iOS web-auth "continue" prompts are platform/provider OAuth steps rather
+  than an ASJ internal second CTA.
+- No OAuth bypass, no redirect flow rewrite, no Supabase/Kakao dashboard
+  mutation, and no `signInWithOAuth` / `linkIdentity` semantics change was
+  made.
+- Store-before-release follow-up: review Kakao/Supabase app display, redirect,
+  and consent settings, but do not try to bypass ASWebAuthenticationSession or
+  provider consent prompts.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.

@@ -62,6 +62,12 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
     Archive cards now prioritize journal label, date, title, status, and
     state-aware description so the Video tab feels like a rider archive instead
     of a raw video file list.
+  - Kakao display_name fallback is complete for the current scope. Authenticated
+    API requests now sync `public.users.display_name` from `full_name`, `name`,
+    `preferred_username`, `user_name`, then email.
+  - OAuth Step Reduction Investigation is complete for the current scope. ASJ's
+    in-app Kakao Single CTA is one-click, while remaining Kakao/iOS web-auth
+    prompts are provider/platform OAuth steps and should not be bypassed.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
@@ -73,6 +79,9 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   that later build, but none is urgent as a standalone build reason.
   Do not start infra upgrades solely from
   first-open slowness without A/B evidence.
+- Store-before-release OAuth follow-up is configuration review only: Kakao app
+  display, Supabase redirect allowlist, and consent wording. Do not rewrite
+  Kakao linking/recovery semantics just to reduce provider prompts.
 - Keep QA Debug Panel visible until the Founder explicitly says to remove it or
   ASJ is preparing for App Store / real-service release. Media Preview P1 QA
   should be mentioned when the next build happens, but it should not remain as a

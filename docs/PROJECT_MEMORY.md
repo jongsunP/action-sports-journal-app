@@ -242,12 +242,11 @@ Current stable workstream list:
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 Store 배포 전 별도 A/B 확인으로 진행. 현재는 QA panel 값이 인프라 지연을 가리키는지 지속 관찰
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
-- Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
-- Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback)
+- Kakao display_name sync/fallback(카카오 이름 동기화 / fallback): 현재 범위 완료. 서버 authenticated user resolver는 `full_name` -> `name` -> `preferred_username` -> `user_name` -> email 순서로 `public.users.display_name`을 동기화
 - 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토
 - Media / Share UX Next Step(미디어 / 공유 경험 다음 단계): image export, native share sheet, ShareResult route 중 하나를 별도 승인 후 선택
 - Future Media UX Next Step(향후 미디어 경험 다음 단계): image export/native share route 또는 ShareResult route를 별도 승인 후 선택. Archive Card Visual Hierarchy P1은 완료
-- OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
+- OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
@@ -282,7 +281,7 @@ QA / 검증 대기:
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Founder가 별도로 말하기 전까지 유지. App Store / 실서비스 배포 직전에 숨김/제거.
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 계속 유지할 제품 원칙.
 - 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토.
-- Kakao display_name sync(카카오 이름 동기화): 조사 완료. 현재 즉시 구현 불필요.
+- Kakao display_name sync/fallback(카카오 이름 동기화 / fallback): 현재 범위 완료. 사용자 직접 이름 편집 도입 전까지 metadata 기반 동기화 유지.
 - Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 89 성공으로 current-account Email Recovery Connection P1 완료.
 - Recovery Attempt Observability P1(복구 시도 관측성 1차): 구현/마이그레이션/smoke 완료.
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략): current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 P1 코드 구현 후 standalone QA 대기.
@@ -292,8 +291,7 @@ QA / 검증 대기:
 - Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과.
 
 작은 후속 / 낮은 우선순위:
-- Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback): 작고 안전한 fallback 후보.
-- OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): UX 마찰 조사 후보. 급하지 않음.
+- OAuth Step Reduction Store Check(외부 OAuth 진행 단계 Store 전 점검): 구현 후보가 아니라 설정/표시 점검 후보. 앱 내부 one-click은 완료되어 있음.
 - Email Custom SMTP(이메일 발송 설정): 운영 품질/브랜딩 성격. 급하지 않음.
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리): Kakao 운영 설정 정리. 급하지 않음.
 

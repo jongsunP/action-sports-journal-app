@@ -510,10 +510,11 @@ semantics explicit.
 
 ### Follow-up
 
-- OAuth Step Reduction Investigation: Kakao/iOS may still feel like two
-  external `계속` actions even though ASJ's own CTA is now one-click. Investigate
-  whether this can be reduced without breaking Supabase OAuth, but keep it
-  separate from the completed ASJ one-click requirement.
+- OAuth Step Reduction Investigation is closed for the current app scope.
+  Kakao/iOS may still feel like two external `계속` actions, but ASJ's internal
+  CTA is already one-click. Treat the remaining steps as provider/platform
+  OAuth prompts and do not bypass them. Store-before-release follow-up is limited
+  to Kakao/Supabase display, redirect, and consent-setting review.
 
 ## Startup / Video Tab Loading Observability P1 - 2026-06-26
 
@@ -947,9 +948,10 @@ method connected state, and read-only DB/Auth checks confirmed:
 Follow-up backlog:
 
 - Kakao linking UX: make connected, failed, and cancelled states more explicit.
-- Kakao metadata sync: investigated on 2026-06-26. Auth `user_metadata`
-  contains Kakao name candidates and the current `public.users.display_name` is
-  already a Kakao-name value, so no immediate implementation is needed.
+- Kakao metadata sync: investigated on 2026-06-26 and completed for the current
+  scope. Auth `user_metadata` contains Kakao name candidates and
+  `resolveRequestUser(request)` now syncs `full_name`, `name`,
+  `preferred_username`, `user_name`, then email to `public.users.display_name`.
 - Moment ownership continuity: rerun with a user that already has Moments. The
   Build 75 QA user had `moments` count `0`, so preservation was verified by
   ownership structure, not by a real existing Moment sample.
@@ -993,9 +995,8 @@ Build 81 QA verified:
 
 Remaining follow-up checks:
 
-1. Kakao display_name sync: no immediate implementation needed. Later, add
-   `preferred_username` / `user_name` fallback only if smoke evidence shows
-   Kakao profiles missing `name` / `full_name`.
+1. Kakao display_name sync/fallback is complete for the current scope. Revisit
+   only when user-editable display names are introduced.
 2. Keep Realtime recovered-auth-channel verification in the ownership continuity
    follow-up if additional DB/log evidence is needed.
 
@@ -1008,8 +1009,9 @@ Kakao display_name sync policy:
   and `user_name`.
 - `AccountRecoveryScreen` already reads Kakao display copy from Auth
   `user_metadata`, not from `public.users.display_name`.
-- `resolveRequestUser(request)` already syncs `user_metadata.full_name` /
-  `name` to `public.users.display_name` on authenticated API requests.
+- `resolveRequestUser(request)` syncs `user_metadata.full_name`, `name`,
+  `preferred_username`, `user_name`, then email to `public.users.display_name`
+  on authenticated API requests.
 - Kakao email is optional; do not require email for display_name sync.
 - If ASJ later adds user-editable display names, revisit overwrite policy so
   Kakao metadata does not blindly replace a user-customized value.
@@ -1825,6 +1827,11 @@ POC implementation status, 2026-06-27:
   raw evidence text, routes, schema, storage, or sharing/export features. The
   remaining Media / Share next steps are image export, native share sheet, or
   ShareResult route after separate product approval.
+- Kakao display_name fallback and OAuth Step Reduction Investigation are closed
+  for the current pre-AI Calibration scope. Display name sync now includes
+  `preferred_username` and `user_name`; OAuth prompt reduction should not bypass
+  provider/platform authentication prompts and is only a Store-before-release
+  settings review item.
 
 ## Render Free Cold Start Watch
 

@@ -6993,6 +6993,8 @@ async function resolveRequestUser(
   const displayName =
     readStringUserMetadata(authData.user.user_metadata?.full_name) ??
     readStringUserMetadata(authData.user.user_metadata?.name) ??
+    readStringUserMetadata(authData.user.user_metadata?.preferred_username) ??
+    readStringUserMetadata(authData.user.user_metadata?.user_name) ??
     email;
   const now = new Date().toISOString();
   const { data: existingUser, error: selectError } = await client
