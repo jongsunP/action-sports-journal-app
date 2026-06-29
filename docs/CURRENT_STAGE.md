@@ -113,6 +113,23 @@ Media / Share UX P1 implementation, 2026-06-29:
   but those need separate product/QA approval and likely standalone build
   validation.
 
+Future Media UX P1 - Detail Media State Polish, 2026-06-29:
+
+- Implemented as a Detail-only media hero polish on top of Media Preview Policy
+  P1 and Media / Share UX P1.
+- Video playback is unchanged when a valid user-facing video exists.
+- Thumbnail-only Detail states now render as a representative image with a
+  compact "대표 이미지" overlay, so completed records feel intentional rather
+  than broken when compressed local playback is suppressed.
+- Missing-media fallback copy now separates completed records from
+  non-completed states: completed Moments explain that analysis and journal
+  results remain available, while processing/failed/non-completed states explain
+  that video access or preview preparation is still needed.
+- No Home, Video Archive, SharePreviewCard, export/share, storage cleanup,
+  storage policy, DB schema, AI calibration, or MediaPipe work was added.
+- Next media UX candidates remain Archive Card Visual Hierarchy, image export,
+  native share sheet, or ShareResult route, each requiring separate approval.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.

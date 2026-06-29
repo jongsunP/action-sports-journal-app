@@ -231,6 +231,7 @@ Current stable workstream list:
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
 - Media Preview Policy P1(미디어 미리보기 정책 1차): 구현 완료. completed + thumbnail 존재 + source storage deleted + compressed local asset 조건에서는 Detail이 압축 영상 재생 대신 thumbnail-only로 전환
 - Media / Share UX P1(미디어 / 공유 경험 1차): 구현 완료. 외부 공유 기능이 아니라 Moment Detail의 completed evidence 아래 share-ready preview card 기반을 추가
+- Future Media UX P1 - Detail Media State Polish(향후 미디어 UX 1차 - 상세 미디어 상태 정리): 구현 완료. Detail media hero에서 thumbnail-only 상태를 "대표 이미지"로 자연스럽게 표시하고, completed / non-completed missing media 문구를 분리
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
@@ -244,7 +245,7 @@ Current stable workstream list:
 - Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback)
 - 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토
 - Media / Share UX Next Step(미디어 / 공유 경험 다음 단계): image export, native share sheet, ShareResult route 중 하나를 별도 승인 후 선택
-- Future Media UX Improvements(향후 미디어 경험 개선)
+- Future Media UX Next Step(향후 미디어 경험 다음 단계): Archive Card Visual Hierarchy 또는 image export/native share route 중 하나를 별도 승인 후 선택
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Email Custom SMTP(이메일 발송 설정)
@@ -267,7 +268,7 @@ Current remaining work classification:
 ```text
 핵심 / 진행 순서:
 - Media / Share UX(미디어 / 공유 경험): 실제 외부 공유 활성화는 AI 신뢰도 이후. 지금은 공유 가능한 Moment 표현력, 카드, detail/media presentation 기반을 준비하는 범위.
-- Future Media UX Improvements(향후 미디어 경험 개선): 미디어 표시, preview, share-ready presentation 후속.
+- Future Media UX(향후 미디어 경험): Detail Media State Polish는 완료. 다음 후보는 Archive Card Visual Hierarchy 또는 export/share route이며, 미디어 저장 정책이나 AI Calibration과 섞지 않는다.
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트): 필요 시 후속 재검토. 현재 필수는 아님.
 - AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
 

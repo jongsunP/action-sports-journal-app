@@ -238,8 +238,12 @@ Media / Share UX:
   card for completed evidence. It intentionally does not add Instagram/Kakao
   direct share, image export, native share sheet, server share pages, public
   feeds, ShareResult persistence, or ShareResult routes.
+- Future Media UX P1 - Detail Media State Polish is implemented for Moment
+  Detail only. Thumbnail-only states now look like intentional representative
+  images, and missing-media copy is softer for completed records while still
+  making non-completed video-access needs clear.
 - Do next only after product approval: choose one of image export, native share
-  sheet, or ShareResult route.
+  sheet, ShareResult route, or Archive Card Visual Hierarchy.
 
 ### Minimum next implementation scope
 
@@ -1808,6 +1812,11 @@ POC implementation status, 2026-06-27:
   It uses thumbnail, date/session title, rider-facing analysis title,
   confidence label, short summary, up to two confirmed signals, and ASJ branding.
   External sharing/export remains a separate future scope.
+- Future Media UX P1 - Detail Media State Polish is implemented on top of Media
+  Preview Policy P1. It does not change Home, Video Archive, SharePreviewCard,
+  storage cleanup, storage policy, DB schema, or AI analysis. Next visual-media
+  candidates are Archive Card Visual Hierarchy, image export, native share
+  sheet, or ShareResult route.
 
 ## Render Free Cold Start Watch
 

@@ -35,10 +35,61 @@ const ENABLE_INTERNAL_DEBUG_VIEWER =
 type HomeScreenStyles = Record<string, any>;
 let styles: HomeScreenStyles;
 
+function isCompletedMoment(momentStatus?: MomentStatus) {
+  return momentStatus === 'completed';
+}
+
+function getMissingMediaCopy(momentStatus?: MomentStatus) {
+  if (isCompletedMoment(momentStatus)) {
+    return {
+      body: '영상 파일이 없어도 분석 결과와 라이딩 기록은 아래에서 계속 확인할 수 있습니다.',
+      title: '대표 이미지를 준비하지 못했습니다',
+    };
+  }
+
+  return {
+    body: '영상 파일 위치가 바뀌었거나 아직 미리보기를 준비하지 못했습니다.',
+    title: '영상 접근이 필요합니다',
+  };
+}
+
+function DetailThumbnailPreview({
+  momentStatus,
+  thumbnailUri,
+}: {
+  momentStatus?: MomentStatus;
+  thumbnailUri: string;
+}) {
+  const completed = isCompletedMoment(momentStatus);
+
+  return (
+    <View style={styles.detailThumbnailHero}>
+      <Image
+        resizeMode="cover"
+        source={{ uri: thumbnailUri }}
+        style={styles.detailThumbnailImage}
+      />
+      <View style={styles.detailThumbnailOverlay}>
+        <Text style={styles.detailThumbnailBadge}>대표 이미지</Text>
+        <Text style={styles.detailThumbnailTitle}>
+          {completed ? '완료된 라이딩 기록' : '라이딩 대표 이미지'}
+        </Text>
+        <Text style={styles.detailThumbnailText}>
+          {completed
+            ? '영상 대신 대표 이미지와 분석 결과를 확인할 수 있습니다.'
+            : '영상 미리보기를 준비하는 동안 대표 이미지를 보여줍니다.'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function LocalSessionVideoPlayer({
+  momentStatus,
   thumbnailUri,
   videoUri,
 }: {
+  momentStatus?: MomentStatus;
   thumbnailUri?: string;
   videoUri: string;
 }) {
@@ -56,20 +107,19 @@ function LocalSessionVideoPlayer({
   if (hasPlaybackError) {
     if (thumbnailUri) {
       return (
-        <Image
-          resizeMode="cover"
-          source={{ uri: thumbnailUri }}
-          style={styles.detailVideo}
+        <DetailThumbnailPreview
+          momentStatus={momentStatus}
+          thumbnailUri={thumbnailUri}
         />
       );
     }
 
+    const missingMediaCopy = getMissingMediaCopy(momentStatus);
+
     return (
       <View style={styles.videoMissingFallback}>
-        <Text style={styles.videoMissingTitle}>영상 파일을 다시 선택해 주세요.</Text>
-        <Text style={styles.videoMissingText}>
-          로컬 영상 위치가 바뀌었거나 접근 권한이 만료되었습니다.
-        </Text>
+        <Text style={styles.videoMissingTitle}>{missingMediaCopy.title}</Text>
+        <Text style={styles.videoMissingText}>{missingMediaCopy.body}</Text>
       </View>
     );
   }
@@ -178,6 +228,7 @@ export function MomentDetailContent({
     onRetry && retryEligibility.canRetry && !isDeleting,
   );
   const canPressDelete = Boolean(onDelete && !isDeleting);
+  const missingMediaCopy = getMissingMediaCopy(momentStatus);
 
   return (
     <SafeAreaView style={styles.detailModalContainer}>
@@ -220,22 +271,19 @@ export function MomentDetailContent({
         <View style={styles.detailVideoFrame}>
           {video ? (
             <LocalSessionVideoPlayer
+              momentStatus={momentStatus}
               thumbnailUri={thumbnailUri}
               videoUri={video.uri}
             />
           ) : thumbnailUri ? (
-            <Image
-              resizeMode="cover"
-              source={{ uri: thumbnailUri }}
-              style={styles.detailVideo}
+            <DetailThumbnailPreview
+              momentStatus={momentStatus}
+              thumbnailUri={thumbnailUri}
             />
           ) : (
             <View style={styles.videoMissingFallback}>
-              <Text style={styles.videoMissingTitle}>영상이 필요합니다</Text>
-              <Text style={styles.videoMissingText}>
-                원본 영상은 이 기기에 없지만, 저장된 분석 결과는 계속 확인할 수
-                있습니다.
-              </Text>
+              <Text style={styles.videoMissingTitle}>{missingMediaCopy.title}</Text>
+              <Text style={styles.videoMissingText}>{missingMediaCopy.body}</Text>
             </View>
           )}
         </View>
