@@ -47,6 +47,10 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   workstream list. Media Preview Policy P1 standalone QA can be bundled into a
   later build, but is not urgent. Do not start infra upgrades solely from
   first-open slowness without A/B evidence.
+- Keep QA Debug Panel visible until the Founder explicitly says to remove it or
+  ASJ is preparing for App Store / real-service release. Media Preview P1 QA
+  should be mentioned when the next build happens, but it should not remain as a
+  standalone workstream list item.
 
 ## Collaboration Model
 

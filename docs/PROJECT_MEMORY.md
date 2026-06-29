@@ -228,10 +228,10 @@ Current stable workstream list:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
 - Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 89에서 `parksunl77@daum.net`으로 메일 링크 클릭 -> ASJ 앱 복귀 -> 수동 갱신 없는 "복구 준비 완료" 표시 -> 앱 완전 종료 후 재실행 연결 상태 유지까지 성공. 현재-account Email Recovery Connection P1은 완료
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
-- QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): 테스트 중에는 계속 필요하므로 유지. 실서비스 배포 직전에 숨김/제거 정책 적용
+- QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Founder가 별도로 말하기 전까지 유지. App Store / 실서비스 배포 직전에 숨김/제거 정책 적용
 - Recovery Attempt Observability P1(복구 시도 관측성 1차): 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. Migration 적용 완료, authenticated insert smoke 완료, 개인정보 redaction 및 no-token 401 확인 완료
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
-- Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 QA panel 값이 인프라 지연을 가리킬 때만 검토
+- Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 Store 배포 전 별도 A/B 확인으로 진행. 현재는 QA panel 값이 인프라 지연을 가리키는지 지속 관찰
 - Upload Entry UX Bottom Sheet(업로드 진입 바텀시트)는 필요 시 후속 재검토
 - Kakao display_name sync(카카오 이름 동기화)는 조사 완료. 현재 Auth user_metadata와 public.users.display_name 상태상 즉시 구현 불필요
 - Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback)
@@ -247,8 +247,7 @@ Current stable workstream list:
 - Build 90 Compression Flow QA(빌드 90 압축 업로드 플로우 QA): 기술 flow 검증 완료. `uploadProcessing`은 response/debug metadata로는 확인 가능하지만 DB에는 저장되지 않으므로, 원본/압축 비율의 사후 DB 관측이 필요하면 별도 upload observability 후속으로 분리
 - Upload Selection Size Validation Fix(업로드 선택 단계 용량 검증 순서 보정): 코드 반영 완료. 30MB 초과 소스도 기본 video/URI/fileSize/duration/MIME 및 15초 제한을 통과하면 Upload 화면까지 허용하고, 30MB 정책은 압축/최적화 후 최종 업로드 파일 기준으로 적용
 - Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과. Upload Unified Progress UX, Upload Selection Size Validation Fix, Compression Upload Flow P1, Video no-records timeout UI fix가 모두 통과했고 압축된 영상 업로드 후 분석까지 정상 완료
-- Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 구현 커밋 `a395d37`. 다음 standalone build 후보에서 큰 영상 업로드 -> 압축 발생 -> 분석 완료 -> iOS Photos 원본 삭제 -> Detail 재진입 시 압축 영상이 재생되지 않고 thumbnail-only인지 확인 필요. 이번 단계에서는 빌드 보류
-- Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높음. 당장 업그레이드하지 말고, 기능/QA가 안정된 뒤 유료 플랜으로 짧게 비교해 근거를 만든다
+- Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): Store 배포 전 별도 확인. 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높으므로, 유료 플랜으로 짧게 비교해 근거를 만든다
 - AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): AI 고도화의 첫 단계는 트릭 전체 정답률보다 Toe-side / Heel-side 판정 안정화로 잡는다. Gemini/GPT 분석만으로 밀지 말고, 실제 ASJ 샘플에서 MediaPipe Pose/Landmark가 라이더 자세, 어깨/골반 방향, 접근 edge, takeoff 직전 움직임의 보조 근거가 될 수 있는지 feasibility spike로 검증한다. MediaPipe는 단독 판정기가 아니라 Motion Evidence Extraction(동작 근거 추출)의 후보 신호다
 - EverEx Reference for AI Motion Productization(EverEx 참고): EverEx는 의료/재활 중심이라 ASJ의 직접 경쟁사는 아니지만, AI motion analysis를 신뢰 가능한 개인 맞춤 피드백과 장기 변화 추적으로 제품화하는 참고 사례다. ASJ AI Develop 때는 의료/재활 포지션을 따라가지 말고, moment evidence, rider growth, readable next-step feedback, progress tracking 관점만 참고한다
 - AI Calibration(AI 분석 정확도 보정)
