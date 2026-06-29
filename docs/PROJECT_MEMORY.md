@@ -262,6 +262,54 @@ Current stable workstream list:
 - Anonymous Cleanup(익명 계정 정리)
 ```
 
+Current remaining work classification:
+
+```text
+핵심 / 다음 큰 목표:
+- AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): 다음 큰 제품 품질 작업. AI 고도화는 broad trick-name accuracy보다 TS/HS evidence 안정화부터 시작한다.
+- AI Calibration(AI 분석 정확도 보정): TS/HS Evidence 이후의 더 넓은 분석 정확도 개선.
+
+AI 전에 할 수 있는 제품/UX 준비:
+- Media / Share UX(미디어 / 공유 경험): 실제 외부 공유 활성화는 AI 신뢰도 이후. 지금은 공유 가능한 Moment 표현력, 카드, detail/media presentation 기반을 준비하는 범위.
+- Future Media UX Improvements(향후 미디어 경험 개선): 미디어 표시, preview, share-ready presentation 후속.
+- Upload Entry UX Bottom Sheet(업로드 진입 바텀시트): 필요 시 후속 재검토. 현재 필수는 아님.
+
+구현 완료 / QA 대기:
+- Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): Email Recovery Sign-in P1 코드는 구현 완료. 다음 standalone build에서 이메일 링크 -> ASJ 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload 확인.
+- Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 별도 리스트 항목으로 유지하지 않고, 다음 빌드 때 QA 항목으로 언급. 큰 영상 업로드 -> 압축 -> 분석 완료 -> iOS Photos 원본 삭제 -> Detail thumbnail-only 확인.
+
+Store 전 / 운영 전 확인:
+- QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Founder가 별도로 말하기 전까지 유지. App Store / 실서비스 배포 직전에 숨김/제거.
+- Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): Store 배포 전 별도 확인. 지금은 QA panel로 느림 증거를 모은다.
+- Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증): 위 A/B Check와 같은 운영 전 인프라 판단 범위.
+
+정책 / 유지 원칙:
+- Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 계속 유지할 제품 원칙.
+- 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토.
+- Kakao display_name sync(카카오 이름 동기화): 조사 완료. 현재 즉시 구현 불필요.
+
+작은 후속 / 낮은 우선순위:
+- Kakao display_name preferred_username/user_name fallback(카카오 이름 fallback): 작고 안전한 fallback 후보.
+- OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): UX 마찰 조사 후보. 급하지 않음.
+- Email Custom SMTP(이메일 발송 설정): 운영 품질/브랜딩 성격. 급하지 않음.
+- Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리): Kakao 운영 설정 정리. 급하지 않음.
+
+이미 완료됐지만 리스트에 남아 있는 확인/기록성 항목:
+- Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 89 성공으로 current-account Email Recovery Connection P1 완료.
+- Recovery Attempt Observability P1(복구 시도 관측성 1차): 구현/마이그레이션/smoke 완료.
+- Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략): current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 P1 코드 구현 후 standalone QA 대기.
+- Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 91 기준 핵심 flow 통과. 추가 observability가 필요하면 후속으로 분리.
+- Build 90 Compression Flow QA(빌드 90 압축 업로드 플로우 QA): 기술 flow 검증 완료.
+- Upload Selection Size Validation Fix(업로드 선택 단계 용량 검증 순서 보정): 코드 반영 완료.
+- Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과.
+
+옵션 / 장기:
+- Apple Login(애플 로그인)
+- Google Login(구글 로그인)
+- Phone/SMS Recovery(전화번호 / 문자 복구)
+- Anonymous Cleanup(익명 계정 정리)
+```
+
 When discussing whether to build, frame the answer around validation stages:
 
 - If simulator/local verification remains, say that first and avoid a build.
