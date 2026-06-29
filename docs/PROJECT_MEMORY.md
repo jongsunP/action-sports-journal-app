@@ -272,7 +272,7 @@ Current remaining work classification:
 - AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
 
 QA / 검증 대기:
-- Build 92 AI Calibration Baseline QA(빌드 92 AI 전 기준선 QA): build 준비 커밋 `e96e0b7`, iOS buildNumber `92`. 개발세션의 EAS build 결과 대기 중. 완료 후 Build page와 QA 항목만 Founder에게 전달하고, QA 결과를 받은 뒤 Render Starter 전환으로 진행한다.
+- Build 92 AI Calibration Baseline QA(빌드 92 AI 전 기준선 QA): EAS build 완료 / Founder 실기기 QA 대기. build 준비 커밋 `e96e0b7`, iOS buildNumber `92`, EAS Build ID `83730ee0-dae1-4073-9db8-a1c779c09fb9`, Build page `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/83730ee0-dae1-4073-9db8-a1c779c09fb9`. QA 결과를 받은 뒤 Render Starter 전환으로 진행한다.
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): Email Recovery Sign-in P1 코드는 구현 완료. 다음 standalone build에서 이메일 링크 -> ASJ 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload 확인.
 - Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 별도 리스트 항목으로 유지하지 않고, 다음 빌드 때 QA 항목으로 언급. 큰 영상 업로드 -> 압축 -> 분석 완료 -> iOS Photos 원본 삭제 -> Detail thumbnail-only 확인.
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 이번 기준선 build QA 후 AI Calibration 시작 전에 Render Web Service Starter($7/mo)로 전환해 Free cold start 변수를 제거한다. 이후 QA Debug Panel 값으로 앱/백엔드/인프라 문제를 분리한다.
