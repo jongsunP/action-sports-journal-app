@@ -44,7 +44,12 @@ Build 91 closeout, 2026-06-29:
   accuracy work, the first calibration slice should be TS/HS Evidence rather
   than broad trick-name tuning. MediaPipe may be evaluated as a feasibility spike
   for Motion Evidence Extraction, but only as a candidate support signal after
-  real ASJ sample validation.
+  real ASJ sample validation. EverEx is a useful adjacent reference for later AI
+  development: not a direct competitor because it is healthcare/rehab focused,
+  but it shows how AI motion analysis can be productized around trust,
+  personalized feedback, and long-term progress tracking. ASJ should translate
+  that lesson into action-sports language: moment evidence, rider growth, and
+  readable next-step feedback rather than medical/rehab positioning.
 
 Daily wrap-up, 2026-06-25:
 

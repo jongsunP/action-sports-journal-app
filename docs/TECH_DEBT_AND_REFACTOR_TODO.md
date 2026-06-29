@@ -2632,6 +2632,10 @@ Calibration references:
 - `docs/EVIDENCE_POSTPROCESSING_CALIBRATION_MATRIX.md`
 - `docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md`
 - `docs/WAKEBOARD_VALIDATION_MATRIX.md`
+- EverEx (`https://www.everex.kr/`) as an adjacent productization reference:
+  AI motion analysis -> trustable feedback -> personalized guidance -> progress
+  tracking. Treat it as a healthcare/rehab reference, not a direct competitive
+  model or product-positioning target for ASJ.
 
 AI Calibration P1 direction:
 
@@ -2649,6 +2653,11 @@ AI Calibration P1 direction:
   evidence for Gemini/GPT post-processing or validator logic.
 - If landmarks are unstable on actual samples, keep the idea documented but do
   not ship it into the product path.
+- Product framing reference: EverEx-like motion-analysis products are useful
+  because they make analysis feel trustworthy through evidence, personalization,
+  and long-term change tracking. ASJ should adapt that framing to action sports:
+  rider moments, trick evidence, growth history, and next-session suggestions.
+  Do not copy medical/rehab language or turn ASJ into a healthcare workflow.
 
 Rule:
 

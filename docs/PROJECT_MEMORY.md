@@ -249,6 +249,7 @@ Current stable workstream list:
 - Compressed Preview Retention Policy(압축 영상 프리뷰 유지 정책): 원본 Photos 영상을 삭제해도 ASJ에서 압축 영상 preview가 계속 보일 수 있음. Read-only 확인 결과 최신 completed Moments는 `source_video_storage_status=deleted`, source Storage object 없음, thumbnail object 있음, `source_video_uri`는 local `file:` URI. 현재 유력 원인은 앱 로컬 compressed temp / persisted video asset이며, 제품적으로 preview continuity로 볼지 완료 후 thumbnail-only로 바꿀지 후속 결정 필요
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높음. 당장 업그레이드하지 말고, 기능/QA가 안정된 뒤 유료 플랜으로 짧게 비교해 근거를 만든다
 - AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): AI 고도화의 첫 단계는 트릭 전체 정답률보다 Toe-side / Heel-side 판정 안정화로 잡는다. Gemini/GPT 분석만으로 밀지 말고, 실제 ASJ 샘플에서 MediaPipe Pose/Landmark가 라이더 자세, 어깨/골반 방향, 접근 edge, takeoff 직전 움직임의 보조 근거가 될 수 있는지 feasibility spike로 검증한다. MediaPipe는 단독 판정기가 아니라 Motion Evidence Extraction(동작 근거 추출)의 후보 신호다
+- EverEx Reference for AI Motion Productization(EverEx 참고): EverEx는 의료/재활 중심이라 ASJ의 직접 경쟁사는 아니지만, AI motion analysis를 신뢰 가능한 개인 맞춤 피드백과 장기 변화 추적으로 제품화하는 참고 사례다. ASJ AI Develop 때는 의료/재활 포지션을 따라가지 말고, moment evidence, rider growth, readable next-step feedback, progress tracking 관점만 참고한다
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)
 - Google Login(구글 로그인)
