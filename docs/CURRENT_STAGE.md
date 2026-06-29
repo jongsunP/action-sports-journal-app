@@ -14,6 +14,19 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 92 baseline QA build pending, 2026-06-29:
+
+- Build prep commit is `e96e0b7 chore: prepare ai calibration baseline qa build`.
+- iOS buildNumber is `92`.
+- Build 92 is the AI Calibration baseline QA build. It should verify the
+  completed pre-AI foundation/media work before ASJ moves into AI Calibration.
+- Await the development session's EAS build result. The CTO/user next step is
+  to receive the Build page URL and run QA, not to start another implementation
+  task.
+- After Build 92 QA, upgrade the Render Web Service from Free to Starter
+  ($7/mo) before AI Calibration so free-plan cold start is removed as a
+  confounding variable during upload/analysis debugging.
+
 Build 91 closeout, 2026-06-29:
 
 - iOS preview/internal Build 91 completed successfully.

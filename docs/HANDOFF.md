@@ -16,6 +16,17 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 ## Current Resume Point
 
+Build 92 AI Calibration baseline QA build is pending.
+
+- Build prep commit: `e96e0b7 chore: prepare ai calibration baseline qa build`.
+- iOS buildNumber: `92`.
+- Await the development session's EAS build result. When the build result
+  arrives, provide the Founder only the build page URL and the QA checklist.
+- Do not start AI Calibration until Build 92 QA has been reviewed and Render
+  Web Service has been upgraded from Free to Starter ($7/mo).
+
+Previous stable build:
+
 Build 91 iOS preview/internal build is complete and real-device QA passed.
 
 - Build number: `91`.
@@ -72,17 +83,12 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
-- Next starting point: finish the current standalone QA build, then upgrade the
-  Render Web Service to Starter before AI Calibration. This should not require
-  app code/env/build changes; it is an infrastructure setting change intended to
-  separate free-plan sleep from real upload/analysis issues.
-- The build should verify Email
-  Recovery Sign-in P1. The build should verify email link click -> ASJ app
-  return -> existing email-linked Auth user session switch -> Home/Video/Detail
-  reload. Media Preview Policy P1, Media / Share UX P1, Detail media state
-  polish, and Archive Card Visual Hierarchy P1 visual QA can be bundled into
-  that later build, but none is urgent as a standalone build reason.
-  After the build QA, Render Starter is the agreed next infrastructure step.
+- Next starting point: receive Build 92 result, give the Founder the build page
+  URL plus QA checklist, then wait for the Founder QA result. Build 92 should
+  verify Email Recovery Sign-in P1, Media Preview Policy P1, Media / Share UX
+  P1, Detail media state polish, Archive Card Visual Hierarchy P1, and upload /
+  compression regression. After Build 92 QA, Render Starter is the agreed next
+  infrastructure step before AI Calibration.
 - Store-before-release OAuth follow-up is configuration review only: Kakao app
   display, Supabase redirect allowlist, and consent wording. Do not rewrite
   Kakao linking/recovery semantics just to reduce provider prompts.
