@@ -220,6 +220,8 @@ Current stable workstream list:
 - Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): Build 89 fresh-link QA 성공
 - Compression / Upload Optimization POC(영상 압축 / 업로드 최적화 POC): Build 89 실기기 QA 성공
+- Compression Upload Flow P1(압축 업로드 플로우 1차): Build 91 실기기 QA 성공. 압축된 영상 업로드 후 분석 완료까지 정상 확인
+- Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
@@ -240,11 +242,11 @@ Current stable workstream list:
 - Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
-- Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Backend 정책은 계속 최종 파일 기준
+- Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준
 - Build 90 Compression Flow QA(빌드 90 압축 업로드 플로우 QA): 기술 flow 검증 완료. `uploadProcessing`은 response/debug metadata로는 확인 가능하지만 DB에는 저장되지 않으므로, 원본/압축 비율의 사후 DB 관측이 필요하면 별도 upload observability 후속으로 분리
 - Upload Selection Size Validation Fix(업로드 선택 단계 용량 검증 순서 보정): 코드 반영 완료. 30MB 초과 소스도 기본 video/URI/fileSize/duration/MIME 및 15초 제한을 통과하면 Upload 화면까지 허용하고, 30MB 정책은 압축/최적화 후 최종 업로드 파일 기준으로 적용
-- Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): iOS preview/internal build 완료. Build 91은 Upload Unified Progress UX, Upload Selection Size Validation Fix, Compression Upload Flow P1, Video no-records timeout UI fix를 포함. 다음 시작점은 Build 91 실기기 QA 결과 확인
-- Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): `aa89f14`로 수정 완료. Build 89에는 미포함이므로 다음 빌드에서 count 0 + boot timeout/failed 시 "영상 기록 동기화가 지연 중입니다" 표시와 retry 버튼을 확인
+- Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과. Upload Unified Progress UX, Upload Selection Size Validation Fix, Compression Upload Flow P1, Video no-records timeout UI fix가 모두 통과했고 압축된 영상 업로드 후 분석까지 정상 완료
+- Compressed Preview Retention Policy(압축 영상 프리뷰 유지 정책): 원본 Photos 영상을 삭제해도 ASJ에서 압축 영상 preview가 계속 보일 수 있음. Read-only 확인 결과 최신 completed Moments는 `source_video_storage_status=deleted`, source Storage object 없음, thumbnail object 있음, `source_video_uri`는 local `file:` URI. 현재 유력 원인은 앱 로컬 compressed temp / persisted video asset이며, 제품적으로 preview continuity로 볼지 완료 후 thumbnail-only로 바꿀지 후속 결정 필요
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높음. 당장 업그레이드하지 말고, 기능/QA가 안정된 뒤 유료 플랜으로 짧게 비교해 근거를 만든다
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)

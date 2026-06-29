@@ -1777,19 +1777,27 @@ POC implementation status, 2026-06-27:
   picker keeps basic video / URI / positive file size / positive duration / MIME
   checks plus the 15 second duration limit. The 30MB limit is enforced after
   optimization on the final upload file.
-- Build 91 is complete and is the next real-device QA checkpoint. QA should
-  verify: source files over 30MB and under 15 seconds can reach UploadScreen,
-  upload submit triggers optimization, final files under 30MB upload and continue
-  to analysis, final files still over 30MB show user-facing failure copy, progress
-  appears as one "영상 기록을 만들고 있습니다" flow, the QA compression metadata
-  action remains preview/internal only, and the Video no-records timeout UI shows
-  delayed/retry instead of indefinite loading.
+- Build 91 real-device QA passed for Upload Unified Progress UX, Upload
+  Selection Size Validation Fix, Compression Upload Flow P1, Video no-records
+  timeout UI fix, and compressed-video upload through completed analysis.
+- Build 91 follow-up observation: deleting the original iOS Photos source does
+  not necessarily remove playable ASJ video preview. Read-only DB/Storage checks
+  showed recent completed Moments with `source_video_storage_status=deleted`,
+  missing source video Storage objects, existing `moment-thumbnails` objects,
+  and local `file:` `source_video_uri` values. The current likely source is the
+  app-local compressed temp / persisted video asset. Decide later whether ASJ
+  should preserve this compressed local preview for continuity or clear it after
+  completion and use thumbnail-only previews for storage-saving semantics.
 
 ## Render Free Cold Start Watch
 
 Founder observation: the app feels slow mainly on the first open after a long
 idle period, then becomes faster on later opens. That pattern fits Render free
 cold start better than local app cache alone, but this is not proven.
+
+Build 91 update: the same pattern was observed again. Core upload/compression
+flows passed, so keep this as a Render/backend cold-start A/B candidate rather
+than an immediate app-state fix.
 
 Decision:
 

@@ -25,9 +25,21 @@ Build 91 closeout, 2026-06-29:
   `https://expo.dev/artifacts/eas/DVcaOrdwyk6f-8WEneGF1xY8wcmuQLzZpM695elWf1I.ipa`.
 - Build 91 includes Upload Unified Progress UX, Upload Selection Size Validation
   Fix, Compression Upload Flow P1, and Video no-records timeout UI fix.
-- Next starting point: wait for Build 91 real-device QA results. Confirm Upload /
-  Compression closeout scenarios and Video no-records timeout UI before deciding
-  whether to do more upload work or move to the next product/UX workstream.
+- Build 91 real-device QA passed for Upload Unified Progress UX, Upload
+  Selection Size Validation Fix, Compression Upload Flow P1, Video no-records
+  timeout UI fix, and compressed-video upload through completed analysis.
+- User feedback after Build 91:
+  - First launch can still feel slow after idle time, while later opens are
+    acceptable once the backend is awake. Keep this as Render Plan Upgrade A/B
+    Check candidate, not an immediate app fix.
+  - After deleting the original iOS Photos video, a compressed-video preview can
+    still play. Read-only investigation shows the completed Moment source
+    Storage object is deleted, thumbnails remain in `moment-thumbnails`, and DB
+    `source_video_uri` still points to a local `file:` URI. Current likely source
+    is the app-local compressed temp file / persisted local video asset, not the
+    deleted Photos original and not the Supabase source object. Treat this as a
+    product-policy follow-up: keep playable local compressed previews, or clear
+    local compressed video after completion and rely on thumbnail-only preview.
 
 Daily wrap-up, 2026-06-25:
 

@@ -16,7 +16,7 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 ## Current Resume Point
 
-Build 91 iOS preview/internal build is complete.
+Build 91 iOS preview/internal build is complete and real-device QA passed.
 
 - Build number: `91`.
 - Build commit: `4775fab chore: bump ios build number to 91`.
@@ -29,8 +29,21 @@ Build 91 iOS preview/internal build is complete.
   - Upload Selection Size Validation Fix.
   - Compression Upload Flow P1.
   - Video no-records timeout UI fix.
-- Next starting point: collect Build 91 real-device QA results. Do not start a new
-  implementation thread until the QA result is known.
+- Build 91 QA passed for the listed upload/compression/loading fixes, including
+  compressed-video upload through completed analysis.
+- Current follow-up observations:
+  - First launch can still be slow after idle time, then improves after the
+    backend wakes. Keep Render Plan Upgrade A/B Check as an evidence-gated
+    candidate.
+  - Deleting the original Photos video does not necessarily remove playable
+    preview in ASJ. Read-only investigation indicates completed source video
+    Storage objects are deleted, thumbnails persist, and `source_video_uri`
+    remains a local `file:` URI. The likely playable source is the local
+    compressed temp/persisted app video asset. Decide later whether this is the
+    desired preview-continuity policy or whether completed compressed local video
+    should be cleared for thumbnail-only previews.
+- Next starting point: decide the next workstream after Build 91 closeout. Do
+  not start infra upgrades solely from first-open slowness without A/B evidence.
 
 ## Collaboration Model
 
