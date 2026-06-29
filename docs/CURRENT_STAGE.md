@@ -51,6 +51,21 @@ Build 91 closeout, 2026-06-29:
   that lesson into action-sports language: moment evidence, rider growth, and
   readable next-step feedback rather than medical/rehab positioning.
 
+Media Preview Policy P1 implementation, 2026-06-29:
+
+- Implemented in commit `a395d37 fix: prefer thumbnails for completed compressed
+  previews`.
+- Policy: completed Moments with thumbnail available, source storage deleted,
+  and compressed local video asset should show thumbnail-only in Detail instead
+  of replaying the lower-quality compressed local video.
+- Uploading/queued/processing/failed states can still use compressed preview so
+  the rider can confirm the just-selected upload while the Moment is still
+  converging.
+- Local compressed files are not deleted in this P1; the change only prevents
+  completed compressed local assets from being chosen as user-facing playback.
+- Standalone Build QA is still needed later, but it is not urgent and was
+  explicitly deferred by the Founder.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.

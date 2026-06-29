@@ -1780,14 +1780,19 @@ POC implementation status, 2026-06-27:
 - Build 91 real-device QA passed for Upload Unified Progress UX, Upload
   Selection Size Validation Fix, Compression Upload Flow P1, Video no-records
   timeout UI fix, and compressed-video upload through completed analysis.
-- Build 91 follow-up observation: deleting the original iOS Photos source does
-  not necessarily remove playable ASJ video preview. Read-only DB/Storage checks
-  showed recent completed Moments with `source_video_storage_status=deleted`,
-  missing source video Storage objects, existing `moment-thumbnails` objects,
-  and local `file:` `source_video_uri` values. The current likely source is the
-  app-local compressed temp / persisted video asset. Decide later whether ASJ
-  should preserve this compressed local preview for continuity or clear it after
-  completion and use thumbnail-only previews for storage-saving semantics.
+- Media Preview Policy P1 is implemented in
+  `a395d37 fix: prefer thumbnails for completed compressed previews`. Read-only
+  DB/Storage checks showed recent completed Moments with
+  `source_video_storage_status=deleted`, missing source video Storage objects,
+  existing `moment-thumbnails` objects, and local `file:` `source_video_uri`
+  values. The likely playable source was the app-local compressed temp /
+  persisted video asset. P1 now prevents completed + thumbnail + deleted source
+  + compressed local asset from being selected as Detail playback, so the user
+  sees thumbnail-only instead of a lower-quality compressed video.
+- Media Preview Policy P1 intentionally does not delete local compressed files,
+  migrate old AsyncStorage state, change Supabase Storage policy, or add remote
+  video playback. Standalone iPhone QA is still needed later, but it can be
+  bundled into the next relevant build rather than run immediately.
 
 ## Render Free Cold Start Watch
 

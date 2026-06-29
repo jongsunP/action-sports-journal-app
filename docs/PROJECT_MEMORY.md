@@ -222,6 +222,7 @@ Current stable workstream list:
 - Compression / Upload Optimization POC(영상 압축 / 업로드 최적화 POC): Build 89 실기기 QA 성공
 - Compression Upload Flow P1(압축 업로드 플로우 1차): Build 91 실기기 QA 성공. 압축된 영상 업로드 후 분석 완료까지 정상 확인
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
+- Media Preview Policy P1(미디어 미리보기 정책 1차): 구현 완료. completed + thumbnail 존재 + source storage deleted + compressed local asset 조건에서는 Detail이 압축 영상 재생 대신 thumbnail-only로 전환
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
@@ -246,7 +247,7 @@ Current stable workstream list:
 - Build 90 Compression Flow QA(빌드 90 압축 업로드 플로우 QA): 기술 flow 검증 완료. `uploadProcessing`은 response/debug metadata로는 확인 가능하지만 DB에는 저장되지 않으므로, 원본/압축 비율의 사후 DB 관측이 필요하면 별도 upload observability 후속으로 분리
 - Upload Selection Size Validation Fix(업로드 선택 단계 용량 검증 순서 보정): 코드 반영 완료. 30MB 초과 소스도 기본 video/URI/fileSize/duration/MIME 및 15초 제한을 통과하면 Upload 화면까지 허용하고, 30MB 정책은 압축/최적화 후 최종 업로드 파일 기준으로 적용
 - Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과. Upload Unified Progress UX, Upload Selection Size Validation Fix, Compression Upload Flow P1, Video no-records timeout UI fix가 모두 통과했고 압축된 영상 업로드 후 분석까지 정상 완료
-- Compressed Preview Retention Policy(압축 영상 프리뷰 유지 정책): 원본 Photos 영상을 삭제해도 ASJ에서 압축 영상 preview가 계속 보일 수 있음. Read-only 확인 결과 최신 completed Moments는 `source_video_storage_status=deleted`, source Storage object 없음, thumbnail object 있음, `source_video_uri`는 local `file:` URI. 현재 유력 원인은 앱 로컬 compressed temp / persisted video asset이며, 제품적으로 preview continuity로 볼지 완료 후 thumbnail-only로 바꿀지 후속 결정 필요
+- Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 구현 커밋 `a395d37`. 다음 standalone build 후보에서 큰 영상 업로드 -> 압축 발생 -> 분석 완료 -> iOS Photos 원본 삭제 -> Detail 재진입 시 압축 영상이 재생되지 않고 thumbnail-only인지 확인 필요. 이번 단계에서는 빌드 보류
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높음. 당장 업그레이드하지 말고, 기능/QA가 안정된 뒤 유료 플랜으로 짧게 비교해 근거를 만든다
 - AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): AI 고도화의 첫 단계는 트릭 전체 정답률보다 Toe-side / Heel-side 판정 안정화로 잡는다. Gemini/GPT 분석만으로 밀지 말고, 실제 ASJ 샘플에서 MediaPipe Pose/Landmark가 라이더 자세, 어깨/골반 방향, 접근 edge, takeoff 직전 움직임의 보조 근거가 될 수 있는지 feasibility spike로 검증한다. MediaPipe는 단독 판정기가 아니라 Motion Evidence Extraction(동작 근거 추출)의 후보 신호다
 - EverEx Reference for AI Motion Productization(EverEx 참고): EverEx는 의료/재활 중심이라 ASJ의 직접 경쟁사는 아니지만, AI motion analysis를 신뢰 가능한 개인 맞춤 피드백과 장기 변화 추적으로 제품화하는 참고 사례다. ASJ AI Develop 때는 의료/재활 포지션을 따라가지 말고, moment evidence, rider growth, readable next-step feedback, progress tracking 관점만 참고한다

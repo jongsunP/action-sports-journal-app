@@ -35,18 +35,18 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   - First launch can still be slow after idle time, then improves after the
     backend wakes. Keep Render Plan Upgrade A/B Check as an evidence-gated
     candidate.
-  - Deleting the original Photos video does not necessarily remove playable
-    preview in ASJ. Read-only investigation indicates completed source video
-    Storage objects are deleted, thumbnails persist, and `source_video_uri`
-    remains a local `file:` URI. The likely playable source is the local
-    compressed temp/persisted app video asset. Decide later whether this is the
-    desired preview-continuity policy or whether completed compressed local video
-    should be cleared for thumbnail-only previews.
+  - Media Preview Policy P1 is implemented in
+    `a395d37 fix: prefer thumbnails for completed compressed previews`.
+    Completed Moments with a thumbnail, deleted source Storage, and compressed
+    local preview asset now prefer thumbnail-only Detail display instead of
+    replaying the lower-quality compressed local video.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
-- Next starting point: decide the next workstream after Build 91 closeout. Do
-  not start infra upgrades solely from first-open slowness without A/B evidence.
+- Next starting point: continue the next non-AI workstream from the stable
+  workstream list. Media Preview Policy P1 standalone QA can be bundled into a
+  later build, but is not urgent. Do not start infra upgrades solely from
+  first-open slowness without A/B evidence.
 
 ## Collaboration Model
 
