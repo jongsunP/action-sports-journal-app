@@ -40,12 +40,24 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
     Completed Moments with a thumbnail, deleted source Storage, and compressed
     local preview asset now prefer thumbnail-only Detail display instead of
     replaying the lower-quality compressed local video.
+  - Auth Bootstrap Timeout / Observability is implemented for the current
+    scope. The QA Debug Panel now distinguishes auth bootstrap
+    `getSession` / `getUser` / anonymous sign-in status, duration, and reason
+    from boot remote sync and Video first-page loading, without exposing token,
+    email, or full user id values.
+  - Email Recovery Sign-in P1 is code-complete but standalone E2E QA is still
+    pending. It is separate from current-account Email Recovery Connection:
+    connection still uses `updateUser({ email })`, while reinstall/new-device
+    recovery uses `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`
+    and the `actionsportsjournal://auth/email/recovery` callback path.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
-- Next starting point: continue the next non-AI workstream from the stable
-  workstream list. Media Preview Policy P1 standalone QA can be bundled into a
-  later build, but is not urgent. Do not start infra upgrades solely from
+- Next starting point: decide whether to create a standalone QA build for Email
+  Recovery Sign-in P1. The build should verify email link click -> ASJ app
+  return -> existing email-linked Auth user session switch -> Home/Video/Detail
+  reload. Media Preview Policy P1 standalone QA can be bundled into that later
+  build, but it is not urgent. Do not start infra upgrades solely from
   first-open slowness without A/B evidence.
 - Keep QA Debug Panel visible until the Founder explicitly says to remove it or
   ASJ is preparing for App Store / real-service release. Media Preview P1 QA

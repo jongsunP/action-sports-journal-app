@@ -66,6 +66,35 @@ Media Preview Policy P1 implementation, 2026-06-29:
 - Standalone Build QA is still needed later, but it is not urgent and was
   explicitly deferred by the Founder.
 
+Auth Bootstrap Timeout / Observability and Email Recovery Sign-in P1,
+2026-06-29:
+
+- Auth bootstrap observability is complete for the current implementable scope.
+  `AuthSessionProvider` now records bootstrap status/stage/duration/reason for
+  `getSession`, `getUser`, and anonymous sign-in, and the QA Debug Panel exposes
+  this without tokens, email, or full user ids.
+- The goal is not to guarantee backend cold starts disappear. The goal is to
+  prevent permanent app loading and make slow Supabase/session bootstrap
+  distinguishable from boot remote sync and Video archive first-page loading.
+- Email Recovery Sign-in P1 is implemented but not standalone-E2E verified yet.
+  This is separate from Email Recovery Connection P1: connection uses
+  `updateUser({ email })` for the current device-first account, while sign-in
+  uses `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` to return
+  to an existing email-linked account after reinstall/new device.
+- Selected recovery redirect path:
+  `actionsportsjournal://auth/email/recovery`.
+- The app handles initial/runtime email recovery callback URLs, accepts code
+  exchange or hash session payloads, refreshes with `getSession` + `getUser`,
+  and treats callback error / missing payload / missing session as not
+  completed rather than success.
+- `AccountRecoveryScreen` now keeps the existing "복구 이메일" connection path
+  and adds a small "기존 기록 복구" email sign-in CTA. It reuses the local
+  unsynced/uploading work guard before requesting a recovery sign-in email.
+- No EAS build or buildNumber change was performed in this pass. Next required
+  QA is standalone iPhone E2E with a suitable test email: request recovery link
+  -> tap email link -> ASJ app return -> session switches to existing
+  email-linked user -> Home/Video/Detail reload under that owner.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.

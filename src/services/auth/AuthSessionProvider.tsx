@@ -12,8 +12,11 @@ import type { Session, User } from '@supabase/supabase-js';
 
 import {
   completeRecoveryEmailChangeFromUrl,
+  completeRecoveryEmailSignInFromUrl,
   isRecoveryEmailChangeUrl,
+  isRecoveryEmailSignInUrl,
   requestRecoveryEmailLink,
+  requestRecoveryEmailSignInLink,
   type RecoveryEmailCompletionResult,
   verifyRecoveryEmailOtp,
 } from './accountRecovery';
@@ -35,12 +38,14 @@ import { supabase } from '../supabase/client';
 
 type AuthSessionState = {
   accessToken: string | null;
+  authBootstrapDiagnostics: AuthBootstrapDiagnostics;
   authMode: AuthMode;
   isAuthenticated: boolean;
   isLoading: boolean;
   lastRecoveryEmailCompletion: RecoveryEmailCompletionResult | null;
   linkKakaoIdentity: () => Promise<KakaoLinkResult>;
   requestRecoveryEmailLink: (email: string) => Promise<void>;
+  requestRecoveryEmailSignInLink: (email: string) => Promise<void>;
   recoverWithKakao: () => Promise<KakaoRecoverySignInResult>;
   refreshSession: () => Promise<Session | null>;
   session: Session | null;
@@ -53,6 +58,77 @@ type AuthSessionState = {
 };
 
 const AuthSessionContext = createContext<AuthSessionState | undefined>(undefined);
+
+type AuthBootstrapDiagnosticsStatus =
+  | 'completed'
+  | 'failed'
+  | 'idle'
+  | 'loading'
+  | 'timeout';
+type AuthBootstrapDiagnosticsStage =
+  | 'anonymous_sign_in'
+  | 'completed'
+  | 'get_session'
+  | 'get_user'
+  | 'idle';
+export type AuthBootstrapDiagnostics = {
+  durationMs: number | null;
+  reason: string | null;
+  stage: AuthBootstrapDiagnosticsStage;
+  status: AuthBootstrapDiagnosticsStatus;
+  updatedAt: number | null;
+};
+
+const AUTH_BOOTSTRAP_STAGE_TIMEOUT_MS = 8_000;
+
+const initialAuthBootstrapDiagnostics: AuthBootstrapDiagnostics = {
+  durationMs: null,
+  reason: null,
+  stage: 'idle',
+  status: 'idle',
+  updatedAt: null,
+};
+
+class AuthBootstrapTimeoutError extends Error {
+  constructor(stage: AuthBootstrapDiagnosticsStage) {
+    super(`Auth bootstrap ${stage} timed out.`);
+    this.name = 'AuthBootstrapTimeoutError';
+  }
+}
+
+function sanitizeAuthBootstrapReason(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message.slice(0, 160);
+  }
+
+  return 'unknown error';
+}
+
+function isAuthBootstrapTimeout(error: unknown) {
+  return error instanceof AuthBootstrapTimeoutError;
+}
+
+async function withAuthBootstrapTimeout<T>(
+  stage: AuthBootstrapDiagnosticsStage,
+  promise: Promise<T>,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new AuthBootstrapTimeoutError(stage));
+        }, AUTH_BOOTSTRAP_STAGE_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 async function refreshSupabaseSession() {
   if (!supabase) {
@@ -100,7 +176,11 @@ function hasRecoveryEmailLinked(result: RecoveryEmailCompletionResult) {
 function normalizeRecoveryEmailCompletion(
   result: RecoveryEmailCompletionResult,
 ): RecoveryEmailCompletionResult {
-  if (result.status === 'completed' || !hasRecoveryEmailLinked(result)) {
+  if (
+    result.flow !== 'connection' ||
+    result.status === 'completed' ||
+    !hasRecoveryEmailLinked(result)
+  ) {
     return result;
   }
 
@@ -112,6 +192,7 @@ function normalizeRecoveryEmailCompletion(
 
   return {
     status: 'completed',
+    flow: result.flow,
     session: {
       ...result.session,
       user,
@@ -123,6 +204,8 @@ function normalizeRecoveryEmailCompletion(
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authBootstrapDiagnostics, setAuthBootstrapDiagnostics] =
+    useState<AuthBootstrapDiagnostics>(initialAuthBootstrapDiagnostics);
   const [lastRecoveryEmailCompletion, setLastRecoveryEmailCompletion] =
     useState<RecoveryEmailCompletionResult | null>(null);
   const handledRecoveryEmailUrlsRef = useRef(new Set<string>());
@@ -138,8 +221,33 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     async function restoreOrCreateAnonymousSession() {
+      const startedAt = Date.now();
+
+      const updateAuthBootstrapDiagnostics = (
+        nextDiagnostics: Partial<AuthBootstrapDiagnostics>,
+      ) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setAuthBootstrapDiagnostics((current) => ({
+          ...current,
+          ...nextDiagnostics,
+          durationMs: Date.now() - startedAt,
+          updatedAt: Date.now(),
+        }));
+      };
+
       try {
-        const { data, error } = await client.auth.getSession();
+        updateAuthBootstrapDiagnostics({
+          reason: null,
+          stage: 'get_session',
+          status: 'loading',
+        });
+        const { data, error } = await withAuthBootstrapTimeout(
+          'get_session',
+          client.auth.getSession(),
+        );
 
         if (!isMounted) {
           return;
@@ -150,23 +258,49 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
             'Supabase session restore failed:',
             error instanceof Error ? error.message : 'Unknown error',
           );
+          updateAuthBootstrapDiagnostics({
+            reason: sanitizeAuthBootstrapReason(error),
+            stage: 'get_session',
+            status: 'failed',
+          });
           setSession(null);
           return;
         }
 
         if (data.session) {
-          const refreshedSession = await refreshSupabaseSession();
+          updateAuthBootstrapDiagnostics({
+            reason: null,
+            stage: 'get_user',
+            status: 'loading',
+          });
+          const refreshedSession = await withAuthBootstrapTimeout(
+            'get_user',
+            refreshSupabaseSession(),
+          );
 
           if (!isMounted) {
             return;
           }
 
           setSession(refreshedSession ?? data.session);
+          updateAuthBootstrapDiagnostics({
+            reason: null,
+            stage: 'completed',
+            status: 'completed',
+          });
           return;
         }
 
+        updateAuthBootstrapDiagnostics({
+          reason: null,
+          stage: 'anonymous_sign_in',
+          status: 'loading',
+        });
         const { data: anonymousData, error: anonymousError } =
-          await client.auth.signInAnonymously();
+          await withAuthBootstrapTimeout(
+            'anonymous_sign_in',
+            client.auth.signInAnonymously(),
+          );
 
         if (!isMounted) {
           return;
@@ -179,11 +313,21 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
               ? anonymousError.message
               : 'Unknown error',
           );
+          updateAuthBootstrapDiagnostics({
+            reason: sanitizeAuthBootstrapReason(anonymousError),
+            stage: 'anonymous_sign_in',
+            status: 'failed',
+          });
           setSession(null);
           return;
         }
 
         setSession(anonymousData.session ?? null);
+        updateAuthBootstrapDiagnostics({
+          reason: null,
+          stage: 'completed',
+          status: 'completed',
+        });
       } catch (error) {
         if (!isMounted) {
           return;
@@ -193,6 +337,10 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
           'Supabase session initialization failed:',
           error instanceof Error ? error.message : 'Unknown error',
         );
+        updateAuthBootstrapDiagnostics({
+          reason: sanitizeAuthBootstrapReason(error),
+          status: isAuthBootstrapTimeout(error) ? 'timeout' : 'failed',
+        });
         setSession(null);
       } finally {
         if (isMounted) {
@@ -239,25 +387,35 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     let isDisposed = false;
 
     const handleRecoveryEmailUrl = async (url: string | null) => {
-      if (
-        !url ||
-        !isRecoveryEmailChangeUrl(url) ||
-        handledRecoveryEmailUrlsRef.current.has(url)
-      ) {
+      const isConnectionCallback = url ? isRecoveryEmailChangeUrl(url) : false;
+      const isRecoveryCallback = url ? isRecoveryEmailSignInUrl(url) : false;
+
+      if (!url || (!isConnectionCallback && !isRecoveryCallback)) {
+        return;
+      }
+
+      if (handledRecoveryEmailUrlsRef.current.has(url)) {
         return;
       }
 
       handledRecoveryEmailUrlsRef.current.add(url);
+      const flow = isRecoveryCallback ? 'recovery' : 'connection';
+      const attemptFlow =
+        flow === 'recovery' ? 'recovery_sign_in' : 'email_callback';
+      const attemptPrefix =
+        flow === 'recovery' ? 'email_recovery' : 'email_connection';
 
       try {
         void recordRecoveryAttempt({
-          event: 'email_connection_callback_received',
-          flow: 'email_callback',
+          event: `${attemptPrefix}_callback_received`,
+          flow: attemptFlow,
           provider: 'email',
           status: 'started',
         });
         const result = normalizeRecoveryEmailCompletion(
-          await completeRecoveryEmailChangeFromUrl(url),
+          await (flow === 'recovery'
+            ? completeRecoveryEmailSignInFromUrl(url)
+            : completeRecoveryEmailChangeFromUrl(url)),
         );
 
         if (isDisposed) {
@@ -269,9 +427,9 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         void recordRecoveryAttempt({
           event:
             result.status === 'completed'
-              ? 'email_connection_callback_succeeded'
-              : 'email_connection_callback_failed',
-          flow: 'email_callback',
+              ? `${attemptPrefix}_callback_succeeded`
+              : `${attemptPrefix}_callback_failed`,
+          flow: attemptFlow,
           provider: 'email',
           reasonCode:
             result.status === 'completed' ? undefined : result.reason,
@@ -297,14 +455,15 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         const { data: userData } = await client.auth.getUser();
         void recordRecoveryAttempt({
           errorCode: getRecoveryErrorCode(error),
-          event: 'email_connection_callback_failed',
-          flow: 'email_callback',
+          event: `${attemptPrefix}_callback_failed`,
+          flow: attemptFlow,
           provider: 'email',
           reasonCode: getRecoveryReasonCode(error),
           status: 'failed',
         });
         setLastRecoveryEmailCompletion({
           status: 'notCompleted',
+          flow,
           reason: 'callback_error',
           message:
             error instanceof Error && error.message
@@ -331,6 +490,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthSessionState>(
     () => ({
       accessToken: session?.access_token ?? null,
+      authBootstrapDiagnostics,
       authMode: getAuthMode({
         hasAccessToken: Boolean(session?.access_token),
         isLoading,
@@ -366,6 +526,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
             : currentSession,
         );
       },
+      requestRecoveryEmailSignInLink,
       recoverWithKakao: async () => {
         const result = await signInWithKakaoRecovery();
 
@@ -415,7 +576,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         return null;
       },
     }),
-    [isLoading, lastRecoveryEmailCompletion, session],
+    [authBootstrapDiagnostics, isLoading, lastRecoveryEmailCompletion, session],
   );
 
   return (

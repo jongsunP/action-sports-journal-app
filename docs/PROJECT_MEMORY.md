@@ -218,7 +218,9 @@ Current stable workstream list:
 - Initial Loading / Video Tab Spinner Observability P1(초기 로딩 / 영상 탭 스피너 관측성 1차)
 - QA Debug Overlay / Panel P1(QA 디버그 오버레이 / 패널 1차)
 - Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)
+- Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성): 구현 가능한 현재 범위 완료. `getSession` / `getUser` / anonymous sign-in 단계별 status, durationMs, reason을 QA Debug Panel에서 확인 가능
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): Build 89 fresh-link QA 성공
+- Email Recovery Sign-in P1(이메일 기존 기록 복구 로그인 1차): 코드 구현 완료. `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 기반으로 기존 email-linked 계정 복구 링크를 요청하고 `actionsportsjournal://auth/email/recovery` callback을 처리함. Standalone E2E QA는 다음 빌드 승인 후 확인 필요
 - Compression / Upload Optimization POC(영상 압축 / 업로드 최적화 POC): Build 89 실기기 QA 성공
 - Compression Upload Flow P1(압축 업로드 플로우 1차): Build 91 실기기 QA 성공. 압축된 영상 업로드 후 분석 완료까지 정상 확인
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
@@ -227,7 +229,6 @@ Current stable workstream list:
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
 - Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 89에서 `parksunl77@daum.net`으로 메일 링크 클릭 -> ASJ 앱 복귀 -> 수동 갱신 없는 "복구 준비 완료" 표시 -> 앱 완전 종료 후 재실행 연결 상태 유지까지 성공. 현재-account Email Recovery Connection P1은 완료
-- Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성)
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Founder가 별도로 말하기 전까지 유지. App Store / 실서비스 배포 직전에 숨김/제거 정책 적용
 - Recovery Attempt Observability P1(복구 시도 관측성 1차): 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. Migration 적용 완료, authenticated insert smoke 완료, 개인정보 redaction 및 no-token 401 확인 완료
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
@@ -239,8 +240,7 @@ Current stable workstream list:
 - Media / Share UX(미디어 / 공유 경험)
 - Future Media UX Improvements(향후 미디어 경험 개선)
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
-- Email Recovery Sign-in(이메일 기존 기록 복구 로그인)은 아직 미구현. 앱 삭제/재설치 후 이메일로 기존 기록 복구는 후속 별도 범위
-- Email Recovery Sign-in Implementation(이메일 기존 기록 복구 구현): `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 계열 별도 설계/승인 후 진행
+- Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 코드 구현은 완료. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준

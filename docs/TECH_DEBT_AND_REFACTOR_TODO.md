@@ -630,8 +630,9 @@ Validation:
 ## Email Recovery / Account Linking QA - 2026-06-24
 
 The first implementation links a recovery email to the current authenticated
-anonymous Supabase user. It does not yet implement reinstall/new-device
-recovery sign-in.
+anonymous Supabase user. Email Recovery Sign-in P1 now adds the separate
+reinstall/new-device recovery path in code, but standalone E2E QA is still
+pending.
 
 Current P1 status:
 
@@ -655,13 +656,15 @@ Current P1 status:
    `parksunl7@naver.com`; it is no longer a valid fresh Email Recovery target.
    Any future Email Recovery E2E must use an owner-approved fresh email and run
    within the magic-link validity window.
-5. Current-account email recovery-method connection is complete. Future
-   reinstall/new-device Email Recovery Sign-in remains a separate flow.
-6. If Email Recovery Sign-in is implemented later, confirm existing Moments,
-   upload targets, push tokens, and Realtime channel ownership stay under the
-   recovered user after email verification/sign-in.
-7. Add the actual recovery sign-in path for reinstall/new-device restore after
-   account linking is verified.
+5. Current-account email recovery-method connection is complete.
+6. Email Recovery Sign-in P1 is implemented as a separate flow using
+   `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` and
+   `actionsportsjournal://auth/email/recovery`. The app handles initial/runtime
+   callback URLs, code exchange or hash session payloads, and refreshes with
+   `getSession` + `getUser`.
+7. Next standalone E2E QA must confirm existing Moments, upload targets, push
+   tokens, and Realtime channel ownership stay under the recovered user after
+   email verification/sign-in.
 8. Keep no-token default user fallback internal-only throughout this work.
 
 Current blocker:
@@ -678,8 +681,9 @@ Deep-link / redirect investigation result:
   for standalone QA.
 - `updateUser({ email })` is the current-account email recovery-method
   connection path, not reinstall/new-device recovery sign-in.
-- Reinstall/new-device recovery needs a separate flow, likely
-  `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
+- Reinstall/new-device recovery now has a P1 code path using
+  `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`; standalone
+  E2E QA remains pending.
 - Email must follow the same product separation as Kakao: connect a recovery
   method versus recover existing records.
 - Current Email connection path now has a callback helper, initial URL handler,

@@ -4,16 +4,19 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../supabase/client';
 
 const EMAIL_CHANGE_REDIRECT_PATH = 'auth/email/change';
+const EMAIL_RECOVERY_REDIRECT_PATH = 'auth/email/recovery';
 const EMAIL_SCHEME = 'actionsportsjournal';
 
 export type RecoveryEmailCompletionResult =
   | {
       status: 'completed';
+      flow: 'connection' | 'recovery';
       session: Session;
       user: User;
     }
   | {
       status: 'notCompleted';
+      flow: 'connection' | 'recovery';
       reason: 'callback_error' | 'missing_auth_payload' | 'missing_session';
       message: string;
       session: Session | null;
@@ -33,12 +36,26 @@ export function getRecoveryEmailChangeRedirectUrl() {
   });
 }
 
+export function getRecoveryEmailSignInRedirectUrl() {
+  return Linking.createURL(EMAIL_RECOVERY_REDIRECT_PATH, {
+    scheme: EMAIL_SCHEME,
+  });
+}
+
 export function isRecoveryEmailChangeUrl(url: string) {
+  return isRecoveryEmailUrlForPath(url, EMAIL_CHANGE_REDIRECT_PATH);
+}
+
+export function isRecoveryEmailSignInUrl(url: string) {
+  return isRecoveryEmailUrlForPath(url, EMAIL_RECOVERY_REDIRECT_PATH);
+}
+
+function isRecoveryEmailUrlForPath(url: string, path: string) {
   try {
     const parsedUrl = new URL(url);
     const hostAndPath = `${parsedUrl.host}${parsedUrl.pathname}`;
 
-    return hostAndPath.includes(EMAIL_CHANGE_REDIRECT_PATH);
+    return hostAndPath.includes(path);
   } catch {
     return false;
   }
@@ -129,6 +146,30 @@ export async function requestRecoveryEmailLink(email: string) {
   return data.user;
 }
 
+export async function requestRecoveryEmailSignInLink(email: string) {
+  if (!supabase) {
+    throw new AccountRecoveryError('Supabase client is not configured.');
+  }
+
+  const normalizedEmail = normalizeRecoveryEmail(email);
+
+  if (!normalizedEmail) {
+    throw new AccountRecoveryError('Recovery email is required.');
+  }
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
+    options: {
+      emailRedirectTo: getRecoveryEmailSignInRedirectUrl(),
+      shouldCreateUser: false,
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function verifyRecoveryEmailOtp({
   email,
   token,
@@ -163,6 +204,19 @@ export async function verifyRecoveryEmailOtp({
 export async function completeRecoveryEmailChangeFromUrl(
   url: string,
 ): Promise<RecoveryEmailCompletionResult> {
+  return completeRecoveryEmailCallbackFromUrl(url, 'connection');
+}
+
+export async function completeRecoveryEmailSignInFromUrl(
+  url: string,
+): Promise<RecoveryEmailCompletionResult> {
+  return completeRecoveryEmailCallbackFromUrl(url, 'recovery');
+}
+
+async function completeRecoveryEmailCallbackFromUrl(
+  url: string,
+  flow: 'connection' | 'recovery',
+): Promise<RecoveryEmailCompletionResult> {
   if (!supabase) {
     throw new AccountRecoveryError('Supabase client is not configured.');
   }
@@ -188,6 +242,7 @@ export async function completeRecoveryEmailChangeFromUrl(
 
     return {
       status: 'notCompleted',
+      flow,
       reason: 'callback_error',
       message: getRecoveryEmailFailureMessage({
         error: queryError ?? error,
@@ -207,6 +262,7 @@ export async function completeRecoveryEmailChangeFromUrl(
 
       return {
         status: 'notCompleted',
+        flow,
         reason: 'callback_error',
         message: getRecoveryEmailFailureMessage({
           error: error.name,
@@ -231,6 +287,7 @@ export async function completeRecoveryEmailChangeFromUrl(
 
     return {
       status: 'notCompleted',
+      flow,
       reason: 'missing_auth_payload',
       message: '이메일 확인 결과를 확인하지 못했습니다. 다시 시도해주세요.',
       session,
@@ -243,6 +300,7 @@ export async function completeRecoveryEmailChangeFromUrl(
   if (!session) {
     return {
       status: 'notCompleted',
+      flow,
       reason: 'missing_session',
       message: '이메일 확인 세션을 확인하지 못했습니다. 다시 시도해주세요.',
       session: null,
@@ -252,6 +310,7 @@ export async function completeRecoveryEmailChangeFromUrl(
 
   return {
     status: 'completed',
+    flow,
     session: {
       ...session,
       user: user ?? session.user,

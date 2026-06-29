@@ -237,7 +237,7 @@ export function HomeScreen() {
   const layout = useWindowDimensions();
   const colorScheme = useColorScheme();
   const prefersDarkMode = colorScheme === 'dark';
-  const { authMode, user } = useAuthSession();
+  const { authBootstrapDiagnostics, authMode, user } = useAuthSession();
   const canUseRemoteApi =
     authMode === 'authenticated' || authMode === 'internalFallback';
   const isAuthLoading = authMode === 'authLoading';
@@ -2006,6 +2006,11 @@ export function HomeScreen() {
   const qaDebugSnapshot = useMemo(
     () => ({
       auth: {
+        bootstrapDurationMs: authBootstrapDiagnostics.durationMs,
+        bootstrapReason: authBootstrapDiagnostics.reason,
+        bootstrapStage: authBootstrapDiagnostics.stage,
+        bootstrapStatus: authBootstrapDiagnostics.status,
+        bootstrapUpdatedAt: authBootstrapDiagnostics.updatedAt,
         hasUser: Boolean(user),
         isAnonymous: Boolean(
           (user as { is_anonymous?: boolean } | null)?.is_anonymous,
@@ -2024,6 +2029,7 @@ export function HomeScreen() {
     }),
     [
       authMode,
+      authBootstrapDiagnostics,
       homeSessionSummaries.length,
       isAuthLoading,
       remoteMomentSyncDiagnostics,
@@ -2308,6 +2314,11 @@ function QADebugPanel({
   onToggle: () => void;
   snapshot: {
     auth: {
+      bootstrapDurationMs: number | null;
+      bootstrapReason: string | null;
+      bootstrapStage: string;
+      bootstrapStatus: string;
+      bootstrapUpdatedAt: number | null;
       hasUser: boolean;
       isAnonymous: boolean;
       isLoading: boolean;
@@ -2369,6 +2380,14 @@ function QADebugPanel({
         Auth {snapshot.auth.mode} · loading {snapshot.auth.isLoading ? 'Y' : 'N'} ·
         user {snapshot.auth.hasUser ? 'Y' : 'N'} · anon{' '}
         {snapshot.auth.isAnonymous ? 'Y' : 'N'}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Auth boot {snapshot.auth.bootstrapStatus}/{snapshot.auth.bootstrapStage} ·{' '}
+        {snapshot.auth.bootstrapDurationMs ?? '-'}ms
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Auth at {formatDebugTimestamp(snapshot.auth.bootstrapUpdatedAt)} · reason{' '}
+        {compactDebugReason(snapshot.auth.bootstrapReason)}
       </Text>
       <Text style={styles.qaDebugLine}>
         Boot {snapshot.boot.status} · {snapshot.boot.durationMs ?? '-'}ms · count{' '}
