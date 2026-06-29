@@ -187,6 +187,11 @@ named in the project memory or conversation, do not silently rename, merge, or
 omit it just because it is not active today. Preserve the same list structure
 so the Founder can recognize continuity over time. If an item is completed,
 blocked, deferred, or split, keep the item visible and mark its status.
+When showing the remaining work list, distinguish unimplemented work from
+implemented-but-not-yet-QA-verified work. Do not describe a code-complete item
+as "not done" just because standalone E2E QA is pending. Use wording such as
+`미구현`, `구현 완료 / QA 대기`, `실기기 QA 대기`, or `Store 전 확인` so the Founder can
+separate product/code scope from validation scope.
 
 Current stable workstream list:
 
@@ -240,7 +245,7 @@ Current stable workstream list:
 - Media / Share UX(미디어 / 공유 경험)
 - Future Media UX Improvements(향후 미디어 경험 개선)
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사)
-- Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 코드 구현은 완료. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
+- Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준

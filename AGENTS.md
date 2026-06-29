@@ -81,6 +81,9 @@ named in the project memory or conversation, do not silently rename, merge, or
 omit it just because it is not active today. Preserve the same list structure
 so the Founder can recognize continuity over time. If an item is completed,
 blocked, deferred, or split, keep the item visible and mark its status.
+When listing remaining work, clearly distinguish between `미구현` and
+`구현 완료 / QA 대기`. A code-complete item that only needs standalone E2E QA
+should not be described as if it is unimplemented.
 
 When discussing whether to build, frame the answer around validation stages:
 
