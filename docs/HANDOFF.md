@@ -42,6 +42,9 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
     compressed temp/persisted app video asset. Decide later whether this is the
     desired preview-continuity policy or whether completed compressed local video
     should be cleared for thumbnail-only previews.
+  - AI Calibration should later start with TS/HS Evidence, not broad trick-name
+    tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
+    but it must be tested on real ASJ wakeboard samples before adoption.
 - Next starting point: decide the next workstream after Build 91 closeout. Do
   not start infra upgrades solely from first-open slowness without A/B evidence.
 

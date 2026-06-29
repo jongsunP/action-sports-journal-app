@@ -2633,6 +2633,23 @@ Calibration references:
 - `docs/WAKEBOARD_TRICK_TAXONOMY_REFERENCE.md`
 - `docs/WAKEBOARD_VALIDATION_MATRIX.md`
 
+AI Calibration P1 direction:
+
+- First target: TS/HS Evidence(토/힐 사이드 근거 보정), not full trick-name
+  accuracy.
+- Goal: stabilize Toe-side / Heel-side judgment with confidence and explicit
+  evidence before tuning Back Roll, Tantrum, grabs, or broader trick identity.
+- Treat MediaPipe Feasibility Spike(미디어파이프 가능성 검증) as a candidate input
+  to Motion Evidence Extraction(동작 근거 추출), not as a standalone judge.
+- Evaluate MediaPipe on real ASJ wakeboard samples before adoption because
+  rider size, water spray, rope/board occlusion, fast rotation, camera shake, and
+  blur may make landmarks unreliable.
+- If useful, MediaPipe pose/landmark signals can support body orientation,
+  shoulder/hip direction, edge approach, takeoff posture, and rotation-initiation
+  evidence for Gemini/GPT post-processing or validator logic.
+- If landmarks are unstable on actual samples, keep the idea documented but do
+  not ship it into the product path.
+
 Rule:
 
 Only repeated failure patterns across multiple real videos should become prompt,

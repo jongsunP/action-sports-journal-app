@@ -248,6 +248,7 @@ Current stable workstream list:
 - Build 91 Upload/Compression Closeout QA(빌드 91 업로드/압축 마감 QA): 실기기 QA 통과. Upload Unified Progress UX, Upload Selection Size Validation Fix, Compression Upload Flow P1, Video no-records timeout UI fix가 모두 통과했고 압축된 영상 업로드 후 분석까지 정상 완료
 - Compressed Preview Retention Policy(압축 영상 프리뷰 유지 정책): 원본 Photos 영상을 삭제해도 ASJ에서 압축 영상 preview가 계속 보일 수 있음. Read-only 확인 결과 최신 completed Moments는 `source_video_storage_status=deleted`, source Storage object 없음, thumbnail object 있음, `source_video_uri`는 local `file:` URI. 현재 유력 원인은 앱 로컬 compressed temp / persisted video asset이며, 제품적으로 preview continuity로 볼지 완료 후 thumbnail-only로 바꿀지 후속 결정 필요
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 오랜 idle 이후 첫 실행만 느린 패턴이면 Render free cold start 가능성이 높음. 당장 업그레이드하지 말고, 기능/QA가 안정된 뒤 유료 플랜으로 짧게 비교해 근거를 만든다
+- AI Calibration P1 - TS/HS Evidence(토/힐 사이드 근거 보정): AI 고도화의 첫 단계는 트릭 전체 정답률보다 Toe-side / Heel-side 판정 안정화로 잡는다. Gemini/GPT 분석만으로 밀지 말고, 실제 ASJ 샘플에서 MediaPipe Pose/Landmark가 라이더 자세, 어깨/골반 방향, 접근 edge, takeoff 직전 움직임의 보조 근거가 될 수 있는지 feasibility spike로 검증한다. MediaPipe는 단독 판정기가 아니라 Motion Evidence Extraction(동작 근거 추출)의 후보 신호다
 - AI Calibration(AI 분석 정확도 보정)
 - Apple Login(애플 로그인)
 - Google Login(구글 로그인)

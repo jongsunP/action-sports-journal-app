@@ -40,6 +40,11 @@ Build 91 closeout, 2026-06-29:
     deleted Photos original and not the Supabase source object. Treat this as a
     product-policy follow-up: keep playable local compressed previews, or clear
     local compressed video after completion and rely on thumbnail-only preview.
+- AI Calibration note from follow-up discussion: when ASJ returns to analysis
+  accuracy work, the first calibration slice should be TS/HS Evidence rather
+  than broad trick-name tuning. MediaPipe may be evaluated as a feasibility spike
+  for Motion Evidence Extraction, but only as a candidate support signal after
+  real ASJ sample validation.
 
 Daily wrap-up, 2026-06-25:
 
