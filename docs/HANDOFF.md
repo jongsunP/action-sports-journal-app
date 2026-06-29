@@ -58,15 +58,19 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
     Detail only. Thumbnail-only completed states now read as a representative
     image, and missing-media copy is split between completed records and
     non-completed states.
+  - Archive Card Visual Hierarchy P1 is implemented for Video tab rows only.
+    Archive cards now prioritize journal label, date, title, status, and
+    state-aware description so the Video tab feels like a rider archive instead
+    of a raw video file list.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
 - Next starting point: decide whether to create a standalone QA build for Email
   Recovery Sign-in P1. The build should verify email link click -> ASJ app
   return -> existing email-linked Auth user session switch -> Home/Video/Detail
-  reload. Media Preview Policy P1 and Media / Share UX P1 visual QA can be
-  bundled into that later build, including Detail thumbnail-only and
-  missing-media state polish, but neither is urgent as a standalone build reason.
+  reload. Media Preview Policy P1, Media / Share UX P1, Detail media state
+  polish, and Archive Card Visual Hierarchy P1 visual QA can be bundled into
+  that later build, but none is urgent as a standalone build reason.
   Do not start infra upgrades solely from
   first-open slowness without A/B evidence.
 - Keep QA Debug Panel visible until the Founder explicitly says to remove it or

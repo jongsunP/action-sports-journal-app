@@ -130,6 +130,25 @@ Future Media UX P1 - Detail Media State Polish, 2026-06-29:
 - Next media UX candidates remain Archive Card Visual Hierarchy, image export,
   native share sheet, or ShareResult route, each requiring separate approval.
 
+Archive Card Visual Hierarchy P1, 2026-06-29:
+
+- Implemented as the final Media UX polish candidate before AI Calibration.
+- Video tab archive rows now read more like rider journal records than raw
+  video file rows: the card separates journal label, date, title, status, and a
+  short state-aware description.
+- Description fallback is now journal-oriented. Completed evidence says the
+  analysis summary is available, review-needed evidence says the analysis record
+  needs confirmation, running states say analysis is being prepared, failed
+  states say the record can be retried, and no-video states say the record has no
+  video.
+- Session notes still take priority when present.
+- The card intentionally does not expose primary trick names, confidence scores,
+  raw evidence text, image export, native share, public feed, routes, schema,
+  storage, or AI Calibration changes.
+- With Media Preview Policy P1, Detail Media State Polish, Media / Share UX P1,
+  and Archive Card Visual Hierarchy P1 complete, the next major product-quality
+  candidate can move to AI Calibration, starting with TS/HS Evidence.
+
 Daily wrap-up, 2026-06-25:
 
 Kakao Recovery / Account Linking is the verified recovery path as of Build 75.

@@ -57,6 +57,62 @@ export type VideoArchiveLoadState =
   | 'ready'
   | 'timeout';
 
+function needsEvidenceReview(evidence?: GeminiEvidenceResult) {
+  return Boolean(
+    evidence?.requiresUserConfirmation ||
+      evidence?.consistencyStatus === 'needs_review' ||
+      evidence?.consistencyStatus === 'inconsistent' ||
+      evidence?.confidence === 'low' ||
+      evidence?.primaryCandidate.confidence === 'low' ||
+      evidence?.primaryCandidate.name === '확인 필요',
+  );
+}
+
+function getArchiveCardLabel({
+  completedEvidence,
+  momentStatus,
+}: SessionSummary) {
+  const visibleStatus = getVisibleMomentStatus(momentStatus);
+
+  if (completedEvidence) {
+    return needsEvidenceReview(completedEvidence) ? '확인 필요' : '라이딩 기록';
+  }
+
+  if (visibleStatus === 'running') {
+    return '기록 진행중';
+  }
+
+  if (visibleStatus === 'failed') {
+    return '다시 시도 가능';
+  }
+
+  return '라이딩 기록';
+}
+
+function getArchiveCardDescription(
+  summary: SessionSummary,
+  getVideoArchiveDescription: (session: Session) => string,
+) {
+  const { completedEvidence, momentStatus, session } = summary;
+  const visibleStatus = getVisibleMomentStatus(momentStatus);
+
+  if (completedEvidence) {
+    return needsEvidenceReview(completedEvidence)
+      ? '확인이 필요한 분석 기록입니다.'
+      : '분석 요약을 확인할 수 있습니다.';
+  }
+
+  if (visibleStatus === 'running') {
+    return '분석 결과를 준비하고 있습니다.';
+  }
+
+  if (visibleStatus === 'failed') {
+    return '다시 시도할 수 있는 기록입니다.';
+  }
+
+  return getVideoArchiveDescription(session);
+}
+
 export function JournalSnapshot({
   activeCount,
   completedCount,
@@ -575,6 +631,10 @@ export function VideoArchiveList({
 
   const renderSessionRow = ({ item }: { item: SessionSummary }) => {
     const { card, momentStatus, session } = item;
+    const archiveCardDescription =
+      session.notes ??
+      getArchiveCardDescription(item, getVideoArchiveDescription);
+    const archiveCardLabel = getArchiveCardLabel(item);
 
     return (
       <Pressable
@@ -600,16 +660,21 @@ export function VideoArchiveList({
         </View>
         <View style={styles.videoArchiveBody}>
           <View style={styles.videoArchiveMetaRow}>
-            <MomentStatusLabel status={momentStatus} styles={styles} />
+            <Text style={styles.videoArchiveKicker} numberOfLines={1}>
+              {archiveCardLabel}
+            </Text>
             <Text style={styles.recentDate} numberOfLines={1}>
               {formatShortSessionDate(session.occurredAt)}
             </Text>
           </View>
-          <Text style={styles.timelineTitle} numberOfLines={1}>
+          <Text style={styles.videoArchiveTitle} numberOfLines={1}>
             {card.momentTitle}
           </Text>
+          <View style={styles.videoArchiveStatusRow}>
+            <MomentStatusLabel status={momentStatus} styles={styles} />
+          </View>
           <Text style={styles.videoArchiveDescription} numberOfLines={2}>
-            {session.notes ?? getVideoArchiveDescription(session)}
+            {archiveCardDescription}
           </Text>
         </View>
       </Pressable>

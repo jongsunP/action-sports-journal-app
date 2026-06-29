@@ -242,8 +242,12 @@ Media / Share UX:
   Detail only. Thumbnail-only states now look like intentional representative
   images, and missing-media copy is softer for completed records while still
   making non-completed video-access needs clear.
+- Archive Card Visual Hierarchy P1 is implemented for Video tab rows only. It
+  keeps thumbnail and row navigation intact while making archive cards read as
+  rider journal records through label/date/title/status/description hierarchy
+  and state-aware copy.
 - Do next only after product approval: choose one of image export, native share
-  sheet, ShareResult route, or Archive Card Visual Hierarchy.
+  sheet, or ShareResult route.
 
 ### Minimum next implementation scope
 
@@ -1814,9 +1818,13 @@ POC implementation status, 2026-06-27:
   External sharing/export remains a separate future scope.
 - Future Media UX P1 - Detail Media State Polish is implemented on top of Media
   Preview Policy P1. It does not change Home, Video Archive, SharePreviewCard,
-  storage cleanup, storage policy, DB schema, or AI analysis. Next visual-media
-  candidates are Archive Card Visual Hierarchy, image export, native share
-  sheet, or ShareResult route.
+  storage cleanup, storage policy, DB schema, or AI analysis.
+- Archive Card Visual Hierarchy P1 is implemented as the final pre-AI
+  Calibration Media UX polish candidate. Video tab rows now use journal-oriented
+  state descriptions without exposing primary trick names, confidence scores,
+  raw evidence text, routes, schema, storage, or sharing/export features. The
+  remaining Media / Share next steps are image export, native share sheet, or
+  ShareResult route after separate product approval.
 
 ## Render Free Cold Start Watch
 

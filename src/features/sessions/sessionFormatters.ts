@@ -149,7 +149,9 @@ export function getSessionDisplayTitle(
 }
 
 export function getVideoArchiveDescription(session: Session) {
-  return session.videoUri ? '업로드된 라이딩 영상' : '영상이 없는 세션';
+  return session.videoUri
+    ? '라이딩 기록을 확인할 수 있습니다.'
+    : '영상이 없는 기록입니다.';
 }
 
 export function formatShortSessionDate(value: string) {
