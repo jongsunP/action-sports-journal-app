@@ -61,7 +61,6 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <Text style={styles.closeButtonText}>‹</Text>
         </Pressable>
         <View style={styles.headerTitleBlock}>
-          <Text style={styles.kicker}>설정</Text>
           <Text style={styles.title}>앱 설정</Text>
         </View>
         <View style={styles.headerSpacer} />
@@ -150,6 +149,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           </View>
         </View>
 
+        <View style={styles.footerSpacer} />
         <Text style={styles.versionText}>Wake Board {APP_VERSION}</Text>
       </ScrollView>
     </SafeAreaView>
@@ -199,13 +199,6 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       height: 38,
       width: 38,
     },
-    kicker: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: '900',
-      marginBottom: 3,
-      textTransform: 'uppercase',
-    },
     title: {
       color: colors.textPrimary,
       fontSize: 24,
@@ -213,6 +206,7 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       lineHeight: 29,
     },
     body: {
+      flexGrow: 1,
       gap: 14,
       padding: 16,
       paddingBottom: 28,
@@ -315,11 +309,14 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       fontWeight: '700',
       lineHeight: 17,
     },
+    footerSpacer: {
+      flex: 1,
+      minHeight: 28,
+    },
     versionText: {
       color: colors.textMuted,
       fontSize: 12,
       fontWeight: '700',
-      paddingTop: 2,
       textAlign: 'center',
     },
     buttonPressed: {

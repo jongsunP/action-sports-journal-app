@@ -886,7 +886,6 @@ export function AccountRecoveryScreen() {
             <Text style={styles.closeButtonText}>‹</Text>
           </Pressable>
           <View style={styles.headerTitleBlock}>
-            <Text style={styles.kicker}>Account Recovery</Text>
             <Text style={styles.title}>계정 복구</Text>
           </View>
           <View style={styles.headerSpacer} />
@@ -1267,7 +1266,6 @@ function createAccountRecoveryThemeStyles(
       borderColor: borderStrong,
     },
     closeButtonText: { color: colors.textPrimary },
-    kicker: { color: colors.textMuted },
     title: { color: colors.textPrimary },
     statusPanel: {
       backgroundColor: colors.surface,
@@ -1414,13 +1412,6 @@ const baseStyles = StyleSheet.create({
   headerSpacer: {
     height: 38,
     width: 38,
-  },
-  kicker: {
-    color: '#9ca3af',
-    fontSize: 10,
-    fontWeight: '900',
-    marginBottom: 3,
-    textTransform: 'uppercase',
   },
   title: {
     color: '#f9fafb',

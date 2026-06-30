@@ -311,22 +311,15 @@ function BottomTabIcon({
   );
 }
 
-export function FlowPlaceholderTab({
-  kicker,
-  styles,
-}: {
-  kicker: string;
-  styles: HomeScreenStyles;
-}) {
+export function FlowPlaceholderTab({ styles }: { styles: HomeScreenStyles }) {
   return (
     <>
       <View style={styles.tabPageHeader}>
-        <Text style={styles.kicker}>{kicker}</Text>
         <Text style={styles.title}>성장</Text>
-        <Text style={styles.headerMeta}>Progression 준비 중</Text>
+        <Text style={styles.headerMeta}>성장 기록 준비 중</Text>
       </View>
       <View style={styles.placeholderCard}>
-        <Text style={styles.placeholderTitle}>Progression Layer</Text>
+        <Text style={styles.placeholderTitle}>성장 기록</Text>
         <Text style={styles.placeholderText}>
           반복된 세션과 분석 결과가 충분히 쌓이면 성장 추이, 검토 후보, 다음
           연습 포인트를 이곳에서 보여줄 예정입니다.
@@ -340,7 +333,6 @@ export function ProfilePlaceholderTab({ styles }: { styles: HomeScreenStyles }) 
   return (
     <>
       <View style={styles.tabPageHeader}>
-        <Text style={styles.kicker}>Wake Board</Text>
         <Text style={styles.title}>개인정보</Text>
         <Text style={styles.headerMeta}>계정과 설정 진입점</Text>
       </View>

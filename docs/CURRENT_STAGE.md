@@ -47,6 +47,10 @@ AI pre-build hardening pass, 2026-06-30:
   - Account Recovery removed remaining default description/helper copy from the
     first view and method cards; only title, state, CTA, and necessary
     pending/error/completion messages remain.
+  - Home, Settings, Account Recovery, Video, Growth, boot loading, and related
+    placeholder headers now avoid decorative English/brand eyebrows above the
+    main Korean page title. Settings version copy is positioned as a lower
+    footer rather than normal content.
 
 Render Starter baseline, 2026-06-30:
 

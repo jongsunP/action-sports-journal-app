@@ -105,6 +105,10 @@ Latest product/UX direction update:
   description-heavy copy from the header, protection panel, method cards, and
   Email base state while preserving necessary pending/cancel/error/success
   messages.
+- Page headers were simplified to one user-facing Korean title where practical:
+  Home, Settings, Account Recovery, Video, Growth, boot loading, and placeholder
+  headers no longer stack decorative English/brand eyebrows above the main
+  title. Settings version text now sits as a lower footer.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 

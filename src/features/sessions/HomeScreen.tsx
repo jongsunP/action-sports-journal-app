@@ -2086,7 +2086,6 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.bootLoadingContent}>
-          <Text style={styles.kicker}>Wake Board</Text>
           <Text style={styles.bootLoadingTitle}>기록을 불러오는 중입니다</Text>
         </View>
       </SafeAreaView>
@@ -2102,7 +2101,6 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.bootLoadingContent}>
-          <Text style={styles.kicker}>Wake Board</Text>
           <Text style={styles.bootLoadingTitle}>로그인이 필요합니다</Text>
           <Text style={styles.emptyText}>
             계정 연결 화면은 다음 단계에서 추가할 예정입니다.
@@ -2169,7 +2167,6 @@ export function HomeScreen() {
           </View>
         </Pressable>
         <View style={styles.headerTitleBlock}>
-          <Text style={styles.kicker}>Wake Board</Text>
           <Text style={styles.title}>오늘의 라이딩 기록</Text>
           <Text style={styles.headerMeta}>
             {journalSnapshot.totalCount}개 기록
@@ -2231,7 +2228,6 @@ export function HomeScreen() {
   const renderVideoArchiveHeader = () => (
     <>
       <View style={styles.tabPageHeader}>
-        <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wake Board'}</Text>
         <Text style={styles.title}>영상</Text>
         <Text style={styles.headerMeta}>
           {visibleVideoArchiveSessionSummaries.length}개 표시됨
@@ -2244,7 +2240,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Text style={styles.sectionLabel}>세션 아카이브</Text>
-          <Text style={styles.sectionHint}>VIDEO</Text>
+          <Text style={styles.sectionHint}>기록</Text>
         </View>
       </View>
     </>
@@ -2267,10 +2263,7 @@ export function HomeScreen() {
   );
 
   const renderFlowTab = () => (
-    <FlowPlaceholderTab
-      kicker={selectedGroup?.name ?? 'Wake Board'}
-      styles={styles}
-    />
+    <FlowPlaceholderTab styles={styles} />
   );
 
   const renderPagerScene = ({
@@ -2590,7 +2583,6 @@ function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       borderColor: borderStrong,
     },
     headerMenuText: { color: colors.textPrimary },
-    kicker: { color: colors.textMuted },
     title: { color: colors.textPrimary },
     headerMeta: { color: colors.textMuted },
     headerAddButton: {
@@ -3059,13 +3051,6 @@ const baseStyles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     lineHeight: 22,
-  },
-  kicker: {
-    color: '#9ca3af',
-    fontSize: 10,
-    fontWeight: '900',
-    marginBottom: 3,
-    textTransform: 'uppercase',
   },
   title: {
     color: '#f9fafb',
