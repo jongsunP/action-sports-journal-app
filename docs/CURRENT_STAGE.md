@@ -55,6 +55,20 @@ Startup Performance Observability P2 implemented after Build 94 QA feedback,
 - Next build should verify whether app `apiMs` is close to server `serverTotalMs`
   or whether time is being lost outside the server handler.
 
+Build 95 Startup Performance Observability P2 QA build complete, 2026-07-01:
+
+- Build commit is `f49481e chore: bump ios build number to 95`.
+- iOS buildNumber is `95`.
+- EAS Build ID is `b45e226d-60f7-458d-ab2e-e814f33ca6c6`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/b45e226d-60f7-458d-ab2e-e814f33ca6c6`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/DP8-ZCgYSgzIFm1KnPRst7kmiJ3Ld_TCvzlHyTekFoY.ipa`.
+- Purpose: observation build only. Verify P2 `/api/moments` timing fields on
+  the real iPhone + Render + Supabase/Auth/Storage path.
+- Next start point: check Build 95 P2 timing QA results, especially app QA
+  Debug `apiMs` versus Render `[moments_timing] serverTotalMs`.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

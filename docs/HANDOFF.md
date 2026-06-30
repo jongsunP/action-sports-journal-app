@@ -44,6 +44,19 @@ Latest product/UX direction update:
   `X-ASJ-Request-Id`. This is still observation-only; no lazy thumbnail,
   evidence payload split, DB migration, or Render plan change was made. Next
   build should compare app QA Debug `apiMs` with server `serverTotalMs`.
+- Build 95 Startup Performance Observability P2 preview/internal build is
+  complete. Next session should start from the Build 95 timing QA result:
+  compare app QA Debug `apiMs` with Render `[moments_timing] serverTotalMs`,
+  then inspect `authGetUserMs`, `publicUserLookupMs`,
+  `publicUserUpsertOrSyncMs`, `staleCleanupMs`, `momentsQueryMs`,
+  `evidenceQueryMs`, `thumbnailSignedUrlMs`, `responseBytes`, and `requestId`.
+  - Build commit: `f49481e chore: bump ios build number to 95`.
+  - iOS buildNumber: `95`.
+  - EAS Build ID: `b45e226d-60f7-458d-ab2e-e814f33ca6c6`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/b45e226d-60f7-458d-ab2e-e814f33ca6c6`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/DP8-ZCgYSgzIFm1KnPRst7kmiJ3Ld_TCvzlHyTekFoY.ipa`.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

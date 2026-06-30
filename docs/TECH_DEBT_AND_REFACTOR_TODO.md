@@ -403,6 +403,11 @@ Future Detail UX backlog:
   `responseBytes`, `serverTotalMs`, and `requestId`, while preserving `totalMs`
   as a legacy alias. Use this before deciding on thumbnail lazy loading,
   evidence payload reduction, DB index changes, or Render plan changes.
+- Build 95 is the current Startup Performance Observability P2 QA build.
+  Build commit: `f49481e`; iOS buildNumber: `95`; EAS Build ID:
+  `b45e226d-60f7-458d-ab2e-e814f33ca6c6`. Next start point is the Build 95
+  timing QA result: compare app QA Debug `apiMs` with Render
+  `[moments_timing] serverTotalMs` and match by `requestId`.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or
