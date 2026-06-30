@@ -413,6 +413,11 @@ Future Detail UX backlog:
   shows them in QA Debug Video diagnostics. This needs the next preview/internal
   build before real-device QA can match app screenshots to Render logs without
   manual time-window guessing.
+- Build 96 is the current Startup Performance Observability P2.1 QA build.
+  Build commit: `4f8f4a2`; iOS buildNumber: `96`; EAS Build ID:
+  `68b17987-b5f8-4a6f-9a06-7a2260c69708`. Next start point is the Build 96
+  timing QA result: compare app QA Debug `apiMs` with app QA Debug
+  `serverTotalMs` before choosing any optimization.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or

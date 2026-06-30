@@ -80,6 +80,20 @@ Startup Performance Observability P2.1 implemented, 2026-07-01:
 - No performance optimization, API payload contract change, DB migration, EAS
   build, paid AI call, or external console change was made.
 
+Build 96 Startup Performance Observability P2.1 QA build complete, 2026-07-01:
+
+- Build commit is `4f8f4a2 chore: bump ios build number to 96`.
+- iOS buildNumber is `96`.
+- EAS Build ID is `68b17987-b5f8-4a6f-9a06-7a2260c69708`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/68b17987-b5f8-4a6f-9a06-7a2260c69708`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/JgPGyJ5Y3njSGS6-Q6MFc7zdpwjNFqmA6StePZzUssQ.ipa`.
+- Purpose: observation build only. It should show app QA Debug `apiMs`,
+  `serverTotalMs`, and short `requestId` together.
+- Next start point: check Build 96 P2.1 timing QA results before deciding on
+  endpoint optimization or Development Build / Local Build Workflow.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

@@ -62,6 +62,18 @@ Latest product/UX direction update:
   `X-ASJ-Server-Total-Ms`; the client reads both `X-ASJ-Request-Id` and
   `X-ASJ-Server-Total-Ms`; QA Debug Video displays `Video req {shortId} ·
   server {ms}ms`. A follow-up build is needed before device QA can use this UI.
+- Build 96 Startup Performance Observability P2.1 preview/internal build is
+  complete. Next session should start from the Build 96 P2.1 timing QA result.
+  Compare app QA Debug `apiMs` with app QA Debug `serverTotalMs`, then use the
+  short request id to find the Render `[moments_timing]` row if detailed
+  server stage timings are needed.
+  - Build commit: `4f8f4a2 chore: bump ios build number to 96`.
+  - iOS buildNumber: `96`.
+  - EAS Build ID: `68b17987-b5f8-4a6f-9a06-7a2260c69708`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/68b17987-b5f8-4a6f-9a06-7a2260c69708`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/JgPGyJ5Y3njSGS6-Q6MFc7zdpwjNFqmA6StePZzUssQ.ipa`.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the
