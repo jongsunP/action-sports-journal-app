@@ -110,6 +110,27 @@ Startup Performance Optimization P1 implemented, 2026-07-01:
 - No evidence payload split, thumbnail lazy endpoint, DB migration, EAS build,
   paid AI call, Storage upload test, or external console change was made.
 
+Build 97 Startup Performance Optimization P1 QA build complete, 2026-07-01:
+
+- Build commit is `1bb347c chore: bump ios build number to 97`.
+- iOS buildNumber is `97`.
+- EAS Build ID is `a3693975-e234-4ae0-a169-373fd683cd3a`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/a3693975-e234-4ae0-a169-373fd683cd3a`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/46cVuinLZ-VVowkdVFcw-iKcdjx-vvzG10RU4M7Vyx4.ipa`.
+- Purpose: verify Startup Performance Optimization P1 on the real iPhone +
+  Render + Supabase path.
+- QA should compare Build 96 timing with Build 97 values: app `apiMs`, app
+  `serverTotalMs`, short `requestId`, Render `cacheHit`,
+  `staleCleanupBlocking=false`, `authGetUserMs`, `publicUserLookupMs`,
+  `publicUserUpsertOrSyncMs`, `staleCleanupMs`, `momentsQueryMs`,
+  `evidenceQueryMs`, `thumbnailSignedUrlMs`, `thumbnailSignedUrlWallMs`, and
+  `responseBytes`.
+- Next start point: check Startup Performance Optimization P1 QA results before
+  deciding on Development Build / Local Build Workflow or any further
+  `/api/moments` optimization.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

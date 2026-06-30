@@ -425,6 +425,15 @@ Future Detail UX backlog:
   signed URL time. Next build should verify whether 0-record `serverTotalMs`
   drops before considering evidence payload split, thumbnail lazy loading, DB
   migration, or plan changes.
+- Build 97 is the current Startup Performance Optimization P1 QA build. Build
+  commit: `1bb347c`; iOS buildNumber: `97`; EAS Build ID:
+  `a3693975-e234-4ae0-a169-373fd683cd3a`. Next start point is Startup
+  Performance Optimization P1 QA result review: compare Build 96 with Build 97
+  app `apiMs`, app `serverTotalMs`, Render `cacheHit`,
+  `staleCleanupBlocking=false`, `authGetUserMs`, `publicUserLookupMs`,
+  `publicUserUpsertOrSyncMs`, `staleCleanupMs`, `momentsQueryMs`,
+  `evidenceQueryMs`, `thumbnailSignedUrlMs`, `thumbnailSignedUrlWallMs`, and
+  `responseBytes`.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or
