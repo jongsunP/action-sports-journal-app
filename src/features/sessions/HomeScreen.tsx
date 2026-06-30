@@ -127,11 +127,16 @@ type RequestDiagnosticsStatus =
   | 'ready'
   | 'timeout';
 type RequestDiagnostics = {
+  apiMs: number | null;
+  bootPageReused: boolean | null;
+  clientNormalizeMs: number | null;
   count: number | null;
+  duplicateVideoFetchBlocked: boolean | null;
   durationMs: number | null;
   hasMore: boolean | null;
   reason: string | null;
   retryCount: number;
+  source: 'archive_fetch' | 'boot_reuse' | null;
   status: RequestDiagnosticsStatus;
   updatedAt: number | null;
 };
@@ -295,11 +300,16 @@ export function HomeScreen() {
   const [isQADebugPanelOpen, setIsQADebugPanelOpen] = useState(false);
   const [videoArchiveDiagnostics, setVideoArchiveDiagnostics] =
     useState<RequestDiagnostics>({
+      apiMs: null,
+      bootPageReused: null,
+      clientNormalizeMs: null,
       count: null,
+      duplicateVideoFetchBlocked: null,
       durationMs: null,
       hasMore: null,
       reason: null,
       retryCount: 0,
+      source: null,
       status: 'empty',
       updatedAt: null,
     });
@@ -1327,17 +1337,24 @@ export function HomeScreen() {
     }
 
     hasAppliedBootVideoArchivePageRef.current = true;
+    const normalizeStartedAt = Date.now();
     applyVideoArchiveFirstPage({
       moments: initialRemoteMoments,
       hasMore: initialRemoteMomentPageInfo.hasMore,
       nextCursor: initialRemoteMomentPageInfo.nextCursor,
     });
+    const clientNormalizeMs = getRequestDurationMs(normalizeStartedAt);
     setVideoArchiveDiagnostics((current) => ({
       ...current,
+      apiMs: remoteMomentSyncDiagnostics.durationMs,
+      bootPageReused: true,
+      clientNormalizeMs,
       count: initialRemoteMoments.length,
+      duplicateVideoFetchBlocked: false,
       durationMs: remoteMomentSyncDiagnostics.durationMs,
       hasMore: initialRemoteMomentPageInfo.hasMore,
       reason: remoteMomentSyncDiagnostics.reason,
+      source: 'boot_reuse',
       status: initialRemoteMoments.length > 0 ? 'ready' : 'empty',
       updatedAt: Date.now(),
     }));
@@ -1369,12 +1386,23 @@ export function HomeScreen() {
     });
   }, []);
   const loadInitialVideoArchivePage = useCallback(() => {
-    if (
-      !canUseRemoteApi ||
+    const duplicateVideoFetchBlocked =
       hasLoadedVideoArchiveFirstPageRef.current ||
       hasLoadedVideoArchiveFirstPage ||
       isLoadingVideoArchiveInitialPageRef.current ||
-      isLoadingVideoArchiveInitialPage ||
+      isLoadingVideoArchiveInitialPage;
+
+    if (duplicateVideoFetchBlocked) {
+      setVideoArchiveDiagnostics((current) => ({
+        ...current,
+        duplicateVideoFetchBlocked: true,
+        updatedAt: Date.now(),
+      }));
+      return;
+    }
+
+    if (
+      !canUseRemoteApi ||
       !hasConfiguredSupabaseMoments()
     ) {
       return;
@@ -1386,10 +1414,15 @@ export function HomeScreen() {
     const startedAt = Date.now();
     setVideoArchiveDiagnostics((current) => ({
       ...current,
+      apiMs: null,
+      bootPageReused: false,
+      clientNormalizeMs: null,
       count: null,
+      duplicateVideoFetchBlocked: false,
       durationMs: null,
       hasMore: null,
       reason: null,
+      source: 'archive_fetch',
       status: 'loading',
       updatedAt: startedAt,
     }));
@@ -1403,14 +1436,22 @@ export function HomeScreen() {
       limit: MOMENT_LIST_PAGE_SIZE,
     })
       .then((remoteMomentPage) => {
+        const apiMs = getRequestDurationMs(startedAt);
+        const normalizeStartedAt = Date.now();
         syncRemoteMoments(remoteMomentPage.moments);
         applyVideoArchiveFirstPage(remoteMomentPage);
+        const clientNormalizeMs = getRequestDurationMs(normalizeStartedAt);
         setVideoArchiveDiagnostics((current) => ({
           ...current,
+          apiMs,
+          bootPageReused: false,
+          clientNormalizeMs,
           count: remoteMomentPage.moments.length,
           durationMs: getRequestDurationMs(startedAt),
+          duplicateVideoFetchBlocked: false,
           hasMore: remoteMomentPage.hasMore,
           reason: null,
+          source: 'archive_fetch',
           status: remoteMomentPage.moments.length > 0 ? 'ready' : 'empty',
           updatedAt: Date.now(),
         }));
@@ -1428,10 +1469,15 @@ export function HomeScreen() {
         setVideoArchiveLoadState(status);
         setVideoArchiveDiagnostics((current) => ({
           ...current,
+          apiMs: getRequestDurationMs(startedAt),
+          bootPageReused: false,
+          clientNormalizeMs: null,
           count: null,
           durationMs: getRequestDurationMs(startedAt),
+          duplicateVideoFetchBlocked: false,
           hasMore: null,
           reason,
+          source: 'archive_fetch',
           status,
           updatedAt: Date.now(),
         }));
@@ -1894,11 +1940,16 @@ export function HomeScreen() {
     setHasMountedVideoTab(false);
     setVideoArchiveLoadState('empty');
     setVideoArchiveDiagnostics({
+      apiMs: null,
+      bootPageReused: null,
+      clientNormalizeMs: null,
       count: null,
+      duplicateVideoFetchBlocked: null,
       durationMs: null,
       hasMore: null,
       reason: null,
       retryCount: 0,
+      source: null,
       status: 'empty',
       updatedAt: Date.now(),
     });
@@ -2447,7 +2498,25 @@ function QADebugPanel({
       </Text>
       <Text style={styles.qaDebugLine}>
         Video {snapshot.video.status} · {snapshot.video.durationMs ?? '-'}ms ·
-        ui {snapshot.videoUiLoadState} · count {snapshot.video.count ?? '-'} · more{' '}
+        api {snapshot.video.apiMs ?? '-'}ms · source {snapshot.video.source ?? '-'}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video ui {snapshot.videoUiLoadState} · norm{' '}
+        {snapshot.video.clientNormalizeMs ?? '-'}ms · bootReuse{' '}
+        {snapshot.video.bootPageReused === null
+          ? '-'
+          : snapshot.video.bootPageReused
+            ? 'Y'
+            : 'N'}{' '}
+        · dupBlocked{' '}
+        {snapshot.video.duplicateVideoFetchBlocked === null
+          ? '-'
+          : snapshot.video.duplicateVideoFetchBlocked
+            ? 'Y'
+            : 'N'}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video count {snapshot.video.count ?? '-'} · more{' '}
         {snapshot.video.hasMore === null ? '-' : snapshot.video.hasMore ? 'Y' : 'N'} ·
         retry {snapshot.video.retryCount}
       </Text>

@@ -1317,6 +1317,7 @@ function decodeMomentCursor(value: unknown) {
 }
 
 app.get("/api/moments", async (request, response) => {
+  const startedAt = Date.now();
   try {
     const client = getSupabaseServerClient();
 
@@ -1372,7 +1373,9 @@ app.get("/api/moments", async (request, response) => {
       );
     }
 
+    const momentsQueryStartedAt = Date.now();
     const { data: moments, error: momentsError } = await momentsQuery;
+    const momentsQueryMs = Date.now() - momentsQueryStartedAt;
 
     if (momentsError) {
       throw new Error(`Failed to list moments: ${momentsError.message}`);
@@ -1385,8 +1388,10 @@ app.get("/api/moments", async (request, response) => {
       .map((moment) => moment.latest_evidence_result_id)
       .filter((value): value is string => typeof value === "string");
     const evidenceResultsById = new Map<string, Record<string, unknown>>();
+    let evidenceQueryMs = 0;
 
     if (evidenceResultIds.length > 0) {
+      const evidenceQueryStartedAt = Date.now();
       const evidenceResultColumnsV1 = [
         "id",
         "moment_id",
@@ -1463,6 +1468,7 @@ app.get("/api/moments", async (request, response) => {
           );
         }
       }
+      evidenceQueryMs = Date.now() - evidenceQueryStartedAt;
     }
 
     const visibleMomentRows = momentRows.filter(
@@ -1474,38 +1480,66 @@ app.get("/api/moments", async (request, response) => {
       hasMoreRows && pageMomentRows.length > 0
         ? encodeMomentCursor(pageMomentRows[pageMomentRows.length - 1])
         : null;
+    let thumbnailSignedUrlMs = 0;
+    const includeThumbnailCount = pageMomentRows.filter((moment) =>
+      Boolean(nullableString(moment.thumbnail_uri)),
+    ).length;
+    const normalizationStartedAt = Date.now();
     const responseMoments = await Promise.all(
-      pageMomentRows.map(async (moment) => ({
-        id: moment.id,
-        sessionId: moment.session_id,
-        activityGroupId: moment.activity_group_id,
-        title: moment.title,
-        notes: moment.notes,
-        status: moment.status,
-        occurredAt: moment.occurred_at,
-        sourceVideoUri: moment.source_video_uri,
-        thumbnailUri: await resolveMomentThumbnailUri(client, moment.thumbnail_uri),
-        durationMs: moment.duration_ms,
-        fileName: moment.file_name,
-        mimeType: moment.mime_type,
-        fileSize: moment.file_size,
-        sourceVideoStorageProvider: moment.source_video_storage_provider,
-        sourceVideoStorageBucket: moment.source_video_storage_bucket,
-        sourceVideoStoragePath: moment.source_video_storage_path,
-        sourceVideoStorageUploadedAt: moment.source_video_storage_uploaded_at,
-        sourceVideoStorageStatus: moment.source_video_storage_status,
-        latestEvidenceResultId: moment.latest_evidence_result_id,
-        latestAnalysisJobId: moment.latest_analysis_job_id,
-        latestEvidenceResult:
-          typeof moment.latest_evidence_result_id === "string"
-            ? sanitizeEvidenceResultForMomentList(
-                evidenceResultsById.get(moment.latest_evidence_result_id),
-              )
-            : null,
-        createdAt: moment.created_at,
-        updatedAt: moment.updated_at,
-      })),
+      pageMomentRows.map(async (moment) => {
+        const thumbnailStartedAt = Date.now();
+        const thumbnailUri = await resolveMomentThumbnailUri(
+          client,
+          moment.thumbnail_uri,
+        );
+        thumbnailSignedUrlMs += Date.now() - thumbnailStartedAt;
+
+        return {
+          id: moment.id,
+          sessionId: moment.session_id,
+          activityGroupId: moment.activity_group_id,
+          title: moment.title,
+          notes: moment.notes,
+          status: moment.status,
+          occurredAt: moment.occurred_at,
+          sourceVideoUri: moment.source_video_uri,
+          thumbnailUri,
+          durationMs: moment.duration_ms,
+          fileName: moment.file_name,
+          mimeType: moment.mime_type,
+          fileSize: moment.file_size,
+          sourceVideoStorageProvider: moment.source_video_storage_provider,
+          sourceVideoStorageBucket: moment.source_video_storage_bucket,
+          sourceVideoStoragePath: moment.source_video_storage_path,
+          sourceVideoStorageUploadedAt: moment.source_video_storage_uploaded_at,
+          sourceVideoStorageStatus: moment.source_video_storage_status,
+          latestEvidenceResultId: moment.latest_evidence_result_id,
+          latestAnalysisJobId: moment.latest_analysis_job_id,
+          latestEvidenceResult:
+            typeof moment.latest_evidence_result_id === "string"
+              ? sanitizeEvidenceResultForMomentList(
+                  evidenceResultsById.get(moment.latest_evidence_result_id),
+                )
+              : null,
+          createdAt: moment.created_at,
+          updatedAt: moment.updated_at,
+        };
+      }),
     );
+    const normalizationMs = Date.now() - normalizationStartedAt;
+
+    console.info("[moments_timing]", {
+      event: "moments_list_completed",
+      evidenceQueryMs,
+      includeEvidenceCount: evidenceResultsById.size,
+      includeThumbnailCount,
+      limit,
+      momentCount: responseMoments.length,
+      momentsQueryMs,
+      normalizationMs,
+      thumbnailSignedUrlMs,
+      totalMs: Date.now() - startedAt,
+    });
 
     response.json({
       hasMore: Boolean(nextCursor),
