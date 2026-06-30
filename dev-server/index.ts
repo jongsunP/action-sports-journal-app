@@ -1544,6 +1544,7 @@ app.get("/api/moments", async (request, response) => {
     const responseBodyJson = JSON.stringify(responseBody);
     const responseBytes = Buffer.byteLength(responseBodyJson, "utf8");
     const serverTotalMs = Date.now() - startedAt;
+    response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
 
     console.info("[moments_timing]", {
       authGetUserMs: requestUserTiming.authGetUserMs ?? null,
@@ -1569,6 +1570,13 @@ app.get("/api/moments", async (request, response) => {
 
     response.type("application/json").send(responseBodyJson);
   } catch (error) {
+    if (!response.headersSent) {
+      response.setHeader(
+        "X-ASJ-Server-Total-Ms",
+        String(Date.now() - startedAt),
+      );
+    }
+
     if (sendAuthRequiredResponse(response, error)) {
       return;
     }

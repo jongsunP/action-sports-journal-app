@@ -69,6 +69,17 @@ Build 95 Startup Performance Observability P2 QA build complete, 2026-07-01:
 - Next start point: check Build 95 P2 timing QA results, especially app QA
   Debug `apiMs` versus Render `[moments_timing] serverTotalMs`.
 
+Startup Performance Observability P2.1 implemented, 2026-07-01:
+
+- Server now returns `X-ASJ-Server-Total-Ms` with `/api/moments` responses in
+  addition to the existing `X-ASJ-Request-Id`.
+- Client reads both headers from `listMomentsPage()` and carries them through
+  boot reuse and archive fetch diagnostics.
+- QA Debug Video area now shows a short request id and server total line:
+  `Video req {shortId} · server {ms}ms`.
+- No performance optimization, API payload contract change, DB migration, EAS
+  build, paid AI call, or external console change was made.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

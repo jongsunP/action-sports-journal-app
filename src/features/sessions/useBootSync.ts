@@ -69,6 +69,8 @@ export type RemoteMomentSyncDiagnostics = {
   durationMs: number | null;
   hasMore: boolean | null;
   reason: string | null;
+  requestId: string | null;
+  serverTotalMs: number | null;
   status: RemoteMomentSyncStatus;
   updatedAt: number | null;
 };
@@ -117,6 +119,8 @@ export function useBootSync({
       durationMs: null,
       hasMore: null,
       reason: null,
+      requestId: null,
+      serverTotalMs: null,
       status: isRemoteMomentSyncConfigured
         ? 'waiting_for_storage'
         : 'not_configured',
@@ -136,6 +140,8 @@ export function useBootSync({
       setRemoteMomentSyncDiagnostics((current) => ({
         ...current,
         reason: null,
+        requestId: null,
+        serverTotalMs: null,
         status: 'not_configured',
         updatedAt: Date.now(),
       }));
@@ -158,6 +164,8 @@ export function useBootSync({
         durationMs: null,
         hasMore: null,
         reason: null,
+        requestId: null,
+        serverTotalMs: null,
         status: hasConfiguredSupabaseMoments()
           ? 'waiting_for_storage'
           : 'not_configured',
@@ -174,6 +182,8 @@ export function useBootSync({
       setRemoteMomentSyncDiagnostics((current) => ({
         ...current,
         reason: null,
+        requestId: null,
+        serverTotalMs: null,
         status: 'waiting_for_storage',
         updatedAt: Date.now(),
       }));
@@ -260,6 +270,8 @@ export function useBootSync({
         durationMs: null,
         hasMore: null,
         reason: null,
+        requestId: null,
+        serverTotalMs: null,
         status: 'loading',
         updatedAt: startedAt,
       });
@@ -292,6 +304,8 @@ export function useBootSync({
           durationMs: getRemoteMomentSyncDuration(startedAt),
           hasMore: remoteMomentPage.hasMore,
           reason: null,
+          requestId: remoteMomentPage.requestId,
+          serverTotalMs: remoteMomentPage.serverTotalMs,
           status: 'completed',
           updatedAt: Date.now(),
         });
@@ -313,6 +327,8 @@ export function useBootSync({
             durationMs: getRemoteMomentSyncDuration(startedAt),
             hasMore: null,
             reason,
+            requestId: null,
+            serverTotalMs: null,
             status,
             updatedAt: Date.now(),
           });
@@ -368,6 +384,8 @@ export function useBootSync({
       hasMore?: boolean;
       reason?: string | null;
       recoveredFrom?: RemoteMomentSyncStatus;
+      requestId?: string | null;
+      serverTotalMs?: number | null;
     }) => {
       setRemoteMomentSyncStatus((currentStatus) => {
         const status =
@@ -387,6 +405,8 @@ export function useBootSync({
             (status === 'recovered_after_timeout'
               ? 'Remote moment sync recovered after timeout.'
               : null),
+          requestId: diagnostics?.requestId ?? current.requestId,
+          serverTotalMs: diagnostics?.serverTotalMs ?? current.serverTotalMs,
           status,
           updatedAt: Date.now(),
         }));

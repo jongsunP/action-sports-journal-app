@@ -408,6 +408,11 @@ Future Detail UX backlog:
   `b45e226d-60f7-458d-ab2e-e814f33ca6c6`. Next start point is the Build 95
   timing QA result: compare app QA Debug `apiMs` with Render
   `[moments_timing] serverTotalMs` and match by `requestId`.
+- Startup Performance Observability P2.1 is implemented in code. The app now
+  reads `X-ASJ-Request-Id` and `X-ASJ-Server-Total-Ms` from `/api/moments` and
+  shows them in QA Debug Video diagnostics. This needs the next preview/internal
+  build before real-device QA can match app screenshots to Render logs without
+  manual time-window guessing.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or

@@ -184,6 +184,8 @@ export type RemoteMomentPage = {
   hasMore: boolean;
   moments: RemoteMomentRecord[];
   nextCursor: string | null;
+  requestId: string | null;
+  serverTotalMs: number | null;
 };
 
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
@@ -923,6 +925,8 @@ export async function listMomentsPage(
       hasMore: false,
       moments: [],
       nextCursor: null,
+      requestId: null,
+      serverTotalMs: null,
     };
   }
 
@@ -940,6 +944,10 @@ export async function listMomentsPage(
     ? `${momentsEndpoint}?${query.toString()}`
     : momentsEndpoint;
   const response = await authenticatedFetch(url);
+  const requestId = asString(response.headers.get('x-asj-request-id')) ?? null;
+  const serverTotalMs = asFiniteHeaderNumber(
+    response.headers.get('x-asj-server-total-ms'),
+  );
 
   if (!response.ok) {
     const message = await readRemoteErrorMessage(response);
@@ -954,6 +962,8 @@ export async function listMomentsPage(
       hasMore: false,
       moments: [],
       nextCursor: null,
+      requestId,
+      serverTotalMs,
     };
   }
 
@@ -963,6 +973,8 @@ export async function listMomentsPage(
       .map(normalizeRemoteMoment)
       .filter((moment): moment is RemoteMomentRecord => Boolean(moment)),
     nextCursor: asString(data.nextCursor) ?? null,
+    requestId,
+    serverTotalMs,
   };
 }
 
@@ -1427,6 +1439,16 @@ function asNumber(value: unknown) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function asFiniteHeaderNumber(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function withTimeout<T>(

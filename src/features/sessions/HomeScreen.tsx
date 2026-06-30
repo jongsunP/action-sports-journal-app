@@ -135,7 +135,9 @@ type RequestDiagnostics = {
   durationMs: number | null;
   hasMore: boolean | null;
   reason: string | null;
+  requestId: string | null;
   retryCount: number;
+  serverTotalMs: number | null;
   source: 'archive_fetch' | 'boot_reuse' | null;
   status: RequestDiagnosticsStatus;
   updatedAt: number | null;
@@ -171,6 +173,10 @@ function compactDebugReason(reason: string | null) {
   }
 
   return reason.replace(/\s+/g, ' ').slice(0, 72);
+}
+
+function formatDebugRequestId(requestId: string | null) {
+  return requestId ? requestId.slice(0, 8) : '-';
 }
 
 function formatDebugTimestamp(updatedAt: number | null) {
@@ -308,7 +314,9 @@ export function HomeScreen() {
       durationMs: null,
       hasMore: null,
       reason: null,
+      requestId: null,
       retryCount: 0,
+      serverTotalMs: null,
       source: null,
       status: 'empty',
       updatedAt: null,
@@ -1039,6 +1047,8 @@ export function HomeScreen() {
               count: remoteMoments.length,
               hasMore: remoteMomentPage.hasMore,
               recoveredFrom: previousRemoteMomentSyncStatus,
+              requestId: remoteMomentPage.requestId,
+              serverTotalMs: remoteMomentPage.serverTotalMs,
             });
             if (currentReason === 'realtime') {
               pendingRealtimeCompletionNoticeRef.current =
@@ -1354,6 +1364,8 @@ export function HomeScreen() {
       durationMs: remoteMomentSyncDiagnostics.durationMs,
       hasMore: initialRemoteMomentPageInfo.hasMore,
       reason: remoteMomentSyncDiagnostics.reason,
+      requestId: remoteMomentSyncDiagnostics.requestId,
+      serverTotalMs: remoteMomentSyncDiagnostics.serverTotalMs,
       source: 'boot_reuse',
       status: initialRemoteMoments.length > 0 ? 'ready' : 'empty',
       updatedAt: Date.now(),
@@ -1368,6 +1380,8 @@ export function HomeScreen() {
     initialRemoteMoments,
     remoteMomentSyncDiagnostics.durationMs,
     remoteMomentSyncDiagnostics.reason,
+    remoteMomentSyncDiagnostics.requestId,
+    remoteMomentSyncDiagnostics.serverTotalMs,
     remoteMomentSyncStatus,
   ]);
   const appendVideoArchiveSessionIds = useCallback((sessionIds: string[]) => {
@@ -1422,6 +1436,8 @@ export function HomeScreen() {
       durationMs: null,
       hasMore: null,
       reason: null,
+      requestId: null,
+      serverTotalMs: null,
       source: 'archive_fetch',
       status: 'loading',
       updatedAt: startedAt,
@@ -1451,6 +1467,8 @@ export function HomeScreen() {
           duplicateVideoFetchBlocked: false,
           hasMore: remoteMomentPage.hasMore,
           reason: null,
+          requestId: remoteMomentPage.requestId,
+          serverTotalMs: remoteMomentPage.serverTotalMs,
           source: 'archive_fetch',
           status: remoteMomentPage.moments.length > 0 ? 'ready' : 'empty',
           updatedAt: Date.now(),
@@ -1477,6 +1495,8 @@ export function HomeScreen() {
           duplicateVideoFetchBlocked: false,
           hasMore: null,
           reason,
+          requestId: null,
+          serverTotalMs: null,
           source: 'archive_fetch',
           status,
           updatedAt: Date.now(),
@@ -1948,7 +1968,9 @@ export function HomeScreen() {
       durationMs: null,
       hasMore: null,
       reason: null,
+      requestId: null,
       retryCount: 0,
+      serverTotalMs: null,
       source: null,
       status: 'empty',
       updatedAt: Date.now(),
@@ -2514,6 +2536,10 @@ function QADebugPanel({
           : snapshot.video.duplicateVideoFetchBlocked
             ? 'Y'
             : 'N'}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video req {formatDebugRequestId(snapshot.video.requestId)} · server{' '}
+        {snapshot.video.serverTotalMs ?? '-'}ms
       </Text>
       <Text style={styles.qaDebugLine}>
         Video count {snapshot.video.count ?? '-'} · more{' '}

@@ -57,6 +57,11 @@ Latest product/UX direction update:
     `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/b45e226d-60f7-458d-ab2e-e814f33ca6c6`.
   - IPA URL:
     `https://expo.dev/artifacts/eas/DP8-ZCgYSgzIFm1KnPRst7kmiJ3Ld_TCvzlHyTekFoY.ipa`.
+- Startup Performance Observability P2.1 is implemented after Build 95 QA
+  showed app `apiMs` but no request/server values. `/api/moments` now returns
+  `X-ASJ-Server-Total-Ms`; the client reads both `X-ASJ-Request-Id` and
+  `X-ASJ-Server-Total-Ms`; QA Debug Video displays `Video req {shortId} ·
+  server {ms}ms`. A follow-up build is needed before device QA can use this UI.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the
