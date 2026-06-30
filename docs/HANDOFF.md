@@ -36,6 +36,14 @@ Latest product/UX direction update:
   few days. Do not jump straight to optimization until QA Debug and server logs
   show whether the 4-6 seconds are API latency, thumbnail URL generation,
   archive fetch duplication, client normalization, or rendering perception.
+- Startup Performance Observability P2 is implemented after Build 94 QA
+  feedback. `/api/moments` logs now include request/user resolution timing:
+  `resolveRequestUserMs`, `authGetUserMs`, `publicUserLookupMs`,
+  `publicUserUpsertOrSyncMs`, `staleCleanupMs`, `responseBytes`,
+  `serverTotalMs`, and `requestId`. The response also includes
+  `X-ASJ-Request-Id`. This is still observation-only; no lazy thumbnail,
+  evidence payload split, DB migration, or Render plan change was made. Next
+  build should compare app QA Debug `apiMs` with server `serverTotalMs`.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

@@ -397,6 +397,12 @@ Future Detail UX backlog:
   generation, archive fetch duplication, client normalization, or rendering
   perception. Do not start broad optimization until those observations are
   reviewed.
+- Startup Performance Observability P2 is implemented after Build 94 QA
+  feedback. `/api/moments` now logs `resolveRequestUserMs`, `authGetUserMs`,
+  `publicUserLookupMs`, `publicUserUpsertOrSyncMs`, `staleCleanupMs`,
+  `responseBytes`, `serverTotalMs`, and `requestId`, while preserving `totalMs`
+  as a legacy alias. Use this before deciding on thumbnail lazy loading,
+  evidence payload reduction, DB index changes, or Render plan changes.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or

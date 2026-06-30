@@ -40,6 +40,21 @@ multi-day observation pending, 2026-06-30:
   Debug values with server logs before deciding whether to optimize `/api/
   moments`, thumbnail signed URLs, archive fetch reuse, or client rendering.
 
+Startup Performance Observability P2 implemented after Build 94 QA feedback,
+2026-07-01:
+
+- `/api/moments` timing logs now include `requestId`, `resolveRequestUserMs`,
+  `authGetUserMs`, `publicUserLookupMs`, `publicUserUpsertOrSyncMs`,
+  `staleCleanupMs`, `responseBytes`, and `serverTotalMs`.
+- `totalMs` remains as the legacy server total alias; compare it with
+  `serverTotalMs` and the app QA Debug `apiMs`.
+- `X-ASJ-Request-Id` is returned so device screenshots and Render logs can be
+  matched more easily.
+- No endpoint optimization, API contract split, DB migration, Render setting,
+  or external console change was made.
+- Next build should verify whether app `apiMs` is close to server `serverTotalMs`
+  or whether time is being lost outside the server handler.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

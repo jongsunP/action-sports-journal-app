@@ -1317,6 +1317,7 @@ function decodeMomentCursor(value: unknown) {
 }
 
 app.get("/api/moments", async (request, response) => {
+  const requestId = randomUUID();
   const startedAt = Date.now();
   try {
     const client = getSupabaseServerClient();
@@ -1328,9 +1329,17 @@ app.get("/api/moments", async (request, response) => {
       return;
     }
 
-    const requestUser = await resolveRequestUser(request);
+    response.setHeader("X-ASJ-Request-Id", requestId);
+    const requestUserTiming: RequestUserTimingDiagnostics = {};
+    const resolveRequestUserStartedAt = Date.now();
+    const requestUser = await resolveRequestUser(request, {
+      timing: requestUserTiming,
+    });
+    const resolveRequestUserMs = Date.now() - resolveRequestUserStartedAt;
     const userId = requestUser.userId;
+    const staleCleanupStartedAt = Date.now();
     await cleanupStaleAnalysisJobs({ client, userId });
+    const staleCleanupMs = Date.now() - staleCleanupStartedAt;
     const limit = parseMomentListLimit(request.query.limit);
     const cursor = decodeMomentCursor(request.query.cursor);
 
@@ -1527,8 +1536,17 @@ app.get("/api/moments", async (request, response) => {
       }),
     );
     const normalizationMs = Date.now() - normalizationStartedAt;
+    const responseBody = {
+      hasMore: Boolean(nextCursor),
+      nextCursor,
+      moments: responseMoments,
+    };
+    const responseBodyJson = JSON.stringify(responseBody);
+    const responseBytes = Buffer.byteLength(responseBodyJson, "utf8");
+    const serverTotalMs = Date.now() - startedAt;
 
     console.info("[moments_timing]", {
+      authGetUserMs: requestUserTiming.authGetUserMs ?? null,
       event: "moments_list_completed",
       evidenceQueryMs,
       includeEvidenceCount: evidenceResultsById.size,
@@ -1537,15 +1555,19 @@ app.get("/api/moments", async (request, response) => {
       momentCount: responseMoments.length,
       momentsQueryMs,
       normalizationMs,
+      publicUserLookupMs: requestUserTiming.publicUserLookupMs ?? null,
+      publicUserUpsertOrSyncMs:
+        requestUserTiming.publicUserUpsertOrSyncMs ?? null,
+      requestId,
+      resolveRequestUserMs,
+      responseBytes,
+      serverTotalMs,
+      staleCleanupMs,
       thumbnailSignedUrlMs,
-      totalMs: Date.now() - startedAt,
+      totalMs: serverTotalMs,
     });
 
-    response.json({
-      hasMore: Boolean(nextCursor),
-      nextCursor,
-      moments: responseMoments,
-    });
+    response.type("application/json").send(responseBodyJson);
   } catch (error) {
     if (sendAuthRequiredResponse(response, error)) {
       return;
@@ -6964,6 +6986,12 @@ type ResolvedRequestUser = {
   userId: string;
 };
 
+type RequestUserTimingDiagnostics = {
+  authGetUserMs?: number;
+  publicUserLookupMs?: number;
+  publicUserUpsertOrSyncMs?: number;
+};
+
 class AuthRequiredRequestError extends Error {
   constructor(message = "Authentication is required for this request.") {
     super(message);
@@ -6973,6 +7001,9 @@ class AuthRequiredRequestError extends Error {
 
 async function resolveRequestUser(
   request: express.Request,
+  options: {
+    timing?: RequestUserTimingDiagnostics;
+  } = {},
 ): Promise<ResolvedRequestUser> {
   const client = getSupabaseServerClient();
 
@@ -7008,8 +7039,11 @@ async function resolveRequestUser(
     };
   }
 
+  const authGetUserStartedAt = Date.now();
   const { data: authData, error: authError } =
     await client.auth.getUser(bearerToken);
+  options.timing &&
+    (options.timing.authGetUserMs = Date.now() - authGetUserStartedAt);
 
   if (authError || !authData.user?.id) {
     console.warn("[auth]", {
@@ -7031,11 +7065,15 @@ async function resolveRequestUser(
     readStringUserMetadata(authData.user.user_metadata?.user_name) ??
     email;
   const now = new Date().toISOString();
+  const publicUserLookupStartedAt = Date.now();
   const { data: existingUser, error: selectError } = await client
     .from("users")
     .select("id, display_name, email")
     .eq("auth_user_id", authUserId)
     .maybeSingle();
+  options.timing &&
+    (options.timing.publicUserLookupMs =
+      Date.now() - publicUserLookupStartedAt);
 
   if (selectError) {
     throw new Error(`Failed to resolve auth user: ${selectError.message}`);
@@ -7063,6 +7101,7 @@ async function resolveRequestUser(
     }
 
     if (Object.keys(nextProfilePatch).length > 0) {
+      const publicUserSyncStartedAt = Date.now();
       const { error: updateError } = await client
         .from("users")
         .update({
@@ -7070,6 +7109,9 @@ async function resolveRequestUser(
           updated_at: now,
         })
         .eq("id", existingUser.id as string);
+      options.timing &&
+        (options.timing.publicUserUpsertOrSyncMs =
+          Date.now() - publicUserSyncStartedAt);
 
       if (updateError) {
         throw new Error(
@@ -7091,6 +7133,7 @@ async function resolveRequestUser(
     };
   }
 
+  const publicUserInsertStartedAt = Date.now();
   const { data: insertedUser, error: insertError } = await client
     .from("users")
     .insert({
@@ -7102,6 +7145,9 @@ async function resolveRequestUser(
     })
     .select("id")
     .single();
+  options.timing &&
+    (options.timing.publicUserUpsertOrSyncMs =
+      Date.now() - publicUserInsertStartedAt);
 
   if (insertError || !insertedUser?.id) {
     throw new Error(
