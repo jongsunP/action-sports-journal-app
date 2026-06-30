@@ -14,6 +14,49 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
+
+- Implemented user-facing theme selection before AI Calibration.
+- Access point:
+  - Home header now has a small screen-mode button next to the account entry.
+  - It opens an inline "화면 모드" panel with `시스템`, `라이트`, and `다크`.
+  - This avoids forcing theme settings into Account Recovery and avoids adding
+    a large Settings/Profile route before the product has that surface.
+- Behavior:
+  - Uses existing `ThemePreference = system | light | dark`.
+  - Preference is saved to AsyncStorage and restored on app restart.
+  - `system` resolves from the OS color scheme through `useColorScheme()`.
+  - App root background and StatusBar now use the resolved theme.
+- Visible rollout scope:
+  - Home shell, header actions, theme selector, Journal Snapshot, Recent
+    Insight, Recent Sessions empty/card surfaces.
+  - Bottom tab active/inactive states and icon colors.
+  - Video Archive header, empty/error/list surfaces.
+  - Account Recovery protection hub, method cards, Email/Kakao detailed states,
+    input, badges, success/warning/error states.
+  - Upload entry/basic surface through shared Home styles.
+  - Moment Detail major surfaces through shared detail styles: media fallback,
+    thumbnail-only state, review/analysis/evidence panels, share preview, and
+    debug surfaces.
+  - QA Debug Panel light/dark surface and text colors.
+- Simulator verification:
+  - Light mode: Home, Video empty state, Account Recovery hub, and QA Debug
+    Panel were visually checked for text contrast, card boundaries, CTA weight,
+    and tab active/inactive states.
+  - Dark mode: ASJ dark-first tone, recent icon polish, card hierarchy, and tab
+    weight remained intact.
+  - System mode: resolved to the simulator OS theme and changed with the stored
+    preference path.
+  - Restart persistence: selected dark mode survived Expo Go termination and
+    relaunch through the existing project entry.
+- Remaining theme backlog:
+  - Full real-data Moment Detail QA with completed evidence / media sample.
+  - Upload selected-video and progress states need the next device/simulator QA
+    with an allowed media picker.
+  - A future full Settings/Profile screen should eventually host this selector.
+  - Further token cleanup can remove hardcoded colors over time, but the main
+    user-visible surfaces now support usable System / Light / Dark modes.
+
 Final Design / UI / UX Closeout Audit, 2026-06-30:
 
 - Final read-only audit completed after Account Recovery UI IA P1, Visible UI /

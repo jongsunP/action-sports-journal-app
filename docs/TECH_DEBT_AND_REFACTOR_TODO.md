@@ -316,6 +316,13 @@ Media / Share UX:
   QA Debug Panel production hide policy, Settings/Profile theme selector,
   screen-by-screen token rollout, full light-mode QA, completed Moment Detail
   sample QA, and later Media / Share export/share route decisions.
+- Theme Mode P2 moved the selector from backlog to implemented baseline. Home
+  now exposes System / Light / Dark, selection persists, and major visible
+  surfaces support usable light/dark treatment. Remaining theme debt:
+  - Move the selector into a future full Settings/Profile surface.
+  - Continue removing hardcoded colors as screens are touched.
+  - QA selected-video Upload state and completed Moment Detail real-data state.
+  - Re-check QA Debug Panel production hide/gate policy before any public build.
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.

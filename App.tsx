@@ -13,6 +13,7 @@ import {
   AuthSessionProvider,
   useAuthSession,
 } from './src/services/auth/AuthSessionProvider';
+import { AppThemeProvider, useAppTheme } from './src/theme';
 
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
@@ -116,57 +117,75 @@ function AnalysisPushRegistration() {
   return null;
 }
 
+function AppShell() {
+  const theme = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <AnalysisPushRegistration />
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            contentStyle: { backgroundColor: theme.colors.background },
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen
+            name="AccountRecovery"
+            component={AccountRecoveryScreen}
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
+          <Stack.Screen
+            name="Upload"
+            component={UploadScreen}
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
+          <Stack.Screen
+            name="MomentDetail"
+            component={MomentDetailScreen}
+            options={{
+              animation: 'slide_from_right',
+              animationMatchesGesture: true,
+              fullScreenGestureEnabled: false,
+              gestureEnabled: true,
+              gestureDirection: 'horizontal',
+              gestureResponseDistance: { start: 44 },
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <StatusBar
+        backgroundColor={theme.colors.background}
+        style={theme.colors.statusBarStyle}
+      />
+    </View>
+  );
+}
+
 export default function App() {
   return (
     <AuthSessionProvider>
-      <View style={styles.container}>
-        <AnalysisPushRegistration />
-        <NavigationContainer>
-          <Stack.Navigator
-            screenOptions={{
-              contentStyle: styles.container,
-              headerShown: false,
-            }}
-          >
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen
-              name="AccountRecovery"
-              component={AccountRecoveryScreen}
-              options={{
-                animation: 'slide_from_right',
-                gestureEnabled: true,
-                headerShown: false,
-                presentation: 'card',
-              }}
-            />
-            <Stack.Screen
-              name="Upload"
-              component={UploadScreen}
-              options={{
-                animation: 'slide_from_right',
-                gestureEnabled: true,
-                headerShown: false,
-                presentation: 'card',
-              }}
-            />
-            <Stack.Screen
-              name="MomentDetail"
-              component={MomentDetailScreen}
-              options={{
-                animation: 'slide_from_right',
-                animationMatchesGesture: true,
-                fullScreenGestureEnabled: false,
-                gestureEnabled: true,
-                gestureDirection: 'horizontal',
-                gestureResponseDistance: { start: 44 },
-                headerShown: false,
-                presentation: 'card',
-              }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-        <StatusBar backgroundColor="#0b0d12" style="light" />
-      </View>
+      <AppThemeProvider>
+        <AppShell />
+      </AppThemeProvider>
     </AuthSessionProvider>
   );
 }

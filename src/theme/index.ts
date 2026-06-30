@@ -15,4 +15,8 @@ export {
   loadThemePreference,
   saveThemePreference,
 } from './themePreferenceStorage';
-export { useAppTheme, type AppTheme } from './useAppTheme';
+export {
+  AppThemeProvider,
+  useAppTheme,
+  type AppTheme,
+} from './useAppTheme';

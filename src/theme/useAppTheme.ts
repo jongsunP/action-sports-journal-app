@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useColorScheme } from 'react-native';
 
 import {
@@ -9,16 +18,22 @@ import {
   type ResolvedThemeMode,
   type ThemePreference,
 } from './colors';
-import { loadThemePreference } from './themePreferenceStorage';
+import {
+  loadThemePreference,
+  saveThemePreference,
+} from './themePreferenceStorage';
 
 export type AppTheme = {
   colors: AppThemeColors;
   isLoadingPreference: boolean;
   mode: ResolvedThemeMode;
   preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => Promise<void>;
 };
 
-export function useAppTheme(): AppTheme {
+const AppThemeContext = createContext<AppTheme | undefined>(undefined);
+
+function useAppThemeValue(): AppTheme {
   const systemColorScheme = useColorScheme();
   const [preference, setPreference] = useState<ThemePreference>(
     DEFAULT_THEME_PREFERENCE,
@@ -50,6 +65,14 @@ export function useAppTheme(): AppTheme {
     };
   }, []);
 
+  const handleSetPreference = useCallback(
+    async (nextPreference: ThemePreference) => {
+      setPreference(nextPreference);
+      await saveThemePreference(nextPreference);
+    },
+    [],
+  );
+
   const mode = resolveThemeMode(preference, systemColorScheme);
 
   return useMemo(
@@ -58,7 +81,24 @@ export function useAppTheme(): AppTheme {
       isLoadingPreference,
       mode,
       preference,
+      setPreference: handleSetPreference,
     }),
-    [isLoadingPreference, mode, preference],
+    [handleSetPreference, isLoadingPreference, mode, preference],
   );
+}
+
+export function AppThemeProvider({ children }: { children: ReactNode }) {
+  const value = useAppThemeValue();
+
+  return createElement(AppThemeContext.Provider, { value }, children);
+}
+
+export function useAppTheme(): AppTheme {
+  const value = useContext(AppThemeContext);
+
+  if (!value) {
+    throw new Error('useAppTheme must be used within AppThemeProvider.');
+  }
+
+  return value;
 }

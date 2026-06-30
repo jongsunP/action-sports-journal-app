@@ -231,6 +231,24 @@ pre-AI visible-surface review:
   pause AI Calibration to invent a larger design system unless a Founder QA
   issue identifies a specific visible problem.
 
+Theme Mode P2, completed 2026-06-30, made the theme foundation user-visible:
+
+- The selectable modes are `system`, `light`, and `dark`, shown in Korean as
+  `시스템`, `라이트`, and `다크`.
+- The access point is a compact Home header screen-mode panel, not Account
+  Recovery and not a large Settings/Profile route.
+- The selected preference is saved in AsyncStorage and restored after app
+  relaunch. `system` follows `useColorScheme()`.
+- The app root, StatusBar, Home, Bottom tabs, Video Archive, Account Recovery,
+  Upload basic surface, Moment Detail major surfaces, empty/error/loading
+  states, and QA Debug Panel now have usable theme treatment.
+- Light mode is not a raw inversion of dark mode. It uses separate background,
+  surface, card, border, muted text, accent, warning, error, and tab treatments
+  so hierarchy remains visible.
+- Remaining work is polish, not foundation: move the selector into a future
+  Settings/Profile surface, QA real completed Moment Detail data, and continue
+  screen-by-screen hardcoded color cleanup.
+
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom
 interaction. Prefer proven patterns adapted to ASJ over novelty for its own

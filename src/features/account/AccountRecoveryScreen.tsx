@@ -16,6 +16,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { RootStackParamList } from '../../navigation/types';
+import {
+  useAppTheme,
+  type AppThemeColors,
+} from '../../theme';
 import { normalizeRecoveryEmail } from '../../services/auth/accountRecovery';
 import { useAuthSession } from '../../services/auth/AuthSessionProvider';
 import {
@@ -96,6 +100,19 @@ function getRecoveryEmailMetadata(email: string) {
     emailDomain: getRecoveryEmailDomain(email),
     maskedEmail: maskRecoveryEmail(email),
   };
+}
+
+function mergeStyleMaps<T extends Record<string, any>>(
+  base: T,
+  overrides: Record<string, any>,
+) {
+  const merged = { ...base } as Record<string, any>;
+
+  Object.entries(overrides).forEach(([key, value]) => {
+    merged[key] = base[key] ? [base[key], value] : value;
+  });
+
+  return merged as T;
 }
 
 function getKakaoUiCopy({
@@ -276,6 +293,15 @@ export function AccountRecoveryScreen() {
     useNavigation<
       NativeStackNavigationProp<RootStackParamList, 'AccountRecovery'>
     >();
+  const theme = useAppTheme();
+  const styles = useMemo(
+    () =>
+      mergeStyleMaps(
+        baseStyles,
+        createAccountRecoveryThemeStyles(theme.colors, theme.mode),
+      ),
+    [theme.colors, theme.mode],
+  );
   const {
     authMode,
     isLoading,
@@ -952,7 +978,7 @@ export function AccountRecoveryScreen() {
                         ]}
                       >
                         <Ionicons
-                          color="#111827"
+                          color={theme.mode === 'light' ? '#181600' : '#111827'}
                           name="chatbubble-ellipses-outline"
                           size={19}
                         />
@@ -999,7 +1025,11 @@ export function AccountRecoveryScreen() {
                           styles.methodIconChipEmail,
                         ]}
                       >
-                        <Ionicons color="#bfdbfe" name="mail-outline" size={19} />
+                        <Ionicons
+                          color={theme.colors.accent}
+                          name="mail-outline"
+                          size={19}
+                        />
                       </View>
                       <View style={styles.methodTitleBlock}>
                         <Text style={styles.methodLabel}>Email</Text>
@@ -1128,7 +1158,7 @@ export function AccountRecoveryScreen() {
                     keyboardType="email-address"
                     onChangeText={setEmail}
                     placeholder="name@example.com"
-                    placeholderTextColor="#64748b"
+                    placeholderTextColor={theme.colors.textMuted}
                     style={styles.input}
                     textContentType="emailAddress"
                     value={email}
@@ -1233,7 +1263,141 @@ export function AccountRecoveryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createAccountRecoveryThemeStyles(
+  colors: AppThemeColors,
+  mode: 'dark' | 'light',
+) {
+  const isLight = mode === 'light';
+  const borderSoft = isLight ? '#dbe4ee' : 'rgba(255, 255, 255, 0.08)';
+  const borderStrong = isLight ? '#cbd5e1' : 'rgba(148, 163, 184, 0.22)';
+  const subtleSurface = isLight ? '#f1f5f9' : 'rgba(148, 163, 184, 0.1)';
+  const successSurface = isLight ? '#dcfce7' : 'rgba(34, 197, 94, 0.14)';
+  const warningSurface = isLight ? '#fef3c7' : 'rgba(250, 204, 21, 0.12)';
+  const errorSurface = isLight ? '#fff1f2' : 'rgba(244, 63, 94, 0.12)';
+
+  return StyleSheet.create({
+    screen: { backgroundColor: colors.background },
+    closeButton: {
+      backgroundColor: colors.surface,
+      borderColor: borderStrong,
+    },
+    closeButtonText: { color: colors.textPrimary },
+    kicker: { color: colors.textMuted },
+    title: { color: colors.textPrimary },
+    headerMeta: { color: colors.textMuted },
+    statusPanel: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    panelEyebrow: { color: colors.accent },
+    panelTitle: { color: colors.textPrimary },
+    panelText: { color: colors.textSecondary },
+    protectionBadgeDefault: {
+      backgroundColor: subtleSurface,
+      borderColor: borderStrong,
+    },
+    protectionBadgeSuccess: {
+      backgroundColor: successSurface,
+      borderColor: isLight ? '#bbf7d0' : 'rgba(74, 222, 128, 0.3)',
+    },
+    protectionBadgeText: { color: colors.textPrimary },
+    methodMiniBadgeDefault: {
+      backgroundColor: subtleSurface,
+      borderColor: borderStrong,
+    },
+    methodMiniBadgeSuccess: {
+      backgroundColor: successSurface,
+      borderColor: isLight ? '#bbf7d0' : 'rgba(74, 222, 128, 0.26)',
+    },
+    methodMiniBadgeText: { color: colors.textPrimary },
+    noticePanel: {
+      backgroundColor: warningSurface,
+      borderColor: isLight ? '#fde68a' : 'rgba(250, 204, 21, 0.22)',
+    },
+    noticeTitle: { color: colors.warning },
+    noticeText: { color: colors.warning },
+    methodCard: {
+      backgroundColor: colors.surface,
+      borderColor: borderStrong,
+    },
+    methodCardSelected: {
+      backgroundColor: isLight ? '#ecfeff' : '#111827',
+      borderColor: colors.accent,
+    },
+    methodIconChipEmail: {
+      backgroundColor: isLight ? '#e0f2fe' : 'rgba(59, 130, 246, 0.16)',
+      borderColor: isLight ? '#bae6fd' : 'rgba(147, 197, 253, 0.32)',
+    },
+    methodLabel: { color: colors.accent },
+    methodTitle: { color: colors.textPrimary },
+    methodDescription: { color: colors.textSecondary },
+    methodStateBadgeDefault: {
+      backgroundColor: subtleSurface,
+      borderColor: borderStrong,
+    },
+    methodStateBadgeSuccess: {
+      backgroundColor: successSurface,
+      borderColor: isLight ? '#bbf7d0' : 'rgba(74, 222, 128, 0.3)',
+    },
+    methodStateBadgeText: { color: colors.textPrimary },
+    hubHelperText: { color: colors.textMuted },
+    emailPanel: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    formLabel: { color: colors.textPrimary },
+    input: {
+      backgroundColor: colors.surfaceElevated,
+      borderColor: borderStrong,
+      color: colors.textPrimary,
+    },
+    primaryButton: { backgroundColor: colors.textPrimary },
+    primaryButtonText: { color: colors.background },
+    secondaryButton: { backgroundColor: colors.accent },
+    secondaryButtonText: { color: colors.background },
+    kakaoBlock: {
+      borderColor: isLight ? '#facc15' : 'rgba(254, 229, 0, 0.26)',
+    },
+    kakaoStateTitle: { color: colors.textPrimary },
+    kakaoStateBadgeDefault: {
+      backgroundColor: subtleSurface,
+      borderColor: borderStrong,
+    },
+    kakaoStateBadgeSuccess: {
+      backgroundColor: successSurface,
+      borderColor: isLight ? '#bbf7d0' : 'rgba(74, 222, 128, 0.3)',
+    },
+    kakaoStateBadgeNeutral: {
+      backgroundColor: warningSurface,
+      borderColor: isLight ? '#fde68a' : 'rgba(250, 204, 21, 0.26)',
+    },
+    kakaoStateBadgeAttention: {
+      backgroundColor: warningSurface,
+      borderColor: isLight ? '#fde68a' : 'rgba(250, 204, 21, 0.28)',
+    },
+    kakaoStateBadgeText: { color: colors.textPrimary },
+    kakaoFallbackText: { color: colors.textSecondary },
+    kakaoStatusText: { color: colors.warning },
+    kakaoStatusTextAttention: { color: colors.warning },
+    kakaoStatusTextNeutral: { color: colors.textSecondary },
+    kakaoStatusTextSuccess: { color: colors.success },
+    helperText: { color: colors.textMuted },
+    textButtonText: { color: colors.textPrimary },
+    successPanel: {
+      backgroundColor: successSurface,
+      borderColor: isLight ? '#bbf7d0' : 'rgba(74, 222, 128, 0.28)',
+    },
+    successTitle: { color: colors.success },
+    successText: { color: colors.success },
+    errorPanel: {
+      backgroundColor: errorSurface,
+      borderColor: isLight ? '#fecdd3' : 'rgba(251, 113, 133, 0.25)',
+    },
+    errorText: { color: colors.error },
+  });
+}
+
+const baseStyles = StyleSheet.create({
   screen: {
     backgroundColor: '#0b0d12',
     flex: 1,

@@ -65,6 +65,15 @@ Latest product/UX direction update:
   production hide policy, Settings/Profile theme selector, screen-by-screen
   token rollout, full light-mode visual QA, real completed Moment Detail sample
   QA, and future Media / Share export/share route decisions.
+- Theme Mode P2 is now implemented after the closeout audit. The Founder can
+  choose `시스템`, `라이트`, or `다크` from a compact Home header screen-mode
+  panel. The choice persists through AsyncStorage, app root / StatusBar follow
+  the resolved mode, and the main visible surfaces now have usable light/dark
+  theme treatment: Home, Bottom tabs, Video Archive, Account Recovery, Upload
+  basic surface, Moment Detail major panels, empty/loading/error states, and QA
+  Debug Panel. This is still not a full design-system rewrite; future work can
+  move the selector into a real Settings/Profile surface and continue removing
+  hardcoded colors screen-by-screen.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 

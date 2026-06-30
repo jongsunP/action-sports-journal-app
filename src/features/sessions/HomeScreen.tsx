@@ -15,7 +15,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useColorScheme,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -93,6 +92,11 @@ import type {
 } from '../../types';
 import type { RootStackParamList } from '../../navigation/types';
 import type { RemoteMomentRecord } from '../../services/moments';
+import {
+  useAppTheme,
+  type AppThemeColors,
+  type ThemePreference,
+} from '../../theme';
 
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
@@ -203,6 +207,32 @@ function ensureAnalysisPushRegistration(source: string) {
     });
 }
 
+const THEME_PREFERENCE_OPTIONS: Array<{
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: ThemePreference;
+}> = [
+  {
+    description: '기기 설정을 따라갑니다',
+    icon: 'phone-portrait-outline',
+    label: '시스템',
+    value: 'system',
+  },
+  {
+    description: '밝은 화면으로 보기',
+    icon: 'sunny-outline',
+    label: '라이트',
+    value: 'light',
+  },
+  {
+    description: '기존 ASJ 다크 톤',
+    icon: 'moon-outline',
+    label: '다크',
+    value: 'dark',
+  },
+];
+
 function getAuthCacheOwnerKey({
   authMode,
   userId,
@@ -232,12 +262,117 @@ function getNextPendingRemoteRefreshReason(
   return nextReason;
 }
 
+function getThemePreferenceLabel(preference: ThemePreference) {
+  return preference === 'system'
+    ? '시스템 설정 따름'
+    : preference === 'light'
+      ? '라이트 모드'
+      : '다크 모드';
+}
+
+function ThemeModePanel({
+  colors,
+  mode,
+  onSelectPreference,
+  preference,
+  styles,
+}: {
+  colors: AppThemeColors;
+  mode: 'dark' | 'light';
+  onSelectPreference: (preference: ThemePreference) => Promise<void>;
+  preference: ThemePreference;
+  styles: Record<string, any>;
+}) {
+  return (
+    <View style={styles.themePanel}>
+      <View style={styles.themePanelHeader}>
+        <View>
+          <Text style={styles.themePanelEyebrow}>화면 모드</Text>
+          <Text style={styles.themePanelTitle}>
+            {getThemePreferenceLabel(preference)}
+          </Text>
+        </View>
+        <Text style={styles.themePanelMeta}>
+          현재 {mode === 'light' ? '라이트' : '다크'}
+        </Text>
+      </View>
+      <View style={styles.themeOptionRow}>
+        {THEME_PREFERENCE_OPTIONS.map((option) => {
+          const isSelected = preference === option.value;
+
+          return (
+            <Pressable
+              accessibilityLabel={`${option.label} 화면 모드 선택`}
+              accessibilityRole="button"
+              key={option.value}
+              onPress={() => {
+                void onSelectPreference(option.value);
+              }}
+              style={({ pressed }) => [
+                styles.themeOption,
+                isSelected ? styles.themeOptionSelected : undefined,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Ionicons
+                color={isSelected ? colors.background : colors.textSecondary}
+                name={option.icon}
+                size={18}
+              />
+              <Text
+                style={[
+                  styles.themeOptionLabel,
+                  isSelected ? styles.themeOptionLabelSelected : undefined,
+                ]}
+              >
+                {option.label}
+              </Text>
+              <Text
+                style={[
+                  styles.themeOptionDescription,
+                  isSelected
+                    ? styles.themeOptionDescriptionSelected
+                    : undefined,
+                ]}
+                numberOfLines={2}
+              >
+                {option.description}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function mergeStyleMaps<T extends Record<string, any>>(
+  base: T,
+  overrides: Record<string, any>,
+) : T & Record<string, any> {
+  const merged = { ...base } as Record<string, any>;
+
+  Object.entries(overrides).forEach(([key, value]) => {
+    merged[key] = base[key] ? [base[key], value] : value;
+  });
+
+  return merged as T & Record<string, any>;
+}
+
 export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'Home'>>();
   const layout = useWindowDimensions();
-  const colorScheme = useColorScheme();
-  const prefersDarkMode = colorScheme === 'dark';
+  const theme = useAppTheme();
+  const prefersDarkMode = theme.mode === 'dark';
+  const styles = useMemo(
+    () =>
+      mergeStyleMaps(
+        baseStyles,
+        createHomeThemeStyles(theme.colors, theme.mode),
+      ),
+    [theme.colors, theme.mode],
+  );
   const { authBootstrapDiagnostics, authMode, user } = useAuthSession();
   const canUseRemoteApi =
     authMode === 'authenticated' || authMode === 'internalFallback';
@@ -256,6 +391,7 @@ export function HomeScreen() {
   const activeTabRef = useRef<AppTabId>('home');
   const [analysisCompletionNotice, setAnalysisCompletionNotice] =
     useState<AnalysisCompletionNotice | null>(null);
+  const [isThemePanelOpen, setIsThemePanelOpen] = useState(false);
   // Video Archive owns paged order. Global sessions remain cache/detail source.
   const [hasMoreVideoArchiveMoments, setHasMoreVideoArchiveMoments] =
     useState(false);
@@ -2137,18 +2273,50 @@ export function HomeScreen() {
             {latestAnalysisLabel ? ` · 최근 분석 ${latestAnalysisLabel}` : ''}
           </Text>
         </View>
-        <Pressable
-          accessibilityLabel="마이페이지 열기"
-          accessibilityRole="button"
-          onPress={handleOpenProfile}
-          style={({ pressed }) => [
-            styles.headerMenuButton,
-            pressed ? styles.buttonPressed : undefined,
-          ]}
-        >
-          <Ionicons color="#f8fafc" name="person-circle-outline" size={25} />
-        </Pressable>
+        <View style={styles.headerActionRow}>
+          <Pressable
+            accessibilityLabel="화면 모드 설정 열기"
+            accessibilityRole="button"
+            onPress={() => setIsThemePanelOpen((current) => !current)}
+            style={({ pressed }) => [
+              styles.headerMenuButton,
+              isThemePanelOpen ? styles.headerMenuButtonActive : undefined,
+              pressed ? styles.buttonPressed : undefined,
+            ]}
+          >
+            <Ionicons
+              color={theme.colors.textPrimary}
+              name={theme.mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
+              size={22}
+            />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="마이페이지 열기"
+            accessibilityRole="button"
+            onPress={handleOpenProfile}
+            style={({ pressed }) => [
+              styles.headerMenuButton,
+              pressed ? styles.buttonPressed : undefined,
+            ]}
+          >
+            <Ionicons
+              color={theme.colors.textPrimary}
+              name="person-circle-outline"
+              size={25}
+            />
+          </Pressable>
+        </View>
       </View>
+
+      {isThemePanelOpen ? (
+        <ThemeModePanel
+          colors={theme.colors}
+          mode={theme.mode}
+          onSelectPreference={theme.setPreference}
+          preference={theme.preference}
+          styles={styles}
+        />
+      ) : null}
 
       <JournalSnapshot
         activeCount={journalSnapshot.activeCount}
@@ -2474,7 +2642,389 @@ function findNewRealtimeCompletedSession({
   return null;
 }
 
-const styles = StyleSheet.create({
+function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
+  const isLight = mode === 'light';
+  const borderSoft = isLight ? '#dbe4ee' : 'rgba(255, 255, 255, 0.09)';
+  const borderStrong = isLight ? '#cbd5e1' : 'rgba(248, 250, 252, 0.14)';
+  const surfaceSubtle = isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.04)';
+  const overlay = isLight
+    ? 'rgba(255, 255, 255, 0.94)'
+    : 'rgba(2, 6, 23, 0.92)';
+  const accentSoft = isLight ? '#ccfbf1' : 'rgba(3, 199, 90, 0.14)';
+  const warningSoft = isLight ? '#fef3c7' : 'rgba(251, 191, 36, 0.14)';
+  const errorSoft = isLight ? '#fff1f2' : 'rgba(244, 63, 94, 0.12)';
+
+  return StyleSheet.create({
+    container: { backgroundColor: colors.background },
+    containerDark: { backgroundColor: colors.background },
+    bootLoadingScreen: { backgroundColor: colors.background },
+    bootLoadingTitle: { color: colors.textPrimary },
+    pagerLazyPlaceholder: { backgroundColor: colors.background },
+    analysisCompleteBanner: {
+      backgroundColor: overlay,
+      borderColor: isLight ? '#bbf7d0' : 'rgba(34, 197, 94, 0.34)',
+    },
+    analysisCompleteTitle: { color: colors.textPrimary },
+    analysisCompleteText: { color: colors.success },
+    qaDebugCollapsed: {
+      backgroundColor: isLight
+        ? 'rgba(255, 255, 255, 0.92)'
+        : 'rgba(15, 23, 42, 0.88)',
+      borderColor: borderStrong,
+    },
+    qaDebugCollapsedText: { color: colors.accent },
+    qaDebugPanel: {
+      backgroundColor: overlay,
+      borderColor: borderStrong,
+    },
+    qaDebugTitle: { color: colors.textPrimary },
+    qaDebugCollapseHint: { color: colors.accent },
+    qaDebugLine: { color: colors.textSecondary },
+    bottomTabBar: {
+      backgroundColor: isLight
+        ? 'rgba(255, 255, 255, 0.94)'
+        : 'rgba(20, 22, 28, 0.92)',
+      borderColor: borderStrong,
+    },
+    bottomTabBarDark: {
+      backgroundColor: isLight
+        ? 'rgba(255, 255, 255, 0.94)'
+        : 'rgba(20, 22, 28, 0.92)',
+      borderColor: borderStrong,
+    },
+    bottomTabItemSelected: {
+      backgroundColor: isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.06)',
+    },
+    bottomTabItemSelectedDark: {
+      backgroundColor: isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.06)',
+    },
+    bottomTabIconFrameSelected: {
+      backgroundColor: isLight ? '#cbd5e1' : 'rgba(255, 255, 255, 0.14)',
+    },
+    bottomTabIconIdle: { color: colors.textMuted },
+    bottomTabIconSelected: { color: colors.textPrimary },
+    headerActionRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    headerMenuButton: {
+      backgroundColor: isLight ? '#ffffff' : 'rgba(248, 250, 252, 0.08)',
+      borderColor: borderStrong,
+    },
+    headerMenuButtonActive: {
+      backgroundColor: isLight ? '#ccfbf1' : 'rgba(3, 199, 90, 0.16)',
+      borderColor: isLight ? '#5eead4' : 'rgba(3, 199, 90, 0.34)',
+    },
+    headerMenuText: { color: colors.textPrimary },
+    kicker: { color: colors.textMuted },
+    title: { color: colors.textPrimary },
+    headerMeta: { color: colors.textMuted },
+    headerAddButton: {
+      backgroundColor: colors.textPrimary,
+      shadowColor: colors.textPrimary,
+    },
+    themePanel: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+      borderRadius: 18,
+      borderWidth: 1,
+      gap: 12,
+      marginBottom: 12,
+      marginHorizontal: 16,
+      padding: 14,
+    },
+    themePanelHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    themePanelEyebrow: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+    },
+    themePanelTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+      marginTop: 2,
+    },
+    themePanelMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    themeOptionRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    themeOption: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceElevated,
+      borderColor: borderSoft,
+      borderRadius: 14,
+      borderWidth: 1,
+      flex: 1,
+      gap: 5,
+      minHeight: 92,
+      paddingHorizontal: 8,
+      paddingVertical: 10,
+    },
+    themeOptionSelected: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    themeOptionLabel: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '900',
+      textAlign: 'center',
+    },
+    themeOptionLabelSelected: {
+      color: colors.background,
+    },
+    themeOptionDescription: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '700',
+      lineHeight: 14,
+      textAlign: 'center',
+    },
+    themeOptionDescriptionSelected: {
+      color: colors.background,
+      opacity: 0.82,
+    },
+    journalSnapshot: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    journalSnapshotTitle: { color: colors.textPrimary },
+    journalSnapshotMeta: { color: colors.textMuted },
+    journalSnapshotItem: { backgroundColor: surfaceSubtle },
+    journalSnapshotValue: { color: colors.textPrimary },
+    journalSnapshotLabel: { color: colors.textMuted },
+    primaryInsightCard: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    cardEyebrow: { color: colors.textMuted },
+    primaryInsightTitle: { color: colors.textPrimary },
+    primaryInsightText: { color: colors.textSecondary },
+    primaryInsightReview: { color: colors.warning },
+    primaryInsightDate: { color: colors.textMuted },
+    textLinkButtonText: { color: colors.textPrimary },
+    sectionLabel: { color: colors.textPrimary },
+    sectionHint: { color: colors.textMuted },
+    recentSessionCard: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    recentPreview: { backgroundColor: colors.surfaceElevated },
+    recentThumbFallbackText: { color: colors.textSecondary },
+    recentDate: { color: colors.textMuted },
+    momentStatusLabel: { color: colors.textPrimary },
+    recentTitle: { color: colors.textPrimary },
+    recentSummary: { color: colors.textSecondary },
+    timelineTitle: { color: colors.textPrimary },
+    videoArchiveRow: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    videoArchiveThumb: { backgroundColor: colors.surfaceElevated },
+    videoArchiveKicker: { color: colors.success },
+    videoArchiveTitle: { color: colors.textPrimary },
+    videoArchiveDescription: { color: colors.textSecondary },
+    videoArchiveEmptyVisual: {
+      backgroundColor: surfaceSubtle,
+      borderColor: borderSoft,
+    },
+    videoArchiveEmptyVisualAttention: {
+      backgroundColor: warningSoft,
+      borderColor: isLight ? '#fde68a' : 'rgba(251, 191, 36, 0.28)',
+    },
+    placeholderCard: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    placeholderTitle: { color: colors.textPrimary },
+    placeholderText: { color: colors.textSecondary },
+    groupChip: {
+      backgroundColor: colors.surfaceElevated,
+      borderColor: borderSoft,
+    },
+    groupChipSelected: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    groupChipTitle: { color: colors.textPrimary },
+    groupChipTitleSelected: { color: colors.background },
+    groupChipMeta: { color: colors.textMuted },
+    groupChipMetaSelected: { color: colors.background },
+    contextText: { color: colors.textMuted },
+    uploadSheetBackdrop: { backgroundColor: colors.background },
+    uploadSheet: { backgroundColor: colors.background },
+    uploadSheetTitle: { color: colors.textPrimary },
+    uploadSheetDescription: { color: colors.textSecondary },
+    selectedVideoInfo: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    selectedVideoLabel: { color: colors.textMuted },
+    selectedVideoTitle: { color: colors.textPrimary },
+    selectedVideoMeta: { color: colors.accent },
+    uploadStepPill: {
+      backgroundColor: isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.1)',
+      borderColor: isLight ? '#bae6fd' : 'rgba(125, 211, 252, 0.22)',
+    },
+    uploadStepIndex: { color: colors.accent },
+    uploadStepText: { color: colors.textPrimary },
+    selectedVideoHelper: { borderTopColor: borderSoft },
+    selectedVideoHelperTitle: { color: colors.textPrimary },
+    selectedVideoHelperText: { color: colors.textSecondary },
+    uploadPageFooter: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    uploadAiNotice: { color: colors.textSecondary },
+    uploadPageSecondaryButton: {
+      backgroundColor: isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.12)',
+      borderColor: isLight ? '#bae6fd' : 'rgba(125, 211, 252, 0.34)',
+    },
+    uploadPageSecondaryText: { color: colors.accent },
+    uploadPagePrimaryButton: { backgroundColor: colors.textPrimary },
+    uploadPagePrimaryText: { color: colors.background },
+    uploadSubmittingHint: { color: colors.accent },
+    uploadSubmittingPanel: {
+      backgroundColor: isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.1)',
+      borderColor: isLight ? '#bae6fd' : 'rgba(125, 211, 252, 0.3)',
+    },
+    uploadSubmittingTitle: { color: colors.textPrimary },
+    uploadBlockingOverlay: {
+      backgroundColor: isLight
+        ? 'rgba(248, 250, 252, 0.88)'
+        : 'rgba(5, 5, 7, 0.86)',
+    },
+    uploadBlockingCard: {
+      backgroundColor: colors.surface,
+      borderColor: isLight ? '#bae6fd' : 'rgba(125, 211, 252, 0.34)',
+    },
+    uploadBlockingTitle: { color: colors.textPrimary },
+    uploadBlockingText: { color: colors.accent },
+    uploadBlockingStep: { color: colors.textMuted },
+    uploadProgressPercent: { color: colors.accent },
+    uploadProgressTrack: {
+      backgroundColor: isLight ? '#cbd5e1' : 'rgba(148, 163, 184, 0.24)',
+    },
+    emptyState: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    emptyTitle: { color: colors.textPrimary },
+    emptyText: { color: colors.textSecondary },
+    detailModalContainer: { backgroundColor: colors.background },
+    detailModalHeader: {
+      backgroundColor: colors.background,
+      borderBottomColor: borderSoft,
+    },
+    detailHeaderTitle: { color: colors.textPrimary },
+    detailHeaderMeta: { color: colors.textMuted },
+    detailBackIconStrokeTop: { backgroundColor: colors.textPrimary },
+    detailBackIconStrokeBottom: { backgroundColor: colors.textPrimary },
+    detailVideoFrame: { backgroundColor: colors.surfaceElevated },
+    detailActionPanel: { borderBottomColor: borderSoft },
+    detailActionTitle: { color: colors.textPrimary },
+    detailReviewCard: {
+      backgroundColor: accentSoft,
+      borderColor: isLight ? '#99f6e4' : 'rgba(3, 199, 90, 0.22)',
+    },
+    detailReviewLabel: { color: colors.success },
+    detailReviewTitle: { color: colors.textPrimary },
+    detailReviewAction: { color: colors.success },
+    detailSummaryCard: { borderBottomColor: borderSoft },
+    detailSectionHeading: { color: colors.textPrimary },
+    detailStateCard: { borderBottomColor: borderSoft },
+    detailStateTitle: { color: colors.textPrimary },
+    detailStateText: { color: colors.textMuted },
+    detailHero: { backgroundColor: colors.surfaceElevated },
+    detailThumbnailHero: { backgroundColor: colors.surfaceElevated },
+    detailHeroFallback: { backgroundColor: colors.surfaceElevated },
+    videoMissingFallback: { backgroundColor: colors.surfaceElevated },
+    videoMissingTitle: { color: colors.textPrimary },
+    videoMissingText: { color: colors.textMuted },
+    detailMomentReason: { color: colors.textMuted },
+    detailNotes: {
+      backgroundColor: surfaceSubtle,
+      borderColor: borderSoft,
+      color: colors.textSecondary,
+    },
+    coachDock: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    coachDockTitle: { color: colors.textPrimary },
+    coachDockText: { color: colors.textMuted },
+    detailRetryButton: { backgroundColor: colors.accent },
+    detailRetryText: { color: colors.background },
+    riderAnalysisCard: {
+      backgroundColor: colors.surface,
+      borderColor: isLight ? '#99f6e4' : 'rgba(3, 199, 90, 0.2)',
+    },
+    riderAnalysisEyebrow: { color: colors.success },
+    riderAnalysisBadge: {
+      backgroundColor: accentSoft,
+      borderColor: isLight ? '#99f6e4' : 'rgba(3, 199, 90, 0.26)',
+      color: colors.success,
+    },
+    riderAnalysisTitle: { color: colors.textPrimary },
+    riderAnalysisSummary: { color: colors.textSecondary },
+    riderAnalysisTrustBox: {
+      backgroundColor: surfaceSubtle,
+      borderColor: borderSoft,
+    },
+    riderAnalysisTrustTitle: { color: colors.textPrimary },
+    riderAnalysisTrustText: { color: colors.textSecondary },
+    riderAnalysisSection: { borderTopColor: borderSoft },
+    riderAnalysisSectionTitle: { color: colors.textMuted },
+    riderAnalysisItem: { color: colors.textSecondary },
+    evidenceDisclosureCard: { borderBottomColor: borderSoft },
+    evidenceDisclosureLabel: { color: colors.textMuted },
+    evidenceDisclosureTitle: { color: colors.textPrimary },
+    evidenceDisclosureAction: { color: colors.accent },
+    evidenceTitle: { color: colors.textPrimary },
+    evidenceModelBadge: {
+      backgroundColor: accentSoft,
+      borderColor: isLight ? '#99f6e4' : 'rgba(3, 199, 90, 0.28)',
+      color: colors.success,
+    },
+    evidenceModelBadgeDegraded: {
+      backgroundColor: errorSoft,
+      borderColor: isLight ? '#fecdd3' : 'rgba(251, 113, 133, 0.28)',
+      color: colors.error,
+    },
+    evidenceFactRow: { borderTopColor: borderSoft },
+    evidenceFactLabel: { color: colors.textMuted },
+    evidenceFactValue: { color: colors.textPrimary },
+    evidenceSection: { borderTopColor: borderSoft },
+    evidenceSectionTitle: { color: colors.textPrimary },
+    evidenceText: { color: colors.textSecondary },
+    evidenceWarningText: { color: colors.warning },
+    evidenceSummaryCard: {
+      backgroundColor: colors.surface,
+      borderColor: borderSoft,
+    },
+    evidenceSummaryLabel: { color: colors.textMuted },
+    evidenceSummaryValue: { color: colors.textPrimary },
+    debugBox: {
+      backgroundColor: colors.surfaceElevated,
+      borderColor: borderStrong,
+    },
+    debugText: { color: colors.textMuted },
+  });
+}
+
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#050507',
@@ -4874,14 +5424,14 @@ function StatusPill({ active, label }: { active: boolean; label: string }) {
   return (
     <View
       style={[
-        styles.statusPill,
-        active ? styles.statusPillActive : styles.statusPillIdle,
+        baseStyles.statusPill,
+        active ? baseStyles.statusPillActive : baseStyles.statusPillIdle,
       ]}
     >
       <Text
         style={[
-          styles.statusPillText,
-          active ? styles.statusPillTextActive : styles.statusPillTextIdle,
+          baseStyles.statusPillText,
+          active ? baseStyles.statusPillTextActive : baseStyles.statusPillTextIdle,
         ]}
       >
         {label}
@@ -4892,9 +5442,9 @@ function StatusPill({ active, label }: { active: boolean; label: string }) {
 
 function SignalDot({ active, label }: { active: boolean; label: string }) {
   return (
-    <View style={styles.signalItem}>
-      <View style={[styles.signalDot, active ? styles.signalDotActive : undefined]} />
-      <Text style={[styles.signalText, active ? styles.signalTextActive : undefined]}>
+    <View style={baseStyles.signalItem}>
+      <View style={[baseStyles.signalDot, active ? baseStyles.signalDotActive : undefined]} />
+      <Text style={[baseStyles.signalText, active ? baseStyles.signalTextActive : undefined]}>
         {label}
       </Text>
     </View>

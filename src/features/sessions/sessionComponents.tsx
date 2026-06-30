@@ -24,6 +24,7 @@ import type { SessionVideoAsset } from '../../services/ai';
 import type { GeminiEvidenceResult, MomentStatus, Session } from '../../types';
 
 type HomeScreenStyles = Record<string, object>;
+type IconColorStyle = { color?: string };
 
 export type AppTabId = 'home' | 'video' | 'flow';
 
@@ -296,7 +297,13 @@ function BottomTabIcon({
       ]}
     >
       <Ionicons
-        color={isSelected ? '#f8fafc' : 'rgba(248, 250, 252, 0.58)'}
+        color={
+          isSelected
+            ? ((styles.bottomTabIconSelected as IconColorStyle)?.color ??
+              '#f8fafc')
+            : ((styles.bottomTabIconIdle as IconColorStyle)?.color ??
+              'rgba(248, 250, 252, 0.58)')
+        }
         name={iconName}
         size={22}
       />
