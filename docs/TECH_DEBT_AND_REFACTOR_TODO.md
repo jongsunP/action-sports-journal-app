@@ -393,6 +393,10 @@ Future Detail UX backlog:
   real-device QA feedback are pending. Do not start AI Calibration until the
   Build 93 result is reviewed and any blocking pre-AI issues are either fixed
   or explicitly accepted.
+- Push Notification Icon Polish is a later visual polish item. It should check
+  the OS notification/app icon asset shown in Push notifications so it does not
+  feel like a default placeholder. Do not reopen Push delivery, ownership, or
+  observability logic for this item.
 - Do next only after product approval: choose one of image export, native share
   sheet, ShareResult route, or a theme-token adoption pass.
 

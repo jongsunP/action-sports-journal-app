@@ -409,6 +409,7 @@ Current stable workstream list:
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면을 "기록 보호 방법 선택 허브"로 단순화했다. 첫 화면은 compact protection summary, 연결 수단 badge, Kakao/Email method card를 보여주고, Email/Kakao의 상세 pending/error/linked 상태는 선택 또는 진행 후 progressive disclosure로 보여준다. Auth/Supabase/Kakao/Email helper 로직은 변경하지 않았다.
 - Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): build prep commit `47f75ea`, iOS buildNumber `93`. EAS build 결과와 Founder multi-day 실사용 QA 피드백 대기. 다음 작업 재개 시 이 결과부터 확인한다
+- Push Notification Icon Polish(푸시 알림 아이콘 정리): 급하지 않은 후속. 앱 내부 Ionicons 정리와 별개로, OS Push notification에 표시되는 앱/알림 아이콘이 기본값처럼 보이지 않도록 나중에 확인한다. Push delivery/observability 로직은 이미 완료된 영역이므로 이 항목은 비주얼/asset polish로만 다룬다
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준
@@ -456,6 +457,7 @@ QA / 검증 대기:
 
 작은 후속 / 낮은 우선순위:
 - OAuth Step Reduction Store Check(외부 OAuth 진행 단계 Store 전 점검): 구현 후보가 아니라 설정/표시 점검 후보. 앱 내부 one-click은 완료되어 있음.
+- Push Notification Icon Polish(푸시 알림 아이콘 정리): OS Push 알림에 보이는 아이콘/asset 확인 및 필요 시 polish. Push 전송 로직 변경이 아니라 앱/알림 시각 요소 정리로 분리.
 - Email Custom SMTP(이메일 발송 설정): 운영 품질/브랜딩 성격. 급하지 않음.
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리): Kakao 운영 설정 정리. 급하지 않음.
 
