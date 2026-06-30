@@ -34,7 +34,7 @@ export const APP_TABS: Array<{
   hint: string;
 }> = [
   { id: 'home', label: '홈', hint: '대시보드' },
-  { id: 'video', label: '영상', hint: '아카이브' },
+  { id: 'video', label: '영상', hint: '기록' },
   { id: 'flow', label: '성장', hint: '진행' },
 ];
 
@@ -690,7 +690,7 @@ export function VideoArchiveList({
           description: '라이딩 영상을 남기면 이곳에 나만의 기록이 쌓입니다.',
           showRetry: false,
           showSpinner: false,
-          title: '아직 영상 세션이 없습니다',
+          title: '영상이 없습니다',
         };
     }
   })();

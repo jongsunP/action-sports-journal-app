@@ -100,12 +100,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>화면 모드</Text>
-            <Text style={styles.sectionMeta}>
-              현재 {theme.mode === 'light' ? '라이트' : '다크'}
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>화면 모드</Text>
           <View style={styles.themeOptionRow}>
             {THEME_PREFERENCE_OPTIONS.map((option) => {
               const isSelected = theme.preference === option.value;

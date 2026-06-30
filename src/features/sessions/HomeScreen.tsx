@@ -2232,14 +2232,14 @@ export function HomeScreen() {
         <Text style={styles.headerMeta}>
           {visibleVideoArchiveSessionSummaries.length}개 표시됨
           {shouldUseVideoArchiveSessionFallback
-            ? ' · 홈 기록 기준, 아카이브 동기화 중'
+            ? ' · 홈 기록 기준, 동기화 중'
             : ' · 최근 기록 기준'}
         </Text>
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionLabel}>세션 아카이브</Text>
+          <Text style={styles.sectionLabel}>최근 영상</Text>
           <Text style={styles.sectionHint}>기록</Text>
         </View>
       </View>
