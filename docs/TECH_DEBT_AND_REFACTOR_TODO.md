@@ -421,19 +421,21 @@ Future Detail UX backlog:
 - Startup Performance Optimization P1 is implemented in code. `/api/moments`
   no longer blocks the list response on stale analysis cleanup, `resolveRequestUser`
   uses a short TTL in-memory cache keyed by SHA-256 bearer-token hash, and
-  thumbnail timing now records wall-clock time separately from summed per-item
-  signed URL time. Next build should verify whether 0-record `serverTotalMs`
-  drops before considering evidence payload split, thumbnail lazy loading, DB
-  migration, or plan changes.
-- Build 97 is the current Startup Performance Optimization P1 QA build. Build
+  thumbnail timing records wall-clock time separately from summed per-item
+  signed URL time.
+- Build 97 Startup Performance Optimization P1 QA passed. Build
   commit: `1bb347c`; iOS buildNumber: `97`; EAS Build ID:
-  `a3693975-e234-4ae0-a169-373fd683cd3a`. Next start point is Startup
-  Performance Optimization P1 QA result review: compare Build 96 with Build 97
-  app `apiMs`, app `serverTotalMs`, Render `cacheHit`,
-  `staleCleanupBlocking=false`, `authGetUserMs`, `publicUserLookupMs`,
-  `publicUserUpsertOrSyncMs`, `staleCleanupMs`, `momentsQueryMs`,
-  `evidenceQueryMs`, `thumbnailSignedUrlMs`, `thumbnailSignedUrlWallMs`, and
-  `responseBytes`.
+  `a3693975-e234-4ae0-a169-373fd683cd3a`. Founder reported clear perceived
+  improvement. Empty-account repeated `serverTotalMs` reached about `0.66s`,
+  improved from the Build 96 empty-account baseline around `1.9-2.6s`.
+- Startup Performance Optimization P1.5 candidates are retained for later, not
+  immediate implementation: evidence payload reduction, thumbnail signed URL
+  lazy/cache, and list/detail payload split. Seven-record accounts still showed
+  `serverTotalMs` variance around `1.6-3.7s`, so the next performance work
+  should focus on list payload / evidence / thumbnail rather than auth/stale
+  cleanup.
+- Next start point is Development Build / Local Build Workflow preparation to
+  reduce repeated EAS preview/internal build cost.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or

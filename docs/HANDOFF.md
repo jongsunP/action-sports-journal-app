@@ -80,7 +80,7 @@ Latest product/UX direction update:
   users, and adds `thumbnailSignedUrlWallMs` while keeping the old summed
   `thumbnailSignedUrlMs`. No raw bearer token is cached, no-token/default-user
   behavior is unchanged, and no payload/API split or DB migration was done.
-  Build 97 now carries this optimized path for real-device QA.
+  Build 97 real-device QA confirmed the optimization is effective.
   - Build commit: `1bb347c chore: bump ios build number to 97`.
   - iOS buildNumber: `97`.
   - EAS Build ID: `a3693975-e234-4ae0-a169-373fd683cd3a`.
@@ -88,12 +88,16 @@ Latest product/UX direction update:
     `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/a3693975-e234-4ae0-a169-373fd683cd3a`.
   - IPA URL:
     `https://expo.dev/artifacts/eas/46cVuinLZ-VVowkdVFcw-iKcdjx-vvzG10RU4M7Vyx4.ipa`.
-  - Current next start point: check Startup Performance Optimization P1 QA
-    results. Compare Build 96 with Build 97 app `apiMs`, app `serverTotalMs`,
-    `cacheHit`, `staleCleanupBlocking=false`, `authGetUserMs`,
-    `publicUserLookupMs`, `publicUserUpsertOrSyncMs`, `staleCleanupMs`,
-    `momentsQueryMs`, `evidenceQueryMs`, `thumbnailSignedUrlMs`,
-    `thumbnailSignedUrlWallMs`, and `responseBytes`.
+  - Founder QA judgment: clearly faster than before. Empty accounts feel
+    especially fast. Data accounts can still have a slower first run, but
+    repeat launches/re-entry feel faster.
+  - Empty-account repeated `serverTotalMs` reached about `0.66s`, improved from
+    the Build 96 empty-account baseline around `1.9-2.6s`.
+  - Seven-record account still varied around `1.6-3.7s`, so keep performance
+    P1.5 candidates for later: evidence payload reduction, thumbnail signed URL
+    lazy/cache, and list/detail payload split.
+  - Current next start point: Development Build / Local Build Workflow
+    preparation to reduce repeated EAS preview/internal build cost.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

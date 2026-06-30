@@ -110,7 +110,7 @@ Startup Performance Optimization P1 implemented, 2026-07-01:
 - No evidence payload split, thumbnail lazy endpoint, DB migration, EAS build,
   paid AI call, Storage upload test, or external console change was made.
 
-Build 97 Startup Performance Optimization P1 QA build complete, 2026-07-01:
+Build 97 Startup Performance Optimization P1 QA passed, 2026-07-01:
 
 - Build commit is `1bb347c chore: bump ios build number to 97`.
 - iOS buildNumber is `97`.
@@ -119,17 +119,20 @@ Build 97 Startup Performance Optimization P1 QA build complete, 2026-07-01:
   `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/a3693975-e234-4ae0-a169-373fd683cd3a`.
 - IPA URL:
   `https://expo.dev/artifacts/eas/46cVuinLZ-VVowkdVFcw-iKcdjx-vvzG10RU4M7Vyx4.ipa`.
-- Purpose: verify Startup Performance Optimization P1 on the real iPhone +
-  Render + Supabase path.
-- QA should compare Build 96 timing with Build 97 values: app `apiMs`, app
-  `serverTotalMs`, short `requestId`, Render `cacheHit`,
-  `staleCleanupBlocking=false`, `authGetUserMs`, `publicUserLookupMs`,
-  `publicUserUpsertOrSyncMs`, `staleCleanupMs`, `momentsQueryMs`,
-  `evidenceQueryMs`, `thumbnailSignedUrlMs`, `thumbnailSignedUrlWallMs`, and
-  `responseBytes`.
-- Next start point: check Startup Performance Optimization P1 QA results before
-  deciding on Development Build / Local Build Workflow or any further
-  `/api/moments` optimization.
+- Founder QA judgment: clearly faster than before. Empty accounts feel
+  especially fast. Accounts with data can still have a slower first run, but
+  repeat launches/re-entry feel faster, similar to a React Query cache effect.
+- Empty-account captured `serverTotalMs`: `2273ms`, `672ms`, `661ms`,
+  `2179ms`, `661ms`. Repeated empty-account runs reached roughly `0.66s`,
+  improved from the Build 96 empty-account baseline around `1.9-2.6s`.
+- Seven-record account captured `serverTotalMs`: `2596ms`, `3728ms`, `2052ms`,
+  `1666ms`. This still has variance, so the next performance candidate is not
+  auth/stale cleanup P1 but list payload / evidence / thumbnail work.
+- Startup Performance Optimization P1 is complete. Keep P1.5 as a later
+  candidate: evidence payload reduction, thumbnail signed URL lazy/cache, and
+  list/detail payload split.
+- Next start point: Development Build / Local Build Workflow preparation to
+  reduce repeated EAS preview/internal build cost.
 
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
