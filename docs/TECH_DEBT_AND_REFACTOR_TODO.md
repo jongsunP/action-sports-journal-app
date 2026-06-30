@@ -671,11 +671,14 @@ Current P1 status:
    Any future Email Recovery E2E must use an owner-approved fresh email and run
    within the magic-link validity window.
 5. Current-account email recovery-method connection is complete.
-6. Email Recovery Sign-in P1 is implemented as a separate flow using
-   `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` and
-   `actionsportsjournal://auth/email/recovery`. The app handles initial/runtime
-   callback URLs, code exchange or hash session payloads, and refreshes with
-   `getSession` + `getUser`.
+6. Email Recovery Sign-in P1 now uses a single user-facing CTA after Build 92
+   feedback. The UI no longer asks the rider to choose between "connect email"
+   and "recover existing records". Internally, ASJ first tries
+   `updateUser({ email })` for current-account connection; if Supabase reports
+   the email already exists, it uses the existing
+   `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` recovery path
+   and `actionsportsjournal://auth/email/recovery` callback after the local-work
+   guard passes.
 7. Next standalone E2E QA must confirm existing Moments, upload targets, push
    tokens, and Realtime channel ownership stay under the recovered user after
    email verification/sign-in.
@@ -1799,19 +1802,19 @@ POC implementation status, 2026-06-27:
 - Build 91 real-device QA passed for Upload Unified Progress UX, Upload
   Selection Size Validation Fix, Compression Upload Flow P1, Video no-records
   timeout UI fix, and compressed-video upload through completed analysis.
-- Media Preview Policy P1 is implemented in
-  `a395d37 fix: prefer thumbnails for completed compressed previews`. Read-only
-  DB/Storage checks showed recent completed Moments with
-  `source_video_storage_status=deleted`, missing source video Storage objects,
-  existing `moment-thumbnails` objects, and local `file:` `source_video_uri`
-  values. The likely playable source was the app-local compressed temp /
-  persisted video asset. P1 now prevents completed + thumbnail + deleted source
-  + compressed local asset from being selected as Detail playback, so the user
-  sees thumbnail-only instead of a lower-quality compressed video.
-- Media Preview Policy P1 intentionally does not delete local compressed files,
-  migrate old AsyncStorage state, change Supabase Storage policy, or add remote
-  video playback. Standalone iPhone QA is still needed later, but it can be
-  bundled into the next relevant build rather than run immediately.
+- Media Preview Policy P1 is implemented and tightened after Build 92 QA.
+  Read-only DB/Storage checks showed recent completed Moments with deleted
+  source video Storage objects, existing `moment-thumbnails` objects, and local
+  `file:` `source_video_uri` values. The likely playable source was the
+  app-local compressed temp / persisted video asset. The tightened policy keeps
+  the original local video as the user-facing asset when available, prevents
+  completed + thumbnail + compressed local asset from being selected as Detail
+  playback, and best-effort deletes newly created compressed upload temp files
+  after a server Moment is successfully created.
+- Media Preview Policy P1 still does not migrate old AsyncStorage state, change
+  Supabase Storage policy, or add remote video playback. Standalone iPhone QA is
+  still needed later, but it can be bundled into the next relevant build rather
+  than run immediately.
 - Media / Share UX P1 is implemented as a presentation-only share-ready card in
   Moment Detail. Completed Moments with visible evidence now have a "공유
   미리보기" card below the media area and above the rider-facing analysis card.

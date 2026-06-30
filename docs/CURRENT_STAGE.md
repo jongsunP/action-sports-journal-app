@@ -25,7 +25,10 @@ Build 92 baseline QA build complete / Founder QA pending, 2026-06-29:
   `https://expo.dev/artifacts/eas/dAL0Ya7FtxSRWeB1_x7QxDEknsn7F2mGIx2j3hKDADs.ipa`.
 - Build 92 is the AI Calibration baseline QA build. It should verify the
   completed pre-AI foundation/media work before ASJ moves into AI Calibration.
-- The next step is Founder real-device QA, not another implementation task.
+- Build 92 QA produced two UX/policy fixes that are now implemented after the
+  build and need a follow-up standalone QA build: Email Recovery single CTA and
+  completed-media compressed preview priority cleanup. Build 92 itself does not
+  include those follow-up fixes.
 - After Build 92 QA, upgrade the Render Web Service from Free to Starter
   ($7/mo) before AI Calibration so free-plan cold start is removed as a
   confounding variable during upload/analysis debugging.
@@ -69,20 +72,25 @@ Build 91 closeout, 2026-06-29:
   that lesson into action-sports language: moment evidence, rider growth, and
   readable next-step feedback rather than medical/rehab positioning.
 
-Media Preview Policy P1 implementation, 2026-06-29:
+Media Preview Policy P1 implementation / Build 92 feedback tightening,
+2026-06-29:
 
 - Implemented in commit `a395d37 fix: prefer thumbnails for completed compressed
   previews`.
-- Policy: completed Moments with thumbnail available, source storage deleted,
-  and compressed local video asset should show thumbnail-only in Detail instead
-  of replaying the lower-quality compressed local video.
+- Build 92 QA showed that compressed local video could still outrank original
+  or thumbnail display. The tightened policy is: original local video stays the
+  user-facing preview when available; completed Moments with thumbnail available
+  should not use compressed local upload assets as Detail playback; if only a
+  compressed completed asset is available, Detail falls back to thumbnail-only.
 - Uploading/queued/processing/failed states can still use compressed preview so
   the rider can confirm the just-selected upload while the Moment is still
   converging.
-- Local compressed files are not deleted in this P1; the change only prevents
-  completed compressed local assets from being chosen as user-facing playback.
-- Standalone Build QA is still needed later, but it is not urgent and was
-  explicitly deferred by the Founder.
+- New uploads keep the original local video as the user-facing asset while the
+  compressed asset is used only as the final upload file.
+- After a compressed upload successfully creates a server Moment, the compressed
+  temp file is best-effort deleted. This does not change server source-video
+  cleanup policy and does not migrate old persisted data.
+- Standalone Build QA is still needed in the next approved build.
 
 Auth Bootstrap Timeout / Observability and Email Recovery Sign-in P1,
 2026-06-29:
@@ -95,19 +103,20 @@ Auth Bootstrap Timeout / Observability and Email Recovery Sign-in P1,
   prevent permanent app loading and make slow Supabase/session bootstrap
   distinguishable from boot remote sync and Video archive first-page loading.
 - Email Recovery Sign-in P1 is implemented but not standalone-E2E verified yet.
-  This is separate from Email Recovery Connection P1: connection uses
-  `updateUser({ email })` for the current device-first account, while sign-in
-  uses `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` to return
-  to an existing email-linked account after reinstall/new device.
+  Build 92 feedback removed the separate Email connection/recovery CTA choice
+  from the UI. The screen now uses one "이메일로 계속하기" CTA: it first tries
+  current-account connection with `updateUser({ email })`, and only if the email
+  is already registered does it continue into recovery sign-in with
+  `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
 - Selected recovery redirect path:
   `actionsportsjournal://auth/email/recovery`.
 - The app handles initial/runtime email recovery callback URLs, accepts code
   exchange or hash session payloads, refreshes with `getSession` + `getUser`,
   and treats callback error / missing payload / missing session as not
   completed rather than success.
-- `AccountRecoveryScreen` now keeps the existing "복구 이메일" connection path
-  and adds a small "기존 기록 복구" email sign-in CTA. It reuses the local
-  unsynced/uploading work guard before requesting a recovery sign-in email.
+- `AccountRecoveryScreen` keeps the local unsynced/uploading work guard before
+  requesting a recovery sign-in email. The user no longer has to choose between
+  "connect" and "recover" for Email.
 - No EAS build or buildNumber change was performed in this pass. Next required
   QA is standalone iPhone E2E with a suitable test email: request recovery link
   -> tap email link -> ASJ app return -> session switches to existing

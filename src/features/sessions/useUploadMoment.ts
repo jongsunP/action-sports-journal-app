@@ -6,6 +6,7 @@ import {
   type SetStateAction,
 } from 'react';
 import { Alert, AppState } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
@@ -465,21 +466,6 @@ export function useUploadMoment({
         );
         setUploadDraft(activeUploadDraft);
 
-        if (uploadVideoForUpload.uri !== videoForUpload.uri) {
-          setVideoForSession(nextSession.id, uploadVideoForUpload);
-          setSessions((current) =>
-            current.map((session) =>
-              session.id === nextSession.id
-                ? {
-                    ...session,
-                    updatedAt: new Date().toISOString(),
-                    videoUri: uploadVideoForUpload.uri,
-                  }
-                : session,
-            ),
-          );
-        }
-
         uploadStartedAt = Date.now();
 
         console.info('[upload_timing]', {
@@ -664,6 +650,10 @@ export function useUploadMoment({
         });
 
         updateLocalMomentStatus(nextSession.id, nextMomentStatus);
+        void cleanupCompressedUploadAssetIfSafe({
+          originalVideo: videoForUpload,
+          uploadVideo: uploadVideoForUpload,
+        });
         onUploadSuccess?.();
         setUploadDraft(null);
         setSelectedVideo(null);
@@ -1170,6 +1160,34 @@ function withUploadTimeout<T>(
 
 function isMultipartFallbackAmbiguousFailure(errorMessage: string) {
   return errorMessage === 'Multipart fallback upload timed out.';
+}
+
+async function cleanupCompressedUploadAssetIfSafe({
+  originalVideo,
+  uploadVideo,
+}: {
+  originalVideo: SessionVideoAsset;
+  uploadVideo: SessionVideoAsset;
+}) {
+  if (
+    uploadVideo.previewSource !== 'compressed' ||
+    uploadVideo.uri === originalVideo.uri ||
+    !uploadVideo.uri.startsWith('file:')
+  ) {
+    return;
+  }
+
+  try {
+    await FileSystem.deleteAsync(uploadVideo.uri, { idempotent: true });
+    console.info('[upload_timing]', {
+      event: 'compressed_upload_asset_cleanup_success',
+    });
+  } catch (error) {
+    console.warn(
+      'Compressed upload asset cleanup failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+  }
 }
 
 function createLocalSessionId() {

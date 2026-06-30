@@ -27,6 +27,7 @@ import {
 import { checkRecoveryLocalWorkGuard } from './recoveryLocalWorkGuard';
 
 type RecoveryStep = 'idle' | 'emailSent' | 'linked';
+type EmailContinueFlow = 'connection' | 'recovery';
 type KakaoContinueMode = 'link' | 'recover';
 type KakaoFeedbackType =
   | 'success'
@@ -294,12 +295,12 @@ export function AccountRecoveryScreen() {
   const [isLinkingKakao, setIsLinkingKakao] = useState(false);
   const [isRecoveringWithKakao, setIsRecoveringWithKakao] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
-  const [isRequestingEmailRecovery, setIsRequestingEmailRecovery] =
-    useState(false);
   const [isRefreshingSession, setIsRefreshingSession] = useState(false);
   const [emailRecoveryMessage, setEmailRecoveryMessage] = useState<
     string | null
   >(null);
+  const [emailContinueFlow, setEmailContinueFlow] =
+    useState<EmailContinueFlow>('connection');
 
   const normalizedEmail = useMemo(() => normalizeRecoveryEmail(email), [email]);
   const isAnonymousUser = hasAnonymousFlag(user);
@@ -310,22 +311,12 @@ export function AccountRecoveryScreen() {
     authMode === 'authenticated' &&
     normalizedEmail.includes('@') &&
     !isSubmittingEmail &&
-    !isRequestingEmailRecovery &&
     !isRefreshingSession &&
     !isLinkingKakao &&
     !isRecoveringWithKakao;
   const canRefreshLinkStatus =
     authMode === 'authenticated' &&
     !isSubmittingEmail &&
-    !isRequestingEmailRecovery &&
-    !isRefreshingSession &&
-    !isLinkingKakao &&
-    !isRecoveringWithKakao;
-  const canRequestEmailRecovery =
-    authMode === 'authenticated' &&
-    normalizedEmail.includes('@') &&
-    !isSubmittingEmail &&
-    !isRequestingEmailRecovery &&
     !isRefreshingSession &&
     !isLinkingKakao &&
     !isRecoveringWithKakao;
@@ -333,7 +324,6 @@ export function AccountRecoveryScreen() {
     authMode === 'authenticated' &&
     !hasKakaoIdentity &&
     !isSubmittingEmail &&
-    !isRequestingEmailRecovery &&
     !isRefreshingSession &&
     !isLinkingKakao &&
     !isRecoveringWithKakao;
@@ -379,6 +369,7 @@ export function AccountRecoveryScreen() {
           ? '기존 이메일 계정의 기록으로 돌아왔습니다.'
           : null,
       );
+      setEmailContinueFlow(lastRecoveryEmailCompletion.flow);
       setStep(nextEmail ? 'linked' : 'idle');
       return;
     }
@@ -393,7 +384,50 @@ export function AccountRecoveryScreen() {
     setErrorMessage(lastRecoveryEmailCompletion.message);
   }, [lastRecoveryEmailCompletion]);
 
-  const handleRequestEmailLink = async () => {
+  const requestEmailRecoverySignIn = async (emailToRecover: string) => {
+    void recordRecoveryAttempt({
+      event: 'email_recovery_started',
+      flow: 'recovery_sign_in',
+      metadata: getRecoveryEmailMetadata(emailToRecover),
+      provider: 'email',
+      status: 'started',
+    });
+    const guard = await checkRecoveryLocalWorkGuard();
+
+    if (!guard.canRecover) {
+      void recordRecoveryAttempt({
+        event: 'email_recovery_blocked',
+        flow: 'recovery_sign_in',
+        metadata: {
+          blockingCount: guard.blockingCount,
+          ...getRecoveryEmailMetadata(emailToRecover),
+        },
+        provider: 'email',
+        reasonCode: 'local_work_guard',
+        status: 'blocked',
+      });
+      setEmailRecoveryMessage(guard.message);
+      return false;
+    }
+
+    await requestRecoveryEmailSignInLink(emailToRecover);
+    void recordRecoveryAttempt({
+      event: 'email_recovery_email_sent',
+      flow: 'recovery_sign_in',
+      metadata: getRecoveryEmailMetadata(emailToRecover),
+      provider: 'email',
+      status: 'succeeded',
+    });
+    setPendingEmail(emailToRecover);
+    setEmailContinueFlow('recovery');
+    setEmailRecoveryMessage(
+      '이메일 링크를 누르면 이 앱으로 돌아와 기존 기록을 불러옵니다.',
+    );
+    setStep('emailSent');
+    return true;
+  };
+
+  const handleContinueWithEmail = async () => {
     if (!canSubmitEmail) {
       return;
     }
@@ -420,6 +454,7 @@ export function AccountRecoveryScreen() {
         status: 'succeeded',
       });
       setPendingEmail(normalizedEmail);
+      setEmailContinueFlow('connection');
       setStep('emailSent');
     } catch (error) {
       const reasonCode = getRecoveryReasonCode(error);
@@ -438,7 +473,30 @@ export function AccountRecoveryScreen() {
         reasonCode,
         status: 'failed',
       });
-      setErrorMessage(getErrorMessage(error));
+
+      if (reasonCode === 'email_exists') {
+        try {
+          await requestEmailRecoverySignIn(normalizedEmail);
+        } catch (recoveryError) {
+          const recoveryReasonCode = getRecoveryReasonCode(recoveryError);
+
+          void recordRecoveryAttempt({
+            errorCode: getRecoveryErrorCode(recoveryError),
+            event:
+              recoveryReasonCode === 'rate_limited'
+                ? 'email_recovery_rate_limited'
+                : 'email_recovery_failed',
+            flow: 'recovery_sign_in',
+            metadata: getRecoveryEmailMetadata(normalizedEmail),
+            provider: 'email',
+            reasonCode: recoveryReasonCode,
+            status: 'failed',
+          });
+          setEmailRecoveryMessage(getErrorMessage(recoveryError));
+        }
+      } else {
+        setErrorMessage(getErrorMessage(error));
+      }
     } finally {
       setIsSubmittingEmail(false);
     }
@@ -467,12 +525,7 @@ export function AccountRecoveryScreen() {
   };
 
   const handleResend = async () => {
-    if (
-      !pendingEmail ||
-      isSubmittingEmail ||
-      isRequestingEmailRecovery ||
-      isRefreshingSession
-    ) {
+    if (!pendingEmail || isSubmittingEmail || isRefreshingSession) {
       return;
     }
 
@@ -483,33 +536,44 @@ export function AccountRecoveryScreen() {
     setIsSubmittingEmail(true);
 
     try {
-      void recordRecoveryAttempt({
-        event: 'email_connection_started',
-        flow: 'email_connection',
-        metadata: getRecoveryEmailMetadata(pendingEmail),
-        provider: 'email',
-        status: 'started',
-      });
-      await requestRecoveryEmailLink(pendingEmail);
-      void recordRecoveryAttempt({
-        event: 'email_connection_email_sent',
-        flow: 'email_connection',
-        metadata: getRecoveryEmailMetadata(pendingEmail),
-        provider: 'email',
-        status: 'succeeded',
-      });
+      if (emailContinueFlow === 'recovery') {
+        await requestEmailRecoverySignIn(pendingEmail);
+      } else {
+        void recordRecoveryAttempt({
+          event: 'email_connection_started',
+          flow: 'email_connection',
+          metadata: getRecoveryEmailMetadata(pendingEmail),
+          provider: 'email',
+          status: 'started',
+        });
+        await requestRecoveryEmailLink(pendingEmail);
+        void recordRecoveryAttempt({
+          event: 'email_connection_email_sent',
+          flow: 'email_connection',
+          metadata: getRecoveryEmailMetadata(pendingEmail),
+          provider: 'email',
+          status: 'succeeded',
+        });
+      }
     } catch (error) {
       const reasonCode = getRecoveryReasonCode(error);
 
       void recordRecoveryAttempt({
         errorCode: getRecoveryErrorCode(error),
         event:
-          reasonCode === 'email_exists'
+          emailContinueFlow === 'recovery'
+            ? reasonCode === 'rate_limited'
+              ? 'email_recovery_rate_limited'
+              : 'email_recovery_failed'
+          : reasonCode === 'email_exists'
             ? 'email_exists'
             : reasonCode === 'rate_limited'
               ? 'rate_limited'
               : 'email_connection_failed',
-        flow: 'email_connection',
+        flow:
+          emailContinueFlow === 'recovery'
+            ? 'recovery_sign_in'
+            : 'email_connection',
         metadata: getRecoveryEmailMetadata(pendingEmail),
         provider: 'email',
         reasonCode,
@@ -751,74 +815,6 @@ export function AccountRecoveryScreen() {
     }
   };
 
-  const handleRequestEmailRecoverySignIn = async () => {
-    if (!canRequestEmailRecovery) {
-      return;
-    }
-
-    setErrorMessage(null);
-    setKakaoFeedback(null);
-    setEmailRecoveryMessage(null);
-    setIsRequestingEmailRecovery(true);
-
-    try {
-      void recordRecoveryAttempt({
-        event: 'email_recovery_started',
-        flow: 'recovery_sign_in',
-        metadata: getRecoveryEmailMetadata(normalizedEmail),
-        provider: 'email',
-        status: 'started',
-      });
-      const guard = await checkRecoveryLocalWorkGuard();
-
-      if (!guard.canRecover) {
-        void recordRecoveryAttempt({
-          event: 'email_recovery_blocked',
-          flow: 'recovery_sign_in',
-          metadata: {
-            blockingCount: guard.blockingCount,
-            ...getRecoveryEmailMetadata(normalizedEmail),
-          },
-          provider: 'email',
-          reasonCode: 'local_work_guard',
-          status: 'blocked',
-        });
-        setEmailRecoveryMessage(guard.message);
-        return;
-      }
-
-      await requestRecoveryEmailSignInLink(normalizedEmail);
-      void recordRecoveryAttempt({
-        event: 'email_recovery_email_sent',
-        flow: 'recovery_sign_in',
-        metadata: getRecoveryEmailMetadata(normalizedEmail),
-        provider: 'email',
-        status: 'succeeded',
-      });
-      setEmailRecoveryMessage(
-        '이메일 링크를 누르면 이 앱으로 돌아와 기존 기록을 불러옵니다.',
-      );
-    } catch (error) {
-      const reasonCode = getRecoveryReasonCode(error);
-
-      void recordRecoveryAttempt({
-        errorCode: getRecoveryErrorCode(error),
-        event:
-          reasonCode === 'rate_limited'
-            ? 'email_recovery_rate_limited'
-            : 'email_recovery_failed',
-        flow: 'recovery_sign_in',
-        metadata: getRecoveryEmailMetadata(normalizedEmail),
-        provider: 'email',
-        reasonCode,
-        status: 'failed',
-      });
-      setEmailRecoveryMessage(getErrorMessage(error));
-    } finally {
-      setIsRequestingEmailRecovery(false);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
@@ -876,7 +872,6 @@ export function AccountRecoveryScreen() {
                 autoCorrect={false}
                 editable={
                   !isSubmittingEmail &&
-                  !isRequestingEmailRecovery &&
                   !isRefreshingSession
                 }
                 inputMode="email"
@@ -891,7 +886,7 @@ export function AccountRecoveryScreen() {
               <Pressable
                 accessibilityRole="button"
                 disabled={!canSubmitEmail}
-                onPress={handleRequestEmailLink}
+                onPress={handleContinueWithEmail}
                 style={({ pressed }) => [
                   styles.primaryButton,
                   !canSubmitEmail ? styles.buttonDisabled : undefined,
@@ -901,7 +896,7 @@ export function AccountRecoveryScreen() {
                 {isSubmittingEmail ? (
                   <ActivityIndicator color="#050507" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>복구 이메일 보내기</Text>
+                  <Text style={styles.primaryButtonText}>이메일로 계속하기</Text>
                 )}
               </Pressable>
 
@@ -910,7 +905,10 @@ export function AccountRecoveryScreen() {
                   <Text style={styles.formLabel}>이메일 확인 대기 중</Text>
                   <Text style={styles.helperText}>
                     {pendingEmail} 주소로 보낸 메일에서 확인 링크를 눌러주세요.
-                    링크를 열면 앱으로 돌아와 연결 상태를 확인합니다.
+                    링크를 열면 앱으로 돌아와{' '}
+                    {emailContinueFlow === 'recovery'
+                      ? '기존 기록을 불러옵니다.'
+                      : '복구 수단 연결을 확인합니다.'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -934,7 +932,6 @@ export function AccountRecoveryScreen() {
                     accessibilityRole="button"
                     disabled={
                       isSubmittingEmail ||
-                      isRequestingEmailRecovery ||
                       isRefreshingSession
                     }
                     onPress={handleResend}
@@ -957,36 +954,13 @@ export function AccountRecoveryScreen() {
                 </View>
               ) : null}
 
-              <View style={styles.codeBlock}>
-                <Text style={styles.formLabel}>기존 기록 복구</Text>
-                <Text style={styles.helperText}>
-                  앱을 다시 설치했거나 다른 기기라면, 이미 연결해 둔 이메일로
-                  기존 기록에 돌아올 수 있습니다.
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={!canRequestEmailRecovery}
-                  onPress={handleRequestEmailRecoverySignIn}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    !canRequestEmailRecovery
-                      ? styles.buttonDisabled
-                      : undefined,
-                    pressed ? styles.buttonPressed : undefined,
-                  ]}
-                >
-                  {isRequestingEmailRecovery ? (
-                    <ActivityIndicator color="#f8fafc" />
-                  ) : (
-                    <Text style={styles.secondaryButtonText}>
-                      이메일로 기존 기록 복구
-                    </Text>
-                  )}
-                </Pressable>
-                {emailRecoveryMessage ? (
-                  <Text style={styles.helperText}>{emailRecoveryMessage}</Text>
-                ) : null}
-              </View>
+              <Text style={styles.helperText}>
+                이 이메일로 현재 기록을 보호합니다. 이미 연결된 기존 기록이
+                있으면 같은 버튼으로 복구 메일을 보냅니다.
+              </Text>
+              {emailRecoveryMessage ? (
+                <Text style={styles.helperText}>{emailRecoveryMessage}</Text>
+              ) : null}
 
               <View style={styles.kakaoBlock}>
                 <View style={styles.kakaoHeaderRow}>

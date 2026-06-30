@@ -17,12 +17,10 @@ export function getVideoAssetFromSession(session: Session): SessionVideoAsset | 
 
 export function getUserFacingDetailVideo({
   momentStatus,
-  sourceVideoStorageStatus,
   thumbnailUri,
   video,
 }: {
   momentStatus?: MomentStatus;
-  sourceVideoStorageStatus?: string;
   thumbnailUri?: string;
   video?: SessionVideoAsset | null;
 }) {
@@ -33,7 +31,6 @@ export function getUserFacingDetailVideo({
   if (
     momentStatus === 'completed' &&
     thumbnailUri &&
-    sourceVideoStorageStatus === 'deleted' &&
     isCompressedPreviewVideo(video)
   ) {
     return null;

@@ -225,11 +225,11 @@ Current stable workstream list:
 - Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성): 구현 가능한 현재 범위 완료. `getSession` / `getUser` / anonymous sign-in 단계별 status, durationMs, reason을 QA Debug Panel에서 확인 가능
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): Build 89 fresh-link QA 성공
-- Email Recovery Sign-in P1(이메일 기존 기록 복구 로그인 1차): 코드 구현 완료. `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` 기반으로 기존 email-linked 계정 복구 링크를 요청하고 `actionsportsjournal://auth/email/recovery` callback을 처리함. Standalone E2E QA는 다음 빌드 승인 후 확인 필요
+- Email Recovery Sign-in P1(이메일 기존 기록 복구 로그인 1차): 코드 구현 완료. Build 92 피드백 후 UI는 Kakao처럼 single CTA로 정리됨. 사용자는 이메일 입력 후 `이메일로 계속하기`만 누르고, 내부에서는 `updateUser({ email })` current-account 연결을 먼저 시도한 뒤 이미 등록된 이메일이면 local-work guard 후 `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` recovery sign-in으로 이어감. Standalone E2E QA는 다음 빌드 승인 후 확인 필요
 - Compression / Upload Optimization POC(영상 압축 / 업로드 최적화 POC): Build 89 실기기 QA 성공
 - Compression Upload Flow P1(압축 업로드 플로우 1차): Build 91 실기기 QA 성공. 압축된 영상 업로드 후 분석 완료까지 정상 확인
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
-- Media Preview Policy P1(미디어 미리보기 정책 1차): 구현 완료. completed + thumbnail 존재 + source storage deleted + compressed local asset 조건에서는 Detail이 압축 영상 재생 대신 thumbnail-only로 전환
+- Media Preview Policy P1(미디어 미리보기 정책 1차): 구현 완료 / Build 92 피드백 반영. 원본 local video가 있으면 원본이 user-facing preview이고, completed + thumbnail + compressed local asset은 source storage status와 무관하게 Detail playback에서 제외되어 thumbnail-only로 전환됨. 새 compressed upload temp file은 서버 Moment 생성 성공 후 best-effort cleanup
 - Media / Share UX P1(미디어 / 공유 경험 1차): 구현 완료. 외부 공유 기능이 아니라 Moment Detail의 completed evidence 아래 share-ready preview card 기반을 추가
 - Future Media UX P1 - Detail Media State Polish(향후 미디어 UX 1차 - 상세 미디어 상태 정리): 구현 완료. Detail media hero에서 thumbnail-only 상태를 "대표 이미지"로 자연스럽게 표시하고, completed / non-completed missing media 문구를 분리
 - Archive Card Visual Hierarchy P1(아카이브 카드 시각 위계 1차): 구현 완료. Video 탭 archive row를 파일 목록이 아니라 라이딩 기록 카드처럼 보이도록 journal label/date/title/status/state-aware description 위계로 정리
@@ -247,7 +247,7 @@ Current stable workstream list:
 - Media / Share UX Next Step(미디어 / 공유 경험 다음 단계): image export, native share sheet, ShareResult route 중 하나를 별도 승인 후 선택
 - Future Media UX Next Step(향후 미디어 경험 다음 단계): image export/native share route 또는 ShareResult route를 별도 승인 후 선택. Archive Card Visual Hierarchy P1은 완료
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
-- Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
+- Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준
@@ -274,7 +274,7 @@ Current remaining work classification:
 QA / 검증 대기:
 - Build 92 AI Calibration Baseline QA(빌드 92 AI 전 기준선 QA): EAS build 완료 / Founder 실기기 QA 대기. build 준비 커밋 `e96e0b7`, iOS buildNumber `92`, EAS Build ID `83730ee0-dae1-4073-9db8-a1c779c09fb9`, Build page `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/83730ee0-dae1-4073-9db8-a1c779c09fb9`. QA 결과를 받은 뒤 Render Starter 전환으로 진행한다.
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): Email Recovery Sign-in P1 코드는 구현 완료. 다음 standalone build에서 이메일 링크 -> ASJ 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload 확인.
-- Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 별도 리스트 항목으로 유지하지 않고, 다음 빌드 때 QA 항목으로 언급. 큰 영상 업로드 -> 압축 -> 분석 완료 -> iOS Photos 원본 삭제 -> Detail thumbnail-only 확인.
+- Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 별도 리스트 항목으로 유지하지 않고, 다음 빌드 때 QA 항목으로 언급. 큰 영상 업로드 -> 압축 -> 분석 완료 -> 원본이 있으면 원본 preview 유지 -> 원본 삭제 후 Detail thumbnail-only 확인 -> completed 후 compressed temp cleanup 회귀 없음 확인.
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 이번 기준선 build QA 후 AI Calibration 시작 전에 Render Web Service Starter($7/mo)로 전환해 Free cold start 변수를 제거한다. 이후 QA Debug Panel 값으로 앱/백엔드/인프라 문제를 분리한다.
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증): 우선 Render Starter 전환만 진행한다. Supabase 플랜은 별도 증거가 생기기 전까지 변경하지 않는다.
 

@@ -61,8 +61,6 @@ export function MomentDetailScreen({
   const thumbnailUri = runtimeState.thumbnailsBySessionId[session.id];
   const video = getUserFacingDetailVideo({
     momentStatus,
-    sourceVideoStorageStatus:
-      runtimeState.sourceVideoStorageStatusBySessionId[session.id],
     thumbnailUri,
     video: availableVideo,
   });

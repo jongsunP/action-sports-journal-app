@@ -28,6 +28,11 @@ Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 - Build 92 is a QA baseline build only. It includes the completed pre-AI
   foundation/media work and should be verified on the Founder device before
   any AI Calibration work begins.
+- Build 92 QA feedback has been addressed in code after the build: Email
+  Recovery now follows a Kakao-like single CTA path, and completed Detail media
+  no longer lets compressed local upload assets outrank original video or
+  thumbnail display. A follow-up standalone build is needed to verify these
+  fixes on device; do not treat Build 92 itself as containing them.
 - Do not start AI Calibration until Build 92 QA has been reviewed and Render
   Web Service has been upgraded from Free to Starter ($7/mo).
 
@@ -53,21 +58,24 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
     backend wakes. New decision: after the current baseline build QA and before
     AI Calibration, change the Render Web Service instance from Free to Starter
     ($7/mo) to remove the free-plan cold start variable.
-  - Media Preview Policy P1 is implemented in
-    `a395d37 fix: prefer thumbnails for completed compressed previews`.
-    Completed Moments with a thumbnail, deleted source Storage, and compressed
-    local preview asset now prefer thumbnail-only Detail display instead of
-    replaying the lower-quality compressed local video.
+  - Media Preview Policy P1 is implemented and tightened after Build 92 QA.
+    Completed Moments with a thumbnail no longer use compressed local upload
+    assets as Detail playback. New compressed upload assets are kept for the
+    upload/final file path, while the user-facing local video stays original
+    when available; successful compressed uploads also best-effort delete the
+    compressed temp file after the server Moment is created.
   - Auth Bootstrap Timeout / Observability is implemented for the current
     scope. The QA Debug Panel now distinguishes auth bootstrap
     `getSession` / `getUser` / anonymous sign-in status, duration, and reason
     from boot remote sync and Video first-page loading, without exposing token,
     email, or full user id values.
   - Email Recovery Sign-in P1 is code-complete but standalone E2E QA is still
-    pending. It is separate from current-account Email Recovery Connection:
-    connection still uses `updateUser({ email })`, while reinstall/new-device
-    recovery uses `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`
-    and the `actionsportsjournal://auth/email/recovery` callback path.
+    pending. After Build 92 feedback, the UI now presents one Email CTA:
+    `이메일로 계속하기`. Internally it first attempts current-account
+    connection with `updateUser({ email })`; if Supabase reports the email
+    already belongs to an existing account, it continues into
+    `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` for recovery
+    sign-in after the local-work guard passes.
   - Media / Share UX P1 is implemented as a Detail share-ready preview card for
     completed Moments with visible evidence. This is a presentation foundation,
     not Instagram/Kakao direct sharing, image export, native share sheet, or
@@ -89,11 +97,13 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   - AI Calibration should later start with TS/HS Evidence, not broad trick-name
     tuning. MediaPipe is a candidate for Motion Evidence Extraction feasibility,
     but it must be tested on real ASJ wakeboard samples before adoption.
-- Next starting point: install Build 92 and run Founder real-device QA. Build
-  92 should verify Email Recovery Sign-in P1, Media Preview Policy P1, Media /
-  Share UX P1, Detail media state polish, Archive Card Visual Hierarchy P1, and
-  upload / compression regression. After Build 92 QA, Render Starter is the
-  agreed next infrastructure step before AI Calibration.
+- Next starting point: create a follow-up standalone QA build only after user
+  approval. It should verify the Build 92 feedback fixes: Email single CTA,
+  original-or-thumbnail media preview priority, compressed temp cleanup after
+  successful upload, plus the existing Media / Share UX, Detail media state,
+  Archive Card Visual Hierarchy, and upload / compression regression checks.
+  After that QA, Render Starter is the agreed next infrastructure step before
+  AI Calibration.
 - Store-before-release OAuth follow-up is configuration review only: Kakao app
   display, Supabase redirect allowlist, and consent wording. Do not rewrite
   Kakao linking/recovery semantics just to reduce provider prompts.
