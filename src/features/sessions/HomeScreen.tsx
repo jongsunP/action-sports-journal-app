@@ -2212,7 +2212,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Text style={styles.sectionLabel}>최근 기록</Text>
-          <Text style={styles.sectionHint}>기록</Text>
+          <Text style={styles.sectionHint}>최신순</Text>
         </View>
         <RecentSessionsRail
           formatShortSessionDate={formatShortSessionDate}
@@ -2240,7 +2240,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Text style={styles.sectionLabel}>최근 영상</Text>
-          <Text style={styles.sectionHint}>기록</Text>
+          <Text style={styles.sectionHint}>최신순</Text>
         </View>
       </View>
     </>
