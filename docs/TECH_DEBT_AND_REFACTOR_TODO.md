@@ -163,6 +163,22 @@ BLOCKED:
 Foundation hardening is closed enough to move into product UX. The recommended
 next task is Product UX Baseline P1: Unified User-Facing Status Resolver.
 
+### Reference-driven UI / UX rule
+
+Founder direction as of 2026-06-30:
+
+- ASJ should not invent new UI/UX systems just to be original.
+- Prefer proven app patterns that many services already use, adapted to ASJ's
+  rider-journal context.
+- uibowl and similar reference libraries may be used to find comparable
+  patterns for account settings, connection methods, recovery, onboarding
+  choice, media cards, and share-ready presentation.
+- These references are for structure, hierarchy, and flow. Do not copy exact
+  screens, colors, or branding.
+- Instagram remains the strongest behavioral reference because ASJ's target
+  users are likely media-native and Instagram-familiar. Borrow validated user
+  learning, not Instagram's exact UI.
+
 ### Decision
 
 Start with a UI-only user-facing status resolver before larger Journal,
@@ -228,6 +244,27 @@ Kakao Recovery UX:
 - Guardrail: keep local unsynced/uploading work protection and do not blur the
   internal ownership distinction between `linkIdentity` and recovery
   `signInWithOAuth`.
+
+Account Recovery UI information architecture:
+
+- Current state: Email and Kakao are now both single-CTA flows, but the
+  `AccountRecoveryScreen` still exposes too much information at once: account
+  state, Email, Kakao, pending/error/linked details, and technical anonymous
+  account language.
+- Decision: keep Account Recovery as an independent stack page like Upload.
+  Recovery has its own pending/error/cancel/success states and should not be
+  hidden in a tab or transient bottom sheet.
+- Recommended P1: first view becomes a compact protection-method hub. Show a
+  short protection summary and method cards such as "카카오로 계속하기" and
+  "이메일로 계속하기". Reveal Email/Kakao detailed panels only after the user
+  selects or starts that method.
+- Not recommended: tabs, because they make recovery methods look like competing
+  settings; bottom sheets, because OAuth/email-link flows and app backgrounding
+  can outgrow the sheet; immediate nested stack, because current-screen
+  progressive disclosure is safer before adding navigation surface.
+- Implementation candidate: `AccountRecoveryScreen.tsx` information structure
+  only. Do not change Supabase Auth, Kakao/Email helpers, DB, or ownership
+  semantics for this P1.
 
 Media / Share UX:
 

@@ -16,6 +16,21 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 ## Current Resume Point
 
+Latest product/UX direction update:
+
+- ASJ should use proven mobile UI/UX patterns instead of inventing new
+  interaction systems by default. uibowl and similar reference libraries are
+  acceptable sources for information architecture and interaction patterns, but
+  not for literal screen copying.
+- Instagram remains the highest-priority behavioral reference because ASJ's
+  likely riders understand media-native Instagram patterns. Treat it as user
+  learning and growth-context reference, not a style sheet.
+- Account Recovery UI read-only review is complete. The screen should remain an
+  independent stack page, but the first view should become a compact
+  protection-method hub. Show a short protection summary and Email/Kakao method
+  choices first; reveal Email/Kakao detailed states only after selection or
+  progress. Tabs and bottom sheets are not recommended for P1.
+
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
 - Build prep commit: `e96e0b7 chore: prepare ai calibration baseline qa build`.

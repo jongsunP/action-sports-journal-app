@@ -14,6 +14,32 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Account Recovery UI information architecture review, 2026-06-30:
+
+- Founder direction: ASJ UI/UX should rely on proven mobile patterns rather than
+  inventing novel interaction systems. uibowl and similar reference libraries
+  may be used to study structures such as account settings, connect account,
+  recovery, and auth-method choice. References should inform hierarchy and flow,
+  not be copied visually.
+- Instagram remains the strongest behavioral reference because ASJ's target
+  riders are media-native and Instagram-familiar. This is a product-learning
+  reference, not a mandate to copy Instagram screens.
+- `AccountRecoveryScreen` should remain a stack-style independent page like
+  Upload because recovery has its own cancel/pending/error/success states.
+- The current problem is information density: current account state, Email
+  Recovery, Kakao Recovery, pending/error/linked explanations, and technical
+  "anonymous device account" language are visible together.
+- Recommended P1 direction: keep the independent page, but turn the first view
+  into a compact protection-method hub. Show a short protection summary and
+  method cards such as "카카오로 계속하기" and "이메일로 계속하기". Show Email/Kakao
+  detailed state only after the user selects or starts that method.
+- Not recommended for P1: tabs, because they make Email/Kakao feel like
+  competing settings; bottom sheets, because OAuth/email-link flows can outgrow
+  the sheet and conflict with background/foreground lifecycle; immediate nested
+  stack split, because progressive disclosure inside the current screen is
+  safer first.
+- No code, build, DB/Auth, or Supabase setting changes were made in this review.
+
 Build 92 baseline QA build complete / Founder QA pending, 2026-06-29:
 
 - Build prep commit is `e96e0b7 chore: prepare ai calibration baseline qa build`.
