@@ -38,6 +38,13 @@ Latest product/UX direction update:
   disclosure, and gated the Upload compression POC panel behind explicit
   `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`. No Auth, DB, API, Storage,
   Upload state machine, or AI Calibration logic changed.
+- Visible UI / UX Polish P2 - App Chrome & Empty States is implemented. It
+  tightened bottom tab primitive icons, made Growth read as progression instead
+  of "more", strengthened the Home upload CTA with a primitive film-plus mark,
+  replaced the Home `☰` entry with a primitive profile mark, shortened
+  empty/error and Upload copy, softened missing-media copy, removed model/provider
+  language from the default user-facing analysis state, and shortened Account
+  Recovery helper text. No icon library or package change was introduced.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
@@ -125,7 +132,7 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   approval. It should verify the Build 92 feedback fixes: Email single CTA,
   original-or-thumbnail media preview priority, compressed temp cleanup after
   successful upload, plus the existing Media / Share UX, Detail media state,
-  Archive Card Visual Hierarchy, Visible UI / UX Polish P1, and upload /
+  Archive Card Visual Hierarchy, Visible UI / UX Polish P1/P2, and upload /
   compression regression checks.
   After that QA, Render Starter is the agreed next infrastructure step before
   AI Calibration.

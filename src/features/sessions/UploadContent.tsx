@@ -111,9 +111,9 @@ export function UploadContent({
               <Text style={styles.headerMenuText}>×</Text>
             </Pressable>
             <View style={styles.uploadSheetTitleBlock}>
-              <Text style={styles.uploadSheetTitle}>새 기록 만들기</Text>
+              <Text style={styles.uploadSheetTitle}>라이딩 기록 만들기</Text>
               <Text style={styles.uploadSheetDescription}>
-                영상을 고르면 바로 업로드하고 분석을 시작합니다.
+                영상을 고르면 오늘의 라이딩을 기록하고 분석을 시작합니다.
               </Text>
             </View>
           </View>
@@ -150,12 +150,11 @@ export function UploadContent({
                 </View>
                 <View style={styles.selectedVideoHelper}>
                   <Text style={styles.selectedVideoHelperTitle}>
-                    빠르게 기록을 시작합니다
+                    이 영상으로 기록을 시작합니다
                   </Text>
                   <Text style={styles.selectedVideoHelperText}>
-                    메모 입력 없이 먼저 분석합니다. 최종 업로드 파일은 30MB /
-                    15초 이하만 지원하며, 20MB를 넘는 영상은 업로드 전에
-                    자동으로 최적화합니다.
+                    메모는 나중에 보강할 수 있습니다. 큰 영상은 업로드 전에
+                    자동으로 가볍게 정리합니다.
                   </Text>
                 </View>
                 {ENABLE_UPLOAD_COMPRESSION_POC ? (
@@ -173,14 +172,16 @@ export function UploadContent({
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>선택된 영상이 없습니다</Text>
-              <Text style={styles.emptyText}>영상을 다시 선택해주세요.</Text>
+              <Text style={styles.emptyText}>
+                라이딩 기록으로 남길 영상을 다시 선택해주세요.
+              </Text>
             </View>
           )}
         </ScrollView>
 
         <View style={styles.uploadPageFooter}>
           <Text style={styles.uploadAiNotice}>
-            업로드가 끝나면 분석은 서버에서 이어집니다. 업로드 중에는 앱을 닫지 않는 것이 안전합니다.
+            업로드가 끝나면 분석은 서버에서 이어집니다. 완료 전에는 앱을 열어두는 것이 안전합니다.
           </Text>
           {isSubmitting ? (
             <View style={styles.uploadSubmittingPanel}>
@@ -240,7 +241,7 @@ export function UploadContent({
                   ? '기록 생성 중...'
                   : isPreparingThumbnail
                     ? '준비 중...'
-                    : '업로드하고 분석 시작'}
+                    : '기록 만들고 분석 시작'}
               </Text>
             </Pressable>
           </View>
@@ -274,7 +275,7 @@ export function UploadContent({
               ) : null}
               <Text style={styles.uploadBlockingText}>
                 {uploadProgress?.detail ??
-                  '앱을 닫지 말고 잠시만 기다려주세요.'}
+                  '완료될 때까지 잠시만 기다려주세요.'}
               </Text>
               <Text style={styles.uploadBlockingText}>
                 업로드가 완료되면 분석은 서버에서 계속됩니다.

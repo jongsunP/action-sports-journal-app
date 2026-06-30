@@ -285,9 +285,16 @@ function BottomTabIcon({
         <View
           style={[
             styles.tabIconHome,
-            isSelected ? styles.tabIconFilled : undefined,
+            isSelected ? styles.tabIconStrong : undefined,
           ]}
-        />
+        >
+          <View
+            style={[
+              styles.tabIconHomeLine,
+              isSelected ? styles.tabIconFilled : undefined,
+            ]}
+          />
+        </View>
       </View>
     );
   }
@@ -303,9 +310,12 @@ function BottomTabIcon({
         <View
           style={[
             styles.tabIconVideo,
-            isSelected ? styles.tabIconFilled : undefined,
+            isSelected ? styles.tabIconStrong : undefined,
           ]}
-        />
+        >
+          <View style={styles.tabIconVideoTopBar} />
+          <View style={styles.tabIconVideoBody} />
+        </View>
       </View>
     );
   }
@@ -323,7 +333,10 @@ function BottomTabIcon({
           <View
             key={`flow-${index}`}
             style={[
-              styles.tabIconFlowDot,
+              styles.tabIconFlowBar,
+              index === 0 ? styles.tabIconFlowBarSmall : undefined,
+              index === 1 ? styles.tabIconFlowBarMedium : undefined,
+              index === 2 ? styles.tabIconFlowBarTall : undefined,
               isSelected ? styles.tabIconFilled : undefined,
             ]}
           />
@@ -403,7 +416,7 @@ export function RecentSessionsRail({
         <Text style={styles.emptyText}>
           {isLoading
             ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
-            : '왼쪽 상단 + 버튼으로 첫 영상을 추가하면 최근 기록이 이곳에 쌓입니다.'}
+            : '왼쪽 상단 영상 추가 버튼으로 첫 영상을 남기면 최근 기록이 이곳에 쌓입니다.'}
         </Text>
       </View>
     );
@@ -544,8 +557,8 @@ export function PrimaryInsightCard({
             첫 라이딩 기록을 시작해보세요
           </Text>
           <Text style={styles.primaryInsightText}>
-            왼쪽 상단 + 버튼으로 영상을 남기면 최근 인사이트와 기록 흐름이
-            이곳에 쌓입니다.
+            왼쪽 상단 영상 추가 버튼으로 영상을 남기면 최근 인사이트와 기록
+            흐름이 이곳에 쌓입니다.
           </Text>
         </>
       )}
@@ -687,7 +700,7 @@ export function VideoArchiveList({
       case 'delayed':
         return {
           description:
-            '기록이 없거나 서버 응답이 늦어지고 있습니다. 잠시 후 다시 불러올 수 있습니다.',
+            '네트워크가 안정되면 최근 라이딩 기록을 다시 이어서 불러옵니다.',
           showRetry: true,
           showSpinner: false,
           title: '영상 기록 동기화가 지연 중입니다',
@@ -702,7 +715,7 @@ export function VideoArchiveList({
       case 'timeout':
         return {
           description:
-            '서버 응답이 지연되고 있습니다. 네트워크가 안정되면 다시 시도해주세요.',
+            '네트워크가 안정되면 다시 불러올 수 있습니다.',
           showRetry: true,
           showSpinner: false,
           title: '영상 기록을 불러오지 못했습니다',
@@ -710,7 +723,7 @@ export function VideoArchiveList({
       case 'error':
         return {
           description:
-            '영상 기록을 불러오는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.',
+            '잠시 후 다시 시도하면 최근 기록을 이어서 확인할 수 있습니다.',
           showRetry: true,
           showSpinner: false,
           title: '영상 기록을 불러오지 못했습니다',
@@ -719,7 +732,7 @@ export function VideoArchiveList({
       case 'ready':
       default:
         return {
-          description: '홈에서 새 분석을 시작하면 영상 세션이 이곳에 모입니다.',
+          description: '라이딩 영상을 남기면 이곳에 나만의 기록이 쌓입니다.',
           showRetry: false,
           showSpinner: false,
           title: '아직 영상 세션이 없습니다',

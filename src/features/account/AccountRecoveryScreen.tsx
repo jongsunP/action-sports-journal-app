@@ -1021,8 +1021,7 @@ export function AccountRecoveryScreen() {
               </View>
 
               <Text style={styles.hubHelperText}>
-                처음 사용하는 경우에는 현재 기록을 보호하고, 기존 기록이 있으면
-                같은 방법으로 불러옵니다.
+                처음이면 기록을 보호하고, 기존 기록이 있으면 같은 방법으로 불러옵니다.
               </Text>
 
               {showKakaoDetails ? (

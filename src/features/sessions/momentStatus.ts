@@ -37,7 +37,7 @@ export function getRetryEligibility({
   if (!canRequestGeminiEvidence) {
     return {
       canRetry: false,
-      reason: '분석 endpoint가 설정되어 있지 않습니다.',
+      reason: '지금은 분석을 다시 시작할 수 없습니다.',
     };
   }
 
@@ -266,8 +266,8 @@ function getMomentStatusPresentation(status: MomentStatus) {
   if (status === 'processing') {
     return {
       label: '진행중',
-      title: 'AI가 영상을 분석하고 있습니다',
-      body: 'Gemini가 영상의 접근, 팝, 회전, 착지 신호를 확인하고 있습니다. 보통 잠시 걸리지만 경우에 따라 1~5분 정도 걸릴 수 있습니다. 알림이 켜져 있으면 앱을 닫아도 완료 후 알려드립니다.',
+      title: '라이딩 신호를 확인하고 있습니다',
+      body: '접근, 팝, 회전, 착지 신호를 확인하고 있습니다. 보통 잠시 걸리지만 경우에 따라 1~5분 정도 걸릴 수 있습니다. 알림이 켜져 있으면 앱을 닫아도 완료 후 알려드립니다.',
     };
   }
 

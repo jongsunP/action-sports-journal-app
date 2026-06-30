@@ -42,14 +42,14 @@ function isCompletedMoment(momentStatus?: MomentStatus) {
 function getMissingMediaCopy(momentStatus?: MomentStatus) {
   if (isCompletedMoment(momentStatus)) {
     return {
-      body: '영상 파일이 없어도 분석 결과와 라이딩 기록은 아래에서 계속 확인할 수 있습니다.',
-      title: '대표 이미지를 준비하지 못했습니다',
+      body: '영상 미리보기가 없어도 대표 기록과 분석 요약은 계속 확인할 수 있습니다.',
+      title: '대표 이미지가 준비되지 않았습니다',
     };
   }
 
   return {
-    body: '영상 파일 위치가 바뀌었거나 아직 미리보기를 준비하지 못했습니다.',
-    title: '영상 접근이 필요합니다',
+    body: '원본 영상 위치가 바뀌었거나 아직 미리보기를 준비하는 중입니다.',
+    title: '영상 미리보기를 준비하지 못했습니다',
   };
 }
 
@@ -420,13 +420,6 @@ export function MomentDetailContent({
                 </Text>
               </View>
             ) : null}
-            {ENABLE_INTERNAL_DEBUG_VIEWER && isEvidenceDetailOpen && debugEndpoint ? (
-              <View style={styles.debugBox}>
-                <Text style={styles.debugText}>
-                  DEV endpoint: {debugEndpoint}
-                </Text>
-              </View>
-            ) : null}
       </ScrollView>
       {isDeleting ? (
         <View accessibilityRole="progressbar" style={styles.uploadBlockingOverlay}>
@@ -655,10 +648,10 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
             : undefined,
         ]}
       >
-        AI 근거 ·{' '}
+        분석 신호 ·{' '}
         {evidence.qualityMode === 'degraded'
-          ? '품질 낮음 / 확인 필요'
-          : '일반 분석'}
+          ? '확인 필요'
+          : '기본 확인'}
       </Text>
       <View style={styles.evidenceSummaryGrid}>
         <EvidenceSummaryCard label="추정 기술" value={evidence.primaryCandidate.name} />
@@ -687,12 +680,12 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
         {shouldAskUser ? (
           <Text style={styles.evidenceWarningText}>
             {hasConsistencyIssue
-              ? 'AI 추정 결과에 내부 불일치가 있어 상세 검토가 필요합니다.'
+              ? '분석 신호가 서로 맞지 않아 다시 확인이 필요합니다.'
               : evidence.qualityMode === 'degraded'
-              ? '서비스 혼잡으로 낮은 품질 fallback 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
+              ? '서비스 응답이 불안정해 보수적으로 표시한 결과입니다.'
               : evidence.recoveredFromPartial
-                ? '분석 응답 일부만 복구된 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
-              : 'AI가 기술명을 확신하지 못했습니다. 확정 기술명이 아닌 검토 후보로 봐주세요.'}
+                ? '일부 신호만 복구된 결과라 다시 확인이 필요합니다.'
+              : '기술명을 확정하기 전 참고 후보로 봐주세요.'}
           </Text>
         ) : null}
         {evidence.consistencyWarnings?.map((warning) => (

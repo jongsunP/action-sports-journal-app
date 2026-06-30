@@ -110,7 +110,7 @@ export function getSessionCardPresentation({
   const reason = hasEvidence
     ? hook ?? '동작 근거가 준비됐습니다.'
     : session.videoUri
-      ? 'Gemini 근거 추출을 시작합니다.'
+      ? '라이딩 신호 확인을 시작합니다.'
       : '클립을 추가하면 영상 기록이 살아납니다.';
   const openReason = hasEvidence
     ? needsReview

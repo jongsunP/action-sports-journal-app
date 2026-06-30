@@ -160,6 +160,24 @@ creating a new design system:
 This pass is UI/copy/visibility only. It does not change Auth, Upload,
 Storage, API, DB, or AI Calibration behavior.
 
+Visible UI / UX Polish P2, completed 2026-06-30, continued the same principle
+at the app chrome and empty-state layer:
+
+- Bottom tab primitive icons were refined without adding an icon package.
+  Growth now uses progression bars instead of three dots, so it reads less like
+  a generic "more" action.
+- Home's primary upload action now uses a primitive film-plus mark, and the
+  account entry uses a primitive profile mark instead of raw glyphs.
+- Empty/error states and Upload copy were shortened toward rider-journal
+  language.
+- Moment Detail opened evidence copy now avoids model/provider language by
+  default, and processing status copy no longer names Gemini.
+- Account Recovery helper text was shortened while keeping the same Email/Kakao
+  recovery behavior.
+
+Future UI polish may still introduce an icon package after explicit Founder
+approval, but P2 intentionally avoided package and design-system changes.
+
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom
 interaction. Prefer proven patterns adapted to ASJ over novelty for its own

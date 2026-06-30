@@ -14,6 +14,41 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Visible UI / UX Polish P2 - App Chrome & Empty States, 2026-06-30:
+
+- Implemented as the next no-build polish pass after P1. This remains a
+  View/Text primitive polish only: no new icon library, no `package.json`
+  change, no brand-symbol work, and no Auth / DB / API / Upload pipeline / AI
+  behavior change.
+- App chrome:
+  - Bottom tab primitive icons were tightened. Home now reads more like a
+    journal/card, Video like a film frame, and Growth now uses rising bars
+    instead of three dots so it no longer looks like a generic "more" tab.
+  - Active tab visual weight was increased with a subtle selected background
+    and stronger icon opacity.
+  - Home upload CTA is now a brighter primary action with a small primitive
+    film-plus mark instead of a plain `+` glyph.
+  - Home account/menu entry now uses a primitive profile mark instead of the
+    `☰` placeholder.
+- Empty/error/copy:
+  - Video empty / delayed / timeout / error copy was shortened toward rider
+    journal language and away from raw empty-data explanation.
+  - Upload no-selected and selected-video copy now reads more like creating a
+    riding record instead of only running an upload pipeline.
+  - Missing-media Detail copy was softened for completed records and
+    non-completed states.
+- Analysis/detail:
+  - Opened evidence detail copy now says "분석 신호" instead of model/provider
+    language such as "AI 근거 · 일반 분석".
+  - User-facing status copy no longer names Gemini in processing state.
+  - Developer endpoint text was removed from the Moment Detail user surface.
+- Account Recovery:
+  - Helper text under the method hub was shortened without changing Email/Kakao
+    recovery behavior.
+- Next standalone QA should include a quick visual check of bottom tabs, Home
+  upload/account actions, Video empty/error states, Upload selected/progress
+  copy, Detail evidence disclosure opened state, and Account Recovery density.
+
 Visible UI / UX Polish P1, 2026-06-30:
 
 - Implemented as the last small polish pass before the next standalone QA build

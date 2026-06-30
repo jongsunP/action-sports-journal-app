@@ -269,6 +269,8 @@ Account Recovery UI information architecture:
 - Visible UI / UX Polish P1 added small primitive method visuals to the Kakao
   and Email cards after the IA pass. These are not a new icon system or official
   provider logos; they are lightweight scan cues for the method hub.
+- Visible UI / UX Polish P2 shortened the method-hub helper copy while keeping
+  the same Email/Kakao single-CTA flows and recovery semantics.
 
 Media / Share UX:
 
@@ -291,11 +293,15 @@ Media / Share UX:
   remaining prototype/future-feature copy was removed from visible surfaces,
   Video empty/error states gained a primitive film-frame cue, and completed
   Moment Detail now hides technical evidence details behind "세부 근거 보기".
+- Visible UI / UX Polish P2 is implemented for app chrome and empty states:
+  bottom tab primitive icons, Home upload/account actions, Video empty copy,
+  Upload record-creation copy, Detail opened-evidence copy, and missing-media
+  copy were tightened without a new icon library or package change.
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.
 - Do next only after product approval: choose one of image export, native share
-  sheet, or ShareResult route.
+  sheet, ShareResult route, or an explicit icon-package pass.
 
 ### Minimum next implementation scope
 
@@ -1887,6 +1893,10 @@ POC implementation status, 2026-06-27:
   It was intentionally limited to copy, primitive visual cues, Detail evidence
   progressive disclosure, and upload debug-surface gating. No new UI system,
   icon library, Auth/DB/API/AI logic, or build was introduced.
+- Visible UI / UX Polish P2 is closed for the current pre-AI Calibration scope.
+  It intentionally stayed within existing View/Text primitives. If the Founder
+  still feels the app looks too basic, the next visual step should be an
+  explicitly approved icon-package pass, not another broad logic change.
 
 ## Render Free Cold Start Watch
 
