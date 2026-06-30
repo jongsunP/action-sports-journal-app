@@ -389,10 +389,11 @@ Future Detail UX backlog:
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.
 - Build 93 is the current pre-AI standalone QA target. Build prep commit:
-  `47f75ea`; iOS buildNumber: `93`. EAS build result and Founder multi-day
-  real-device QA feedback are pending. Do not start AI Calibration until the
-  Build 93 result is reviewed and any blocking pre-AI issues are either fixed
-  or explicitly accepted.
+  `47f75ea`; iOS buildNumber: `93`; EAS Build ID:
+  `c944b65e-deec-4c6a-9f12-b5f43ea7fd82`. EAS build is complete and Founder
+  multi-day real-device QA feedback is pending. Do not start AI Calibration
+  until the Build 93 Founder QA result is reviewed and any blocking pre-AI
+  issues are either fixed or explicitly accepted.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or

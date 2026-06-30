@@ -18,13 +18,19 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
-- Build 93 prep commit is `47f75ea chore: prepare pre-ai calibration qa build`
-  and iOS buildNumber is `93`. The EAS build result and Founder multi-day
-  real-device QA feedback are pending. Do not mark Build 93 passed until the
+- Build 93 EAS preview/internal build is complete and Founder multi-day
+  real-device QA feedback is pending. Do not mark Build 93 passed until the
   Founder reports the actual installed-build result.
+  - Build prep commit: `47f75ea chore: prepare pre-ai calibration qa build`.
+  - iOS buildNumber: `93`.
+  - EAS Build ID: `c944b65e-deec-4c6a-9f12-b5f43ea7fd82`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/c944b65e-deec-4c6a-9f12-b5f43ea7fd82`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/SD62MoyuGy2qrl2C9Wg6HwQ1Z0QyjoZmIzP0PcN-1yU.ipa`.
 - Build 93 is the intended baseline after Render Starter, UI/UX/theme/settings
   polish, user-facing naming cleanup, and boot/video first-page hardening. The
-  next session should start from the Build 93 result and Founder QA feedback.
+  next session should start from the Founder Build 93 QA feedback.
 - The Founder will use the next build slowly for a few days. When work resumes,
   first collect Build 93 outcome and any real-use feedback, then decide whether
   to fix pre-AI issues or move toward AI Calibration.

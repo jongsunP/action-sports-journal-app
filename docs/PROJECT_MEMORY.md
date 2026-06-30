@@ -408,7 +408,7 @@ Current stable workstream list:
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면을 "기록 보호 방법 선택 허브"로 단순화했다. 첫 화면은 compact protection summary, 연결 수단 badge, Kakao/Email method card를 보여주고, Email/Kakao의 상세 pending/error/linked 상태는 선택 또는 진행 후 progressive disclosure로 보여준다. Auth/Supabase/Kakao/Email helper 로직은 변경하지 않았다.
-- Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): build prep commit `47f75ea`, iOS buildNumber `93`. EAS build 결과와 Founder multi-day 실사용 QA 피드백 대기. 다음 작업 재개 시 이 결과부터 확인한다
+- Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): EAS preview/internal build 완료 / Founder multi-day 실사용 QA 대기. Build prep commit `47f75ea`, iOS buildNumber `93`, EAS Build ID `c944b65e-deec-4c6a-9f12-b5f43ea7fd82`. 다음 작업 재개 시 Founder QA 피드백부터 확인한다
 - Push Notification Icon Polish(푸시 알림 아이콘 정리): 급하지 않은 후속. 앱 내부 Ionicons 정리와 별개로, OS Push notification에 표시되는 앱/알림 아이콘이 기본값처럼 보이지 않도록 나중에 확인한다. Push delivery/observability 로직은 이미 완료된 영역이므로 이 항목은 비주얼/asset polish로만 다룬다
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
@@ -435,7 +435,7 @@ Current remaining work classification:
 - AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
 
 QA / 검증 대기:
-- Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): EAS build 결과와 Founder multi-day 실기기 QA 피드백 대기. Build prep commit `47f75ea`, iOS buildNumber `93`. 확인 범위는 UI/UX/theme/settings, Render Starter startup, Upload/Compression, Account/Email/Kakao Recovery, Media Preview, Detail sample, Boot/Video duplicate guard, QA Debug 민감정보 미노출이다.
+- Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): EAS preview/internal build 완료 / Founder multi-day 실기기 QA 피드백 대기. Build prep commit `47f75ea`, iOS buildNumber `93`, EAS Build ID `c944b65e-deec-4c6a-9f12-b5f43ea7fd82`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/c944b65e-deec-4c6a-9f12-b5f43ea7fd82`, IPA URL은 `https://expo.dev/artifacts/eas/SD62MoyuGy2qrl2C9Wg6HwQ1Z0QyjoZmIzP0PcN-1yU.ipa`. 확인 범위는 UI/UX/theme/settings, Render Starter startup, Upload/Compression, Account/Email/Kakao Recovery, Media Preview, Detail sample, Boot/Video duplicate guard, QA Debug 민감정보 미노출이다.
 - Build 92 AI Calibration Baseline QA(빌드 92 AI 전 기준선 QA): 이전 baseline build. Build 92 이후 피드백과 후속 수정이 많으므로 현재 검증 기준은 Build 93으로 이동했다.
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): Email Recovery Sign-in P1 코드는 구현 완료. 다음 standalone build에서 이메일 링크 -> ASJ 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload 확인.
 - Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 별도 리스트 항목으로 유지하지 않고, 다음 빌드 때 QA 항목으로 언급. 큰 영상 업로드 -> 압축 -> 분석 완료 -> 원본이 있으면 원본 preview 유지 -> 원본 삭제 후 Detail thumbnail-only 확인 -> completed 후 compressed temp cleanup 회귀 없음 확인.

@@ -14,16 +14,20 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
-Build 93 pre-AI QA build preparation, 2026-06-30:
+Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.
 - iOS buildNumber is `93`.
+- EAS Build ID is `c944b65e-deec-4c6a-9f12-b5f43ea7fd82`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/c944b65e-deec-4c6a-9f12-b5f43ea7fd82`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/SD62MoyuGy2qrl2C9Wg6HwQ1Z0QyjoZmIzP0PcN-1yU.ipa`.
 - This build is intended as the post-UI/UX/theme/settings and Render Starter
   baseline QA build before AI Calibration.
 - The Founder will use the build slowly over the next few days and report QA
   feedback in the next session.
-- Treat Build 93 QA as pending until the EAS build result and Founder real-use
-  feedback are received.
+- Treat Build 93 QA as pending until Founder real-use feedback is received.
 - Expected QA scope:
   - Home / Video / Settings / Account Recovery visible polish.
   - System / Light / Dark theme selection and persistence.
