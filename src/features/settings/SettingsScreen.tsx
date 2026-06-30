@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import Constants from 'expo-constants';
 import {
   Pressable,
   SafeAreaView,
@@ -17,40 +18,29 @@ import {
 } from '../../theme';
 
 type SettingsScreenProps = NativeStackScreenProps<RootStackParamList, 'Settings'>;
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 const THEME_PREFERENCE_OPTIONS: Array<{
-  description: string;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: ThemePreference;
 }> = [
   {
-    description: '기기 설정을 따라갑니다',
     icon: 'phone-portrait-outline',
     label: '시스템',
     value: 'system',
   },
   {
-    description: '밝은 화면으로 보기',
     icon: 'sunny-outline',
     label: '라이트',
     value: 'light',
   },
   {
-    description: '기존 다크 톤',
     icon: 'moon-outline',
     label: '다크',
     value: 'dark',
   },
 ];
-
-function getThemePreferenceLabel(preference: ThemePreference) {
-  return preference === 'system'
-    ? '시스템 설정 따름'
-    : preference === 'light'
-      ? '라이트 모드'
-      : '다크 모드';
-}
 
 export function SettingsScreen({ navigation }: SettingsScreenProps) {
   const theme = useAppTheme();
@@ -73,9 +63,6 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         <View style={styles.headerTitleBlock}>
           <Text style={styles.kicker}>설정</Text>
           <Text style={styles.title}>앱 설정</Text>
-          <Text style={styles.headerMeta}>
-            기록 보호와 화면 모드를 관리합니다.
-          </Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -85,11 +72,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          <Text style={styles.sectionEyebrow}>계정</Text>
-          <Text style={styles.sectionTitle}>계정 보호</Text>
-          <Text style={styles.sectionText}>
-            카카오나 이메일로 Wake Board 기록을 보호하고 복구합니다.
-          </Text>
+          <Text style={styles.sectionTitle}>계정</Text>
           <Pressable
             accessibilityLabel="계정 보호 및 복구 화면 열기"
             accessibilityRole="button"
@@ -108,9 +91,6 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
             </View>
             <View style={styles.actionBody}>
               <Text style={styles.actionTitle}>계정 보호 / 복구</Text>
-              <Text style={styles.actionText}>
-                복구 수단 연결과 기존 기록 복구를 설정합니다.
-              </Text>
             </View>
             <Ionicons
               color={theme.colors.textMuted}
@@ -122,17 +102,11 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View>
-              <Text style={styles.sectionEyebrow}>화면</Text>
-              <Text style={styles.sectionTitle}>화면 모드</Text>
-            </View>
+            <Text style={styles.sectionTitle}>화면 모드</Text>
             <Text style={styles.sectionMeta}>
               현재 {theme.mode === 'light' ? '라이트' : '다크'}
             </Text>
           </View>
-          <Text style={styles.sectionText}>
-            {getThemePreferenceLabel(theme.preference)}
-          </Text>
           <View style={styles.themeOptionRow}>
             {THEME_PREFERENCE_OPTIONS.map((option) => {
               const isSelected = theme.preference === option.value;
@@ -168,17 +142,6 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                   >
                     {option.label}
                   </Text>
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      styles.themeOptionDescription,
-                      isSelected
-                        ? styles.themeOptionDescriptionSelected
-                        : undefined,
-                    ]}
-                  >
-                    {option.description}
-                  </Text>
                 </Pressable>
               );
             })}
@@ -186,20 +149,16 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionEyebrow}>QA</Text>
           <Text style={styles.sectionTitle}>QA 진단 패널</Text>
-          <Text style={styles.sectionText}>
-            현재 QA 빌드에서는 Home 오른쪽 아래 QA 버튼으로 부팅, 동기화,
-            Video 상태를 확인할 수 있습니다.
-          </Text>
           <View style={styles.infoCard}>
             <Ionicons color={theme.colors.accent} name="bug-outline" size={20} />
             <Text style={styles.infoText}>
-              실서비스 전에는 QA Debug Panel을 숨기거나 내부 빌드에서만
-              보이도록 정리합니다.
+              현재 QA 빌드에서만 표시합니다.
             </Text>
           </View>
         </View>
+
+        <Text style={styles.versionText}>Wake Board {APP_VERSION}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -261,18 +220,10 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       fontWeight: '900',
       lineHeight: 29,
     },
-    headerMeta: {
-      color: colors.textMuted,
-      fontSize: 12,
-      fontWeight: '700',
-      lineHeight: 17,
-      marginTop: 3,
-      textAlign: 'center',
-    },
     body: {
       gap: 14,
       padding: 16,
-      paddingBottom: 32,
+      paddingBottom: 28,
     },
     section: {
       backgroundColor: colors.surface,
@@ -287,23 +238,11 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
-    sectionEyebrow: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: '900',
-      textTransform: 'uppercase',
-    },
     sectionTitle: {
       color: colors.textPrimary,
       fontSize: 18,
       fontWeight: '900',
       lineHeight: 23,
-    },
-    sectionText: {
-      color: colors.textSecondary,
-      fontSize: 13,
-      fontWeight: '700',
-      lineHeight: 19,
     },
     sectionMeta: {
       color: colors.textMuted,
@@ -359,7 +298,7 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       borderWidth: 1,
       flex: 1,
       gap: 5,
-      minHeight: 94,
+      minHeight: 76,
       paddingHorizontal: 8,
       paddingVertical: 10,
     },
@@ -375,17 +314,6 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
     },
     themeOptionLabelSelected: {
       color: colors.background,
-    },
-    themeOptionDescription: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: '700',
-      lineHeight: 14,
-      textAlign: 'center',
-    },
-    themeOptionDescriptionSelected: {
-      color: colors.background,
-      opacity: 0.82,
     },
     infoCard: {
       alignItems: 'center',
@@ -403,6 +331,13 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       fontSize: 12,
       fontWeight: '700',
       lineHeight: 17,
+    },
+    versionText: {
+      color: colors.textMuted,
+      fontSize: 12,
+      fontWeight: '700',
+      paddingTop: 2,
+      textAlign: 'center',
     },
     buttonPressed: {
       opacity: 0.78,

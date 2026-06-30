@@ -254,6 +254,8 @@ export function HomeScreen() {
   const layout = useWindowDimensions();
   const theme = useAppTheme();
   const prefersDarkMode = theme.mode === 'dark';
+  const headerUploadIconColor =
+    theme.mode === 'light' ? '#ffffff' : '#050507';
   const styles = useMemo(
     () =>
       mergeStyleMaps(
@@ -2144,9 +2146,13 @@ export function HomeScreen() {
           ]}
         >
           <View style={styles.headerAddIconWrap}>
-            <Ionicons color="#050507" name="videocam-outline" size={23} />
             <Ionicons
-              color="#050507"
+              color={headerUploadIconColor}
+              name="videocam-outline"
+              size={23}
+            />
+            <Ionicons
+              color={headerUploadIconColor}
               name="add-circle"
               size={13}
               style={styles.headerAddIconBadge}
@@ -2579,8 +2585,10 @@ function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
     title: { color: colors.textPrimary },
     headerMeta: { color: colors.textMuted },
     headerAddButton: {
-      backgroundColor: colors.textPrimary,
-      shadowColor: colors.textPrimary,
+      backgroundColor: isLight ? colors.accent : colors.textPrimary,
+      borderColor: isLight ? '#059669' : 'transparent',
+      borderWidth: isLight ? 1 : 0,
+      shadowColor: isLight ? colors.accent : colors.textPrimary,
     },
     journalSnapshot: {
       backgroundColor: colors.surface,
