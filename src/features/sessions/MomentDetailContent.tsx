@@ -27,6 +27,7 @@ import { MomentStatusDot } from './sessionComponents';
 import { getSessionDisplayTitle } from './sessionFormatters';
 
 import type { SessionVideoAsset } from '../../services/ai';
+import type { MomentDetailFetchDiagnostics } from '../../services/moments';
 import type { AnalysisResult, GeminiEvidenceResult, MomentStatus, Session } from '../../types';
 
 const ENABLE_INTERNAL_DEBUG_VIEWER =
@@ -34,6 +35,10 @@ const ENABLE_INTERNAL_DEBUG_VIEWER =
 
 type HomeScreenStyles = Record<string, any>;
 let styles: HomeScreenStyles;
+
+function formatDetailDebugRequestId(requestId?: string | null) {
+  return requestId ? requestId.slice(0, 8) : '-';
+}
 
 function isCompletedMoment(momentStatus?: MomentStatus) {
   return momentStatus === 'completed';
@@ -160,6 +165,7 @@ function shouldShowTrickConfirmationAction(evidence?: GeminiEvidenceResult) {
 export type MomentDetailContentProps = {
   canRequestGeminiEvidence: boolean;
   debugEndpoint?: string;
+  detailDiagnostics?: MomentDetailFetchDiagnostics | null;
   evidence?: GeminiEvidenceResult;
   isDeleting?: boolean;
   isLoading: boolean;
@@ -176,6 +182,7 @@ export type MomentDetailContentProps = {
 export function MomentDetailContent({
   canRequestGeminiEvidence,
   debugEndpoint,
+  detailDiagnostics,
   evidence,
   isDeleting = false,
   isLoading,
@@ -289,6 +296,18 @@ export function MomentDetailContent({
             </View>
           )}
         </View>
+
+          {ENABLE_INTERNAL_DEBUG_VIEWER && detailDiagnostics ? (
+            <View style={styles.detailStateCard}>
+              <Text style={styles.detailStateTitle}>QA Detail fetch</Text>
+              <Text style={styles.detailStateText}>
+                detail req {formatDetailDebugRequestId(detailDiagnostics.requestId)} ·
+                server {detailDiagnostics.serverTotalMs ?? '-'}ms · fetch{' '}
+                {detailDiagnostics.fetchMs ?? '-'}ms · bytes{' '}
+                {detailDiagnostics.responseBytes ?? '-'}
+              </Text>
+            </View>
+          ) : null}
 
           {hasDetailActions ? (
             <View style={styles.detailActionPanel}>

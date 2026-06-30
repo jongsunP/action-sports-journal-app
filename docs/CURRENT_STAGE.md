@@ -151,6 +151,11 @@ Startup Performance Optimization P1.5 implemented, 2026-07-01:
 - `npm run typecheck` and `git diff --check` passed. Authenticated
   responseBytes reduction still needs the next standalone/Render QA because no
   paid AI, upload, DB migration, or external console change was performed.
+- P1.5 build-before diagnostics update: Detail full evidence fetch now exposes
+  `detailFetchMs`, `detailServerTotalMs`, `detailResponseBytes`, and
+  `detailRequestId` in the Moment Detail QA/debug area. `GET /api/moments/
+  :momentId` returns `X-ASJ-Request-Id`, `X-ASJ-Server-Total-Ms`, and
+  `X-ASJ-Response-Bytes`.
 - Next start point remains Development Build / Local Build Workflow
   preparation, then include P1.5 responseBytes/serverTotalMs verification in
   the next real-device build.

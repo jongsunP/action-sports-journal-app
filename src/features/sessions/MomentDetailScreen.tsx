@@ -9,7 +9,10 @@ import {
   getVideoAssetFromSession,
 } from './sessionFormatters';
 import { useMomentDetailRuntimeState } from './momentDetailRuntimeStore';
-import { getMomentDetail } from '../../services/moments';
+import {
+  getMomentDetail,
+  type MomentDetailFetchDiagnostics,
+} from '../../services/moments';
 
 import type { RootStackParamList } from '../../navigation/types';
 import type { GeminiEvidenceResult } from '../../types';
@@ -33,6 +36,8 @@ export function MomentDetailScreen({
   const [detailEvidence, setDetailEvidence] = useState<
     GeminiEvidenceResult | undefined
   >();
+  const [detailDiagnostics, setDetailDiagnostics] =
+    useState<MomentDetailFetchDiagnostics | null>(null);
 
   useEffect(() => {
     if (runtimeState.isReady && !session && navigation.canGoBack()) {
@@ -44,6 +49,7 @@ export function MomentDetailScreen({
     let isActive = true;
 
     setDetailEvidence(undefined);
+    setDetailDiagnostics(null);
 
     if (!remoteMomentId) {
       return () => {
@@ -52,15 +58,19 @@ export function MomentDetailScreen({
     }
 
     getMomentDetail(remoteMomentId)
-      .then((remoteMoment) => {
-        if (!isActive || !remoteMoment?.evidence) {
+      .then((result) => {
+        if (!isActive) {
           return;
         }
 
-        setDetailEvidence({
-          ...remoteMoment.evidence,
-          sessionId,
-        });
+        setDetailDiagnostics(result.diagnostics);
+
+        if (result.moment?.evidence) {
+          setDetailEvidence({
+            ...result.moment.evidence,
+            sessionId,
+          });
+        }
       })
       .catch((error) => {
         const message =
@@ -112,6 +122,7 @@ export function MomentDetailScreen({
     <MomentDetailContent
       canRequestGeminiEvidence={runtimeState.canRequestGeminiEvidence}
       debugEndpoint={runtimeState.debugEndpoint}
+      detailDiagnostics={detailDiagnostics}
       evidence={evidence}
       isDeleting={Boolean(runtimeState.deletingSessionIds[session.id])}
       isLoading={Boolean(runtimeState.extractingEvidenceBySessionId[session.id])}

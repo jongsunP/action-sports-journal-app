@@ -108,6 +108,10 @@ Latest product/UX direction update:
   Home/List/Video Archive continue to use the smaller list response.
   - Timing fields remain: `serverTotalMs`, `responseBytes`, `evidenceQueryMs`,
     `normalizationMs`, `thumbnailSignedUrlWallMs`, and `cacheHit`.
+  - Before the P1.5 build, Detail fetch diagnostics were added: Moment Detail
+    QA/debug now shows short detail request id, detail server ms, detail fetch
+    ms, and detail response bytes. The detail endpoint returns
+    `X-ASJ-Request-Id`, `X-ASJ-Server-Total-Ms`, and `X-ASJ-Response-Bytes`.
   - Local smoke preserved auth boundaries: no-token list 401, no-token detail
     401, invalid bearer list 401.
   - Next real-device QA should compare Build 97 responseBytes/serverTotalMs

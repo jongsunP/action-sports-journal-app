@@ -55,6 +55,18 @@ type MomentDetailResponse = {
   moment?: unknown;
 };
 
+export type MomentDetailFetchDiagnostics = {
+  fetchMs: number | null;
+  requestId: string | null;
+  responseBytes: number | null;
+  serverTotalMs: number | null;
+};
+
+export type MomentDetailFetchResult = {
+  diagnostics: MomentDetailFetchDiagnostics;
+  moment: RemoteMomentRecord | null;
+};
+
 export type RequestUploadTargetInput = {
   draftId: string;
   fileName?: string | null;
@@ -990,13 +1002,29 @@ export async function listMoments(options: ListMomentsOptions = {}) {
 
 export async function getMomentDetail(
   momentId: string,
-): Promise<RemoteMomentRecord | null> {
+): Promise<MomentDetailFetchResult> {
   if (!momentsEndpoint || !momentId.trim()) {
-    return null;
+    return {
+      diagnostics: {
+        fetchMs: null,
+        requestId: null,
+        responseBytes: null,
+        serverTotalMs: null,
+      },
+      moment: null,
+    };
   }
 
+  const startedAt = Date.now();
   const response = await authenticatedFetch(
     `${momentsEndpoint}/${encodeURIComponent(momentId)}`,
+  );
+  const requestId = asString(response.headers.get('x-asj-request-id')) ?? null;
+  const serverTotalMs = asFiniteHeaderNumber(
+    response.headers.get('x-asj-server-total-ms'),
+  );
+  const responseBytes = asFiniteHeaderNumber(
+    response.headers.get('x-asj-response-bytes'),
   );
 
   if (!response.ok) {
@@ -1006,8 +1034,19 @@ export async function getMomentDetail(
   }
 
   const data = (await response.json()) as MomentDetailResponse;
+  const fetchMs = Date.now() - startedAt;
 
-  return normalizeRemoteMoment(data.moment);
+  return {
+    diagnostics: {
+      fetchMs,
+      requestId,
+      responseBytes:
+        responseBytes ??
+        JSON.stringify(data).length,
+      serverTotalMs,
+    },
+    moment: normalizeRemoteMoment(data.moment),
+  };
 }
 
 async function readRemoteErrorMessage(response: Response) {

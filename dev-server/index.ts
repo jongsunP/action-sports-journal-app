@@ -1594,6 +1594,7 @@ app.get("/api/moments", async (request, response) => {
     const responseBytes = Buffer.byteLength(responseBodyJson, "utf8");
     const serverTotalMs = Date.now() - startedAt;
     response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
+    response.setHeader("X-ASJ-Response-Bytes", String(responseBytes));
 
     console.info("[moments_timing]", {
       authGetUserMs: requestUserTiming.authGetUserMs ?? null,
@@ -1713,18 +1714,7 @@ app.get("/api/moments/:momentId", async (request, response) => {
       momentRow.thumbnail_uri,
     );
     const thumbnailSignedUrlWallMs = Date.now() - thumbnailStartedAt;
-    const serverTotalMs = Date.now() - startedAt;
-    response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
-
-    console.info("[moment_detail_timing]", {
-      event: "moment_detail_completed",
-      evidenceIncluded: Boolean(evidenceResult),
-      requestId,
-      serverTotalMs,
-      thumbnailSignedUrlWallMs,
-    });
-
-    response.json({
+    const responseBody = {
       moment: buildMomentResponsePayload({
         evidenceResult: evidenceResult
           ? sanitizeEvidenceResultForMomentDetail(evidenceResult)
@@ -1732,7 +1722,23 @@ app.get("/api/moments/:momentId", async (request, response) => {
         moment: momentRow,
         thumbnailUri,
       }),
+    };
+    const responseBodyJson = JSON.stringify(responseBody);
+    const responseBytes = Buffer.byteLength(responseBodyJson, "utf8");
+    const serverTotalMs = Date.now() - startedAt;
+    response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
+    response.setHeader("X-ASJ-Response-Bytes", String(responseBytes));
+
+    console.info("[moment_detail_timing]", {
+      event: "moment_detail_completed",
+      evidenceIncluded: Boolean(evidenceResult),
+      requestId,
+      responseBytes,
+      serverTotalMs,
+      thumbnailSignedUrlWallMs,
     });
+
+    response.type("application/json").send(responseBodyJson);
   } catch (error) {
     if (!response.headersSent) {
       response.setHeader(

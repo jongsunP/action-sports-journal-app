@@ -441,6 +441,10 @@ Future Detail UX backlog:
   authenticated `GET /api/moments/:momentId` and the Detail screen fetches it
   on open. Next build should measure 7-record `responseBytes` and
   `serverTotalMs` against Build 97.
+- P1.5 build-before diagnostics were added for Detail fetch. The detail
+  endpoint returns `X-ASJ-Request-Id`, `X-ASJ-Server-Total-Ms`, and
+  `X-ASJ-Response-Bytes`; Moment Detail QA/debug shows detail request id,
+  detail server ms, detail fetch ms, and detail response bytes.
 - Remaining performance candidates after P1.5: thumbnail signed URL lazy/cache
   and deeper list/detail payload tuning if Build QA still shows high variance.
 - Next start point is Development Build / Local Build Workflow preparation to
