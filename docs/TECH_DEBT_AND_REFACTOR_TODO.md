@@ -434,6 +434,15 @@ Future Detail UX backlog:
   `serverTotalMs` variance around `1.6-3.7s`, so the next performance work
   should focus on list payload / evidence / thumbnail rather than auth/stale
   cleanup.
+- Startup Performance Optimization P1.5 is now implemented for list payload
+  reduction. `/api/moments` list excludes `raw_response_text`,
+  temporal/evidence windows, observations, detailed observed-facts/validation
+  payloads, and approach v2 signal payloads. Full evidence is available through
+  authenticated `GET /api/moments/:momentId` and the Detail screen fetches it
+  on open. Next build should measure 7-record `responseBytes` and
+  `serverTotalMs` against Build 97.
+- Remaining performance candidates after P1.5: thumbnail signed URL lazy/cache
+  and deeper list/detail payload tuning if Build QA still shows high variance.
 - Next start point is Development Build / Local Build Workflow preparation to
   reduce repeated EAS preview/internal build cost.
 - Push Notification Icon Polish is a later visual polish item. It should check

@@ -134,6 +134,27 @@ Build 97 Startup Performance Optimization P1 QA passed, 2026-07-01:
 - Next start point: Development Build / Local Build Workflow preparation to
   reduce repeated EAS preview/internal build cost.
 
+Startup Performance Optimization P1.5 implemented, 2026-07-01:
+
+- `/api/moments` list response now uses compact evidence fields only.
+- Removed from the list payload: `raw_response_text`, temporal/evidence
+  windows, observations, approach/pop/rotation/grab/landing/inversion detailed
+  fact/validation payloads, and v2 approach signal payloads.
+- Added `GET /api/moments/:momentId` as a full-detail read path for Moment
+  Detail. Detail opens with the compact list evidence, then fetches full
+  evidence for the selected Moment without changing list payload semantics.
+- Existing list timing diagnostics are retained: `serverTotalMs`,
+  `responseBytes`, `evidenceQueryMs`, `normalizationMs`,
+  `thumbnailSignedUrlWallMs`, and `cacheHit`.
+- Auth boundary was preserved in local smoke: no-token list returned 401,
+  no-token detail returned 401, and invalid bearer list returned 401.
+- `npm run typecheck` and `git diff --check` passed. Authenticated
+  responseBytes reduction still needs the next standalone/Render QA because no
+  paid AI, upload, DB migration, or external console change was performed.
+- Next start point remains Development Build / Local Build Workflow
+  preparation, then include P1.5 responseBytes/serverTotalMs verification in
+  the next real-device build.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

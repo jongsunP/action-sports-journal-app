@@ -21,6 +21,7 @@ export type MomentDetailRuntimeState = {
     },
   ) => void | Promise<void>;
   isReady: boolean;
+  remoteMomentIdsBySessionId: Record<string, string>;
   sessions: Session[];
   sourceVideoStorageStatusBySessionId: Record<string, string>;
   styles: HomeScreenStyles;
@@ -38,6 +39,7 @@ let currentState: MomentDetailRuntimeState = {
   handleDeleteSession: () => {},
   handleExtractEvidence: () => {},
   isReady: false,
+  remoteMomentIdsBySessionId: {},
   sessions: [],
   sourceVideoStorageStatusBySessionId: {},
   styles: emptyStyles,
@@ -61,6 +63,7 @@ export function resetMomentDetailRuntimeState() {
     handleDeleteSession: () => {},
     handleExtractEvidence: () => {},
     isReady: false,
+    remoteMomentIdsBySessionId: {},
     sessions: [],
     sourceVideoStorageStatusBySessionId: {},
     styles: emptyStyles,

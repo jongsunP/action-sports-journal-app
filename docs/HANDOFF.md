@@ -99,6 +99,22 @@ Latest product/UX direction update:
   - Current next start point: Development Build / Local Build Workflow
     preparation to reduce repeated EAS preview/internal build cost.
 
+- Startup Performance Optimization P1.5 is implemented after Build 97 QA.
+  `/api/moments` list now returns compact evidence only and excludes
+  `raw_response_text`, temporal/evidence windows, observations, detailed
+  observed-facts/validation payloads, and approach v2 signal payloads. A new
+  authenticated `GET /api/moments/:momentId` detail route returns full evidence
+  for Moment Detail. The Detail screen fetches full evidence on open while
+  Home/List/Video Archive continue to use the smaller list response.
+  - Timing fields remain: `serverTotalMs`, `responseBytes`, `evidenceQueryMs`,
+    `normalizationMs`, `thumbnailSignedUrlWallMs`, and `cacheHit`.
+  - Local smoke preserved auth boundaries: no-token list 401, no-token detail
+    401, invalid bearer list 401.
+  - Next real-device QA should compare Build 97 responseBytes/serverTotalMs
+    with the P1.5 build, especially for the 7-record account.
+  - Current next start point still remains Development Build / Local Build
+    Workflow preparation before more EAS-heavy verification.
+
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the
   Founder reports the actual installed-build result.

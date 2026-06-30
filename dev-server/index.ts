@@ -1324,6 +1324,128 @@ function decodeMomentCursor(value: unknown) {
   }
 }
 
+const momentListColumns = [
+  "id",
+  "session_id",
+  "activity_group_id",
+  "title",
+  "notes",
+  "status",
+  "occurred_at",
+  "source_video_uri",
+  "thumbnail_uri",
+  "duration_ms",
+  "file_name",
+  "mime_type",
+  "file_size",
+  "source_video_storage_provider",
+  "source_video_storage_bucket",
+  "source_video_storage_path",
+  "source_video_storage_uploaded_at",
+  "source_video_storage_status",
+  "latest_evidence_result_id",
+  "latest_analysis_job_id",
+  "created_at",
+  "updated_at",
+];
+
+const compactEvidenceResultColumns = [
+  "id",
+  "moment_id",
+  "analysis_job_id",
+  "provider",
+  "model",
+  "status",
+  "quality_mode",
+  "predicted_trick",
+  "family",
+  "confidence",
+  "needs_review",
+  "consistency_status",
+  "consistency_warnings",
+  "error_message",
+  "created_at",
+  "updated_at",
+];
+
+const evidenceResultColumnsV1 = [
+  "id",
+  "moment_id",
+  "analysis_job_id",
+  "provider",
+  "model",
+  "status",
+  "quality_mode",
+  "predicted_trick",
+  "family",
+  "confidence",
+  "needs_review",
+  "consistency_status",
+  "consistency_warnings",
+  "approach_observed_facts",
+  "inversion_observed_facts",
+  "temporal_windows",
+  "evidence_windows",
+  "observations",
+  "raw_response_text",
+  "error_message",
+  "created_at",
+  "updated_at",
+];
+
+const evidenceResultColumnsV2 = [
+  ...evidenceResultColumnsV1.slice(0, 14),
+  "approach_observed_facts_v2",
+  "approach_decision_v2",
+  "approach_v2_signals",
+  "approach_v2_conflict_summary",
+  "pop_observed_facts",
+  "pop_validation",
+  "rotation_observed_facts",
+  "rotation_validation",
+  "grab_observed_facts",
+  "grab_validation",
+  "landing_observed_facts",
+  "landing_validation",
+  ...evidenceResultColumnsV1.slice(14),
+];
+
+function buildMomentResponsePayload({
+  evidenceResult,
+  moment,
+  thumbnailUri,
+}: {
+  evidenceResult?: Record<string, unknown> | null;
+  moment: Record<string, unknown>;
+  thumbnailUri?: string | null;
+}) {
+  return {
+    id: moment.id,
+    sessionId: moment.session_id,
+    activityGroupId: moment.activity_group_id,
+    title: moment.title,
+    notes: moment.notes,
+    status: moment.status,
+    occurredAt: moment.occurred_at,
+    sourceVideoUri: moment.source_video_uri,
+    thumbnailUri,
+    durationMs: moment.duration_ms,
+    fileName: moment.file_name,
+    mimeType: moment.mime_type,
+    fileSize: moment.file_size,
+    sourceVideoStorageProvider: moment.source_video_storage_provider,
+    sourceVideoStorageBucket: moment.source_video_storage_bucket,
+    sourceVideoStoragePath: moment.source_video_storage_path,
+    sourceVideoStorageUploadedAt: moment.source_video_storage_uploaded_at,
+    sourceVideoStorageStatus: moment.source_video_storage_status,
+    latestEvidenceResultId: moment.latest_evidence_result_id,
+    latestAnalysisJobId: moment.latest_analysis_job_id,
+    latestEvidenceResult: evidenceResult ?? null,
+    createdAt: moment.created_at,
+    updatedAt: moment.updated_at,
+  };
+}
+
 app.get("/api/moments", async (request, response) => {
   const requestId = randomUUID();
   const startedAt = Date.now();
@@ -1362,32 +1484,7 @@ app.get("/api/moments", async (request, response) => {
 
     let momentsQuery = client
       .from("moments")
-      .select(
-        [
-          "id",
-          "session_id",
-          "activity_group_id",
-          "title",
-          "notes",
-          "status",
-          "occurred_at",
-          "source_video_uri",
-          "thumbnail_uri",
-          "duration_ms",
-          "file_name",
-          "mime_type",
-          "file_size",
-          "source_video_storage_provider",
-          "source_video_storage_bucket",
-          "source_video_storage_path",
-          "source_video_storage_uploaded_at",
-          "source_video_storage_status",
-          "latest_evidence_result_id",
-          "latest_analysis_job_id",
-          "created_at",
-          "updated_at",
-        ].join(","),
-      )
+      .select(momentListColumns.join(","))
       .eq("user_id", userId)
       .order("occurred_at", { ascending: false })
       .order("id", { ascending: false })
@@ -1418,60 +1515,10 @@ app.get("/api/moments", async (request, response) => {
 
     if (evidenceResultIds.length > 0) {
       const evidenceQueryStartedAt = Date.now();
-      const evidenceResultColumnsV1 = [
-        "id",
-        "moment_id",
-        "analysis_job_id",
-        "provider",
-        "model",
-        "status",
-        "quality_mode",
-        "predicted_trick",
-        "family",
-        "confidence",
-        "needs_review",
-        "consistency_status",
-        "consistency_warnings",
-        "approach_observed_facts",
-        "inversion_observed_facts",
-        "temporal_windows",
-        "evidence_windows",
-        "observations",
-        "raw_response_text",
-        "error_message",
-        "created_at",
-        "updated_at",
-      ];
-      const evidenceResultColumnsV2 = [
-        ...evidenceResultColumnsV1.slice(0, 14),
-        "approach_observed_facts_v2",
-        "approach_decision_v2",
-        "approach_v2_signals",
-        "approach_v2_conflict_summary",
-        "pop_observed_facts",
-        "pop_validation",
-        "rotation_observed_facts",
-        "rotation_validation",
-        "grab_observed_facts",
-        "grab_validation",
-        "landing_observed_facts",
-        "landing_validation",
-        ...evidenceResultColumnsV1.slice(14),
-      ];
-      let evidenceResultsQuery = await client
+      const evidenceResultsQuery = await client
         .from("evidence_results")
-        .select(evidenceResultColumnsV2.join(","))
+        .select(compactEvidenceResultColumns.join(","))
         .in("id", evidenceResultIds);
-
-      if (isMissingApproachV2ColumnError(evidenceResultsQuery.error)) {
-        console.warn(
-          "ApproachObservedFacts v2 columns are not applied yet; falling back to v1 evidence result reads.",
-        );
-        evidenceResultsQuery = await client
-          .from("evidence_results")
-          .select(evidenceResultColumnsV1.join(","))
-          .in("id", evidenceResultIds);
-      }
 
       const { data: evidenceResults, error: evidenceResultsError } =
         evidenceResultsQuery;
@@ -1521,36 +1568,16 @@ app.get("/api/moments", async (request, response) => {
         );
         thumbnailSignedUrlMs += Date.now() - thumbnailStartedAt;
 
-        return {
-          id: moment.id,
-          sessionId: moment.session_id,
-          activityGroupId: moment.activity_group_id,
-          title: moment.title,
-          notes: moment.notes,
-          status: moment.status,
-          occurredAt: moment.occurred_at,
-          sourceVideoUri: moment.source_video_uri,
-          thumbnailUri,
-          durationMs: moment.duration_ms,
-          fileName: moment.file_name,
-          mimeType: moment.mime_type,
-          fileSize: moment.file_size,
-          sourceVideoStorageProvider: moment.source_video_storage_provider,
-          sourceVideoStorageBucket: moment.source_video_storage_bucket,
-          sourceVideoStoragePath: moment.source_video_storage_path,
-          sourceVideoStorageUploadedAt: moment.source_video_storage_uploaded_at,
-          sourceVideoStorageStatus: moment.source_video_storage_status,
-          latestEvidenceResultId: moment.latest_evidence_result_id,
-          latestAnalysisJobId: moment.latest_analysis_job_id,
-          latestEvidenceResult:
+        return buildMomentResponsePayload({
+          evidenceResult:
             typeof moment.latest_evidence_result_id === "string"
               ? sanitizeEvidenceResultForMomentList(
                   evidenceResultsById.get(moment.latest_evidence_result_id),
                 )
               : null,
-          createdAt: moment.created_at,
-          updatedAt: moment.updated_at,
-        };
+          moment,
+          thumbnailUri,
+        });
       }),
     );
     const thumbnailSignedUrlWallMs =
@@ -1609,6 +1636,118 @@ app.get("/api/moments", async (request, response) => {
     const message =
       error instanceof Error ? error.message : "Moment list failed.";
     console.error("Moment list failed:", message);
+    response.status(500).json({ error: message });
+  }
+});
+
+app.get("/api/moments/:momentId", async (request, response) => {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
+
+  try {
+    const client = getSupabaseServerClient();
+
+    if (!client) {
+      response.status(503).json({
+        error: "Supabase service role env is not configured.",
+      });
+      return;
+    }
+
+    response.setHeader("X-ASJ-Request-Id", requestId);
+    const requestUser = await resolveRequestUser(request);
+
+    const { data: moment, error: momentError } = await client
+      .from("moments")
+      .select(momentListColumns.join(","))
+      .eq("id", request.params.momentId)
+      .eq("user_id", requestUser.userId)
+      .maybeSingle();
+
+    if (momentError) {
+      throw new Error(`Failed to read moment: ${momentError.message}`);
+    }
+
+    if (!moment) {
+      response.status(404).json({ error: "Moment not found." });
+      return;
+    }
+
+    const momentRow = moment as unknown as Record<string, unknown>;
+    let evidenceResult: Record<string, unknown> | undefined;
+
+    if (typeof momentRow.latest_evidence_result_id === "string") {
+      let evidenceResultQuery = await client
+        .from("evidence_results")
+        .select(evidenceResultColumnsV2.join(","))
+        .eq("id", momentRow.latest_evidence_result_id)
+        .eq("user_id", requestUser.userId)
+        .maybeSingle();
+
+      if (isMissingApproachV2ColumnError(evidenceResultQuery.error)) {
+        console.warn(
+          "ApproachObservedFacts v2 columns are not applied yet; falling back to v1 evidence result detail read.",
+        );
+        evidenceResultQuery = await client
+          .from("evidence_results")
+          .select(evidenceResultColumnsV1.join(","))
+          .eq("id", momentRow.latest_evidence_result_id)
+          .eq("user_id", requestUser.userId)
+          .maybeSingle();
+      }
+
+      if (evidenceResultQuery.error) {
+        throw new Error(
+          `Failed to read evidence result: ${evidenceResultQuery.error.message}`,
+        );
+      }
+
+      evidenceResult =
+        (evidenceResultQuery.data as Record<string, unknown> | null) ??
+        undefined;
+    }
+
+    const thumbnailStartedAt = Date.now();
+    const thumbnailUri = await resolveMomentThumbnailUri(
+      client,
+      momentRow.thumbnail_uri,
+    );
+    const thumbnailSignedUrlWallMs = Date.now() - thumbnailStartedAt;
+    const serverTotalMs = Date.now() - startedAt;
+    response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
+
+    console.info("[moment_detail_timing]", {
+      event: "moment_detail_completed",
+      evidenceIncluded: Boolean(evidenceResult),
+      requestId,
+      serverTotalMs,
+      thumbnailSignedUrlWallMs,
+    });
+
+    response.json({
+      moment: buildMomentResponsePayload({
+        evidenceResult: evidenceResult
+          ? sanitizeEvidenceResultForMomentDetail(evidenceResult)
+          : null,
+        moment: momentRow,
+        thumbnailUri,
+      }),
+    });
+  } catch (error) {
+    if (!response.headersSent) {
+      response.setHeader(
+        "X-ASJ-Server-Total-Ms",
+        String(Date.now() - startedAt),
+      );
+    }
+
+    if (sendAuthRequiredResponse(response, error)) {
+      return;
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Moment detail failed.";
+    console.error("Moment detail failed:", message);
     response.status(500).json({ error: message });
   }
 });
@@ -1800,6 +1939,19 @@ function sanitizeEvidenceResultForMomentList(
   sanitized.raw_response_text = safeRawResponseTextForMomentList(
     evidenceResult.raw_response_text,
   );
+
+  return sanitized;
+}
+
+function sanitizeEvidenceResultForMomentDetail(
+  evidenceResult: Record<string, unknown>,
+) {
+  const sanitized = { ...evidenceResult };
+
+  sanitized.raw_response_text =
+    typeof evidenceResult.raw_response_text === "string"
+      ? evidenceResult.raw_response_text
+      : null;
 
   return sanitized;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,8 +9,10 @@ import {
   getVideoAssetFromSession,
 } from './sessionFormatters';
 import { useMomentDetailRuntimeState } from './momentDetailRuntimeStore';
+import { getMomentDetail } from '../../services/moments';
 
 import type { RootStackParamList } from '../../navigation/types';
+import type { GeminiEvidenceResult } from '../../types';
 
 type MomentDetailScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -27,12 +29,52 @@ export function MomentDetailScreen({
     () => runtimeState.sessions.find((item) => item.id === sessionId),
     [runtimeState.sessions, sessionId],
   );
+  const remoteMomentId = runtimeState.remoteMomentIdsBySessionId[sessionId];
+  const [detailEvidence, setDetailEvidence] = useState<
+    GeminiEvidenceResult | undefined
+  >();
 
   useEffect(() => {
     if (runtimeState.isReady && !session && navigation.canGoBack()) {
       navigation.goBack();
     }
   }, [navigation, runtimeState.isReady, session]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    setDetailEvidence(undefined);
+
+    if (!remoteMomentId) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    getMomentDetail(remoteMomentId)
+      .then((remoteMoment) => {
+        if (!isActive || !remoteMoment?.evidence) {
+          return;
+        }
+
+        setDetailEvidence({
+          ...remoteMoment.evidence,
+          sessionId,
+        });
+      })
+      .catch((error) => {
+        const message =
+          error instanceof Error ? error.message : 'Moment detail load failed.';
+        console.warn('[moment_detail_load_failed]', {
+          message,
+          momentId: remoteMomentId,
+        });
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [remoteMomentId, sessionId]);
 
   if (!runtimeState.isReady) {
     return (
@@ -50,7 +92,8 @@ export function MomentDetailScreen({
     return null;
   }
 
-  const evidence = runtimeState.geminiEvidenceBySessionId[session.id];
+  const evidence =
+    detailEvidence ?? runtimeState.geminiEvidenceBySessionId[session.id];
   const availableVideo =
     runtimeState.videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
   const momentStatus = getMomentStatus({

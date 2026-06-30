@@ -51,6 +51,10 @@ type DeleteMomentResponse = {
   storageCleanupFailed?: unknown;
 };
 
+type MomentDetailResponse = {
+  moment?: unknown;
+};
+
 export type RequestUploadTargetInput = {
   draftId: string;
   fileName?: string | null;
@@ -982,6 +986,28 @@ export async function listMoments(options: ListMomentsOptions = {}) {
   const page = await listMomentsPage(options);
 
   return page.moments;
+}
+
+export async function getMomentDetail(
+  momentId: string,
+): Promise<RemoteMomentRecord | null> {
+  if (!momentsEndpoint || !momentId.trim()) {
+    return null;
+  }
+
+  const response = await authenticatedFetch(
+    `${momentsEndpoint}/${encodeURIComponent(momentId)}`,
+  );
+
+  if (!response.ok) {
+    const message = await readRemoteErrorMessage(response);
+
+    throw new Error(message ?? `Moment detail failed with ${response.status}`);
+  }
+
+  const data = (await response.json()) as MomentDetailResponse;
+
+  return normalizeRemoteMoment(data.moment);
 }
 
 async function readRemoteErrorMessage(response: Response) {
