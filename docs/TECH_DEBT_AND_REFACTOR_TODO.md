@@ -328,6 +328,13 @@ Media / Share UX:
   - Continue removing hardcoded colors as screens are touched.
   - QA selected-video Upload state and completed Moment Detail real-data state.
   - Re-check QA Debug Panel production hide/gate policy before any public build.
+- Settings row descriptions are intentionally terse after Founder feedback.
+  Do not reintroduce explanatory text under every familiar settings row unless
+  the row is genuinely unclear.
+- Settings footer uses the user-facing app name and Expo config version only
+  (`Wake Board 1.0.0` style). Do not expose git/build/env details there.
+- Light-mode Upload CTA contrast is part of the baseline: accent background and
+  white icon are used so the action does not appear as a black blob.
 - User-facing app-name copy policy is set: visible UI should not use `ASJ` or
   `Action Sports Journal`; use `Wake Board` when an app name is needed.
   Internal variables, docs, historical notes, and developer-only logs can keep

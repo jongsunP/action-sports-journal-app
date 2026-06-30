@@ -30,6 +30,13 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
   - User-facing app naming now avoids `ASJ` / `Action Sports Journal`; visible
     app-name copy uses `Wake Board` when a name is needed. Internal docs,
     variables, logs, and developer-only references can still use ASJ.
+  - Settings copy was simplified after Founder review. Menu rows avoid
+    excessive descriptions because the patterns are familiar; the screen keeps
+    labels/status only where useful.
+  - Settings footer shows the app version as `Wake Board 1.0.0` via Expo config
+    version metadata, without git hash, build hash, env, or secret values.
+  - Light-mode Home Upload CTA uses an accent background with a white icon so it
+    does not appear as a black blob.
 - Behavior:
   - Uses existing `ThemePreference = system | light | dark`.
   - Preference is saved to AsyncStorage and restored on app restart.
@@ -66,6 +73,8 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
     with an allowed media picker.
   - Further token cleanup can remove hardcoded colors over time, but the main
     user-visible surfaces now support usable System / Light / Dark modes.
+  - Before production distribution, re-check QA Debug Panel visibility and any
+    other debug-only surfaces.
 
 Final Design / UI / UX Closeout Audit, 2026-06-30:
 
@@ -84,10 +93,10 @@ Final Design / UI / UX Closeout Audit, 2026-06-30:
   ready for the next bundled standalone QA pass.
 - Remaining design backlog is non-blocking for AI Calibration:
   - Hide or gate QA Debug Panel before production distribution.
-  - Add a real Settings/Profile surface for System / Light / Dark preference.
-  - Apply theme tokens screen-by-screen and visually QA full light mode.
+  - Continue screen-by-screen hardcoded color cleanup as touched.
   - Verify completed Moment Detail / Share Preview with real standalone sample
     data.
+  - Verify Upload selected-video/progress surfaces with real media picker access.
   - Choose a later Media / Share step: image export, native share sheet, or
     ShareResult route.
 

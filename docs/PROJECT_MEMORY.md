@@ -243,6 +243,14 @@ Theme Mode P2, completed 2026-06-30, made the theme foundation user-visible:
 - `Settings` groups `계정 보호 / 복구`, `화면 모드`, and `QA 진단 패널` 안내.
   Theme selection lives inside Settings, and Account Recovery is opened through
   Home -> Settings -> `계정 보호 / 복구`.
+- Settings rows were simplified after Founder simulator review. Do not add
+  explanatory descriptions under every familiar menu item; use clear labels,
+  selected states, and compact status only.
+- Settings footer shows the app version as `Wake Board 1.0.0` from Expo config
+  version metadata. Do not show git hash, build hash, env, or secret values in
+  this user-facing footer.
+- Light-mode Home Upload CTA was adjusted to use accent background + white icon
+  so the primary action does not read as a black blob.
 - The selected preference is saved in AsyncStorage and restored after app
   relaunch. `system` follows `useColorScheme()`.
 - The app root, StatusBar, Home, Bottom tabs, Video Archive, Account Recovery,

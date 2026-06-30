@@ -79,6 +79,11 @@ Latest product/UX direction update:
   Recovery, Upload basic surface, Moment Detail major panels, empty/loading/error
   states, and QA Debug Panel. This is still not a full design-system rewrite;
   future work can continue removing hardcoded colors screen-by-screen.
+- Latest Settings polish: keep Settings terse. Familiar menu rows should not
+  carry explanatory descriptions by default. The Home light-mode Upload CTA now
+  uses accent background + white icon for contrast, and Settings footer shows
+  `Wake Board 1.0.0` from Expo config version metadata without developer build
+  details.
 - User-facing app-name copy should not use `ASJ` or `Action Sports Journal`.
   When visible copy needs an app name, use `Wake Board`. Internal variables,
   docs, and developer-only logs may still use ASJ.
