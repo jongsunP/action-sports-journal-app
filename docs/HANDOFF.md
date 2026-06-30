@@ -25,11 +25,12 @@ Latest product/UX direction update:
 - Instagram remains the highest-priority behavioral reference because ASJ's
   likely riders understand media-native Instagram patterns. Treat it as user
   learning and growth-context reference, not a style sheet.
-- Account Recovery UI read-only review is complete. The screen should remain an
-  independent stack page, but the first view should become a compact
-  protection-method hub. Show a short protection summary and Email/Kakao method
-  choices first; reveal Email/Kakao detailed states only after selection or
-  progress. Tabs and bottom sheets are not recommended for P1.
+- Account Recovery UI Information Architecture P1 is implemented. The screen
+  remains an independent stack page, but the first view is now a compact
+  protection-method hub: short protection summary, connected-method badges, and
+  Email/Kakao method cards. Email/Kakao detailed states are revealed only after
+  selection or progress. Tabs, bottom sheets, nested routes, Auth/Supabase
+  changes, and recovery-helper rewrites were intentionally avoided.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
@@ -44,10 +45,11 @@ Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
   foundation/media work and should be verified on the Founder device before
   any AI Calibration work begins.
 - Build 92 QA feedback has been addressed in code after the build: Email
-  Recovery now follows a Kakao-like single CTA path, and completed Detail media
-  no longer lets compressed local upload assets outrank original video or
-  thumbnail display. A follow-up standalone build is needed to verify these
-  fixes on device; do not treat Build 92 itself as containing them.
+  Recovery now follows a Kakao-like single CTA path, completed Detail media no
+  longer lets compressed local upload assets outrank original video or thumbnail
+  display, and Account Recovery now uses a compact method-hub information
+  architecture. A follow-up standalone build is needed to verify these fixes on
+  device; do not treat Build 92 itself as containing them.
 - Do not start AI Calibration until Build 92 QA has been reviewed and Render
   Web Service has been upgraded from Free to Starter ($7/mo).
 

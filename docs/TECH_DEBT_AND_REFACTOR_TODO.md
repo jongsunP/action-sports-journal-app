@@ -247,24 +247,25 @@ Kakao Recovery UX:
 
 Account Recovery UI information architecture:
 
-- Current state: Email and Kakao are now both single-CTA flows, but the
-  `AccountRecoveryScreen` still exposes too much information at once: account
-  state, Email, Kakao, pending/error/linked details, and technical anonymous
-  account language.
+- Current state: Email and Kakao are now both single-CTA flows, and the
+  `AccountRecoveryScreen` P1 information architecture has been simplified so
+  account status, Email, Kakao, pending/error/linked details, and technical
+  anonymous account language are no longer all exposed on first view.
 - Decision: keep Account Recovery as an independent stack page like Upload.
   Recovery has its own pending/error/cancel/success states and should not be
   hidden in a tab or transient bottom sheet.
-- Recommended P1: first view becomes a compact protection-method hub. Show a
+- Implemented P1: first view is a compact protection-method hub. It shows a
   short protection summary and method cards such as "카카오로 계속하기" and
-  "이메일로 계속하기". Reveal Email/Kakao detailed panels only after the user
+  "이메일로 계속하기". Email/Kakao detailed panels are revealed only after the user
   selects or starts that method.
 - Not recommended: tabs, because they make recovery methods look like competing
   settings; bottom sheets, because OAuth/email-link flows and app backgrounding
   can outgrow the sheet; immediate nested stack, because current-screen
   progressive disclosure is safer before adding navigation surface.
-- Implementation candidate: `AccountRecoveryScreen.tsx` information structure
-  only. Do not change Supabase Auth, Kakao/Email helpers, DB, or ownership
-  semantics for this P1.
+- Implementation scope: `AccountRecoveryScreen.tsx` information structure only.
+  Supabase Auth, Kakao/Email helpers, DB, and ownership semantics were not
+  changed. Standalone QA should confirm first-view density, Email method
+  expansion, Kakao progress/cancel states, and small-device layout.
 
 Media / Share UX:
 

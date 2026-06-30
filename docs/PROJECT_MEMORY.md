@@ -272,7 +272,7 @@ Current stable workstream list:
 - Future Media UX Next Step(향후 미디어 경험 다음 단계): image export/native share route 또는 ShareResult route를 별도 승인 후 선택. Archive Card Visual Hierarchy P1은 완료
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
-- Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): read-only 설계 완료 / 구현 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면은 "기록 보호 방법 선택 허브"로 단순화하고 Email/Kakao의 상세 상태는 선택 또는 진행 후 progressive disclosure로 보여주는 방향이 권장됨. uibowl 같은 레퍼런스는 Account Settings / Connect Account / Recovery / Auth Method Choice 패턴 참고용이며, ASJ UI를 그대로 복사하지 않는다
+- Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면을 "기록 보호 방법 선택 허브"로 단순화했다. 첫 화면은 compact protection summary, 연결 수단 badge, Kakao/Email method card를 보여주고, Email/Kakao의 상세 pending/error/linked 상태는 선택 또는 진행 후 progressive disclosure로 보여준다. Auth/Supabase/Kakao/Email helper 로직은 변경하지 않았다.
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준
@@ -292,7 +292,7 @@ Current remaining work classification:
 
 ```text
 핵심 / 진행 순서:
-- Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): read-only 설계 완료 / 구현 후보. 현재 화면은 기능은 맞지만 현재 상태, 복구 이메일, Kakao 상태가 한 화면에 모두 노출되어 정보 밀도가 높다. 추천 방향은 독립 스택 유지 + 첫 화면 선택 허브 + 선택 후 Email/Kakao 세부 상태 progressive disclosure. 코드 구현은 Auth 로직 변경 없이 `AccountRecoveryScreen` 정보 구조 재배치로 시작한다.
+- Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. 현재 상태, 복구 이메일, Kakao 상태가 한 화면에 모두 노출되던 구조를 독립 스택 유지 + 첫 화면 선택 허브 + 선택 후 Email/Kakao 세부 상태 progressive disclosure로 정리했다. 다음 QA에서는 첫 화면 정보 밀도, Email card 선택 후 입력 UI, Kakao card 진행/취소 상태, 작은 iPhone 줄바꿈을 확인한다.
 - Media / Share UX(미디어 / 공유 경험): 실제 외부 공유 활성화는 AI 신뢰도 이후. 지금은 공유 가능한 Moment 표현력, 카드, detail/media presentation 기반을 준비하는 범위.
 - Future Media UX(향후 미디어 경험): Detail Media State Polish와 Archive Card Visual Hierarchy P1은 완료. 다음 후보는 export/share route이며, 미디어 저장 정책이나 AI Calibration과 섞지 않는다.
 - AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
