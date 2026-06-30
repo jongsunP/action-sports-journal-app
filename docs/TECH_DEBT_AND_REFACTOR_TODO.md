@@ -418,6 +418,13 @@ Future Detail UX backlog:
   `68b17987-b5f8-4a6f-9a06-7a2260c69708`. Next start point is the Build 96
   timing QA result: compare app QA Debug `apiMs` with app QA Debug
   `serverTotalMs` before choosing any optimization.
+- Startup Performance Optimization P1 is implemented in code. `/api/moments`
+  no longer blocks the list response on stale analysis cleanup, `resolveRequestUser`
+  uses a short TTL in-memory cache keyed by SHA-256 bearer-token hash, and
+  thumbnail timing now records wall-clock time separately from summed per-item
+  signed URL time. Next build should verify whether 0-record `serverTotalMs`
+  drops before considering evidence payload split, thumbnail lazy loading, DB
+  migration, or plan changes.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or

@@ -74,6 +74,13 @@ Latest product/UX direction update:
     `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/68b17987-b5f8-4a6f-9a06-7a2260c69708`.
   - IPA URL:
     `https://expo.dev/artifacts/eas/JgPGyJ5Y3njSGS6-Q6MFc7zdpwjNFqmA6StePZzUssQ.ipa`.
+- Startup Performance Optimization P1 is implemented after Build 96 timing
+  analysis. `/api/moments` removes stale cleanup from the blocking list path,
+  uses a short SHA-256 bearer-token-hash TTL cache for resolved authenticated
+  users, and adds `thumbnailSignedUrlWallMs` while keeping the old summed
+  `thumbnailSignedUrlMs`. No raw bearer token is cached, no-token/default-user
+  behavior is unchanged, and no payload/API split or DB migration was done.
+  Next build should compare Build 96 timing with the optimized path.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

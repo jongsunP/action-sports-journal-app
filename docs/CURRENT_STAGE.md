@@ -94,6 +94,22 @@ Build 96 Startup Performance Observability P2.1 QA build complete, 2026-07-01:
 - Next start point: check Build 96 P2.1 timing QA results before deciding on
   endpoint optimization or Development Build / Local Build Workflow.
 
+Startup Performance Optimization P1 implemented, 2026-07-01:
+
+- `/api/moments` no longer awaits stale analysis cleanup before returning the
+  Moment list. Cleanup now runs after the response finishes and logs
+  `[moments_cleanup_timing]`.
+- `resolveRequestUser()` now uses a short in-memory TTL cache keyed by a SHA-256
+  hash of the bearer token. Raw bearer tokens are not stored. No-token requests
+  still cannot use the cache.
+- Cache TTL defaults to 45 seconds through `REQUEST_USER_CACHE_TTL_MS`; max
+  entries defaults to 500 through `REQUEST_USER_CACHE_MAX_ENTRIES`.
+- `/api/moments` timing logs now include `cacheHit`,
+  `staleCleanupBlocking=false`, and `thumbnailSignedUrlWallMs`. The previous
+  `thumbnailSignedUrlMs` sum remains for compatibility.
+- No evidence payload split, thumbnail lazy endpoint, DB migration, EAS build,
+  paid AI call, Storage upload test, or external console change was made.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

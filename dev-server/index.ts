@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createPartFromUri, GoogleGenAI, Type } from "@google/genai";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -74,6 +74,14 @@ const staleQueuedAnalysisMs = readNumberEnv(
 const staleProcessingAnalysisMs = readNumberEnv(
   "STALE_PROCESSING_ANALYSIS_MS",
   30 * 60_000,
+);
+const requestUserCacheTtlMs = readNumberEnv(
+  "REQUEST_USER_CACHE_TTL_MS",
+  45_000,
+);
+const requestUserCacheMaxEntries = readNumberEnv(
+  "REQUEST_USER_CACHE_MAX_ENTRIES",
+  500,
 );
 const geminiMaxOutputTokens = readNumberEnv("GEMINI_MAX_OUTPUT_TOKENS", 1_200);
 const geminiEvidenceMaxOutputTokens = readNumberEnv(
@@ -1338,7 +1346,16 @@ app.get("/api/moments", async (request, response) => {
     const resolveRequestUserMs = Date.now() - resolveRequestUserStartedAt;
     const userId = requestUser.userId;
     const staleCleanupStartedAt = Date.now();
-    await cleanupStaleAnalysisJobs({ client, userId });
+    response.once("finish", () => {
+      const cleanupStartedAt = Date.now();
+      void cleanupStaleAnalysisJobs({ client, userId }).finally(() => {
+        console.info("[moments_cleanup_timing]", {
+          event: "moments_stale_cleanup_completed",
+          requestId,
+          staleCleanupMs: Date.now() - cleanupStartedAt,
+        });
+      });
+    });
     const staleCleanupMs = Date.now() - staleCleanupStartedAt;
     const limit = parseMomentListLimit(request.query.limit);
     const cursor = decodeMomentCursor(request.query.cursor);
@@ -1494,6 +1511,7 @@ app.get("/api/moments", async (request, response) => {
       Boolean(nullableString(moment.thumbnail_uri)),
     ).length;
     const normalizationStartedAt = Date.now();
+    const thumbnailSignedUrlWallStartedAt = Date.now();
     const responseMoments = await Promise.all(
       pageMomentRows.map(async (moment) => {
         const thumbnailStartedAt = Date.now();
@@ -1535,6 +1553,10 @@ app.get("/api/moments", async (request, response) => {
         };
       }),
     );
+    const thumbnailSignedUrlWallMs =
+      pageMomentRows.length > 0
+        ? Date.now() - thumbnailSignedUrlWallStartedAt
+        : 0;
     const normalizationMs = Date.now() - normalizationStartedAt;
     const responseBody = {
       hasMore: Boolean(nextCursor),
@@ -1548,6 +1570,7 @@ app.get("/api/moments", async (request, response) => {
 
     console.info("[moments_timing]", {
       authGetUserMs: requestUserTiming.authGetUserMs ?? null,
+      cacheHit: requestUserTiming.cacheHit === true,
       event: "moments_list_completed",
       evidenceQueryMs,
       includeEvidenceCount: evidenceResultsById.size,
@@ -1564,7 +1587,9 @@ app.get("/api/moments", async (request, response) => {
       responseBytes,
       serverTotalMs,
       staleCleanupMs,
+      staleCleanupBlocking: false,
       thumbnailSignedUrlMs,
+      thumbnailSignedUrlWallMs,
       totalMs: serverTotalMs,
     });
 
@@ -6994,11 +7019,22 @@ type ResolvedRequestUser = {
   userId: string;
 };
 
+type CachedResolvedRequestUser = {
+  authUserId: string;
+  displayName: string | null;
+  email: string | null;
+  expiresAt: number;
+  userId: string;
+};
+
 type RequestUserTimingDiagnostics = {
   authGetUserMs?: number;
+  cacheHit?: boolean;
   publicUserLookupMs?: number;
   publicUserUpsertOrSyncMs?: number;
 };
+
+const resolvedRequestUserCache = new Map<string, CachedResolvedRequestUser>();
 
 class AuthRequiredRequestError extends Error {
   constructor(message = "Authentication is required for this request.") {
@@ -7047,6 +7083,33 @@ async function resolveRequestUser(
     };
   }
 
+  const cacheKey = hashBearerTokenForRequestUserCache(bearerToken);
+  const cachedUser = readResolvedRequestUserCache(cacheKey);
+
+  if (cachedUser) {
+    options.timing &&
+      (options.timing.authGetUserMs = 0);
+    options.timing &&
+      (options.timing.cacheHit = true);
+    options.timing &&
+      (options.timing.publicUserLookupMs = 0);
+    options.timing &&
+      (options.timing.publicUserUpsertOrSyncMs = 0);
+    logResolvedRequestUser({
+      authMode: "authenticated",
+      authUserId: cachedUser.authUserId,
+      route: request.path,
+      userId: cachedUser.userId,
+    });
+    return {
+      authMode: "authenticated",
+      authUserId: cachedUser.authUserId,
+      userId: cachedUser.userId,
+    };
+  }
+
+  options.timing &&
+    (options.timing.cacheHit = false);
   const authGetUserStartedAt = Date.now();
   const { data: authData, error: authError } =
     await client.auth.getUser(bearerToken);
@@ -7134,6 +7197,12 @@ async function resolveRequestUser(
       route: request.path,
       userId: existingUser.id as string,
     });
+    writeResolvedRequestUserCache(cacheKey, {
+      authUserId,
+      displayName,
+      email,
+      userId: existingUser.id as string,
+    });
     return {
       authMode: "authenticated",
       authUserId,
@@ -7169,6 +7238,12 @@ async function resolveRequestUser(
     route: request.path,
     userId: insertedUser.id as string,
   });
+  writeResolvedRequestUserCache(cacheKey, {
+    authUserId,
+    displayName,
+    email,
+    userId: insertedUser.id as string,
+  });
   return {
     authMode: "authenticated",
     authUserId,
@@ -7185,6 +7260,60 @@ function readBearerToken(request: express.Request) {
 
   const match = header.match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() || null;
+}
+
+function hashBearerTokenForRequestUserCache(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function readResolvedRequestUserCache(key: string) {
+  const cachedUser = resolvedRequestUserCache.get(key);
+
+  if (!cachedUser) {
+    return null;
+  }
+
+  if (cachedUser.expiresAt <= Date.now()) {
+    resolvedRequestUserCache.delete(key);
+    return null;
+  }
+
+  return cachedUser;
+}
+
+function writeResolvedRequestUserCache(
+  key: string,
+  user: Omit<CachedResolvedRequestUser, "expiresAt">,
+) {
+  if (requestUserCacheTtlMs <= 0) {
+    return;
+  }
+
+  resolvedRequestUserCache.set(key, {
+    ...user,
+    expiresAt: Date.now() + requestUserCacheTtlMs,
+  });
+  pruneResolvedRequestUserCache();
+}
+
+function pruneResolvedRequestUserCache() {
+  const now = Date.now();
+
+  for (const [key, cachedUser] of resolvedRequestUserCache) {
+    if (cachedUser.expiresAt <= now) {
+      resolvedRequestUserCache.delete(key);
+    }
+  }
+
+  while (resolvedRequestUserCache.size > requestUserCacheMaxEntries) {
+    const oldestKey = resolvedRequestUserCache.keys().next().value;
+
+    if (typeof oldestKey !== "string") {
+      return;
+    }
+
+    resolvedRequestUserCache.delete(oldestKey);
+  }
 }
 
 function maskExpoPushToken(token: string) {
