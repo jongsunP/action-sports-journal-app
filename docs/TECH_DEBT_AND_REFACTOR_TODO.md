@@ -328,6 +328,21 @@ Media / Share UX:
   bottom tab primitive icons, Home upload/account actions, Video empty copy,
   Upload record-creation copy, Detail opened-evidence copy, and missing-media
   copy were tightened without a new icon library or package change.
+
+Future Detail UX backlog:
+
+- Detail Representative Media Selection:
+  - Future feature for choosing or preserving the representative media shown in
+    Moment Detail.
+  - Related surfaces: original video, thumbnail, future share preview, and AI
+    result presentation.
+  - Review after Media Preview Policy and AI Calibration. Do not implement now.
+- Moment Memo / Rider Note:
+  - Future feature for riders to write their own memo on a Moment/video.
+  - Important for ASJ's journal identity, but it needs a deliberate keyboard UX,
+    create/edit/save flow, Detail/Edit placement, and local/remote persistence
+    design.
+  - Review later as a Detail UX / Journal UX follow-up. Do not implement now.
 - Icon Library feasibility is now complete. ASJ adopted
   `@expo/vector-icons` / Ionicons as an explicit dependency for the first
   App Chrome icon pass because it is Expo-standard and lower-risk than adding

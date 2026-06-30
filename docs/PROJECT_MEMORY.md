@@ -401,6 +401,9 @@ Current stable workstream list:
 - 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토
 - Media / Share UX Next Step(미디어 / 공유 경험 다음 단계): image export, native share sheet, ShareResult route 중 하나를 별도 승인 후 선택
 - Future Media UX Next Step(향후 미디어 경험 다음 단계): image export/native share route 또는 ShareResult route를 별도 승인 후 선택. Archive Card Visual Hierarchy P1은 완료
+- Future Detail UX Backlog(향후 상세 화면 UX 후속): 지금 구현하지 않는다.
+  - Detail Representative Media Selection(상세 대표 미디어 선택): 영상 상세에서 원본 video / thumbnail / 향후 share preview / AI 결과 중 어떤 미디어를 대표로 볼지 또는 남길지 선택하는 기능. Media Preview Policy와 AI Calibration 이후 검토한다.
+  - Moment Memo / Rider Note(순간 메모 / 라이더 노트): 사용자가 자기 영상에 직접 메모를 남기는 기능. ASJ의 journal 성격에 중요하지만 키보드 UX, 입력/수정/저장 흐름, Detail/Edit 위치, local/remote persistence 설계가 필요하므로 Detail UX / Journal UX 후속으로 검토한다.
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면을 "기록 보호 방법 선택 허브"로 단순화했다. 첫 화면은 compact protection summary, 연결 수단 badge, Kakao/Email method card를 보여주고, Email/Kakao의 상세 pending/error/linked 상태는 선택 또는 진행 후 progressive disclosure로 보여준다. Auth/Supabase/Kakao/Email helper 로직은 변경하지 않았다.
