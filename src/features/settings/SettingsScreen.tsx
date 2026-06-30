@@ -134,17 +134,10 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>QA 진단 패널</Text>
-          <View style={styles.infoCard}>
-            <Ionicons color={theme.colors.accent} name="bug-outline" size={20} />
-            <Text style={styles.infoText}>
-              현재 QA 빌드에서만 표시합니다.
-            </Text>
-          </View>
-        </View>
-
         <View style={styles.footerSpacer} />
+        <Text style={styles.footerNote}>
+          QA 진단 패널은 테스트 빌드에서만 표시됩니다.
+        </Text>
         <Text style={styles.versionText}>Wake Board {APP_VERSION}</Text>
       </ScrollView>
     </SafeAreaView>
@@ -155,7 +148,6 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
   const isLight = mode === 'light';
   const borderSoft = isLight ? '#dbe4ee' : 'rgba(255, 255, 255, 0.09)';
   const borderStrong = isLight ? '#cbd5e1' : 'rgba(148, 163, 184, 0.22)';
-  const subtleSurface = isLight ? '#f1f5f9' : 'rgba(148, 163, 184, 0.1)';
 
   return StyleSheet.create({
     screen: {
@@ -287,26 +279,17 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       backgroundColor: colors.accent,
       borderColor: colors.accent,
     },
-    infoCard: {
-      alignItems: 'center',
-      backgroundColor: subtleSurface,
-      borderColor: borderSoft,
-      borderRadius: 14,
-      borderWidth: 1,
-      flexDirection: 'row',
-      gap: 10,
-      padding: 12,
-    },
-    infoText: {
-      color: colors.textSecondary,
-      flex: 1,
-      fontSize: 12,
-      fontWeight: '700',
-      lineHeight: 17,
-    },
     footerSpacer: {
       flex: 1,
       minHeight: 28,
+    },
+    footerNote: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      lineHeight: 16,
+      marginBottom: 8,
+      textAlign: 'center',
     },
     versionText: {
       color: colors.textMuted,
