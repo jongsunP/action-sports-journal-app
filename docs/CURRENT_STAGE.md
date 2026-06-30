@@ -14,6 +14,28 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 93 pre-AI QA build preparation, 2026-06-30:
+
+- Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.
+- iOS buildNumber is `93`.
+- This build is intended as the post-UI/UX/theme/settings and Render Starter
+  baseline QA build before AI Calibration.
+- The Founder will use the build slowly over the next few days and report QA
+  feedback in the next session.
+- Treat Build 93 QA as pending until the EAS build result and Founder real-use
+  feedback are received.
+- Expected QA scope:
+  - Home / Video / Settings / Account Recovery visible polish.
+  - System / Light / Dark theme selection and persistence.
+  - Upload CTA and Settings footer/version behavior.
+  - Email/Kakao recovery entry through Settings.
+  - Upload / Compression regression.
+  - Media Preview original-vs-thumbnail policy.
+  - Detail Share Preview / Evidence disclosure with real completed samples.
+  - Boot first-page / Video first-page duplicate-request guard.
+  - Render Starter startup and Video sync behavior.
+  - QA Debug Panel remains useful for QA and does not expose sensitive values.
+
 AI pre-build hardening pass, 2026-06-30:
 
 - Boot first page / Video first page duplicate request guard P1 is implemented.

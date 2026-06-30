@@ -388,6 +388,7 @@ Current stable workstream list:
 - Future Media UX P1 - Detail Media State Polish(향후 미디어 UX 1차 - 상세 미디어 상태 정리): 구현 완료. Detail media hero에서 thumbnail-only 상태를 "대표 이미지"로 자연스럽게 표시하고, completed / non-completed missing media 문구를 분리
 - Archive Card Visual Hierarchy P1(아카이브 카드 시각 위계 1차): 구현 완료. Video 탭 archive row를 파일 목록이 아니라 라이딩 기록 카드처럼 보이도록 journal label/date/title/status/state-aware description 위계로 정리
 - AI Pre-build Hardening Pass(AI 전 빌드 전 최종 하드닝): 구현 완료. boot remote sync가 받은 `/api/moments?limit=20` first page를 Video Archive first page로 ref 기반 선반영하여 같은 렌더/effect 사이클의 중복 fetch 가능성을 줄였고, Video first-page in-flight ref로 동시 요청도 차단. `/health` prewarm은 추가하지 않았으며 Render Starter baseline + QA Debug Panel 진단 흐름을 유지
+- Pre-AI Design / Settings / Theme Closeout(AI 전 디자인 / 설정 / 테마 마감): 구현 완료. Settings 독립 스택, System/Light/Dark 선택, Ionicons app chrome, Wake Board 사용자-facing 명칭, Settings copy 축약, version footer, Video/Home 최신순 label, QA diagnostics footer, page-header 단순화까지 반영. Founder Simulator check는 "일단 패스" 상태
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
@@ -407,6 +408,7 @@ Current stable workstream list:
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면을 "기록 보호 방법 선택 허브"로 단순화했다. 첫 화면은 compact protection summary, 연결 수단 badge, Kakao/Email method card를 보여주고, Email/Kakao의 상세 pending/error/linked 상태는 선택 또는 진행 후 progressive disclosure로 보여준다. Auth/Supabase/Kakao/Email helper 로직은 변경하지 않았다.
+- Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): build prep commit `47f75ea`, iOS buildNumber `93`. EAS build 결과와 Founder multi-day 실사용 QA 피드백 대기. 다음 작업 재개 시 이 결과부터 확인한다
 - Email Custom SMTP(이메일 발송 설정)
 - Kakao Biz App / Email Permission(카카오 비즈 앱 / 이메일 권한 정리)
 - Compression / Upload Optimization(영상 압축 / 업로드 최적화): Build 89 POC 성공 후 정식 upload submit path로 1차 승격. Build 90 read-only follow-up에서 약 25MB 원본이 `FullSizeRender.compressed.mp4` 12,776,723 bytes / 12.83 seconds / `video/mp4` 최종 파일로 업로드 target finalization 및 Gemini analysis completion까지 이어진 것을 확인. Build 91 실기기 QA에서 압축 영상 업로드 후 분석 완료까지 통과. Backend 정책은 계속 최종 파일 기준
@@ -432,7 +434,8 @@ Current remaining work classification:
 - AI Calibration(AI 분석 정확도 보정): 다음 큰 제품 품질 작업. 첫 시작은 별도 과제가 아니라 TS/HS Evidence(토/힐 사이드 근거) 안정화이며, 이후 더 넓은 trick-name accuracy로 확장한다.
 
 QA / 검증 대기:
-- Build 92 AI Calibration Baseline QA(빌드 92 AI 전 기준선 QA): EAS build 완료 / Founder 실기기 QA 대기. build 준비 커밋 `e96e0b7`, iOS buildNumber `92`, EAS Build ID `83730ee0-dae1-4073-9db8-a1c779c09fb9`, Build page `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/83730ee0-dae1-4073-9db8-a1c779c09fb9`. Render Starter 전환은 완료되었으므로, 다음은 follow-up standalone QA build 또는 AI Calibration 진입 여부 판단이다.
+- Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): EAS build 결과와 Founder multi-day 실기기 QA 피드백 대기. Build prep commit `47f75ea`, iOS buildNumber `93`. 확인 범위는 UI/UX/theme/settings, Render Starter startup, Upload/Compression, Account/Email/Kakao Recovery, Media Preview, Detail sample, Boot/Video duplicate guard, QA Debug 민감정보 미노출이다.
+- Build 92 AI Calibration Baseline QA(빌드 92 AI 전 기준선 QA): 이전 baseline build. Build 92 이후 피드백과 후속 수정이 많으므로 현재 검증 기준은 Build 93으로 이동했다.
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): Email Recovery Sign-in P1 코드는 구현 완료. 다음 standalone build에서 이메일 링크 -> ASJ 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload 확인.
 - Media Preview Policy P1 Build QA(미디어 미리보기 정책 1차 빌드 QA): 별도 리스트 항목으로 유지하지 않고, 다음 빌드 때 QA 항목으로 언급. 큰 영상 업로드 -> 압축 -> 분석 완료 -> 원본이 있으면 원본 preview 유지 -> 원본 삭제 후 Detail thumbnail-only 확인 -> completed 후 compressed temp cleanup 회귀 없음 확인.
 - Render Plan Upgrade A/B Check(Render 플랜 업그레이드 A/B 확인): 완료. Render Web Service Starter($7/mo) 전환 및 `/health` 확인 완료. Free cold start 변수는 다음 standalone QA baseline에서 제거된 것으로 본다. 이후에도 QA Debug Panel 값으로 앱/백엔드/인프라 문제를 분리한다.

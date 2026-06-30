@@ -388,6 +388,11 @@ Future Detail UX backlog:
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.
+- Build 93 is the current pre-AI standalone QA target. Build prep commit:
+  `47f75ea`; iOS buildNumber: `93`. EAS build result and Founder multi-day
+  real-device QA feedback are pending. Do not start AI Calibration until the
+  Build 93 result is reviewed and any blocking pre-AI issues are either fixed
+  or explicitly accepted.
 - Do next only after product approval: choose one of image export, native share
   sheet, ShareResult route, or a theme-token adoption pass.
 

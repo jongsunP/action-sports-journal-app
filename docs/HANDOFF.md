@@ -18,6 +18,17 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 93 prep commit is `47f75ea chore: prepare pre-ai calibration qa build`
+  and iOS buildNumber is `93`. The EAS build result and Founder multi-day
+  real-device QA feedback are pending. Do not mark Build 93 passed until the
+  Founder reports the actual installed-build result.
+- Build 93 is the intended baseline after Render Starter, UI/UX/theme/settings
+  polish, user-facing naming cleanup, and boot/video first-page hardening. The
+  next session should start from the Build 93 result and Founder QA feedback.
+- The Founder will use the next build slowly for a few days. When work resumes,
+  first collect Build 93 outcome and any real-use feedback, then decide whether
+  to fix pre-AI issues or move toward AI Calibration.
+
 - ASJ should use proven mobile UI/UX patterns instead of inventing new
   interaction systems by default. uibowl and similar reference libraries are
   acceptable sources for information architecture and interaction patterns, but
