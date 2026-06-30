@@ -139,7 +139,7 @@ export function JournalSnapshot({
   return (
     <View style={styles.journalSnapshot}>
       <View style={styles.journalSnapshotHeader}>
-        <Text style={styles.journalSnapshotTitle}>Journal Snapshot</Text>
+        <Text style={styles.journalSnapshotTitle}>기록 요약</Text>
         <Text style={styles.journalSnapshotMeta} numberOfLines={1}>
           {lastCompletedLabel
             ? `최근 완료 ${lastCompletedLabel}`

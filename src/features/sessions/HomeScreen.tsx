@@ -2075,7 +2075,7 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.bootLoadingContent}>
-          <Text style={styles.kicker}>Riding Journal</Text>
+          <Text style={styles.kicker}>Wake Board</Text>
           <Text style={styles.bootLoadingTitle}>기록을 불러오는 중입니다</Text>
         </View>
       </SafeAreaView>
@@ -2091,7 +2091,7 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.bootLoadingContent}>
-          <Text style={styles.kicker}>Riding Journal</Text>
+          <Text style={styles.kicker}>Wake Board</Text>
           <Text style={styles.bootLoadingTitle}>로그인이 필요합니다</Text>
           <Text style={styles.emptyText}>
             계정 연결 화면은 다음 단계에서 추가할 예정입니다.
@@ -2154,8 +2154,8 @@ export function HomeScreen() {
           </View>
         </Pressable>
         <View style={styles.headerTitleBlock}>
-          <Text style={styles.kicker}>Riding Journal</Text>
-          <Text style={styles.title}>오늘의 라이딩 저널</Text>
+          <Text style={styles.kicker}>Wake Board</Text>
+          <Text style={styles.title}>오늘의 라이딩 기록</Text>
           <Text style={styles.headerMeta}>
             {journalSnapshot.totalCount}개 기록
             {latestAnalysisLabel ? ` · 최근 분석 ${latestAnalysisLabel}` : ''}
@@ -2200,7 +2200,7 @@ export function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Text style={styles.sectionLabel}>최근 기록</Text>
-          <Text style={styles.sectionHint}>JOURNAL</Text>
+          <Text style={styles.sectionHint}>기록</Text>
         </View>
         <RecentSessionsRail
           formatShortSessionDate={formatShortSessionDate}
@@ -2216,7 +2216,7 @@ export function HomeScreen() {
   const renderVideoArchiveHeader = () => (
     <>
       <View style={styles.tabPageHeader}>
-        <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wakeboard'}</Text>
+        <Text style={styles.kicker}>{selectedGroup?.name ?? 'Wake Board'}</Text>
         <Text style={styles.title}>영상</Text>
         <Text style={styles.headerMeta}>
           {visibleVideoArchiveSessionSummaries.length}개 표시됨
@@ -2253,7 +2253,7 @@ export function HomeScreen() {
 
   const renderFlowTab = () => (
     <FlowPlaceholderTab
-      kicker={selectedGroup?.name ?? 'Wakeboard'}
+      kicker={selectedGroup?.name ?? 'Wake Board'}
       styles={styles}
     />
   );
