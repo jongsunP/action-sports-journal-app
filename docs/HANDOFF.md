@@ -116,8 +116,18 @@ Latest product/UX direction update:
     401, invalid bearer list 401.
   - Next real-device QA should compare Build 97 responseBytes/serverTotalMs
     with the P1.5 build, especially for the 7-record account.
-  - Current next start point still remains Development Build / Local Build
-    Workflow preparation before more EAS-heavy verification.
+  - Build 98 P1.5 payload optimization QA build is complete.
+    - Build commit: `1a4f542 chore: bump ios build number to 98`.
+    - iOS buildNumber: `98`.
+    - EAS Build ID: `506cf961-45d7-4e26-ac47-f3106ca1ec7f`.
+    - Install page:
+      `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/506cf961-45d7-4e26-ac47-f3106ca1ec7f`.
+    - IPA URL:
+      `https://expo.dev/artifacts/eas/xfI0axoBndQ7i7YPGS2lpBbPhYCec9WDLSX1vgdnR1U.ipa`.
+    - Current next start point: P1.5 payload optimization QA result review.
+      If results are enough, Startup Performance optimization can pause; if
+      not, move into Development Build / Local Build Workflow before deeper
+      tuning.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

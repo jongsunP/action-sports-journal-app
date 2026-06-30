@@ -156,9 +156,19 @@ Startup Performance Optimization P1.5 implemented, 2026-07-01:
   `detailRequestId` in the Moment Detail QA/debug area. `GET /api/moments/
   :momentId` returns `X-ASJ-Request-Id`, `X-ASJ-Server-Total-Ms`, and
   `X-ASJ-Response-Bytes`.
-- Next start point remains Development Build / Local Build Workflow
-  preparation, then include P1.5 responseBytes/serverTotalMs verification in
-  the next real-device build.
+- Build 98 P1.5 payload optimization QA build complete:
+  - Build commit is `1a4f542 chore: bump ios build number to 98`.
+  - iOS buildNumber is `98`.
+  - EAS Build ID is `506cf961-45d7-4e26-ac47-f3106ca1ec7f`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/506cf961-45d7-4e26-ac47-f3106ca1ec7f`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/xfI0axoBndQ7i7YPGS2lpBbPhYCec9WDLSX1vgdnR1U.ipa`.
+  - Next start point: P1.5 payload optimization QA result review. Check list
+    `apiMs`, `serverTotalMs`, `requestId`, `responseBytes`, `cacheHit`,
+    `staleCleanupBlocking`, `evidenceQueryMs`, `normalizationMs`,
+    `thumbnailSignedUrlWallMs`; then check Detail `detailFetchMs`,
+    `detailServerTotalMs`, `detailRequestId`, and `detailResponseBytes`.
 
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 

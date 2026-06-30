@@ -445,6 +445,11 @@ Future Detail UX backlog:
   endpoint returns `X-ASJ-Request-Id`, `X-ASJ-Server-Total-Ms`, and
   `X-ASJ-Response-Bytes`; Moment Detail QA/debug shows detail request id,
   detail server ms, detail fetch ms, and detail response bytes.
+- Build 98 is the current P1.5 payload optimization QA build. Build commit:
+  `1a4f542`; iOS buildNumber: `98`; EAS Build ID:
+  `506cf961-45d7-4e26-ac47-f3106ca1ec7f`. Next start point is P1.5 payload
+  optimization QA result review: compare list `responseBytes`/`serverTotalMs`
+  with Build 97 and confirm Detail fetch diagnostics are not a new bottleneck.
 - Remaining performance candidates after P1.5: thumbnail signed URL lazy/cache
   and deeper list/detail payload tuning if Build QA still shows high variance.
 - Next start point is Development Build / Local Build Workflow preparation to
