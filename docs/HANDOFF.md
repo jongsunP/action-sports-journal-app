@@ -18,6 +18,25 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 94 Startup Performance Observability preview/internal build is complete.
+  This is an observation build, not an optimization build. The next session
+  should start by collecting a few days of Founder QA Debug screenshots and
+  server log timings for Startup / Video ready.
+  - Build commit: `880ed23 chore: bump ios build number to 94`.
+  - iOS buildNumber: `94`.
+  - EAS Build ID: `9ee5a132-44c5-4760-95d6-f76c2e4b3a67`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/9ee5a132-44c5-4760-95d6-f76c2e4b3a67`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/d-BUTLamUVWmSAK1Lmz7PvuLrvCQ7478Extr_tOyoSM.ipa`.
+  - QA Debug now shows Video `api/source` plus `ui/norm/bootReuse/dupBlocked`.
+  - Server `/api/moments` logs timing for total, moments query, evidence query,
+    thumbnail signed URL generation, normalization, and included counts.
+- Current next start point: observe Build 94 Startup / Video ready values for a
+  few days. Do not jump straight to optimization until QA Debug and server logs
+  show whether the 4-6 seconds are API latency, thumbnail URL generation,
+  archive fetch duplication, client normalization, or rendering perception.
+
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the
   Founder reports the actual installed-build result.

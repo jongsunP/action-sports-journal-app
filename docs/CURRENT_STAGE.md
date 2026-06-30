@@ -14,6 +14,32 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 94 Startup Performance Observability QA build complete / Founder
+multi-day observation pending, 2026-06-30:
+
+- Build commit is `880ed23 chore: bump ios build number to 94`.
+- iOS buildNumber is `94`.
+- EAS Build ID is `9ee5a132-44c5-4760-95d6-f76c2e4b3a67`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/9ee5a132-44c5-4760-95d6-f76c2e4b3a67`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/d-BUTLamUVWmSAK1Lmz7PvuLrvCQ7478Extr_tOyoSM.ipa`.
+- Purpose: observation build only. Build 93 showed Home boot around 1-2 seconds
+  while Video ready could take 4-6 seconds; Build 94 adds diagnostics to split
+  that time before making optimization changes.
+- Included Startup Performance Observability P1:
+  - Server `/api/moments` timing logs: `totalMs`, `momentsQueryMs`,
+    `evidenceQueryMs`, `thumbnailSignedUrlMs`, `normalizationMs`,
+    `momentCount`, `includeThumbnailCount`, `includeEvidenceCount`, and
+    `limit`.
+  - Client Video diagnostics: `apiMs`, `source`, `bootPageReused`,
+    `duplicateVideoFetchBlocked`, and `clientNormalizeMs`.
+  - QA Debug Video line now shows `api/source`, plus `ui/norm/bootReuse/
+    dupBlocked`.
+- Next start point: observe Build 94 over the next few days and compare QA
+  Debug values with server logs before deciding whether to optimize `/api/
+  moments`, thumbnail signed URLs, archive fetch reuse, or client rendering.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.
