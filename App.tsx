@@ -7,6 +7,7 @@ import { AppState, StyleSheet, View } from 'react-native';
 import { AccountRecoveryScreen } from './src/features/account/AccountRecoveryScreen';
 import { HomeScreen } from './src/features/sessions/HomeScreen';
 import { MomentDetailScreen } from './src/features/sessions/MomentDetailScreen';
+import { SettingsScreen } from './src/features/settings/SettingsScreen';
 import { UploadScreen } from './src/features/sessions/UploadScreen';
 import type { RootStackParamList } from './src/navigation/types';
 import {
@@ -136,6 +137,16 @@ function AppShell() {
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen
             name="AccountRecovery"
             component={AccountRecoveryScreen}

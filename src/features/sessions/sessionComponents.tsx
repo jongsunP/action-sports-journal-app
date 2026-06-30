@@ -340,7 +340,7 @@ export function ProfilePlaceholderTab({ styles }: { styles: HomeScreenStyles }) 
   return (
     <>
       <View style={styles.tabPageHeader}>
-        <Text style={styles.kicker}>Action Sports Journal</Text>
+        <Text style={styles.kicker}>Wake Board</Text>
         <Text style={styles.title}>개인정보</Text>
         <Text style={styles.headerMeta}>계정과 설정 진입점</Text>
       </View>

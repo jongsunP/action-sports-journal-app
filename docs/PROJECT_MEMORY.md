@@ -237,9 +237,12 @@ Theme Mode P2, completed 2026-06-30, made the theme foundation user-visible:
   `시스템`, `라이트`, and `다크`.
 - The final access point is not a standalone Home header theme icon. Home keeps
   Upload as the primary action plus a single Profile/Settings entry.
-- The lightweight Profile/Settings hub groups `계정 보호`, `화면 모드`, and
-  `QA 진단 패널`. Theme selection lives inside that hub, and Account Recovery is
-  opened from `계정 보호`.
+- The temporary Home inline Profile/Settings hub was replaced with a standalone
+  `Settings` stack screen after Founder feedback. Do not cover Home with a
+  floating settings panel for normal settings behavior.
+- `Settings` groups `계정 보호 / 복구`, `화면 모드`, and `QA 진단 패널` 안내.
+  Theme selection lives inside Settings, and Account Recovery is opened through
+  Home -> Settings -> `계정 보호 / 복구`.
 - The selected preference is saved in AsyncStorage and restored after app
   relaunch. `system` follows `useColorScheme()`.
 - The app root, StatusBar, Home, Bottom tabs, Video Archive, Account Recovery,
@@ -248,10 +251,16 @@ Theme Mode P2, completed 2026-06-30, made the theme foundation user-visible:
 - Light mode is not a raw inversion of dark mode. It uses separate background,
   surface, card, border, muted text, accent, warning, error, and tab treatments
   so hierarchy remains visible.
-- Remaining work is polish, not foundation: replace the lightweight inline hub
-  with a future full Settings/Profile route when the app has that surface, QA
-  real completed Moment Detail data, and continue screen-by-screen hardcoded
-  color cleanup.
+- Remaining work is polish, not foundation: QA real completed Moment Detail
+  data, QA Debug Panel production hide/gate policy, and continued
+  screen-by-screen hardcoded color cleanup.
+
+User-facing app-name copy policy, added 2026-06-30:
+
+- Visible app copy should not use `ASJ` or `Action Sports Journal`.
+- If the app needs to name itself in user-facing UI, use `Wake Board`.
+- Do not churn internal variables, docs, developer logs, or historical
+  architecture notes just to remove ASJ from development context.
 
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom

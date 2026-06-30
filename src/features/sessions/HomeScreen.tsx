@@ -95,7 +95,6 @@ import type { RemoteMomentRecord } from '../../services/moments';
 import {
   useAppTheme,
   type AppThemeColors,
-  type ThemePreference,
 } from '../../theme';
 
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
@@ -207,32 +206,6 @@ function ensureAnalysisPushRegistration(source: string) {
     });
 }
 
-const THEME_PREFERENCE_OPTIONS: Array<{
-  description: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: ThemePreference;
-}> = [
-  {
-    description: '기기 설정을 따라갑니다',
-    icon: 'phone-portrait-outline',
-    label: '시스템',
-    value: 'system',
-  },
-  {
-    description: '밝은 화면으로 보기',
-    icon: 'sunny-outline',
-    label: '라이트',
-    value: 'light',
-  },
-  {
-    description: '기존 ASJ 다크 톤',
-    icon: 'moon-outline',
-    label: '다크',
-    value: 'dark',
-  },
-];
-
 function getAuthCacheOwnerKey({
   authMode,
   userId,
@@ -260,184 +233,6 @@ function getNextPendingRemoteRefreshReason(
   }
 
   return nextReason;
-}
-
-function getThemePreferenceLabel(preference: ThemePreference) {
-  return preference === 'system'
-    ? '시스템 설정 따름'
-    : preference === 'light'
-      ? '라이트 모드'
-      : '다크 모드';
-}
-
-function ThemeModePanel({
-  colors,
-  mode,
-  onSelectPreference,
-  preference,
-  styles,
-}: {
-  colors: AppThemeColors;
-  mode: 'dark' | 'light';
-  onSelectPreference: (preference: ThemePreference) => Promise<void>;
-  preference: ThemePreference;
-  styles: Record<string, any>;
-}) {
-  return (
-    <View style={styles.themePanel}>
-      <View style={styles.themePanelHeader}>
-        <View>
-          <Text style={styles.themePanelEyebrow}>화면 모드</Text>
-          <Text style={styles.themePanelTitle}>
-            {getThemePreferenceLabel(preference)}
-          </Text>
-        </View>
-        <Text style={styles.themePanelMeta}>
-          현재 {mode === 'light' ? '라이트' : '다크'}
-        </Text>
-      </View>
-      <View style={styles.themeOptionRow}>
-        {THEME_PREFERENCE_OPTIONS.map((option) => {
-          const isSelected = preference === option.value;
-
-          return (
-            <Pressable
-              accessibilityLabel={`${option.label} 화면 모드 선택`}
-              accessibilityRole="button"
-              key={option.value}
-              onPress={() => {
-                void onSelectPreference(option.value);
-              }}
-              style={({ pressed }) => [
-                styles.themeOption,
-                isSelected ? styles.themeOptionSelected : undefined,
-                pressed ? styles.buttonPressed : undefined,
-              ]}
-            >
-              <Ionicons
-                color={isSelected ? colors.background : colors.textSecondary}
-                name={option.icon}
-                size={18}
-              />
-              <Text
-                style={[
-                  styles.themeOptionLabel,
-                  isSelected ? styles.themeOptionLabelSelected : undefined,
-                ]}
-              >
-                {option.label}
-              </Text>
-              <Text
-                style={[
-                  styles.themeOptionDescription,
-                  isSelected
-                    ? styles.themeOptionDescriptionSelected
-                    : undefined,
-                ]}
-                numberOfLines={2}
-              >
-                {option.description}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-function SettingsHubPanel({
-  colors,
-  isQADebugPanelOpen,
-  mode,
-  onOpenAccountRecovery,
-  onSelectPreference,
-  onToggleQADebugPanel,
-  preference,
-  styles,
-}: {
-  colors: AppThemeColors;
-  isQADebugPanelOpen: boolean;
-  mode: 'dark' | 'light';
-  onOpenAccountRecovery: () => void;
-  onSelectPreference: (preference: ThemePreference) => Promise<void>;
-  onToggleQADebugPanel: () => void;
-  preference: ThemePreference;
-  styles: Record<string, any>;
-}) {
-  return (
-    <View style={styles.settingsHubPanel}>
-      <View style={styles.settingsHubHeader}>
-        <View>
-          <Text style={styles.settingsHubEyebrow}>Profile / Settings</Text>
-          <Text style={styles.settingsHubTitle}>앱 설정</Text>
-        </View>
-        <Text style={styles.settingsHubMeta}>기록 보호와 화면 모드</Text>
-      </View>
-
-      <Pressable
-        accessibilityLabel="계정 보호 설정 열기"
-        accessibilityRole="button"
-        onPress={onOpenAccountRecovery}
-        style={({ pressed }) => [
-          styles.settingsActionCard,
-          pressed ? styles.buttonPressed : undefined,
-        ]}
-      >
-        <View style={styles.settingsActionIcon}>
-          <Ionicons
-            color={colors.accent}
-            name="shield-checkmark-outline"
-            size={20}
-          />
-        </View>
-        <View style={styles.settingsActionBody}>
-          <Text style={styles.settingsActionTitle}>계정 보호</Text>
-          <Text style={styles.settingsActionText}>
-            카카오나 이메일로 기록을 보호하고 복구합니다.
-          </Text>
-        </View>
-        <Ionicons
-          color={colors.textMuted}
-          name="chevron-forward"
-          size={18}
-        />
-      </Pressable>
-
-      <ThemeModePanel
-        colors={colors}
-        mode={mode}
-        onSelectPreference={onSelectPreference}
-        preference={preference}
-        styles={styles}
-      />
-
-      <Pressable
-        accessibilityLabel="QA debug panel 열고 닫기"
-        accessibilityRole="button"
-        onPress={onToggleQADebugPanel}
-        style={({ pressed }) => [
-          styles.settingsActionCard,
-          pressed ? styles.buttonPressed : undefined,
-        ]}
-      >
-        <View style={styles.settingsActionIcon}>
-          <Ionicons color={colors.accent} name="bug-outline" size={20} />
-        </View>
-        <View style={styles.settingsActionBody}>
-          <Text style={styles.settingsActionTitle}>QA 진단 패널</Text>
-          <Text style={styles.settingsActionText}>
-            {isQADebugPanelOpen
-              ? '현재 화면에 진단 정보가 표시되고 있습니다.'
-              : '부팅, 동기화, Video 상태를 화면에서 확인합니다.'}
-          </Text>
-        </View>
-        <Text style={styles.settingsActionState}>
-          {isQADebugPanelOpen ? '켜짐' : '꺼짐'}
-        </Text>
-      </Pressable>
-    </View>
-  );
 }
 
 function mergeStyleMaps<T extends Record<string, any>>(
@@ -485,7 +280,6 @@ export function HomeScreen() {
   const activeTabRef = useRef<AppTabId>('home');
   const [analysisCompletionNotice, setAnalysisCompletionNotice] =
     useState<AnalysisCompletionNotice | null>(null);
-  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   // Video Archive owns paged order. Global sessions remain cache/detail source.
   const [hasMoreVideoArchiveMoments, setHasMoreVideoArchiveMoments] =
     useState(false);
@@ -2334,12 +2128,7 @@ export function HomeScreen() {
   };
 
   const handleOpenSettings = () => {
-    setIsSettingsPanelOpen((current) => !current);
-  };
-
-  const handleOpenAccountRecovery = () => {
-    setIsSettingsPanelOpen(false);
-    navigation.navigate('AccountRecovery');
+    navigation.navigate('Settings');
   };
 
   const renderHomeTab = () => (
@@ -2379,7 +2168,6 @@ export function HomeScreen() {
             onPress={handleOpenSettings}
             style={({ pressed }) => [
               styles.headerMenuButton,
-              isSettingsPanelOpen ? styles.headerMenuButtonActive : undefined,
               pressed ? styles.buttonPressed : undefined,
             ]}
           >
@@ -2391,21 +2179,6 @@ export function HomeScreen() {
           </Pressable>
         </View>
       </View>
-
-      {isSettingsPanelOpen ? (
-        <SettingsHubPanel
-          colors={theme.colors}
-          isQADebugPanelOpen={isQADebugPanelOpen}
-          mode={theme.mode}
-          onOpenAccountRecovery={handleOpenAccountRecovery}
-          onSelectPreference={theme.setPreference}
-          onToggleQADebugPanel={() =>
-            setIsQADebugPanelOpen((current) => !current)
-          }
-          preference={theme.preference}
-          styles={styles}
-        />
-      ) : null}
 
       <JournalSnapshot
         activeCount={journalSnapshot.activeCount}
@@ -2801,10 +2574,6 @@ function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       backgroundColor: isLight ? '#ffffff' : 'rgba(248, 250, 252, 0.08)',
       borderColor: borderStrong,
     },
-    headerMenuButtonActive: {
-      backgroundColor: isLight ? '#ccfbf1' : 'rgba(3, 199, 90, 0.16)',
-      borderColor: isLight ? '#5eead4' : 'rgba(3, 199, 90, 0.34)',
-    },
     headerMenuText: { color: colors.textPrimary },
     kicker: { color: colors.textMuted },
     title: { color: colors.textPrimary },
@@ -2812,152 +2581,6 @@ function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
     headerAddButton: {
       backgroundColor: colors.textPrimary,
       shadowColor: colors.textPrimary,
-    },
-    settingsHubPanel: {
-      backgroundColor: colors.surface,
-      borderColor: borderSoft,
-      borderRadius: 20,
-      borderWidth: 1,
-      gap: 12,
-      marginBottom: 14,
-      marginHorizontal: 16,
-      padding: 14,
-    },
-    settingsHubHeader: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    settingsHubEyebrow: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: '900',
-      textTransform: 'uppercase',
-    },
-    settingsHubTitle: {
-      color: colors.textPrimary,
-      fontSize: 18,
-      fontWeight: '900',
-      marginTop: 2,
-    },
-    settingsHubMeta: {
-      color: colors.textMuted,
-      flexShrink: 1,
-      fontSize: 12,
-      fontWeight: '800',
-      textAlign: 'right',
-    },
-    settingsActionCard: {
-      alignItems: 'center',
-      backgroundColor: colors.surfaceElevated,
-      borderColor: borderSoft,
-      borderRadius: 16,
-      borderWidth: 1,
-      flexDirection: 'row',
-      gap: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-    },
-    settingsActionIcon: {
-      alignItems: 'center',
-      backgroundColor: isLight ? '#ecfeff' : 'rgba(3, 199, 90, 0.1)',
-      borderColor: isLight ? '#99f6e4' : 'rgba(3, 199, 90, 0.22)',
-      borderRadius: 999,
-      borderWidth: 1,
-      height: 36,
-      justifyContent: 'center',
-      width: 36,
-    },
-    settingsActionBody: {
-      flex: 1,
-      minWidth: 0,
-    },
-    settingsActionTitle: {
-      color: colors.textPrimary,
-      fontSize: 14,
-      fontWeight: '900',
-    },
-    settingsActionText: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '700',
-      lineHeight: 17,
-      marginTop: 2,
-    },
-    settingsActionState: {
-      color: colors.accent,
-      fontSize: 12,
-      fontWeight: '900',
-    },
-    themePanel: {
-      backgroundColor: colors.surfaceElevated,
-      borderColor: borderSoft,
-      borderRadius: 18,
-      borderWidth: 1,
-      gap: 12,
-      padding: 14,
-    },
-    themePanelHeader: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    themePanelEyebrow: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: '900',
-      textTransform: 'uppercase',
-    },
-    themePanelTitle: {
-      color: colors.textPrimary,
-      fontSize: 16,
-      fontWeight: '900',
-      marginTop: 2,
-    },
-    themePanelMeta: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '800',
-    },
-    themeOptionRow: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    themeOption: {
-      alignItems: 'center',
-      backgroundColor: colors.surfaceElevated,
-      borderColor: borderSoft,
-      borderRadius: 14,
-      borderWidth: 1,
-      flex: 1,
-      gap: 5,
-      minHeight: 92,
-      paddingHorizontal: 8,
-      paddingVertical: 10,
-    },
-    themeOptionSelected: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-    },
-    themeOptionLabel: {
-      color: colors.textPrimary,
-      fontSize: 12,
-      fontWeight: '900',
-      textAlign: 'center',
-    },
-    themeOptionLabelSelected: {
-      color: colors.background,
-    },
-    themeOptionDescription: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: '700',
-      lineHeight: 14,
-      textAlign: 'center',
-    },
-    themeOptionDescriptionSelected: {
-      color: colors.background,
-      opacity: 0.82,
     },
     journalSnapshot: {
       backgroundColor: colors.surface,

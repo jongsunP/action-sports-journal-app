@@ -67,16 +67,21 @@ Latest product/UX direction update:
   QA, and future Media / Share export/share route decisions.
 - Theme Mode P2 is now implemented after the closeout audit, then refined to
   match a more service-like app structure. Home header now keeps only the
-  primary Upload CTA and one Profile/Settings entry. That inline
-  Profile/Settings hub groups `계정 보호`, `화면 모드`, and `QA 진단 패널`; the
-  Founder can choose `시스템`, `라이트`, or `다크` there. The choice persists
-  through AsyncStorage, app root / StatusBar follow the resolved mode, and the
-  main visible surfaces now have usable light/dark theme treatment: Home,
-  Bottom tabs, Video Archive, Account Recovery, Upload basic surface, Moment
-  Detail major panels, empty/loading/error states, and QA Debug Panel. This is
-  still not a full design-system rewrite; future work can move the inline hub
-  into a real Settings/Profile route and continue removing hardcoded colors
-  screen-by-screen.
+  primary Upload CTA and one Profile/Settings entry. The former floating/inline
+  Profile/Settings hub was replaced with a standalone `Settings` stack screen
+  because covering Home felt like a QA/dev convenience rather than a normal
+  commercial app pattern. `Settings` groups `계정 보호 / 복구`, `화면 모드`, and
+  `QA 진단 패널` 안내. The Founder can choose `시스템`, `라이트`, or `다크` from
+  Settings, and Account Recovery is reached through Home -> Settings -> `계정
+  보호 / 복구`. The choice persists through AsyncStorage, app root / StatusBar
+  follow the resolved mode, and the main visible surfaces now have usable
+  light/dark theme treatment: Home, Bottom tabs, Video Archive, Account
+  Recovery, Upload basic surface, Moment Detail major panels, empty/loading/error
+  states, and QA Debug Panel. This is still not a full design-system rewrite;
+  future work can continue removing hardcoded colors screen-by-screen.
+- User-facing app-name copy should not use `ASJ` or `Action Sports Journal`.
+  When visible copy needs an app name, use `Wake Board`. Internal variables,
+  docs, and developer-only logs may still use ASJ.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 

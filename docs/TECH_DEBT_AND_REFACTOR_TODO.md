@@ -317,16 +317,21 @@ Media / Share UX:
   screen-by-screen token rollout, full light-mode QA, completed Moment Detail
   sample QA, and later Media / Share export/share route decisions.
 - Theme Mode P2 moved the selector from backlog to implemented baseline. Home
-  now exposes System / Light / Dark through a lightweight Profile/Settings hub,
-  not a standalone Home header theme icon. The same hub links to Account
-  Recovery and can toggle QA Debug Panel visibility. Selection persists, and
-  major visible surfaces support usable light/dark treatment. Remaining theme
-  debt:
-  - Replace the lightweight inline hub with a future full Settings/Profile
-    route when that surface exists.
+  now keeps only the primary Upload CTA plus a Profile/Settings entry, not a
+  standalone Home header theme icon. The temporary Home inline hub was replaced
+  with a standalone `Settings` stack screen because floating over Home felt like
+  a QA/dev convenience rather than a service pattern. `Settings` contains
+  `계정 보호 / 복구`, `화면 모드`, and `QA 진단 패널` 안내. Account Recovery is
+  entered through Home -> Settings -> `계정 보호 / 복구`. Selection persists,
+  and major visible surfaces support usable light/dark treatment. Remaining
+  theme debt:
   - Continue removing hardcoded colors as screens are touched.
   - QA selected-video Upload state and completed Moment Detail real-data state.
   - Re-check QA Debug Panel production hide/gate policy before any public build.
+- User-facing app-name copy policy is set: visible UI should not use `ASJ` or
+  `Action Sports Journal`; use `Wake Board` when an app name is needed.
+  Internal variables, docs, historical notes, and developer-only logs can keep
+  ASJ.
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.
@@ -1903,7 +1908,8 @@ POC implementation status, 2026-06-27:
   Moment Detail. Completed Moments with visible evidence now have a "공유
   미리보기" card below the media area and above the rider-facing analysis card.
   It uses thumbnail, date/session title, rider-facing analysis title,
-  confidence label, short summary, up to two confirmed signals, and ASJ branding.
+  confidence label, short summary, up to two confirmed signals, and Wake Board
+  branding.
   External sharing/export remains a separate future scope.
 - Future Media UX P1 - Detail Media State Polish is implemented on top of Media
   Preview Policy P1. It does not change Home, Video Archive, SharePreviewCard,

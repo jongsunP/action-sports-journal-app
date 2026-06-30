@@ -454,7 +454,7 @@ function SharePreviewCard({
     <View style={styles.sharePreviewCard}>
       <View style={styles.sharePreviewHeaderRow}>
         <Text style={styles.sharePreviewEyebrow}>공유 미리보기</Text>
-        <Text style={styles.sharePreviewBrand}>ASJ</Text>
+        <Text style={styles.sharePreviewBrand}>Wake Board</Text>
       </View>
       {thumbnailUri ? (
         <Image

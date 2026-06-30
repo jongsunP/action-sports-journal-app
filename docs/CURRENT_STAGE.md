@@ -20,12 +20,16 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
 - Access point:
   - Home header keeps the primary Upload CTA and a single Profile/Settings
     entry.
-  - The Profile/Settings inline hub now groups `계정 보호`, `화면 모드`, and
-    `QA 진단 패널`.
-  - Theme selection lives inside that hub as `시스템`, `라이트`, and `다크`.
-  - This avoids making theme mode a standalone Home action, avoids forcing it
-    into Account Recovery, and avoids adding a large Settings route before the
-    product has that surface.
+  - The former Home inline Profile/Settings hub was replaced with a standalone
+    `Settings` stack screen because floating over Home felt like a QA/dev
+    convenience instead of a service pattern.
+  - `Settings` groups `계정 보호 / 복구`, `화면 모드`, and `QA 진단 패널` 안내.
+  - Theme selection lives on `Settings` as `시스템`, `라이트`, and `다크`.
+  - Account Recovery remains its own stack page, but the user path is now
+    Home -> Settings -> `계정 보호 / 복구` -> Account Recovery.
+  - User-facing app naming now avoids `ASJ` / `Action Sports Journal`; visible
+    app-name copy uses `Wake Board` when a name is needed. Internal docs,
+    variables, logs, and developer-only references can still use ASJ.
 - Behavior:
   - Uses existing `ThemePreference = system | light | dark`.
   - Preference is saved to AsyncStorage and restored on app restart.
@@ -44,8 +48,9 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
     debug surfaces.
   - QA Debug Panel light/dark surface and text colors.
 - Simulator verification:
-  - Header structure: Home now reads as Upload + Profile/Settings, not Upload +
-    Theme + Account.
+  - Header structure: Home now reads as Upload + Profile/Settings only, not
+    Upload + Theme + Account and not an inline settings overlay.
+  - Settings stack screen opens from the Home profile/settings icon.
   - Light mode: Home, Video empty state, Account Recovery hub, and QA Debug
     Panel were visually checked for text contrast, card boundaries, CTA weight,
     and tab active/inactive states.
@@ -59,8 +64,6 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
   - Full real-data Moment Detail QA with completed evidence / media sample.
   - Upload selected-video and progress states need the next device/simulator QA
     with an allowed media picker.
-  - A future full Settings/Profile route can eventually replace the lightweight
-    Home inline hub.
   - Further token cleanup can remove hardcoded colors over time, but the main
     user-visible surfaces now support usable System / Light / Dark modes.
 
