@@ -238,53 +238,53 @@ function getKakaoUiCopy({
   }
 }
 
+function shouldShowKakaoDescription(state: KakaoUiState) {
+  return (
+    state === 'linking' ||
+    state === 'recovering' ||
+    state === 'recoverReady' ||
+    state === 'blocked' ||
+    state === 'cancelled' ||
+    state === 'dismissed' ||
+    state === 'error'
+  );
+}
+
 function getAccountStatusCopy({
   currentEmail,
   hasKakaoIdentity,
   isAnonymousUser,
-  kakaoNickname,
 }: {
   currentEmail: string | null;
   hasKakaoIdentity: boolean;
   isAnonymousUser: boolean;
-  kakaoNickname: string | null;
 }) {
   if (currentEmail && hasKakaoIdentity) {
     return {
       title: '복구 방법이 연결되어 있습니다',
-      description: kakaoNickname
-        ? `${kakaoNickname} 카카오 계정과 이메일로 기록을 다시 찾을 수 있습니다.`
-        : '카카오와 이메일로 기록을 다시 찾을 수 있습니다.',
     };
   }
 
   if (hasKakaoIdentity) {
     return {
       title: '복구 방법이 연결되어 있습니다',
-      description: kakaoNickname
-        ? `${kakaoNickname} 카카오 계정으로 기록을 다시 찾을 수 있습니다.`
-        : '카카오로 기록을 다시 찾을 수 있습니다.',
     };
   }
 
   if (currentEmail) {
     return {
       title: '복구 방법이 연결되어 있습니다',
-      description: `${currentEmail} 이메일로 기록을 다시 찾을 수 있습니다.`,
     };
   }
 
   if (isAnonymousUser) {
     return {
       title: '복구 방법이 아직 연결되지 않았습니다',
-      description:
-        '카카오나 이메일을 연결하면 이 기기의 라이딩 기록을 다시 찾을 수 있습니다.',
     };
   }
 
   return {
     title: '계정 상태를 확인하고 있습니다',
-    description: '잠시 후 복구 방법을 연결할 수 있습니다.',
   };
 }
 
@@ -369,7 +369,6 @@ export function AccountRecoveryScreen() {
     currentEmail,
     hasKakaoIdentity,
     isAnonymousUser,
-    kakaoNickname,
   });
   const hasProtectedAccount = Boolean(currentEmail || hasKakaoIdentity);
   const showEmailDetails =
@@ -889,9 +888,6 @@ export function AccountRecoveryScreen() {
           <View style={styles.headerTitleBlock}>
             <Text style={styles.kicker}>Account Recovery</Text>
             <Text style={styles.title}>계정 복구</Text>
-            <Text style={styles.headerMeta}>
-              이 기기의 라이딩 기록을 복구할 수단을 연결합니다.
-            </Text>
           </View>
           <View style={styles.headerSpacer} />
         </View>
@@ -917,7 +913,6 @@ export function AccountRecoveryScreen() {
               </View>
             </View>
             <Text style={styles.panelTitle}>{accountStatusCopy.title}</Text>
-            <Text style={styles.panelText}>{accountStatusCopy.description}</Text>
             <View style={styles.connectedBadgeRow}>
               <View
                 style={[
@@ -1001,9 +996,6 @@ export function AccountRecoveryScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.methodDescription}>
-                    가장 빠르게 기록을 보호하거나 기존 기록을 불러옵니다.
-                  </Text>
                 </Pressable>
 
                 <Pressable
@@ -1049,15 +1041,8 @@ export function AccountRecoveryScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.methodDescription}>
-                    메일 링크로 기록을 보호하거나 복구합니다.
-                  </Text>
                 </Pressable>
               </View>
-
-              <Text style={styles.hubHelperText}>
-                처음이면 기록을 보호하고, 기존 기록이 있으면 같은 방법으로 불러옵니다.
-              </Text>
 
               {showKakaoDetails ? (
                 <View style={styles.kakaoBlock}>
@@ -1106,7 +1091,11 @@ export function AccountRecoveryScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.helperText}>{kakaoUiCopy.description}</Text>
+                  {shouldShowKakaoDescription(kakaoUiCopy.state) ? (
+                    <Text style={styles.helperText}>
+                      {kakaoUiCopy.description}
+                    </Text>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     disabled={!canContinueWithKakao}
@@ -1240,10 +1229,6 @@ export function AccountRecoveryScreen() {
                     </View>
                   ) : null}
 
-                  <Text style={styles.helperText}>
-                    이 이메일로 현재 기록을 보호합니다. 이미 연결된 기존 기록이
-                    있으면 같은 버튼으로 복구 메일을 보냅니다.
-                  </Text>
                   {emailRecoveryMessage ? (
                     <Text style={styles.helperText}>{emailRecoveryMessage}</Text>
                   ) : null}
@@ -1284,14 +1269,12 @@ function createAccountRecoveryThemeStyles(
     closeButtonText: { color: colors.textPrimary },
     kicker: { color: colors.textMuted },
     title: { color: colors.textPrimary },
-    headerMeta: { color: colors.textMuted },
     statusPanel: {
       backgroundColor: colors.surface,
       borderColor: borderSoft,
     },
     panelEyebrow: { color: colors.accent },
     panelTitle: { color: colors.textPrimary },
-    panelText: { color: colors.textSecondary },
     protectionBadgeDefault: {
       backgroundColor: subtleSurface,
       borderColor: borderStrong,
@@ -1330,7 +1313,6 @@ function createAccountRecoveryThemeStyles(
     },
     methodLabel: { color: colors.accent },
     methodTitle: { color: colors.textPrimary },
-    methodDescription: { color: colors.textSecondary },
     methodStateBadgeDefault: {
       backgroundColor: subtleSurface,
       borderColor: borderStrong,
@@ -1340,7 +1322,6 @@ function createAccountRecoveryThemeStyles(
       borderColor: isLight ? '#bbf7d0' : 'rgba(74, 222, 128, 0.3)',
     },
     methodStateBadgeText: { color: colors.textPrimary },
-    hubHelperText: { color: colors.textMuted },
     emailPanel: {
       backgroundColor: colors.surface,
       borderColor: borderSoft,
@@ -1447,14 +1428,6 @@ const baseStyles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 29,
   },
-  headerMeta: {
-    color: '#9ca3af',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-    marginTop: 3,
-    textAlign: 'center',
-  },
   body: {
     padding: 16,
     paddingBottom: 32,
@@ -1484,13 +1457,6 @@ const baseStyles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     lineHeight: 25,
-  },
-  panelText: {
-    color: '#d1d5db',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    marginTop: 8,
   },
   protectionBadge: {
     borderRadius: 999,
@@ -1615,13 +1581,6 @@ const baseStyles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 22,
   },
-  methodDescription: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-    marginTop: 9,
-  },
   methodStateBadge: {
     borderRadius: 999,
     borderWidth: 1,
@@ -1640,12 +1599,6 @@ const baseStyles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 11,
     fontWeight: '900',
-  },
-  hubHelperText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
   emailPanel: {
     backgroundColor: 'rgba(15, 23, 42, 0.78)',

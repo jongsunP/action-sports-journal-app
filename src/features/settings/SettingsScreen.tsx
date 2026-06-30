@@ -132,16 +132,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                         : theme.colors.textSecondary
                     }
                     name={option.icon}
-                    size={20}
+                    size={22}
                   />
-                  <Text
-                    style={[
-                      styles.themeOptionLabel,
-                      isSelected ? styles.themeOptionLabelSelected : undefined,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
                 </Pressable>
               );
             })}
@@ -297,23 +289,14 @@ function createStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       borderRadius: 14,
       borderWidth: 1,
       flex: 1,
-      gap: 5,
-      minHeight: 76,
+      justifyContent: 'center',
+      minHeight: 54,
       paddingHorizontal: 8,
-      paddingVertical: 10,
+      paddingVertical: 0,
     },
     themeOptionSelected: {
       backgroundColor: colors.accent,
       borderColor: colors.accent,
-    },
-    themeOptionLabel: {
-      color: colors.textPrimary,
-      fontSize: 12,
-      fontWeight: '900',
-      textAlign: 'center',
-    },
-    themeOptionLabelSelected: {
-      color: colors.background,
     },
     infoCard: {
       alignItems: 'center',

@@ -41,6 +41,12 @@ AI pre-build hardening pass, 2026-06-30:
 - This pass is the final small hardening step before the next standalone QA
   build. No `/health` prewarm, Auth/DB/API/Upload core, AI, package, or build
   number change was made.
+- Last pre-build Simulator UI feedback was applied after this pass:
+  - Settings `화면 모드` options are now icon-only centered chips with
+    accessibility labels preserved.
+  - Account Recovery removed remaining default description/helper copy from the
+    first view and method cards; only title, state, CTA, and necessary
+    pending/error/completion messages remain.
 
 Render Starter baseline, 2026-06-30:
 

@@ -100,6 +100,11 @@ Latest product/UX direction update:
 - Final pre-build surface check found no new small UI/copy blocker. Upload
   compression POC remains env-gated, QA Debug Panel remains a preview/internal
   diagnostic surface, and user-facing app-name copy remains `Wake Board`.
+- Last pre-build Simulator UI feedback is applied. Settings `화면 모드` chips are
+  icon-only and vertically centered, and Account Recovery now removes default
+  description-heavy copy from the header, protection panel, method cards, and
+  Email base state while preserving necessary pending/cancel/error/success
+  messages.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
