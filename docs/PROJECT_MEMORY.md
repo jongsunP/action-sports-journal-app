@@ -214,6 +214,23 @@ surface:
 - Do not attempt a one-shot app-wide light-mode conversion. Apply tokens
   screen-by-screen with visual QA.
 
+Final Design / UI / UX Closeout Audit, completed 2026-06-30, closed the
+pre-AI visible-surface review:
+
+- The audit happened after Account Recovery UI IA P1, Visible UI / UX Polish
+  P1/P2, Ionicons App Chrome pass, and Theme Mode P1 foundation.
+- No additional small code polish was required before AI Calibration.
+- Home empty state, bottom tabs/app chrome, Video empty state, and Account
+  Recovery hub were spot-checked in Simulator and did not show a new blocker.
+- Remaining design items are explicit backlog, not AI Calibration blockers:
+  QA Debug Panel hide/gate policy before production, Settings/Profile theme
+  selector, screen-by-screen theme-token rollout, full light-mode visual QA,
+  completed Moment Detail sample QA, and later Media / Share export/share route
+  work.
+- Keep using proven mobile patterns adapted to ASJ's rider journal tone. Do not
+  pause AI Calibration to invent a larger design system unless a Founder QA
+  issue identifies a specific visible problem.
+
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom
 interaction. Prefer proven patterns adapted to ASJ over novelty for its own

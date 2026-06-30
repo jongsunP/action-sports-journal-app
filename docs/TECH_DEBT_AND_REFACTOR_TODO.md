@@ -310,6 +310,12 @@ Media / Share UX:
   screen colors. `system | light | dark` preference types, dark/light token
   objects, AsyncStorage helpers, and a `useAppTheme()` resolver now exist.
   Remaining work is UI exposure and screen-by-screen token adoption.
+- Final Design / UI / UX Closeout Audit is closed for the current pre-AI
+  Calibration scope. No further small visible polish blocker was found. Treat
+  the remaining design work as follow-up backlog, not a calibration blocker:
+  QA Debug Panel production hide policy, Settings/Profile theme selector,
+  screen-by-screen token rollout, full light-mode QA, completed Moment Detail
+  sample QA, and later Media / Share export/share route decisions.
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.

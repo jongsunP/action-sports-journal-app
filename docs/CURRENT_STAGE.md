@@ -14,6 +14,30 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Final Design / UI / UX Closeout Audit, 2026-06-30:
+
+- Final read-only audit completed after Account Recovery UI IA P1, Visible UI /
+  UX Polish P1/P2, Ionicons App Chrome pass, and Theme Mode P1 foundation.
+- Overall judgment: no additional visible design/UI/UX blocker remains before
+  AI Calibration. The current app still has deliberate pre-production traits:
+  dark-first styling, visible QA Debug Panel, and theme tokens that are not yet
+  rolled out screen-by-screen.
+- Immediate polish result: no code polish was needed in this closeout pass.
+  Remaining `Gemini`, payload, and POC terms found in source are internal names,
+  logs, or explicitly gated debug/POC surfaces rather than default rider-facing
+  UI.
+- Simulator spot check covered Home empty state, app chrome / bottom tabs,
+  Video empty state, and Account Recovery protection hub. These surfaces are
+  ready for the next bundled standalone QA pass.
+- Remaining design backlog is non-blocking for AI Calibration:
+  - Hide or gate QA Debug Panel before production distribution.
+  - Add a real Settings/Profile surface for System / Light / Dark preference.
+  - Apply theme tokens screen-by-screen and visually QA full light mode.
+  - Verify completed Moment Detail / Share Preview with real standalone sample
+    data.
+  - Choose a later Media / Share step: image export, native share sheet, or
+    ShareResult route.
+
 Theme Mode P1 - System / Light / Dark Foundation, 2026-06-30:
 
 - Feasibility result:
