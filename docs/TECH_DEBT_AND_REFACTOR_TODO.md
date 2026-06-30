@@ -1954,18 +1954,24 @@ Build 91 update: the same pattern was observed again. Core upload/compression
 flows passed, and after later AI-before-baseline cleanup the Founder decided to
 remove the Render free-plan cold-start variable before AI Calibration.
 
-Decision:
+Status:
 
-- After the current AI-before-baseline build QA, upgrade the Render Web Service
-  from Free to Starter ($7/mo) before AI Calibration. The goal is not more CPU
-  first; it is to remove the free-plan sleep/cold-start variable while debugging
-  upload and analysis behavior.
+- Completed on 2026-06-30. The Render Web Service was upgraded from Free to
+  Starter ($7/mo) in the Dashboard before AI Calibration. The goal was not more
+  CPU first; it was to remove the free-plan sleep/cold-start variable while
+  debugging upload and analysis behavior.
+- Production Render `/health` was checked twice after the change: HTTP 200 with
+  about 334 ms then 244 ms curl total time. Non-secret summary:
+  `ok=true`, `primaryProvider=gemini`, `geminiConfigured=true`,
+  `mockAi.enabled=false`.
+- No app code, app env, DB/Auth/Supabase setting, buildNumber, or EAS build
+  setting changed for the plan upgrade.
 - Treat Video tab infinite loading as a separate UI state bug; that path has
   already been fixed with delayed/retry state instead of an indefinite loading
   card.
-- App code, app env, and EAS build settings should not need to change for this
-  plan upgrade. Render may restart the service once when the instance type
-  changes.
+- Continue watching QA Debug Panel values during the next standalone QA build.
+  Starter removes the Free sleep variable, but it does not prove every startup
+  latency source is solved.
 
 Decision:
 

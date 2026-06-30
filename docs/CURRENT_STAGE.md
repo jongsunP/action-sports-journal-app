@@ -14,6 +14,24 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Render Starter baseline, 2026-06-30:
+
+- Render Web Service was changed from Free to Starter in the Render Dashboard
+  before AI Calibration to remove the free-plan sleep/cold-start variable.
+- No app code, environment variable, build number, DB, Auth, or Supabase setting
+  changed for this step.
+- Current app analysis endpoint still points to the production Render service
+  host. The endpoint was checked without printing tokens/secrets.
+- `GET /health` on the Render production service passed twice:
+  - First call: HTTP 200, about 334 ms curl total time.
+  - Second call: HTTP 200, about 244 ms curl total time.
+  - Non-secret health summary: `ok=true`, `primaryProvider=gemini`,
+    `geminiConfigured=true`, `mockAi.enabled=false`.
+- Interpretation: the Free cold-start variable has been removed for the next
+  standalone QA baseline. Continue using QA Debug Panel values if first launch
+  or Video sync latency reappears; do not treat this as proof that all startup
+  latency is solved.
+
 Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
 
 - Implemented user-facing theme selection before AI Calibration.
@@ -270,9 +288,10 @@ Build 92 baseline QA build complete / Founder QA pending, 2026-06-29:
   build and need a follow-up standalone QA build: Email Recovery single CTA and
   completed-media compressed preview priority cleanup. Build 92 itself does not
   include those follow-up fixes.
-- After Build 92 QA, upgrade the Render Web Service from Free to Starter
-  ($7/mo) before AI Calibration so free-plan cold start is removed as a
-  confounding variable during upload/analysis debugging.
+- After Build 92 QA, the Render Web Service was upgraded from Free to Starter
+  ($7/mo). `/health` now responds normally on repeated calls, so the next
+  standalone QA build can use a more stable backend baseline before AI
+  Calibration.
 
 Build 91 closeout, 2026-06-29:
 

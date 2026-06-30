@@ -106,8 +106,12 @@ Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
   display, and Account Recovery now uses a compact method-hub information
   architecture. A follow-up standalone build is needed to verify these fixes on
   device; do not treat Build 92 itself as containing them.
-- Do not start AI Calibration until Build 92 QA has been reviewed and Render
-  Web Service has been upgraded from Free to Starter ($7/mo).
+- Render Web Service has been upgraded from Free to Starter ($7/mo) in the
+  Dashboard. Production `/health` was checked twice after the change and
+  returned HTTP 200 with about 334 ms then 244 ms curl total time. No code, env,
+  buildNumber, DB, Auth, or Supabase setting changed for the upgrade. This
+  removes the Free sleep/cold-start variable for the next standalone QA
+  baseline; continue watching QA Debug Panel values for app/backend latency.
 
 Previous stable build:
 
@@ -128,9 +132,10 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   compressed-video upload through completed analysis.
 - Current follow-up observations:
   - First launch can still be slow after idle time, then improves after the
-    backend wakes. New decision: after the current baseline build QA and before
-    AI Calibration, change the Render Web Service instance from Free to Starter
-    ($7/mo) to remove the free-plan cold start variable.
+    backend wakes. The Render Web Service has now been changed from Free to
+    Starter ($7/mo), and repeated `/health` checks returned 200 quickly. Treat
+    this as removing the free-plan cold-start variable, not as proof that every
+    startup delay is solved.
   - Media Preview Policy P1 is implemented and tightened after Build 92 QA.
     Completed Moments with a thumbnail no longer use compressed local upload
     assets as Detail playback. New compressed upload assets are kept for the
@@ -176,8 +181,9 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   successful upload, plus the existing Media / Share UX, Detail media state,
   Archive Card Visual Hierarchy, Visible UI / UX Polish P1/P2, Icon Library
   App Chrome pass, and upload / compression regression checks.
-  After that QA, Render Starter is the agreed next infrastructure step before
-  AI Calibration.
+  Render Starter is already done, so after the follow-up standalone QA build the
+  remaining pre-AI decision is whether the device QA baseline is stable enough
+  to begin AI Calibration.
 - If continuing UI foundation before AI Calibration, the next theme task should
   be a screen-by-screen token application pass, not a whole-app light-mode
   rewrite. A System / Light / Dark selector belongs in a future Settings/Profile
