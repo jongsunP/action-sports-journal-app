@@ -18,10 +18,14 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
 
 - Implemented user-facing theme selection before AI Calibration.
 - Access point:
-  - Home header now has a small screen-mode button next to the account entry.
-  - It opens an inline "화면 모드" panel with `시스템`, `라이트`, and `다크`.
-  - This avoids forcing theme settings into Account Recovery and avoids adding
-    a large Settings/Profile route before the product has that surface.
+  - Home header keeps the primary Upload CTA and a single Profile/Settings
+    entry.
+  - The Profile/Settings inline hub now groups `계정 보호`, `화면 모드`, and
+    `QA 진단 패널`.
+  - Theme selection lives inside that hub as `시스템`, `라이트`, and `다크`.
+  - This avoids making theme mode a standalone Home action, avoids forcing it
+    into Account Recovery, and avoids adding a large Settings route before the
+    product has that surface.
 - Behavior:
   - Uses existing `ThemePreference = system | light | dark`.
   - Preference is saved to AsyncStorage and restored on app restart.
@@ -40,6 +44,8 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
     debug surfaces.
   - QA Debug Panel light/dark surface and text colors.
 - Simulator verification:
+  - Header structure: Home now reads as Upload + Profile/Settings, not Upload +
+    Theme + Account.
   - Light mode: Home, Video empty state, Account Recovery hub, and QA Debug
     Panel were visually checked for text contrast, card boundaries, CTA weight,
     and tab active/inactive states.
@@ -53,7 +59,8 @@ Theme Mode P2 - User Selectable System / Light / Dark, 2026-06-30:
   - Full real-data Moment Detail QA with completed evidence / media sample.
   - Upload selected-video and progress states need the next device/simulator QA
     with an allowed media picker.
-  - A future full Settings/Profile screen should eventually host this selector.
+  - A future full Settings/Profile route can eventually replace the lightweight
+    Home inline hub.
   - Further token cleanup can remove hardcoded colors over time, but the main
     user-visible surfaces now support usable System / Light / Dark modes.
 

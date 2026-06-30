@@ -235,8 +235,11 @@ Theme Mode P2, completed 2026-06-30, made the theme foundation user-visible:
 
 - The selectable modes are `system`, `light`, and `dark`, shown in Korean as
   `시스템`, `라이트`, and `다크`.
-- The access point is a compact Home header screen-mode panel, not Account
-  Recovery and not a large Settings/Profile route.
+- The final access point is not a standalone Home header theme icon. Home keeps
+  Upload as the primary action plus a single Profile/Settings entry.
+- The lightweight Profile/Settings hub groups `계정 보호`, `화면 모드`, and
+  `QA 진단 패널`. Theme selection lives inside that hub, and Account Recovery is
+  opened from `계정 보호`.
 - The selected preference is saved in AsyncStorage and restored after app
   relaunch. `system` follows `useColorScheme()`.
 - The app root, StatusBar, Home, Bottom tabs, Video Archive, Account Recovery,
@@ -245,9 +248,10 @@ Theme Mode P2, completed 2026-06-30, made the theme foundation user-visible:
 - Light mode is not a raw inversion of dark mode. It uses separate background,
   surface, card, border, muted text, accent, warning, error, and tab treatments
   so hierarchy remains visible.
-- Remaining work is polish, not foundation: move the selector into a future
-  Settings/Profile surface, QA real completed Moment Detail data, and continue
-  screen-by-screen hardcoded color cleanup.
+- Remaining work is polish, not foundation: replace the lightweight inline hub
+  with a future full Settings/Profile route when the app has that surface, QA
+  real completed Moment Detail data, and continue screen-by-screen hardcoded
+  color cleanup.
 
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom

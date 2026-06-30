@@ -346,6 +346,100 @@ function ThemeModePanel({
   );
 }
 
+function SettingsHubPanel({
+  colors,
+  isQADebugPanelOpen,
+  mode,
+  onOpenAccountRecovery,
+  onSelectPreference,
+  onToggleQADebugPanel,
+  preference,
+  styles,
+}: {
+  colors: AppThemeColors;
+  isQADebugPanelOpen: boolean;
+  mode: 'dark' | 'light';
+  onOpenAccountRecovery: () => void;
+  onSelectPreference: (preference: ThemePreference) => Promise<void>;
+  onToggleQADebugPanel: () => void;
+  preference: ThemePreference;
+  styles: Record<string, any>;
+}) {
+  return (
+    <View style={styles.settingsHubPanel}>
+      <View style={styles.settingsHubHeader}>
+        <View>
+          <Text style={styles.settingsHubEyebrow}>Profile / Settings</Text>
+          <Text style={styles.settingsHubTitle}>앱 설정</Text>
+        </View>
+        <Text style={styles.settingsHubMeta}>기록 보호와 화면 모드</Text>
+      </View>
+
+      <Pressable
+        accessibilityLabel="계정 보호 설정 열기"
+        accessibilityRole="button"
+        onPress={onOpenAccountRecovery}
+        style={({ pressed }) => [
+          styles.settingsActionCard,
+          pressed ? styles.buttonPressed : undefined,
+        ]}
+      >
+        <View style={styles.settingsActionIcon}>
+          <Ionicons
+            color={colors.accent}
+            name="shield-checkmark-outline"
+            size={20}
+          />
+        </View>
+        <View style={styles.settingsActionBody}>
+          <Text style={styles.settingsActionTitle}>계정 보호</Text>
+          <Text style={styles.settingsActionText}>
+            카카오나 이메일로 기록을 보호하고 복구합니다.
+          </Text>
+        </View>
+        <Ionicons
+          color={colors.textMuted}
+          name="chevron-forward"
+          size={18}
+        />
+      </Pressable>
+
+      <ThemeModePanel
+        colors={colors}
+        mode={mode}
+        onSelectPreference={onSelectPreference}
+        preference={preference}
+        styles={styles}
+      />
+
+      <Pressable
+        accessibilityLabel="QA debug panel 열고 닫기"
+        accessibilityRole="button"
+        onPress={onToggleQADebugPanel}
+        style={({ pressed }) => [
+          styles.settingsActionCard,
+          pressed ? styles.buttonPressed : undefined,
+        ]}
+      >
+        <View style={styles.settingsActionIcon}>
+          <Ionicons color={colors.accent} name="bug-outline" size={20} />
+        </View>
+        <View style={styles.settingsActionBody}>
+          <Text style={styles.settingsActionTitle}>QA 진단 패널</Text>
+          <Text style={styles.settingsActionText}>
+            {isQADebugPanelOpen
+              ? '현재 화면에 진단 정보가 표시되고 있습니다.'
+              : '부팅, 동기화, Video 상태를 화면에서 확인합니다.'}
+          </Text>
+        </View>
+        <Text style={styles.settingsActionState}>
+          {isQADebugPanelOpen ? '켜짐' : '꺼짐'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function mergeStyleMaps<T extends Record<string, any>>(
   base: T,
   overrides: Record<string, any>,
@@ -391,7 +485,7 @@ export function HomeScreen() {
   const activeTabRef = useRef<AppTabId>('home');
   const [analysisCompletionNotice, setAnalysisCompletionNotice] =
     useState<AnalysisCompletionNotice | null>(null);
-  const [isThemePanelOpen, setIsThemePanelOpen] = useState(false);
+  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   // Video Archive owns paged order. Global sessions remain cache/detail source.
   const [hasMoreVideoArchiveMoments, setHasMoreVideoArchiveMoments] =
     useState(false);
@@ -2239,7 +2333,12 @@ export function HomeScreen() {
     }
   };
 
-  const handleOpenProfile = () => {
+  const handleOpenSettings = () => {
+    setIsSettingsPanelOpen((current) => !current);
+  };
+
+  const handleOpenAccountRecovery = () => {
+    setIsSettingsPanelOpen(false);
     navigation.navigate('AccountRecovery');
   };
 
@@ -2275,27 +2374,12 @@ export function HomeScreen() {
         </View>
         <View style={styles.headerActionRow}>
           <Pressable
-            accessibilityLabel="화면 모드 설정 열기"
+            accessibilityLabel="프로필 및 설정 열기"
             accessibilityRole="button"
-            onPress={() => setIsThemePanelOpen((current) => !current)}
+            onPress={handleOpenSettings}
             style={({ pressed }) => [
               styles.headerMenuButton,
-              isThemePanelOpen ? styles.headerMenuButtonActive : undefined,
-              pressed ? styles.buttonPressed : undefined,
-            ]}
-          >
-            <Ionicons
-              color={theme.colors.textPrimary}
-              name={theme.mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
-              size={22}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityLabel="마이페이지 열기"
-            accessibilityRole="button"
-            onPress={handleOpenProfile}
-            style={({ pressed }) => [
-              styles.headerMenuButton,
+              isSettingsPanelOpen ? styles.headerMenuButtonActive : undefined,
               pressed ? styles.buttonPressed : undefined,
             ]}
           >
@@ -2308,11 +2392,16 @@ export function HomeScreen() {
         </View>
       </View>
 
-      {isThemePanelOpen ? (
-        <ThemeModePanel
+      {isSettingsPanelOpen ? (
+        <SettingsHubPanel
           colors={theme.colors}
+          isQADebugPanelOpen={isQADebugPanelOpen}
           mode={theme.mode}
+          onOpenAccountRecovery={handleOpenAccountRecovery}
           onSelectPreference={theme.setPreference}
+          onToggleQADebugPanel={() =>
+            setIsQADebugPanelOpen((current) => !current)
+          }
           preference={theme.preference}
           styles={styles}
         />
@@ -2724,14 +2813,88 @@ function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       backgroundColor: colors.textPrimary,
       shadowColor: colors.textPrimary,
     },
-    themePanel: {
+    settingsHubPanel: {
       backgroundColor: colors.surface,
+      borderColor: borderSoft,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 12,
+      marginBottom: 14,
+      marginHorizontal: 16,
+      padding: 14,
+    },
+    settingsHubHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    settingsHubEyebrow: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+    },
+    settingsHubTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: '900',
+      marginTop: 2,
+    },
+    settingsHubMeta: {
+      color: colors.textMuted,
+      flexShrink: 1,
+      fontSize: 12,
+      fontWeight: '800',
+      textAlign: 'right',
+    },
+    settingsActionCard: {
+      alignItems: 'center',
+      backgroundColor: colors.surfaceElevated,
+      borderColor: borderSoft,
+      borderRadius: 16,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+    },
+    settingsActionIcon: {
+      alignItems: 'center',
+      backgroundColor: isLight ? '#ecfeff' : 'rgba(3, 199, 90, 0.1)',
+      borderColor: isLight ? '#99f6e4' : 'rgba(3, 199, 90, 0.22)',
+      borderRadius: 999,
+      borderWidth: 1,
+      height: 36,
+      justifyContent: 'center',
+      width: 36,
+    },
+    settingsActionBody: {
+      flex: 1,
+      minWidth: 0,
+    },
+    settingsActionTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    settingsActionText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 17,
+      marginTop: 2,
+    },
+    settingsActionState: {
+      color: colors.accent,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    themePanel: {
+      backgroundColor: colors.surfaceElevated,
       borderColor: borderSoft,
       borderRadius: 18,
       borderWidth: 1,
       gap: 12,
-      marginBottom: 12,
-      marginHorizontal: 16,
       padding: 14,
     },
     themePanelHeader: {
