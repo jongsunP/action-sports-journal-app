@@ -53,6 +53,11 @@ Latest product/UX direction update:
   or official Kakao logo was created. Light/Dark mode was intentionally deferred:
   the app still has broad hardcoded color usage, so the next safe step is a
   small theme-token layer rather than a full Appearance-based rewrite.
+- Theme Mode P1 foundation is now implemented. ASJ has `system | light | dark`
+  preference types, dark/light core color tokens, AsyncStorage preference
+  helpers, and a `useAppTheme()` resolver hook. This does not yet expose a
+  Settings UI or replace app-wide colors. Current visible app behavior remains
+  effectively dark-first until tokens are applied screen-by-screen.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
@@ -144,6 +149,10 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   App Chrome pass, and upload / compression regression checks.
   After that QA, Render Starter is the agreed next infrastructure step before
   AI Calibration.
+- If continuing UI foundation before AI Calibration, the next theme task should
+  be a screen-by-screen token application pass, not a whole-app light-mode
+  rewrite. A System / Light / Dark selector belongs in a future Settings/Profile
+  surface, not Account Recovery.
 - Store-before-release OAuth follow-up is configuration review only: Kakao app
   display, Supabase redirect allowlist, and consent wording. Do not rewrite
   Kakao linking/recovery semantics just to reduce provider prompts.

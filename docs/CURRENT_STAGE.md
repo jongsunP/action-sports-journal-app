@@ -14,6 +14,34 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Theme Mode P1 - System / Light / Dark Foundation, 2026-06-30:
+
+- Feasibility result:
+  - Full light/dark rollout is not a small safe change today. Home, Video,
+    Detail, Upload, Account Recovery, QA Debug, and debug viewers still contain
+    many hardcoded colors.
+  - ASJ already reads `useColorScheme()` in Home for limited dark styling, but
+    this is not a real app-wide theme system.
+  - No shared theme/color token file existed before this pass.
+- Implemented low-risk foundation only:
+  - Added `ThemePreference = system | light | dark`.
+  - Added `ResolvedThemeMode = light | dark`.
+  - Added dark and light token objects for the core color categories:
+    background, surface, elevated surface, border, text primary/secondary/muted,
+    accent, success, warning, error, and status bar style.
+  - Added AsyncStorage-backed preference helpers with default `system`.
+  - Added `useAppTheme()` hook that resolves saved preference + system
+    color scheme.
+- Not implemented in P1:
+  - No Settings/Profile UI for choosing theme mode.
+  - No app-wide color replacement.
+  - No forced light-mode visual rollout.
+  - No Auth / DB / API / Upload / AI behavior change.
+- Next safe step:
+  - Add a Settings/Profile surface later and expose System / Light / Dark there.
+  - Apply tokens screen-by-screen, starting with App container, Home shell, and
+    Account Recovery, after visual QA of the light palette.
+
 Icon Library + Light/Dark Theme Feasibility, 2026-06-30:
 
 - Feasibility result:

@@ -198,6 +198,22 @@ and debug surfaces. The safe next step is a small theme-token layer for
 background, surface, border, primary/secondary text, accent, success, warning,
 and error before attempting full Appearance / `useColorScheme` support.
 
+Theme Mode P1 later added that foundation without changing the visible product
+surface:
+
+- Theme preferences are `system`, `light`, and `dark`; default is `system`.
+- Resolved mode is `light` or `dark`, derived from saved preference plus the
+  platform color scheme.
+- Core dark/light tokens now exist for background, surface, elevated surface,
+  border, text primary/secondary/muted, accent, success, warning, error, and
+  status bar style.
+- Preference persistence uses AsyncStorage helpers, but no Settings UI exists
+  yet.
+- Do not put the theme selector into Account Recovery. Add it later with a real
+  Settings/Profile surface.
+- Do not attempt a one-shot app-wide light-mode conversion. Apply tokens
+  screen-by-screen with visual QA.
+
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom
 interaction. Prefer proven patterns adapted to ASJ over novelty for its own

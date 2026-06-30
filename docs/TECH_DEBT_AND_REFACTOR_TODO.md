@@ -306,11 +306,15 @@ Media / Share UX:
 - Light/Dark mode is not implemented yet. The app still has broad hardcoded
   color usage, so the next safe step is a small theme-token layer before full
   Appearance / `useColorScheme` support.
+- Theme Mode P1 implemented that token foundation without changing visible
+  screen colors. `system | light | dark` preference types, dark/light token
+  objects, AsyncStorage helpers, and a `useAppTheme()` resolver now exist.
+  Remaining work is UI exposure and screen-by-screen token adoption.
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.
 - Do next only after product approval: choose one of image export, native share
-  sheet, ShareResult route, or a theme-token pass.
+  sheet, ShareResult route, or a theme-token adoption pass.
 
 ### Minimum next implementation scope
 
@@ -1905,7 +1909,10 @@ POC implementation status, 2026-06-27:
 - Visible UI / UX Polish P2 is closed for the current pre-AI Calibration scope.
 - Icon Library App Chrome pass is closed for the current pre-AI Calibration
   scope. `@expo/vector-icons` / Ionicons is now the selected icon path.
-  Light/Dark mode remains a separate theme-token task, not a small icon pass.
+- Theme Mode P1 foundation is closed for the current pre-AI Calibration scope.
+  Light/Dark visual rollout remains a separate screen-by-screen adoption task,
+  and the System / Light / Dark selector should wait for a Settings/Profile
+  surface.
 
 ## Render Free Cold Start Watch
 
