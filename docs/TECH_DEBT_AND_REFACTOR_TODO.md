@@ -266,6 +266,9 @@ Account Recovery UI information architecture:
   Supabase Auth, Kakao/Email helpers, DB, and ownership semantics were not
   changed. Standalone QA should confirm first-view density, Email method
   expansion, Kakao progress/cancel states, and small-device layout.
+- Visible UI / UX Polish P1 added small primitive method visuals to the Kakao
+  and Email cards after the IA pass. These are not a new icon system or official
+  provider logos; they are lightweight scan cues for the method hub.
 
 Media / Share UX:
 
@@ -284,6 +287,13 @@ Media / Share UX:
   keeps thumbnail and row navigation intact while making archive cards read as
   rider journal records through label/date/title/status/description hierarchy
   and state-aware copy.
+- Visible UI / UX Polish P1 is implemented as the last small pre-AI visual pass:
+  remaining prototype/future-feature copy was removed from visible surfaces,
+  Video empty/error states gained a primitive film-frame cue, and completed
+  Moment Detail now hides technical evidence details behind "세부 근거 보기".
+- Upload compression POC/debug metadata remains available only by explicit env
+  opt-in. Before production distribution, re-check QA Debug Panel visibility and
+  any other debug-only surfaces.
 - Do next only after product approval: choose one of image export, native share
   sheet, or ShareResult route.
 
@@ -1873,6 +1883,10 @@ POC implementation status, 2026-06-27:
   `preferred_username` and `user_name`; OAuth prompt reduction should not bypass
   provider/platform authentication prompts and is only a Store-before-release
   settings review item.
+- Visible UI / UX Polish P1 is closed for the current pre-AI Calibration scope.
+  It was intentionally limited to copy, primitive visual cues, Detail evidence
+  progressive disclosure, and upload debug-surface gating. No new UI system,
+  icon library, Auth/DB/API/AI logic, or build was introduced.
 
 ## Render Free Cold Start Watch
 

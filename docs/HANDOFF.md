@@ -31,6 +31,13 @@ Latest product/UX direction update:
   Email/Kakao method cards. Email/Kakao detailed states are revealed only after
   selection or progress. Tabs, bottom sheets, nested routes, Auth/Supabase
   changes, and recovery-helper rewrites were intentionally avoided.
+- Visible UI / UX Polish P1 is implemented. The pass removed remaining
+  prototype/future-feature copy from the main visible surfaces, added small
+  primitive visual cues to Account Recovery method cards and Video empty/error
+  states, moved technical Moment Detail evidence behind a "세부 근거 보기"
+  disclosure, and gated the Upload compression POC panel behind explicit
+  `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`. No Auth, DB, API, Storage,
+  Upload state machine, or AI Calibration logic changed.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
@@ -118,7 +125,8 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   approval. It should verify the Build 92 feedback fixes: Email single CTA,
   original-or-thumbnail media preview priority, compressed temp cleanup after
   successful upload, plus the existing Media / Share UX, Detail media state,
-  Archive Card Visual Hierarchy, and upload / compression regression checks.
+  Archive Card Visual Hierarchy, Visible UI / UX Polish P1, and upload /
+  compression regression checks.
   After that QA, Render Starter is the agreed next infrastructure step before
   AI Calibration.
 - Store-before-release OAuth follow-up is configuration review only: Kakao app

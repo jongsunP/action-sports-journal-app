@@ -943,9 +943,19 @@ export function AccountRecoveryScreen() {
                   ]}
                 >
                   <View style={styles.methodCardHeader}>
-                    <View style={styles.methodTitleBlock}>
-                      <Text style={styles.methodLabel}>Kakao</Text>
-                      <Text style={styles.methodTitle}>카카오로 계속하기</Text>
+                    <View style={styles.methodTitleRow}>
+                      <View
+                        style={[
+                          styles.methodIconChip,
+                          styles.methodIconChipKakao,
+                        ]}
+                      >
+                        <Text style={styles.methodIconTextKakao}>K</Text>
+                      </View>
+                      <View style={styles.methodTitleBlock}>
+                        <Text style={styles.methodLabel}>Kakao</Text>
+                        <Text style={styles.methodTitle}>카카오로 계속하기</Text>
+                      </View>
                     </View>
                     <View
                       style={[
@@ -977,9 +987,19 @@ export function AccountRecoveryScreen() {
                   ]}
                 >
                   <View style={styles.methodCardHeader}>
-                    <View style={styles.methodTitleBlock}>
-                      <Text style={styles.methodLabel}>Email</Text>
-                      <Text style={styles.methodTitle}>이메일로 계속하기</Text>
+                    <View style={styles.methodTitleRow}>
+                      <View
+                        style={[
+                          styles.methodIconChip,
+                          styles.methodIconChipEmail,
+                        ]}
+                      >
+                        <Text style={styles.methodIconTextEmail}>@</Text>
+                      </View>
+                      <View style={styles.methodTitleBlock}>
+                        <Text style={styles.methodLabel}>Email</Text>
+                        <Text style={styles.methodTitle}>이메일로 계속하기</Text>
+                      </View>
                     </View>
                     <View
                       style={[
@@ -1388,6 +1408,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'space-between',
+  },
+  methodTitleRow: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  methodIconChip: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  methodIconChipKakao: {
+    backgroundColor: '#fee500',
+    borderColor: 'rgba(254, 229, 0, 0.48)',
+  },
+  methodIconChipEmail: {
+    backgroundColor: 'rgba(59, 130, 246, 0.16)',
+    borderColor: 'rgba(147, 197, 253, 0.32)',
+  },
+  methodIconTextKakao: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  methodIconTextEmail: {
+    color: '#bfdbfe',
+    fontSize: 16,
+    fontWeight: '900',
   },
   methodTitleBlock: {
     flex: 1,

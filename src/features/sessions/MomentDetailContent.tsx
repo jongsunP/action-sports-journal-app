@@ -189,6 +189,8 @@ export function MomentDetailContent({
   video,
 }: MomentDetailContentProps) {
   styles = nextStyles;
+  const [isEvidenceDetailOpen, setIsEvidenceDetailOpen] = useState(false);
+
   if (!session) {
     return null;
   }
@@ -382,17 +384,43 @@ export function MomentDetailContent({
                 <RiderFacingAnalysisCard
                   analysis={riderFacingAnalysis}
                 />
-                <GeminiEvidenceView evidence={visibleEvidence} />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() =>
+                    setIsEvidenceDetailOpen((current) => !current)
+                  }
+                  style={({ pressed }) => [
+                    styles.evidenceDisclosureCard,
+                    pressed ? styles.buttonPressed : undefined,
+                  ]}
+                >
+                  <View>
+                    <Text style={styles.evidenceDisclosureLabel}>
+                      분석 근거
+                    </Text>
+                    <Text style={styles.evidenceDisclosureTitle}>
+                      {isEvidenceDetailOpen
+                        ? '세부 근거 접기'
+                        : '세부 근거 보기'}
+                    </Text>
+                  </View>
+                  <Text style={styles.evidenceDisclosureAction}>
+                    {isEvidenceDetailOpen ? '접기' : '보기'}
+                  </Text>
+                </Pressable>
+                {isEvidenceDetailOpen ? (
+                  <GeminiEvidenceView evidence={visibleEvidence} />
+                ) : null}
               </>
             ) : !shouldShowStatusMessage && !isLoading && video ? (
               <View style={styles.detailStateCard}>
-                <Text style={styles.detailStateTitle}>아직 추출 결과가 없습니다</Text>
+                <Text style={styles.detailStateTitle}>아직 분석 근거가 없습니다</Text>
                 <Text style={styles.detailStateText}>
-                  다시 시도를 누르면 Gemini evidence endpoint만 호출합니다.
+                  다시 시도하면 영상 근거를 다시 확인합니다.
                 </Text>
               </View>
             ) : null}
-            {debugEndpoint ? (
+            {ENABLE_INTERNAL_DEBUG_VIEWER && isEvidenceDetailOpen && debugEndpoint ? (
               <View style={styles.debugBox}>
                 <Text style={styles.debugText}>
                   DEV endpoint: {debugEndpoint}
@@ -663,7 +691,7 @@ function GeminiEvidenceView({ evidence }: { evidence: GeminiEvidenceResult }) {
               : evidence.qualityMode === 'degraded'
               ? '서비스 혼잡으로 낮은 품질 fallback 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
               : evidence.recoveredFromPartial
-                ? 'Gemini 응답 일부만 복구된 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
+                ? '분석 응답 일부만 복구된 결과입니다. 코칭 전에 상세 검토가 필요합니다.'
               : 'AI가 기술명을 확신하지 못했습니다. 확정 기술명이 아닌 검토 후보로 봐주세요.'}
           </Text>
         ) : null}

@@ -24,8 +24,6 @@ import type { UploadProgressState } from './uploadProgress';
 type HomeScreenStyles = Record<string, any>;
 
 const ENABLE_UPLOAD_COMPRESSION_POC =
-  __DEV__ ||
-  process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true' ||
   process.env.EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC === 'true';
 
 export type UploadContentProps = {

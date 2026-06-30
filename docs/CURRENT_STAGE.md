@@ -14,6 +14,36 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Visible UI / UX Polish P1, 2026-06-30:
+
+- Implemented as the last small polish pass before the next standalone QA build
+  and before AI Calibration. This is a visible UI/copy pass only, not a logic,
+  Auth, DB, API, Storage, or AI behavior change.
+- Visible copy polish:
+  - Removed future-feature wording from the Video Archive header. The archive
+    now says it is showing recent records instead of promising date/trick
+    grouping that does not exist yet.
+  - Replaced remaining user-facing `Wake Board Loading...` prototype copy with
+    Korean loading copy.
+  - Tightened Home empty copy so it points to the actual left-top `+` upload
+    entry instead of a vague "top upload button".
+- Account Recovery method cards now have small primitive leading visuals:
+  yellow `K` chip for Kakao and muted blue `@` chip for Email. No new icon
+  library, custom logo, or Auth behavior was introduced.
+- Video empty/timeout/error states now include a small primitive film-frame cue
+  and keep retry copy/button visible when retry is available.
+- Moment Detail keeps Share Preview and rider-facing analysis as the default
+  completed experience. Technical Gemini evidence is now behind a
+  "세부 근거 보기" disclosure, and developer endpoint copy is not visible by
+  default.
+- Upload debug surface was checked. The upload compression POC panel now renders
+  only when `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`, so QA/debug terms
+  such as payload/meta/upload target do not appear in the normal dev or
+  preview/internal user-facing upload surface.
+- Next standalone QA should include a quick visual pass for Home empty copy,
+  Video empty/error states, Account Recovery method cards, completed Moment
+  Detail evidence disclosure, and Upload debug-surface absence.
+
 Account Recovery UI Information Architecture P1, 2026-06-30:
 
 - Founder direction: ASJ UI/UX should rely on proven mobile patterns rather than

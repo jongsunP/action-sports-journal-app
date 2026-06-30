@@ -138,7 +138,27 @@ Instagram remains the highest-priority behavioral reference because ASJ's
 survival depends heavily on media-native, Instagram-familiar riders. This does
 not mean copying Instagram screens. It means borrowing validated user learning:
 fast media entry, clear visual hierarchy, low-friction actions, share-worthy
-outputs, and a familiar sense of moving through media.
+outputs, a familiar sense of moving through media, and progressive disclosure
+when technical detail is not the default rider experience.
+
+Visible UI / UX Polish P1, completed 2026-06-30, applied this principle without
+creating a new design system:
+
+- User-facing prototype copy such as `Wake Board Loading...` was replaced with
+  Korean product copy.
+- Video Archive no longer promises future date/trick grouping in the header;
+  the visible text now describes the current recent-record archive.
+- Account Recovery method cards gained small primitive leading visuals for
+  Kakao and Email so the recovery-method hub scans as a choice, not a dense
+  settings list.
+- Video empty/timeout/error states gained a small primitive film-frame cue.
+- Completed Moment Detail keeps Share Preview and rider-facing analysis as the
+  default, while technical evidence details are behind "세부 근거 보기".
+- Upload debug/prototype compression metadata is hidden unless explicitly
+  enabled with `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`.
+
+This pass is UI/copy/visibility only. It does not change Auth, Upload,
+Storage, API, DB, or AI Calibration behavior.
 
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom

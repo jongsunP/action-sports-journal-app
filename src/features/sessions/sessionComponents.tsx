@@ -396,12 +396,14 @@ export function RecentSessionsRail({
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyTitle}>
-          {isLoading ? 'Wake Board Loading...' : '아직 라이딩 기록이 없습니다'}
+          {isLoading
+            ? '라이딩 기록을 불러오는 중입니다'
+            : '아직 라이딩 기록이 없습니다'}
         </Text>
         <Text style={styles.emptyText}>
           {isLoading
             ? '라이딩 기록과 분석 결과를 준비하고 있습니다.'
-            : '첫 영상을 추가하면 최근 기록이 이곳에 쌓입니다.'}
+            : '왼쪽 상단 + 버튼으로 첫 영상을 추가하면 최근 기록이 이곳에 쌓입니다.'}
         </Text>
       </View>
     );
@@ -530,7 +532,7 @@ export function PrimaryInsightCard({
       ) : isLoading ? (
         <>
           <Text style={styles.primaryInsightTitle}>
-            Wake Board Loading...
+            라이딩 기록을 불러오는 중입니다
           </Text>
           <Text style={styles.primaryInsightText}>
             라이딩 기록과 분석 결과를 준비하고 있습니다.
@@ -542,7 +544,7 @@ export function PrimaryInsightCard({
             첫 라이딩 기록을 시작해보세요
           </Text>
           <Text style={styles.primaryInsightText}>
-            상단 업로드 버튼으로 영상을 남기면 최근 인사이트와 기록 흐름이
+            왼쪽 상단 + 버튼으로 영상을 남기면 최근 인사이트와 기록 흐름이
             이곳에 쌓입니다.
           </Text>
         </>
@@ -695,7 +697,7 @@ export function VideoArchiveList({
           description: '라이딩 기록과 분석 결과를 준비하고 있습니다.',
           showRetry: false,
           showSpinner: true,
-          title: 'Wake Board Loading...',
+          title: '라이딩 기록을 불러오는 중입니다',
         };
       case 'timeout':
         return {
@@ -736,6 +738,19 @@ export function VideoArchiveList({
       keyExtractor={({ session }) => session.id}
       ListEmptyComponent={
         <View style={styles.emptyState}>
+          <View
+            style={[
+              styles.videoArchiveEmptyVisual,
+              emptyStateCopy.showRetry
+                ? styles.videoArchiveEmptyVisualAttention
+                : undefined,
+            ]}
+          >
+            <View style={styles.videoArchiveEmptyFrame}>
+              <View style={styles.videoArchiveEmptyFrameBar} />
+              <View style={styles.videoArchiveEmptyFrameBody} />
+            </View>
+          </View>
           {emptyStateCopy.showSpinner ? (
             <ActivityIndicator color="#9ca3af" />
           ) : null}

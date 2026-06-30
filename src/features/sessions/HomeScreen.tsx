@@ -2183,7 +2183,7 @@ export function HomeScreen() {
           {visibleVideoArchiveSessionSummaries.length}개 표시됨
           {shouldUseVideoArchiveSessionFallback
             ? ' · 홈 기록 기준, 아카이브 동기화 중'
-            : ' · 날짜별/기술별 분류 예정'}
+            : ' · 최근 기록 기준'}
         </Text>
       </View>
 
@@ -3072,6 +3072,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 17,
     marginTop: 5,
+  },
+  videoArchiveEmptyVisual: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    borderColor: 'rgba(148, 163, 184, 0.22)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    marginBottom: 12,
+    width: 42,
+  },
+  videoArchiveEmptyVisualAttention: {
+    backgroundColor: 'rgba(251, 191, 36, 0.12)',
+    borderColor: 'rgba(251, 191, 36, 0.28)',
+  },
+  videoArchiveEmptyFrame: {
+    borderColor: '#cbd5e1',
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 20,
+    overflow: 'hidden',
+    width: 24,
+  },
+  videoArchiveEmptyFrameBar: {
+    backgroundColor: 'rgba(203, 213, 225, 0.55)',
+    height: 4,
+    width: '100%',
+  },
+  videoArchiveEmptyFrameBody: {
+    backgroundColor: 'rgba(203, 213, 225, 0.18)',
+    flex: 1,
   },
   placeholderCard: {
     backgroundColor: '#14161c',
@@ -4559,6 +4592,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     marginBottom: 4,
+  },
+  evidenceDisclosureCard: {
+    alignItems: 'center',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    paddingVertical: 16,
+  },
+  evidenceDisclosureLabel: {
+    color: '#9ca3af',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  evidenceDisclosureTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  evidenceDisclosureAction: {
+    color: '#bfdbfe',
+    fontSize: 12,
+    fontWeight: '900',
   },
   evidencePanel: {
     marginHorizontal: 16,
