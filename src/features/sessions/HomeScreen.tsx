@@ -326,6 +326,8 @@ export function HomeScreen() {
   const isRefreshingRemoteMomentsRef = useRef(false);
   const pendingRemoteRefreshReasonRef = useRef<RemoteRefreshReason | null>(null);
   const hasAppliedBootVideoArchivePageRef = useRef(false);
+  const hasLoadedVideoArchiveFirstPageRef = useRef(false);
+  const isLoadingVideoArchiveInitialPageRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
   const didTriggerSwipeHapticRef = useRef(false);
   const pendingVideoArchiveSessionIdsRef = useRef<Set<string>>(new Set());
@@ -887,6 +889,7 @@ export function HomeScreen() {
   ]);
   const applyVideoArchiveFirstPage = useCallback(
     (remoteMomentPage: RemoteMomentFirstPage) => {
+      hasLoadedVideoArchiveFirstPageRef.current = true;
       const sessionIds = getSessionIdsForRemoteMoments(
         remoteMomentPage.moments,
       );
@@ -1368,13 +1371,16 @@ export function HomeScreen() {
   const loadInitialVideoArchivePage = useCallback(() => {
     if (
       !canUseRemoteApi ||
+      hasLoadedVideoArchiveFirstPageRef.current ||
       hasLoadedVideoArchiveFirstPage ||
+      isLoadingVideoArchiveInitialPageRef.current ||
       isLoadingVideoArchiveInitialPage ||
       !hasConfiguredSupabaseMoments()
     ) {
       return;
     }
 
+    isLoadingVideoArchiveInitialPageRef.current = true;
     setIsLoadingVideoArchiveInitialPage(true);
     setVideoArchiveLoadState('loading');
     const startedAt = Date.now();
@@ -1441,6 +1447,7 @@ export function HomeScreen() {
         );
       })
       .finally(() => {
+        isLoadingVideoArchiveInitialPageRef.current = false;
         setIsLoadingVideoArchiveInitialPage(false);
       });
   }, [
@@ -1874,6 +1881,8 @@ export function HomeScreen() {
     pendingRealtimeCompletionNoticeRef.current = null;
     isRefreshingRemoteMomentsRef.current = false;
     hasAppliedBootVideoArchivePageRef.current = false;
+    hasLoadedVideoArchiveFirstPageRef.current = false;
+    isLoadingVideoArchiveInitialPageRef.current = false;
     completedBootSyncAtRef.current = null;
     hasAttemptedBootUploadRecoveryRef.current = false;
     didNavigateToUploadRef.current = false;

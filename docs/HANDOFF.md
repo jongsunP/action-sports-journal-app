@@ -87,6 +87,19 @@ Latest product/UX direction update:
 - User-facing app-name copy should not use `ASJ` or `Action Sports Journal`.
   When visible copy needs an app name, use `Wake Board`. Internal variables,
   docs, and developer-only logs may still use ASJ.
+- AI pre-build hardening pass is complete. Boot-loaded `/api/moments?limit=20`
+  first page data is now synchronously marked as the Video Archive first page
+  through refs before React state updates settle, preventing a same-cycle Video
+  tab duplicate fetch. A pending-request ref also blocks concurrent Video
+  first-page loads. Owner/session cache reset clears these refs, so account
+  recovery or owner switch can still load a fresh archive page.
+- No internal `/health` prewarm was added. Render Starter is now the
+  infrastructure baseline, and the app still relies on auth bootstrap, boot
+  remote sync, Video first-page diagnostics, and QA Debug Panel values to
+  classify startup issues.
+- Final pre-build surface check found no new small UI/copy blocker. Upload
+  compression POC remains env-gated, QA Debug Panel remains a preview/internal
+  diagnostic surface, and user-facing app-name copy remains `Wake Board`.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 

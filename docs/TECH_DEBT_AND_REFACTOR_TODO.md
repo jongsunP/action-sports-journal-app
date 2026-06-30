@@ -92,6 +92,37 @@ not accidentally build on unstable assumptions.
 - After any QA report that suggests lost media, missing results, stale sync,
   wrong owner data, or account recovery confusion.
 
+### Execution result - 2026-06-30 AI pre-build hardening
+
+The final pre-AI standalone-build hardening pass ran after Render Starter was
+confirmed and before the next QA build. No EAS build, build number change,
+package change, Auth/DB/API contract change, Upload core change, AI API call, or
+`/health` prewarm was performed.
+
+Done:
+
+- Boot first page / Video first page duplicate request guard P1.
+- Boot-loaded `/api/moments?limit=20` first page data is now marked as loaded
+  through refs before React state updates settle, so the Video tab effect cannot
+  immediately issue another identical first-page fetch in the same effect cycle.
+- Video first-page request in-flight state is also tracked with a ref to avoid
+  concurrent duplicate requests before the React loading state updates.
+- Owner/session cache reset clears these refs together with existing Video
+  Archive state, preserving account recovery and owner-switch correctness.
+- Confirmed no app-internal `/health` prewarm exists after the Render Starter
+  transition.
+- Rechecked visible copy/debug surfaces: `Wake Board` remains the app-name copy,
+  Upload compression POC is env-gated, and QA Debug Panel remains an intentional
+  preview/internal diagnostic surface.
+
+Remaining:
+
+- Verify the duplicate-request reduction in the next standalone or simulator QA
+  by comparing QA Debug Panel boot/video durations and backend `/api/moments`
+  request logs if needed.
+- QA Debug Panel still needs a production hide/gate policy before real service
+  distribution.
+
 ### Execution result - 2026-06-26
 
 Foundation Safety Check ran after Kakao Recovery Sign-in P1 / Build 81 passed

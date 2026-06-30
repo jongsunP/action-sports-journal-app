@@ -387,6 +387,7 @@ Current stable workstream list:
 - Media / Share UX P1(미디어 / 공유 경험 1차): 구현 완료. 외부 공유 기능이 아니라 Moment Detail의 completed evidence 아래 share-ready preview card 기반을 추가
 - Future Media UX P1 - Detail Media State Polish(향후 미디어 UX 1차 - 상세 미디어 상태 정리): 구현 완료. Detail media hero에서 thumbnail-only 상태를 "대표 이미지"로 자연스럽게 표시하고, completed / non-completed missing media 문구를 분리
 - Archive Card Visual Hierarchy P1(아카이브 카드 시각 위계 1차): 구현 완료. Video 탭 archive row를 파일 목록이 아니라 라이딩 기록 카드처럼 보이도록 journal label/date/title/status/state-aware description 위계로 정리
+- AI Pre-build Hardening Pass(AI 전 빌드 전 최종 하드닝): 구현 완료. boot remote sync가 받은 `/api/moments?limit=20` first page를 Video Archive first page로 ref 기반 선반영하여 같은 렌더/effect 사이클의 중복 fetch 가능성을 줄였고, Video first-page in-flight ref로 동시 요청도 차단. `/health` prewarm은 추가하지 않았으며 Render Starter baseline + QA Debug Panel 진단 흐름을 유지
 
 현재 남은 과제:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙

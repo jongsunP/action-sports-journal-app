@@ -14,6 +14,34 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+AI pre-build hardening pass, 2026-06-30:
+
+- Boot first page / Video first page duplicate request guard P1 is implemented.
+- The app still does not issue an internal `/health` prewarm request on boot.
+  Render Starter removes the Free-plan sleep variable, but app startup remains
+  driven by auth bootstrap, boot remote moment sync, and screen-level data
+  loading.
+- Video Archive now treats a boot-loaded `/api/moments?limit=20` first page as
+  already loaded synchronously through refs before React state updates settle.
+  This prevents the Video tab effect from firing a same-page fetch in the same
+  render/effect cycle.
+- A separate in-flight ref also blocks duplicate Video first-page requests while
+  the first request is pending.
+- Owner/session cache resets clear the new refs together with the existing
+  Video Archive state, so account recovery or owner switch can still load a
+  fresh first page.
+- User-facing app-name search was rechecked. Visible app-name copy remains
+  `Wake Board`; remaining `ASJ`, `Action Sports Journal`, `Wakeboard`, payload,
+  and token-related matches are docs, internal type names, logs, backend/auth
+  helpers, or gated QA/debug paths rather than default user-facing UI.
+- Upload compression POC remains hidden unless
+  `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`. QA Debug Panel remains
+  intentionally visible for preview/internal QA and must still be hidden or
+  gated before production distribution.
+- This pass is the final small hardening step before the next standalone QA
+  build. No `/health` prewarm, Auth/DB/API/Upload core, AI, package, or build
+  number change was made.
+
 Render Starter baseline, 2026-06-30:
 
 - Render Web Service was changed from Free to Starter in the Render Dashboard
