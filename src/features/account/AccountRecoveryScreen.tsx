@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import type { RootStackParamList } from '../../navigation/types';
 import { normalizeRecoveryEmail } from '../../services/auth/accountRecovery';
@@ -950,7 +951,11 @@ export function AccountRecoveryScreen() {
                           styles.methodIconChipKakao,
                         ]}
                       >
-                        <Text style={styles.methodIconTextKakao}>K</Text>
+                        <Ionicons
+                          color="#111827"
+                          name="chatbubble-ellipses-outline"
+                          size={19}
+                        />
                       </View>
                       <View style={styles.methodTitleBlock}>
                         <Text style={styles.methodLabel}>Kakao</Text>
@@ -994,7 +999,7 @@ export function AccountRecoveryScreen() {
                           styles.methodIconChipEmail,
                         ]}
                       >
-                        <Text style={styles.methodIconTextEmail}>@</Text>
+                        <Ionicons color="#bfdbfe" name="mail-outline" size={19} />
                       </View>
                       <View style={styles.methodTitleBlock}>
                         <Text style={styles.methodLabel}>Email</Text>
@@ -1429,16 +1434,6 @@ const styles = StyleSheet.create({
   methodIconChipEmail: {
     backgroundColor: 'rgba(59, 130, 246, 0.16)',
     borderColor: 'rgba(147, 197, 253, 0.32)',
-  },
-  methodIconTextKakao: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  methodIconTextEmail: {
-    color: '#bfdbfe',
-    fontSize: 16,
-    fontWeight: '900',
   },
   methodTitleBlock: {
     flex: 1,

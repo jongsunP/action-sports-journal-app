@@ -14,6 +14,37 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Icon Library + Light/Dark Theme Feasibility, 2026-06-30:
+
+- Feasibility result:
+  - Chose `@expo/vector-icons` / Ionicons for the current scope.
+  - `lucide-react-native` was not adopted because it would add a new runtime
+    dependency path, while Expo already supports `@expo/vector-icons` and the
+    package was present in the local install tree.
+  - Added `@expo/vector-icons` as an explicit package dependency via
+    `npx expo install @expo/vector-icons` so future installs do not rely on a
+    transitive dependency.
+  - This is an icon/font asset dependency, not an Auth, DB, API, Upload, AI, or
+    native module behavior change. A normal standalone QA build is still useful
+    before product decisions, but no EAS build was run for this change.
+- Implemented low-risk App Chrome icon pass:
+  - Bottom tabs now use Ionicons for Home, Video, and Growth. Growth uses
+    `trending-up` so it reads as progress, not a generic "more" tab.
+  - Home upload CTA uses a video camera icon, and the account entry uses a
+    person-circle icon.
+  - Video empty/timeout/error visual cue uses film / cloud-offline icons.
+  - Account Recovery method cards use a generic chat bubble for Kakao and mail
+    icon for Email. No official Kakao logo or new brand symbol was created.
+- Light/Dark theme result:
+  - Deferred to a separate design/token pass. The app still has many hardcoded
+    colors across Home, Account Recovery, Detail, Upload, QA Debug, and debug
+    viewers.
+  - Recommended next theme step is not full light mode immediately, but a small
+    `theme/colors` token layer for background, surface, border, text primary /
+    secondary, accent, success, warning, and error.
+  - Full Appearance / `useColorScheme` support should be a separate scoped task
+    after the token layer exists.
+
 Visible UI / UX Polish P2 - App Chrome & Empty States, 2026-06-30:
 
 - Implemented as the next no-build polish pass after P1. This remains a

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import {
   Alert,
@@ -2118,12 +2119,14 @@ export function HomeScreen() {
             pressed ? styles.buttonPressed : undefined,
           ]}
         >
-          <View style={styles.headerAddIconFrame}>
-            <View style={styles.headerAddIconFilm}>
-              <View style={styles.headerAddIconFilmBar} />
-            </View>
-            <View style={styles.headerAddIconPlusHorizontal} />
-            <View style={styles.headerAddIconPlusVertical} />
+          <View style={styles.headerAddIconWrap}>
+            <Ionicons color="#050507" name="videocam-outline" size={23} />
+            <Ionicons
+              color="#050507"
+              name="add-circle"
+              size={13}
+              style={styles.headerAddIconBadge}
+            />
           </View>
         </Pressable>
         <View style={styles.headerTitleBlock}>
@@ -2143,10 +2146,7 @@ export function HomeScreen() {
             pressed ? styles.buttonPressed : undefined,
           ]}
         >
-          <View style={styles.headerProfileIcon}>
-            <View style={styles.headerProfileIconHead} />
-            <View style={styles.headerProfileIconBody} />
-          </View>
+          <Ionicons color="#f8fafc" name="person-circle-outline" size={25} />
         </Pressable>
       </View>
 
@@ -2673,87 +2673,6 @@ const styles = StyleSheet.create({
   bottomTabIconFrameSelected: {
     backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
-  tabIconHome: {
-    borderColor: '#f8fafc',
-    borderRadius: 5,
-    borderWidth: 2,
-    height: 18,
-    justifyContent: 'flex-end',
-    opacity: 0.58,
-    padding: 3,
-    width: 20,
-  },
-  tabIconHomeLine: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 999,
-    height: 2,
-    opacity: 0.9,
-    width: '100%',
-  },
-  tabIconVideo: {
-    borderColor: '#f8fafc',
-    borderRadius: 5,
-    borderWidth: 2,
-    height: 16,
-    opacity: 0.58,
-    overflow: 'hidden',
-    width: 24,
-  },
-  tabIconVideoTopBar: {
-    backgroundColor: 'rgba(248, 250, 252, 0.56)',
-    height: 4,
-    width: '100%',
-  },
-  tabIconVideoBody: {
-    backgroundColor: 'rgba(248, 250, 252, 0.16)',
-    flex: 1,
-  },
-  tabIconFlowFrame: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  tabIconFlowBar: {
-    backgroundColor: 'transparent',
-    borderColor: '#f8fafc',
-    borderRadius: 999,
-    borderWidth: 2,
-    opacity: 0.58,
-    width: 6,
-  },
-  tabIconFlowBarSmall: {
-    height: 9,
-  },
-  tabIconFlowBarMedium: {
-    height: 14,
-  },
-  tabIconFlowBarTall: {
-    height: 20,
-  },
-  tabIconProfileHead: {
-    borderColor: '#f8fafc',
-    borderRadius: 999,
-    borderWidth: 2,
-    height: 10,
-    marginBottom: 3,
-    opacity: 0.7,
-    width: 10,
-  },
-  tabIconProfileBody: {
-    borderColor: '#f8fafc',
-    borderRadius: 999,
-    borderWidth: 2,
-    height: 9,
-    opacity: 0.7,
-    width: 18,
-  },
-  tabIconFilled: {
-    backgroundColor: '#f8fafc',
-    opacity: 1,
-  },
-  tabIconStrong: {
-    opacity: 1,
-  },
   tabPageHeader: {
     marginBottom: 16,
     paddingHorizontal: 16,
@@ -2819,71 +2738,16 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     width: 42,
   },
-  headerAddText: {
-    color: '#050507',
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 24,
-  },
-  headerAddIconFrame: {
+  headerAddIconWrap: {
     alignItems: 'center',
-    height: 24,
+    height: 25,
     justifyContent: 'center',
-    width: 24,
+    width: 25,
   },
-  headerAddIconFilm: {
-    borderColor: '#050507',
-    borderRadius: 5,
-    borderWidth: 2,
-    height: 17,
-    overflow: 'hidden',
-    width: 20,
-  },
-  headerAddIconFilmBar: {
-    backgroundColor: 'rgba(5, 5, 7, 0.28)',
-    height: 4,
-    width: '100%',
-  },
-  headerAddIconPlusHorizontal: {
-    backgroundColor: '#050507',
-    borderRadius: 999,
-    height: 2.5,
+  headerAddIconBadge: {
     position: 'absolute',
-    right: 1,
-    top: 3,
-    width: 9,
-  },
-  headerAddIconPlusVertical: {
-    backgroundColor: '#050507',
-    borderRadius: 999,
-    height: 9,
-    position: 'absolute',
-    right: 4,
-    top: 0,
-    width: 2.5,
-  },
-  headerProfileIcon: {
-    alignItems: 'center',
-    height: 22,
-    justifyContent: 'center',
-    width: 22,
-  },
-  headerProfileIconHead: {
-    borderColor: '#f8fafc',
-    borderRadius: 999,
-    borderWidth: 2,
-    height: 8,
-    marginBottom: 3,
-    opacity: 0.84,
-    width: 8,
-  },
-  headerProfileIconBody: {
-    borderColor: '#f8fafc',
-    borderRadius: 999,
-    borderWidth: 2,
-    height: 8,
-    opacity: 0.84,
-    width: 16,
+    right: -2,
+    top: -1,
   },
   journalSnapshot: {
     backgroundColor: '#0f1117',
@@ -3193,23 +3057,6 @@ const styles = StyleSheet.create({
   videoArchiveEmptyVisualAttention: {
     backgroundColor: 'rgba(251, 191, 36, 0.12)',
     borderColor: 'rgba(251, 191, 36, 0.28)',
-  },
-  videoArchiveEmptyFrame: {
-    borderColor: '#cbd5e1',
-    borderRadius: 5,
-    borderWidth: 2,
-    height: 20,
-    overflow: 'hidden',
-    width: 24,
-  },
-  videoArchiveEmptyFrameBar: {
-    backgroundColor: 'rgba(203, 213, 225, 0.55)',
-    height: 4,
-    width: '100%',
-  },
-  videoArchiveEmptyFrameBody: {
-    backgroundColor: 'rgba(203, 213, 225, 0.18)',
-    flex: 1,
   },
   placeholderCard: {
     backgroundColor: '#14161c',

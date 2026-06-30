@@ -44,7 +44,15 @@ Latest product/UX direction update:
   replaced the Home `☰` entry with a primitive profile mark, shortened
   empty/error and Upload copy, softened missing-media copy, removed model/provider
   language from the default user-facing analysis state, and shortened Account
-  Recovery helper text. No icon library or package change was introduced.
+  Recovery helper text. That pass was primitive-only before the later icon
+  library feasibility pass.
+- Icon Library feasibility is complete and a small App Chrome icon pass is
+  implemented with `@expo/vector-icons` / Ionicons. The package is now an
+  explicit dependency, Bottom tabs / Home upload / account entry / Video empty
+  visual / Account Recovery method cards use library icons, and no brand symbol
+  or official Kakao logo was created. Light/Dark mode was intentionally deferred:
+  the app still has broad hardcoded color usage, so the next safe step is a
+  small theme-token layer rather than a full Appearance-based rewrite.
 
 Build 92 AI Calibration baseline QA build is complete and awaiting Founder QA.
 
@@ -132,8 +140,8 @@ Build 91 iOS preview/internal build is complete and real-device QA passed.
   approval. It should verify the Build 92 feedback fixes: Email single CTA,
   original-or-thumbnail media preview priority, compressed temp cleanup after
   successful upload, plus the existing Media / Share UX, Detail media state,
-  Archive Card Visual Hierarchy, Visible UI / UX Polish P1/P2, and upload /
-  compression regression checks.
+  Archive Card Visual Hierarchy, Visible UI / UX Polish P1/P2, Icon Library
+  App Chrome pass, and upload / compression regression checks.
   After that QA, Render Starter is the agreed next infrastructure step before
   AI Calibration.
 - Store-before-release OAuth follow-up is configuration review only: Kakao app

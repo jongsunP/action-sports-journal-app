@@ -297,11 +297,20 @@ Media / Share UX:
   bottom tab primitive icons, Home upload/account actions, Video empty copy,
   Upload record-creation copy, Detail opened-evidence copy, and missing-media
   copy were tightened without a new icon library or package change.
+- Icon Library feasibility is now complete. ASJ adopted
+  `@expo/vector-icons` / Ionicons as an explicit dependency for the first
+  App Chrome icon pass because it is Expo-standard and lower-risk than adding
+  `lucide-react-native` at this stage. Bottom tabs, Home upload/account entry,
+  Video empty/error cue, and Account Recovery method cards are covered. This
+  does not create a new brand symbol or official Kakao logo.
+- Light/Dark mode is not implemented yet. The app still has broad hardcoded
+  color usage, so the next safe step is a small theme-token layer before full
+  Appearance / `useColorScheme` support.
 - Upload compression POC/debug metadata remains available only by explicit env
   opt-in. Before production distribution, re-check QA Debug Panel visibility and
   any other debug-only surfaces.
 - Do next only after product approval: choose one of image export, native share
-  sheet, ShareResult route, or an explicit icon-package pass.
+  sheet, ShareResult route, or a theme-token pass.
 
 ### Minimum next implementation scope
 
@@ -1894,9 +1903,9 @@ POC implementation status, 2026-06-27:
   progressive disclosure, and upload debug-surface gating. No new UI system,
   icon library, Auth/DB/API/AI logic, or build was introduced.
 - Visible UI / UX Polish P2 is closed for the current pre-AI Calibration scope.
-  It intentionally stayed within existing View/Text primitives. If the Founder
-  still feels the app looks too basic, the next visual step should be an
-  explicitly approved icon-package pass, not another broad logic change.
+- Icon Library App Chrome pass is closed for the current pre-AI Calibration
+  scope. `@expo/vector-icons` / Ionicons is now the selected icon path.
+  Light/Dark mode remains a separate theme-token task, not a small icon pass.
 
 ## Render Free Cold Start Watch
 

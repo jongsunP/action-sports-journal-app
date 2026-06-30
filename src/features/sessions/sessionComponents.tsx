@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactElement } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   FlatList,
@@ -274,78 +275,33 @@ function BottomTabIcon({
   isSelected: boolean;
   styles: HomeScreenStyles;
 }) {
-  if (id === 'home') {
-    return (
-      <View
-        style={[
-          styles.bottomTabIconFrame,
-          isSelected ? styles.bottomTabIconFrameSelected : undefined,
-        ]}
-      >
-        <View
-          style={[
-            styles.tabIconHome,
-            isSelected ? styles.tabIconStrong : undefined,
-          ]}
-        >
-          <View
-            style={[
-              styles.tabIconHomeLine,
-              isSelected ? styles.tabIconFilled : undefined,
-            ]}
-          />
-        </View>
-      </View>
-    );
-  }
+  const iconName =
+    id === 'home'
+      ? isSelected
+        ? 'home'
+        : 'home-outline'
+      : id === 'video'
+        ? isSelected
+          ? 'film'
+          : 'film-outline'
+        : isSelected
+          ? 'trending-up'
+          : 'trending-up-outline';
 
-  if (id === 'video') {
-    return (
-      <View
-        style={[
-          styles.bottomTabIconFrame,
-          isSelected ? styles.bottomTabIconFrameSelected : undefined,
-        ]}
-      >
-        <View
-          style={[
-            styles.tabIconVideo,
-            isSelected ? styles.tabIconStrong : undefined,
-          ]}
-        >
-          <View style={styles.tabIconVideoTopBar} />
-          <View style={styles.tabIconVideoBody} />
-        </View>
-      </View>
-    );
-  }
-
-  if (id === 'flow') {
-    return (
-      <View
-        style={[
-          styles.bottomTabIconFrame,
-          styles.tabIconFlowFrame,
-          isSelected ? styles.bottomTabIconFrameSelected : undefined,
-        ]}
-      >
-        {[0, 1, 2].map((index) => (
-          <View
-            key={`flow-${index}`}
-            style={[
-              styles.tabIconFlowBar,
-              index === 0 ? styles.tabIconFlowBarSmall : undefined,
-              index === 1 ? styles.tabIconFlowBarMedium : undefined,
-              index === 2 ? styles.tabIconFlowBarTall : undefined,
-              isSelected ? styles.tabIconFilled : undefined,
-            ]}
-          />
-        ))}
-      </View>
-    );
-  }
-
-  return null;
+  return (
+    <View
+      style={[
+        styles.bottomTabIconFrame,
+        isSelected ? styles.bottomTabIconFrameSelected : undefined,
+      ]}
+    >
+      <Ionicons
+        color={isSelected ? '#f8fafc' : 'rgba(248, 250, 252, 0.58)'}
+        name={iconName}
+        size={22}
+      />
+    </View>
+  );
 }
 
 export function FlowPlaceholderTab({
@@ -759,10 +715,15 @@ export function VideoArchiveList({
                 : undefined,
             ]}
           >
-            <View style={styles.videoArchiveEmptyFrame}>
-              <View style={styles.videoArchiveEmptyFrameBar} />
-              <View style={styles.videoArchiveEmptyFrameBody} />
-            </View>
+            <Ionicons
+              color={
+                emptyStateCopy.showRetry
+                  ? 'rgba(251, 191, 36, 0.92)'
+                  : 'rgba(203, 213, 225, 0.72)'
+              }
+              name={emptyStateCopy.showRetry ? 'cloud-offline-outline' : 'film-outline'}
+              size={34}
+            />
           </View>
           {emptyStateCopy.showSpinner ? (
             <ActivityIndicator color="#9ca3af" />

@@ -178,6 +178,26 @@ at the app chrome and empty-state layer:
 Future UI polish may still introduce an icon package after explicit Founder
 approval, but P2 intentionally avoided package and design-system changes.
 
+Icon Library feasibility, completed 2026-06-30, resolved that follow-up:
+
+- ASJ uses `@expo/vector-icons` / Ionicons as the first icon-library path. It is
+  Expo-standard, compatible with the current SDK, and lower risk than adding
+  `lucide-react-native` for this stage.
+- The package is now an explicit dependency so future installs do not rely on a
+  transitive local install.
+- The first implementation scope is intentionally small: Bottom tabs, Home
+  upload CTA, Home account entry, Video empty/error cue, and Account Recovery
+  method cards.
+- Do not create a new ASJ brand symbol or recreate official Kakao branding.
+  Kakao can use a generic chat/recovery visual inside the Kakao-colored method
+  card.
+
+Light/Dark mode was investigated but deferred. The app still has broad
+hardcoded color usage across Home, Account Recovery, Detail, Upload, QA Debug,
+and debug surfaces. The safe next step is a small theme-token layer for
+background, surface, border, primary/secondary text, accent, success, warning,
+and error before attempting full Appearance / `useColorScheme` support.
+
 When a UI surface feels dense or confusing, first ask whether there is a
 validated app pattern that should be adapted before inventing a custom
 interaction. Prefer proven patterns adapted to ASJ over novelty for its own
