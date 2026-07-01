@@ -150,6 +150,15 @@ Latest product/UX direction update:
     Auth/user resolve and public user sync logic were not weakened; 0-record
     first-load cache-miss cost remains a known path for a separate security-aware
     review.
+  - Render deploy for the P1.6 server change has completed and production
+    `/health` returned HTTP 200. Since this is server-only, keep using Build 98
+    for real-device observation instead of creating a new EAS build. Next
+    session should start from the Founder-provided post-deploy captures/logs and
+    check whether repeated 7-record launches show
+    `thumbnailSignedUrlCacheHits` increasing and `thumbnailSignedUrlWallMs` /
+    `serverTotalMs` dropping. If yes, Startup Performance can pause before AI
+    Calibration. If not, inspect the remaining 0-record `resolveRequestUser`
+    cache-miss path separately.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

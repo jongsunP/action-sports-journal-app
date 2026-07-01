@@ -213,6 +213,18 @@ Startup Performance Optimization P1.6 implemented, 2026-07-01:
   P1.6. The observed 0-record first-load cost remains a known cache-miss path;
   do not optimize it by bypassing Supabase auth verification without a separate
   security review.
+- Render deployment for the P1.6 server change was confirmed by the Founder
+  after deploy completion. `/health` returned HTTP 200 in production. Because
+  P1.6 is server-side, no new EAS build is required to observe the effect:
+  continue using Build 98 and compare Render `[moments_timing]` rows for
+  repeated 7-record launches. Key fields are
+  `thumbnailSignedUrlCacheHits`, `thumbnailSignedUrlCacheMisses`,
+  `thumbnailSignedUrlWallMs`, `thumbnailSignedUrlMs`, and `serverTotalMs`.
+- Current next start point: wait for Founder real-use captures after the Render
+  P1.6 deploy. If repeated 7-record launches show cache hits and lower signed
+  URL wall time, Startup Performance can pause and the project can move toward
+  AI Calibration. If variance remains high, review the 0-record
+  `resolveRequestUser` cache-miss path separately with a security-aware plan.
 
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 

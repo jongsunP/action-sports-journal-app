@@ -464,14 +464,18 @@ Future Detail UX backlog:
   lazy/cache candidate as a short in-memory cache for `/api/moments` list
   thumbnails. Defaults are `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS=600000` and
   `THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES=1000`; the cache can be disabled with
-  TTL `0`. Next build QA should verify `thumbnailSignedUrlCacheHits`,
-  `thumbnailSignedUrlCacheMisses`, `thumbnailSignedUrlWallMs`,
-  `thumbnailSignedUrlMs`, and `serverTotalMs`.
+  TTL `0`. Render deployment for this server-side change has completed, so no
+  new EAS build is required to observe the effect. Continue using Build 98 and
+  verify `thumbnailSignedUrlCacheHits`, `thumbnailSignedUrlCacheMisses`,
+  `thumbnailSignedUrlWallMs`, `thumbnailSignedUrlMs`, and `serverTotalMs` from
+  Render `[moments_timing]` logs.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
-  deeper list/detail payload tuning, or first-paint state changes if Build QA
-  still shows high variance.
-- Next start point is Development Build / Local Build Workflow preparation to
-  reduce repeated EAS preview/internal build cost.
+  deeper list/detail payload tuning, first-paint state changes, or the
+  0-record `resolveRequestUser` cache-miss path if post-deploy captures still
+  show high variance.
+- Next start point is post-P1.6 Render timing review from Founder captures. If
+  that is stable enough, move to Development Build / Local Build Workflow or AI
+  Calibration depending on CTO/founder priority.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
   feel like a default placeholder. Do not reopen Push delivery, ownership, or
