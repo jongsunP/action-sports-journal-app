@@ -202,8 +202,9 @@ Latest product/UX direction update:
     but keeps the response shape. Boot sync, Video first page/pagination,
     refresh, and upload reconciliation lookup now request summary. Moment Detail
     still fetches full data through `GET /api/moments/:momentId` and uses the
-    detail thumbnail locally. This is client-visible and needs a new standalone
-    build for real-device QA; Build 98 remains compatible with the full default.
+    detail thumbnail locally. This client-visible change is now included in
+    Build 99 for real-device QA; Build 98 remains compatible with the full
+    default and can be used only as an older full-list comparison baseline.
   - Render deploy for the P1.6 server change has completed and production
     `/health` returned HTTP 200. Since this is server-only, keep using Build 98
     for real-device observation instead of creating a new EAS build. Next
