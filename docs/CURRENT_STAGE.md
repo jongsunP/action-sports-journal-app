@@ -319,6 +319,12 @@ Build 99 Startup Performance P2 summary-first boot QA build complete,
   - Moment Detail still loads full evidence and thumbnail through the detail
     endpoint.
   - Upload, Auth, Recovery, and AI flows have no regression.
+- Interim Founder observation: after installing Build 99 and connecting back to
+  the previous account from an anonymous state, boot speed felt significantly
+  faster. Previously visible list thumbnails were not visible in that state,
+  which is consistent with summary-first list responses omitting thumbnail
+  signed URLs. This is not yet a pass/fail decision; wait for the Founder to
+  provide the full capture set and matching Render timing rows.
 - Render deployment for the P1.6 server change was confirmed by the Founder
   after deploy completion. `/health` returned HTTP 200 in production. Because
   P1.6 is server-side, no new EAS build is required to observe the effect:

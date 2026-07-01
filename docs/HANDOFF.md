@@ -40,6 +40,12 @@ Latest product/UX direction update:
     AI Calibration. If long-idle first entry remains slow, inspect
     `resolveRequestUserMs`, `momentsQueryMs`, and network/app `apiMs` before
     adding thumbnail lazy endpoints or deeper list caching.
+  - Interim Founder note: after installing Build 99 and reconnecting to the
+    previous account from an anonymous state, boot felt significantly faster.
+    List thumbnails that were visible before did not appear, which is expected
+    for summary-first list responses because thumbnail signed URLs are skipped.
+    This should be judged with the later full capture set and Render timing rows,
+    not treated as the final QA result yet.
 
 - Build 94 Startup Performance Observability preview/internal build is complete.
   This is an observation build, not an optimization build. The next session
