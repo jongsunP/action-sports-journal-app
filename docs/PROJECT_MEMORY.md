@@ -399,6 +399,7 @@ Current stable workstream list:
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 앞으로도 유지해야 하는 제품 원칙
 - Email Recovery Fresh-link Recheck(이메일 복구 fresh link 재확인): Build 89에서 `parksunl77@daum.net`으로 메일 링크 클릭 -> ASJ 앱 복귀 -> 수동 갱신 없는 "복구 준비 완료" 표시 -> 앱 완전 종료 후 재실행 연결 상태 유지까지 성공. 현재-account Email Recovery Connection P1은 완료
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Founder가 별도로 말하기 전까지 유지. App Store / 실서비스 배포 직전에 숨김/제거 정책 적용
+- QA Debug Panel Observability Rule(QA 디버그 패널 관측성 원칙): 향후 성능/부팅/업로드/복구 QA에서 앱 화면에서 바로 판단해야 하는 non-secret 값은 가능하면 QA Debug Panel에 먼저 노출한다. Render 로그는 보조 확인 수단으로 두고, `view`, `serverTotalMs`, `evidenceQueryMs`, `thumbnailSignedUrlWallMs`, `cacheHit`, short request id처럼 민감정보가 아닌 값은 다음 관측성 작업 시 Panel 표시를 우선 검토한다. token, email, full user id, secret, full callback URL은 계속 표시 금지
 - Recovery Attempt Observability P1(복구 시도 관측성 1차): 완료. `recovery_attempts` SQL 파일, `POST /api/recovery-attempts` BFF endpoint, client `recordRecoveryAttempt()` helper, Kakao/Email 주요 started/succeeded/failed/cancelled/dismissed/blocked 이벤트 연결 완료. Migration 적용 완료, authenticated insert smoke 완료, 개인정보 redaction 및 no-token 401 확인 완료
 - Email Recovery Deep Link / Redirect Strategy(이메일 복구 딥링크 / 리다이렉트 전략)는 current-account email connection P1까지 구현 완료. 기존 기록 복구 sign-in은 별도 후속
 - Render / Supabase Plan Upgrade Check(Render / Supabase 플랜 업그레이드 검증)는 Render Web Service Starter 전환부터 완료했다. 목적은 고성능이 아니라 Free plan cold start 변수를 제거하고, 이후 AI Calibration 중 업로드/분석 지연이 앱/백엔드 문제인지 인프라 sleep 문제인지 분리하는 것이다. 2026-06-30 확인에서 production Render `/health`는 2회 연속 HTTP 200, 약 334ms -> 244ms였고, `ok=true`, `primaryProvider=gemini`, `geminiConfigured=true`, `mockAi.enabled=false`였다. 코드/env/buildNumber/DB/Auth/Supabase 변경은 없었다.
@@ -473,6 +474,7 @@ QA / 검증 대기:
 
 문서화 / 운영 전 정리:
 - QA Debug Panel Production Policy(QA 디버그 패널 정식 배포 전 숨김 / 제거 정책): Founder가 별도로 말하기 전까지 유지. App Store / 실서비스 배포 직전에 숨김/제거.
+- QA Debug Panel Observability Rule(QA 디버그 패널 관측성 원칙): 로그를 찾아야만 판단 가능한 상태를 줄이고, non-secret 서버/클라이언트 timing은 가능하면 QA Panel에 먼저 표시한다. 민감정보는 계속 금지.
 - Anonymous-first Guardrail(익명 사용자 우선 원칙 유지): 구현 과제가 아니라 계속 유지할 제품 원칙.
 - 사용자 직접 display_name 편집 기능 도입 시 Kakao metadata overwrite 정책 재검토.
 - Kakao display_name sync/fallback(카카오 이름 동기화 / fallback): 현재 범위 완료. 사용자 직접 이름 편집 도입 전까지 metadata 기반 동기화 유지.

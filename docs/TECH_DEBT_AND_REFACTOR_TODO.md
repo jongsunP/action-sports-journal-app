@@ -517,6 +517,11 @@ Future Detail UX backlog:
   `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, list
   placeholder quality, and Detail full evidence/thumbnail hydration before
   deciding whether more startup work is needed.
+- Future observability work should prefer QA Debug Panel over Render-log-only
+  checks whenever the values are non-secret and useful during device QA.
+  Candidate fields include request view, server total, evidence timing,
+  thumbnail signed URL wall time, cache hit/miss state, and short request ids.
+  Keep token, email, full user id, secrets, and full callback URLs out of the UI.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
   deeper list/detail payload tuning, first-paint state changes, or the
   0-record `resolveRequestUser` cache-miss path if post-deploy captures still
