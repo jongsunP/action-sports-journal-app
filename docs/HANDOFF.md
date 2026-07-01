@@ -140,6 +140,16 @@ Latest product/UX direction update:
     Next performance decision should compare `cacheHit`, `momentsQueryMs`,
     `evidenceQueryMs`, `thumbnailSignedUrlWallMs`, `responseBytes`,
     `normalizationMs`, and `serverTotalMs` for the captured request ids.
+  - Startup Performance Optimization P1.6 is implemented after reviewing those
+    Build 98 Render timing values. The lowest-risk fix was selected first:
+    `/api/moments` now caches thumbnail signed URLs in memory for a short TTL
+    keyed by storage bucket/path. Defaults are
+    `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS=600000` and
+    `THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES=1000`. Logs now include
+    `thumbnailSignedUrlCacheHits` and `thumbnailSignedUrlCacheMisses`.
+    Auth/user resolve and public user sync logic were not weakened; 0-record
+    first-load cache-miss cost remains a known path for a separate security-aware
+    review.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

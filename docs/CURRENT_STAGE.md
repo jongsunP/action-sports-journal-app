@@ -190,6 +190,30 @@ Startup Performance Optimization P1.5 implemented, 2026-07-01:
     `serverTotalMs`. The next P1.6 candidate should be selected from those
     values rather than guessed.
 
+Startup Performance Optimization P1.6 implemented, 2026-07-01:
+
+- Render `[moments_timing]` review after Build 98 showed two separate costs:
+  0-record accounts still spend time in authenticated user resolve / public
+  user mapping on cache misses, while 7-record accounts spend significant time
+  generating thumbnail signed URLs.
+- P1.6 applies the lowest-risk server-side fix first: a short in-memory cache
+  for thumbnail signed URLs keyed by storage bucket/path.
+- Defaults:
+  - `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS=600000` (10 minutes).
+  - `THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES=1000`.
+- The Supabase signed URL itself still expires according to the existing
+  24-hour signed URL expiry. The in-memory cache TTL is intentionally much
+  shorter and can be disabled with `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS=0`.
+- `/api/moments` timing logs now include
+  `thumbnailSignedUrlCacheHits` and `thumbnailSignedUrlCacheMisses`.
+- Auth/ownership behavior was not weakened. The list endpoint still resolves
+  the authenticated user and only lists Moments for that owner. Raw bearer
+  tokens, emails, full user ids, and signed URLs are not logged.
+- Request-user cache TTL and public user sync behavior were left unchanged in
+  P1.6. The observed 0-record first-load cost remains a known cache-miss path;
+  do not optimize it by bypassing Supabase auth verification without a separate
+  security review.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

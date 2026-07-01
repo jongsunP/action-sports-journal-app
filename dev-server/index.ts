@@ -83,6 +83,14 @@ const requestUserCacheMaxEntries = readNumberEnv(
   "REQUEST_USER_CACHE_MAX_ENTRIES",
   500,
 );
+const thumbnailSignedUrlCacheTtlMs = readNumberEnv(
+  "THUMBNAIL_SIGNED_URL_CACHE_TTL_MS",
+  10 * 60_000,
+);
+const thumbnailSignedUrlCacheMaxEntries = readNumberEnv(
+  "THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES",
+  1_000,
+);
 const geminiMaxOutputTokens = readNumberEnv("GEMINI_MAX_OUTPUT_TOKENS", 1_200);
 const geminiEvidenceMaxOutputTokens = readNumberEnv(
   "GEMINI_EVIDENCE_MAX_OUTPUT_TOKENS",
@@ -1557,6 +1565,11 @@ app.get("/api/moments", async (request, response) => {
     const includeThumbnailCount = pageMomentRows.filter((moment) =>
       Boolean(nullableString(moment.thumbnail_uri)),
     ).length;
+    const thumbnailSignedUrlCacheDiagnostics: ThumbnailSignedUrlCacheDiagnostics =
+      {
+        hits: 0,
+        misses: 0,
+      };
     const normalizationStartedAt = Date.now();
     const thumbnailSignedUrlWallStartedAt = Date.now();
     const responseMoments = await Promise.all(
@@ -1565,6 +1578,7 @@ app.get("/api/moments", async (request, response) => {
         const thumbnailUri = await resolveMomentThumbnailUri(
           client,
           moment.thumbnail_uri,
+          thumbnailSignedUrlCacheDiagnostics,
         );
         thumbnailSignedUrlMs += Date.now() - thumbnailStartedAt;
 
@@ -1616,6 +1630,8 @@ app.get("/api/moments", async (request, response) => {
       serverTotalMs,
       staleCleanupMs,
       staleCleanupBlocking: false,
+      thumbnailSignedUrlCacheHits: thumbnailSignedUrlCacheDiagnostics.hits,
+      thumbnailSignedUrlCacheMisses: thumbnailSignedUrlCacheDiagnostics.misses,
       thumbnailSignedUrlMs,
       thumbnailSignedUrlWallMs,
       totalMs: serverTotalMs,
@@ -7185,6 +7201,11 @@ type CachedResolvedRequestUser = {
   userId: string;
 };
 
+type CachedThumbnailSignedUrl = {
+  expiresAt: number;
+  signedUrl: string;
+};
+
 type RequestUserTimingDiagnostics = {
   authGetUserMs?: number;
   cacheHit?: boolean;
@@ -7192,7 +7213,13 @@ type RequestUserTimingDiagnostics = {
   publicUserUpsertOrSyncMs?: number;
 };
 
+type ThumbnailSignedUrlCacheDiagnostics = {
+  hits: number;
+  misses: number;
+};
+
 const resolvedRequestUserCache = new Map<string, CachedResolvedRequestUser>();
+const thumbnailSignedUrlCache = new Map<string, CachedThumbnailSignedUrl>();
 
 class AuthRequiredRequestError extends Error {
   constructor(message = "Authentication is required for this request.") {
@@ -7836,6 +7863,7 @@ function isUserOwnedStoragePath(path: string, userId: string) {
 async function resolveMomentThumbnailUri(
   client: SupabaseServerClient,
   value: unknown,
+  diagnostics?: ThumbnailSignedUrlCacheDiagnostics,
 ) {
   const thumbnailUri = nullableString(value);
 
@@ -7849,6 +7877,15 @@ async function resolveMomentThumbnailUri(
     return thumbnailUri;
   }
 
+  const cacheKey = buildThumbnailSignedUrlCacheKey(storageReference);
+  const cachedSignedUrl = readThumbnailSignedUrlCache(cacheKey);
+
+  if (cachedSignedUrl) {
+    diagnostics && (diagnostics.hits += 1);
+    return cachedSignedUrl;
+  }
+
+  diagnostics && (diagnostics.misses += 1);
   const { data, error } = await client.storage
     .from(storageReference.bucket)
     .createSignedUrl(
@@ -7861,7 +7898,73 @@ async function resolveMomentThumbnailUri(
     return null;
   }
 
-  return nullableString(data?.signedUrl);
+  const signedUrl = nullableString(data?.signedUrl);
+
+  if (signedUrl) {
+    writeThumbnailSignedUrlCache(cacheKey, signedUrl);
+  }
+
+  return signedUrl;
+}
+
+function buildThumbnailSignedUrlCacheKey({
+  bucket,
+  path,
+}: {
+  bucket: string;
+  path: string;
+}) {
+  return `${bucket}:${path}`;
+}
+
+function readThumbnailSignedUrlCache(key: string) {
+  const cachedThumbnail = thumbnailSignedUrlCache.get(key);
+
+  if (!cachedThumbnail) {
+    return null;
+  }
+
+  if (cachedThumbnail.expiresAt <= Date.now()) {
+    thumbnailSignedUrlCache.delete(key);
+    return null;
+  }
+
+  return cachedThumbnail.signedUrl;
+}
+
+function writeThumbnailSignedUrlCache(key: string, signedUrl: string) {
+  if (thumbnailSignedUrlCacheTtlMs <= 0) {
+    return;
+  }
+
+  thumbnailSignedUrlCache.set(key, {
+    expiresAt: Date.now() + thumbnailSignedUrlCacheTtlMs,
+    signedUrl,
+  });
+  pruneThumbnailSignedUrlCache();
+}
+
+function pruneThumbnailSignedUrlCache() {
+  const now = Date.now();
+
+  for (const [key, cachedThumbnail] of thumbnailSignedUrlCache) {
+    if (cachedThumbnail.expiresAt <= now) {
+      thumbnailSignedUrlCache.delete(key);
+    }
+  }
+
+  if (thumbnailSignedUrlCache.size <= thumbnailSignedUrlCacheMaxEntries) {
+    return;
+  }
+
+  const keysToDelete = Array.from(thumbnailSignedUrlCache.keys()).slice(
+    0,
+    thumbnailSignedUrlCache.size - thumbnailSignedUrlCacheMaxEntries,
+  );
+
+  for (const key of keysToDelete) {
+    thumbnailSignedUrlCache.delete(key);
+  }
 }
 
 function buildSupabaseThumbnailReference({

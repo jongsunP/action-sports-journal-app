@@ -460,8 +460,16 @@ Future Detail UX backlog:
   Before implementing P1.6, inspect `[moments_timing]` by request id and choose
   from: thumbnail signed URL lazy/cache, list endpoint cache improvement,
   further list/detail payload tuning, or first-paint state changes.
-- Remaining performance candidates after P1.5: thumbnail signed URL lazy/cache
-  and deeper list/detail payload tuning if Build QA still shows high variance.
+- Startup Performance Optimization P1.6 implements the thumbnail signed URL
+  lazy/cache candidate as a short in-memory cache for `/api/moments` list
+  thumbnails. Defaults are `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS=600000` and
+  `THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES=1000`; the cache can be disabled with
+  TTL `0`. Next build QA should verify `thumbnailSignedUrlCacheHits`,
+  `thumbnailSignedUrlCacheMisses`, `thumbnailSignedUrlWallMs`,
+  `thumbnailSignedUrlMs`, and `serverTotalMs`.
+- Remaining performance candidates after P1.6: list endpoint cache improvement,
+  deeper list/detail payload tuning, or first-paint state changes if Build QA
+  still shows high variance.
 - Next start point is Development Build / Local Build Workflow preparation to
   reduce repeated EAS preview/internal build cost.
 - Push Notification Icon Polish is a later visual polish item. It should check
