@@ -128,6 +128,18 @@ Latest product/UX direction update:
       If results are enough, Startup Performance optimization can pause; if
       not, move into Development Build / Local Build Workflow before deeper
       tuning.
+  - Build 98 boot / Video readiness QA result has been reviewed. The app is
+    improved versus the earlier pre-Build 96/97 baseline, but long-idle first
+    access remains slower than repeated access. 0-record anonymous captures
+    ranged from about server `3053ms` on the first case down to `681-1715ms`
+    later. The 7-record recovered account varied more: Boot / Video api about
+    `1449-5273ms`, serverTotalMs about `1162-3545ms`. `source boot reuse` is
+    visible and duplicate blocking sometimes fires, so fetch reuse/dup guards
+    are working; the remaining bottleneck should be diagnosed through Render
+    `[moments_timing]` fields rather than treated as Render cold start alone.
+    Next performance decision should compare `cacheHit`, `momentsQueryMs`,
+    `evidenceQueryMs`, `thumbnailSignedUrlWallMs`, `responseBytes`,
+    `normalizationMs`, and `serverTotalMs` for the captured request ids.
 
 - Build 93 EAS preview/internal build is complete and Founder multi-day
   real-device QA feedback is pending. Do not mark Build 93 passed until the

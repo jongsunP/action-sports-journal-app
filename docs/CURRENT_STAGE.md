@@ -169,6 +169,26 @@ Startup Performance Optimization P1.5 implemented, 2026-07-01:
     `staleCleanupBlocking`, `evidenceQueryMs`, `normalizationMs`,
     `thumbnailSignedUrlWallMs`; then check Detail `detailFetchMs`,
     `detailServerTotalMs`, `detailRequestId`, and `detailResponseBytes`.
+- Build 98 boot / Video readiness QA result:
+  - Overall feel is improved versus pre-Build 96/97, but variance remains
+    between long-idle first access and repeated access.
+  - 0-record anonymous account: first captured case was about Boot `3523ms`,
+    Video api `3523ms`, server `3053ms`; later repeated captures dropped to
+    about Boot `1004-2092ms`, server `681-1715ms`.
+  - 7-record recovered account: Boot / Video api varied about `1449-5273ms`,
+    while `serverTotalMs` varied about `1162-3545ms`.
+  - `source boot reuse` is visible, so the boot first page reuse path is
+    working. `dupBlocked` is mostly `N` with some `Y`, so duplicate guards are
+    active but not the main remaining latency source.
+  - Because app api time is generally close to server total time, the remaining
+    issue is more likely server/Supabase/Auth/Storage/list payload path than
+    client normalization/render alone. Render Starter removed the free sleep
+    variable, but it does not make the path constant.
+  - Next investigation should compare Render `[moments_timing]` fields for the
+    same request id: `cacheHit`, `momentsQueryMs`, `evidenceQueryMs`,
+    `thumbnailSignedUrlWallMs`, `responseBytes`, `normalizationMs`, and
+    `serverTotalMs`. The next P1.6 candidate should be selected from those
+    values rather than guessed.
 
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 

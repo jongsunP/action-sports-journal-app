@@ -450,6 +450,16 @@ Future Detail UX backlog:
   `506cf961-45d7-4e26-ac47-f3106ca1ec7f`. Next start point is P1.5 payload
   optimization QA result review: compare list `responseBytes`/`serverTotalMs`
   with Build 97 and confirm Detail fetch diagnostics are not a new bottleneck.
+- Build 98 boot / Video readiness QA confirmed improvement versus the pre-Build
+  96/97 baseline, but not a flat latency profile. Long-idle first access remains
+  slower than repeated access. 0-record anonymous captures ranged from about
+  server `3053ms` down to `681-1715ms`; 7-record recovered captures varied about
+  serverTotalMs `1162-3545ms` and app Boot / Video api `1449-5273ms`. Since app
+  api time is generally close to server total time and boot reuse is visible,
+  do not treat this as a pure client render issue or pure Render cold start.
+  Before implementing P1.6, inspect `[moments_timing]` by request id and choose
+  from: thumbnail signed URL lazy/cache, list endpoint cache improvement,
+  further list/detail payload tuning, or first-paint state changes.
 - Remaining performance candidates after P1.5: thumbnail signed URL lazy/cache
   and deeper list/detail payload tuning if Build QA still shows high variance.
 - Next start point is Development Build / Local Build Workflow preparation to
