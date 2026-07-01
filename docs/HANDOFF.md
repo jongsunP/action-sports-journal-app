@@ -18,6 +18,29 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 99 Startup Performance P2 summary-first boot QA build is complete.
+  Founder real-device QA is pending; do not mark P2 passed until the installed
+  build is tested.
+  - Build prep commit: `18340e9 chore: prepare summary boot qa build`.
+  - Base implementation commit: `918e7a0 feat: add summary-first moment boot`.
+  - iOS buildNumber: `99`.
+  - EAS Build ID: `ae567786-f3c7-4aa3-913d-4af033b1d4fd`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/ae567786-f3c7-4aa3-913d-4af033b1d4fd`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/WoQMHBQB1QgD6w96ASPCNzqWRMypwtBWJ1X0OVB22MU.ipa`.
+  - QA purpose: verify that boot and Video list requests use summary-first
+    `/api/moments?view=summary`, that Render `[moments_timing]` shows
+    `view=summary`, `evidenceQueryMs=0`, and `thumbnailSignedUrlWallMs=0` for
+    summary requests, and that Detail still fetches full evidence/thumbnail on
+    entry.
+  - Current next start point: collect Build 99 real-device QA screenshots plus
+    matching Render `[moments_timing]` rows. If Home/Video first paint improves
+    and Detail still hydrates correctly, Startup Performance can pause before
+    AI Calibration. If long-idle first entry remains slow, inspect
+    `resolveRequestUserMs`, `momentsQueryMs`, and network/app `apiMs` before
+    adding thumbnail lazy endpoints or deeper list caching.
+
 - Build 94 Startup Performance Observability preview/internal build is complete.
   This is an observation build, not an optimization build. The next session
   should start by collecting a few days of Founder QA Debug screenshots and

@@ -292,8 +292,33 @@ Startup Performance P2 summary-first boot implemented, 2026-07-01:
   summary-first list does not permanently remove the Detail thumbnail.
 - Auth verification, ownership filtering, no-token/default-user policy,
   DB schema, Storage, Upload, Recovery, and AI behavior are unchanged.
-- This client-visible startup change needs the next standalone build before
-  real-device QA. Server default full mode can still be observed by older builds.
+- This client-visible startup change required a new standalone build before
+  real-device QA. Build 99 is that QA build. Server default full mode can still
+  be observed by older builds.
+
+Build 99 Startup Performance P2 summary-first boot QA build complete,
+2026-07-01:
+
+- Build prep commit is `18340e9 chore: prepare summary boot qa build`.
+- Base implementation commit is `918e7a0 feat: add summary-first moment boot`.
+- iOS buildNumber is `99`.
+- EAS Build ID is `ae567786-f3c7-4aa3-913d-4af033b1d4fd`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/ae567786-f3c7-4aa3-913d-4af033b1d4fd`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/WoQMHBQB1QgD6w96ASPCNzqWRMypwtBWJ1X0OVB22MU.ipa`.
+- Founder real-device QA is pending. Do not mark P2 passed until the installed
+  build confirms boot/Video summary behavior and Detail full-data hydration.
+- Build 99 QA should check:
+  - First launch / long-idle Home boot speed.
+  - QA Debug Panel API time.
+  - Render `[moments_timing]` includes `view=summary`.
+  - Summary requests show `evidenceQueryMs=0`.
+  - Summary requests show `thumbnailSignedUrlWallMs=0`.
+  - Home / Video list remains usable without immediate thumbnails.
+  - Moment Detail still loads full evidence and thumbnail through the detail
+    endpoint.
+  - Upload, Auth, Recovery, and AI flows have no regression.
 - Render deployment for the P1.6 server change was confirmed by the Founder
   after deploy completion. `/health` returned HTTP 200 in production. Because
   P1.6 is server-side, no new EAS build is required to observe the effect:

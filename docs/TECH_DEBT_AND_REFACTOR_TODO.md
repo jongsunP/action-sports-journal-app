@@ -509,6 +509,14 @@ Future Detail UX backlog:
   thumbnail through `GET /api/moments/:momentId`. If P2 still feels slow, the
   next candidate is a dedicated thumbnail lazy endpoint or visible-row thumbnail
   fetch, not weakening auth.
+- Build 99 is the current Startup Performance P2 summary-first QA build.
+  Build prep commit: `18340e9`; base implementation commit: `918e7a0`; iOS
+  buildNumber: `99`; EAS Build ID:
+  `ae567786-f3c7-4aa3-913d-4af033b1d4fd`. Founder QA is pending. Check
+  long-idle first entry, QA Debug API time, Render `[moments_timing]`
+  `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, list
+  placeholder quality, and Detail full evidence/thumbnail hydration before
+  deciding whether more startup work is needed.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
   deeper list/detail payload tuning, first-paint state changes, or the
   0-record `resolveRequestUser` cache-miss path if post-deploy captures still
