@@ -165,6 +165,14 @@ Latest product/UX direction update:
     behavior is unchanged, and owner filtering is unchanged. After Render
     deploy, keep using Build 98 and confirm `/health.performanceCaches` plus
     Render `[moments_timing]` cache-hit rates.
+  - Startup Performance Optimization P1.9 is implemented as a server-only cold
+    path reduction. It keeps Supabase `auth.getUser()` verification, then caches
+    the verified `authUserId -> public.users.id` mapping for 30 minutes, defers
+    existing profile sync, and runs evidence lookup plus thumbnail signed URL
+    generation in parallel. New timing fields are `authUserPublicUserCacheHit`,
+    `publicUserSyncAction`, and `evidenceIdsCount`. No Auth/Recovery/Upload/AI
+    behavior, no-token policy, owner filtering, DB schema, API contract, EAS
+    build, or buildNumber changed.
   - Render deploy for the P1.6 server change has completed and production
     `/health` returned HTTP 200. Since this is server-only, keep using Build 98
     for real-device observation instead of creating a new EAS build. Next

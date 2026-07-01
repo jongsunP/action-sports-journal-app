@@ -1521,21 +1521,41 @@ app.get("/api/moments", async (request, response) => {
     const momentRows = (moments ?? []) as unknown as Array<
       Record<string, unknown>
     >;
-    const evidenceResultIds = momentRows
+    const visibleMomentRows = momentRows.filter(
+      (moment) => !isIncompleteQueuedMomentListRow(moment),
+    );
+    const pageMomentRows = visibleMomentRows.slice(0, limit);
+    const hasMoreRows = momentRows.length > limit || visibleMomentRows.length > limit;
+    const nextCursor =
+      hasMoreRows && pageMomentRows.length > 0
+        ? encodeMomentCursor(pageMomentRows[pageMomentRows.length - 1])
+        : null;
+    const includeThumbnailCount = pageMomentRows.filter((moment) =>
+      Boolean(nullableString(moment.thumbnail_uri)),
+    ).length;
+    const thumbnailSignedUrlCacheDiagnostics: ThumbnailSignedUrlCacheDiagnostics =
+      {
+        hits: 0,
+        misses: 0,
+      };
+    const evidenceResultIds = pageMomentRows
       .map((moment) => moment.latest_evidence_result_id)
       .filter((value): value is string => typeof value === "string");
-    const evidenceResultsById = new Map<string, Record<string, unknown>>();
-    let evidenceQueryMs = 0;
+    const evidenceResultsPromise = (async () => {
+      const evidenceResultsById = new Map<string, Record<string, unknown>>();
 
-    if (evidenceResultIds.length > 0) {
+      if (evidenceResultIds.length === 0) {
+        return {
+          evidenceQueryMs: 0,
+          evidenceResultsById,
+        };
+      }
+
       const evidenceQueryStartedAt = Date.now();
-      const evidenceResultsQuery = await client
+      const { data: evidenceResults, error: evidenceResultsError } = await client
         .from("evidence_results")
         .select(compactEvidenceResultColumns.join(","))
         .in("id", evidenceResultIds);
-
-      const { data: evidenceResults, error: evidenceResultsError } =
-        evidenceResultsQuery;
 
       if (evidenceResultsError) {
         throw new Error(
@@ -1549,61 +1569,62 @@ app.get("/api/moments", async (request, response) => {
 
       for (const evidenceResult of evidenceResultRows) {
         if (typeof evidenceResult.id === "string") {
-          evidenceResultsById.set(
-            evidenceResult.id,
-            evidenceResult,
-          );
+          evidenceResultsById.set(evidenceResult.id, evidenceResult);
         }
       }
-      evidenceQueryMs = Date.now() - evidenceQueryStartedAt;
-    }
 
-    const visibleMomentRows = momentRows.filter(
-      (moment) => !isIncompleteQueuedMomentListRow(moment),
-    );
-    const pageMomentRows = visibleMomentRows.slice(0, limit);
-    const hasMoreRows = momentRows.length > limit || visibleMomentRows.length > limit;
-    const nextCursor =
-      hasMoreRows && pageMomentRows.length > 0
-        ? encodeMomentCursor(pageMomentRows[pageMomentRows.length - 1])
-        : null;
-    let thumbnailSignedUrlMs = 0;
-    const includeThumbnailCount = pageMomentRows.filter((moment) =>
-      Boolean(nullableString(moment.thumbnail_uri)),
-    ).length;
-    const thumbnailSignedUrlCacheDiagnostics: ThumbnailSignedUrlCacheDiagnostics =
-      {
-        hits: 0,
-        misses: 0,
+      return {
+        evidenceQueryMs: Date.now() - evidenceQueryStartedAt,
+        evidenceResultsById,
       };
-    const normalizationStartedAt = Date.now();
-    const thumbnailSignedUrlWallStartedAt = Date.now();
-    const responseMoments = await Promise.all(
-      pageMomentRows.map(async (moment) => {
-        const thumbnailStartedAt = Date.now();
-        const thumbnailUri = await resolveMomentThumbnailUri(
-          client,
-          moment.thumbnail_uri,
-          thumbnailSignedUrlCacheDiagnostics,
-        );
-        thumbnailSignedUrlMs += Date.now() - thumbnailStartedAt;
+    })();
+    const thumbnailSignedUrlsPromise = (async () => {
+      const thumbnailSignedUrlWallStartedAt = Date.now();
+      let thumbnailSignedUrlMs = 0;
+      const thumbnailUris = await Promise.all(
+        pageMomentRows.map(async (moment) => {
+          const thumbnailStartedAt = Date.now();
+          const thumbnailUri = await resolveMomentThumbnailUri(
+            client,
+            moment.thumbnail_uri,
+            thumbnailSignedUrlCacheDiagnostics,
+          );
+          thumbnailSignedUrlMs += Date.now() - thumbnailStartedAt;
+          return thumbnailUri;
+        }),
+      );
 
-        return buildMomentResponsePayload({
-          evidenceResult:
-            typeof moment.latest_evidence_result_id === "string"
-              ? sanitizeEvidenceResultForMomentList(
-                  evidenceResultsById.get(moment.latest_evidence_result_id),
-                )
-              : null,
-          moment,
-          thumbnailUri,
-        });
+
+      return {
+        thumbnailSignedUrlMs,
+        thumbnailSignedUrlWallMs:
+          pageMomentRows.length > 0
+            ? Date.now() - thumbnailSignedUrlWallStartedAt
+            : 0,
+        thumbnailUris,
+      };
+    })();
+    const [
+      { evidenceQueryMs, evidenceResultsById },
+      {
+        thumbnailSignedUrlMs,
+        thumbnailSignedUrlWallMs,
+        thumbnailUris,
+      },
+    ] = await Promise.all([evidenceResultsPromise, thumbnailSignedUrlsPromise]);
+    const normalizationStartedAt = Date.now();
+    const responseMoments = pageMomentRows.map((moment, index) =>
+      buildMomentResponsePayload({
+        evidenceResult:
+          typeof moment.latest_evidence_result_id === "string"
+            ? sanitizeEvidenceResultForMomentList(
+                evidenceResultsById.get(moment.latest_evidence_result_id),
+              )
+            : null,
+        moment,
+        thumbnailUri: thumbnailUris[index] ?? null,
       }),
     );
-    const thumbnailSignedUrlWallMs =
-      pageMomentRows.length > 0
-        ? Date.now() - thumbnailSignedUrlWallStartedAt
-        : 0;
     const normalizationMs = Date.now() - normalizationStartedAt;
     const responseBody = {
       hasMore: Boolean(nextCursor),
@@ -1618,8 +1639,11 @@ app.get("/api/moments", async (request, response) => {
 
     console.info("[moments_timing]", {
       authGetUserMs: requestUserTiming.authGetUserMs ?? null,
+      authUserPublicUserCacheHit:
+        requestUserTiming.authUserPublicUserCacheHit ?? null,
       cacheHit: requestUserTiming.cacheHit === true,
       event: "moments_list_completed",
+      evidenceIdsCount: evidenceResultIds.length,
       evidenceQueryMs,
       includeEvidenceCount: evidenceResultsById.size,
       includeThumbnailCount,
@@ -1628,6 +1652,7 @@ app.get("/api/moments", async (request, response) => {
       momentsQueryMs,
       normalizationMs,
       publicUserLookupMs: requestUserTiming.publicUserLookupMs ?? null,
+      publicUserSyncAction: requestUserTiming.publicUserSyncAction ?? null,
       publicUserUpsertOrSyncMs:
         requestUserTiming.publicUserUpsertOrSyncMs ?? null,
       requestId,
@@ -7201,8 +7226,13 @@ type ResolvedRequestUser = {
 
 type CachedResolvedRequestUser = {
   authUserId: string;
-  displayName: string | null;
-  email: string | null;
+  expiresAt: number;
+  userId: string;
+};
+
+type CachedPublicUserForAuthUser = {
+  displayNameHash: string | null;
+  emailHash: string | null;
   expiresAt: number;
   userId: string;
 };
@@ -7212,9 +7242,13 @@ type CachedThumbnailSignedUrl = {
   signedUrl: string;
 };
 
+type PublicUserSyncAction = "none" | "insert" | "deferred";
+
 type RequestUserTimingDiagnostics = {
+  authUserPublicUserCacheHit?: boolean;
   authGetUserMs?: number;
   cacheHit?: boolean;
+  publicUserSyncAction?: PublicUserSyncAction;
   publicUserLookupMs?: number;
   publicUserUpsertOrSyncMs?: number;
 };
@@ -7225,6 +7259,10 @@ type ThumbnailSignedUrlCacheDiagnostics = {
 };
 
 const resolvedRequestUserCache = new Map<string, CachedResolvedRequestUser>();
+const resolvedPublicUserByAuthUserCache = new Map<
+  string,
+  CachedPublicUserForAuthUser
+>();
 const thumbnailSignedUrlCache = new Map<string, CachedThumbnailSignedUrl>();
 
 class AuthRequiredRequestError extends Error {
@@ -7283,9 +7321,13 @@ async function resolveRequestUser(
     options.timing &&
       (options.timing.cacheHit = true);
     options.timing &&
+      (options.timing.authUserPublicUserCacheHit = true);
+    options.timing &&
       (options.timing.publicUserLookupMs = 0);
     options.timing &&
       (options.timing.publicUserUpsertOrSyncMs = 0);
+    options.timing &&
+      (options.timing.publicUserSyncAction = "none");
     logResolvedRequestUser({
       authMode: "authenticated",
       authUserId: cachedUser.authUserId,
@@ -7327,6 +7369,74 @@ async function resolveRequestUser(
     readStringUserMetadata(authData.user.user_metadata?.user_name) ??
     email;
   const now = new Date().toISOString();
+  const desiredEmailHash = hashProfileValueForCache(email);
+  const desiredDisplayNameHash = hashProfileValueForCache(displayName);
+  const cachedPublicUser = readResolvedPublicUserByAuthUserCache(authUserId);
+
+  if (cachedPublicUser) {
+    const nextProfilePatch: {
+      display_name?: string | null;
+      email?: string | null;
+      updated_at: string;
+    } = {
+      updated_at: now,
+    };
+
+    if (email && cachedPublicUser.emailHash !== desiredEmailHash) {
+      nextProfilePatch.email = email;
+    }
+
+    if (
+      displayName &&
+      cachedPublicUser.displayNameHash !== desiredDisplayNameHash
+    ) {
+      nextProfilePatch.display_name = displayName;
+    }
+
+    const shouldSyncProfile = Object.keys(nextProfilePatch).length > 1;
+
+    if (shouldSyncProfile) {
+      deferPublicUserProfileSync({
+        client,
+        patch: nextProfilePatch,
+        userId: cachedPublicUser.userId,
+      });
+    }
+
+    options.timing &&
+      (options.timing.authUserPublicUserCacheHit = true);
+    options.timing &&
+      (options.timing.publicUserLookupMs = 0);
+    options.timing &&
+      (options.timing.publicUserUpsertOrSyncMs = 0);
+    options.timing &&
+      (options.timing.publicUserSyncAction = shouldSyncProfile
+        ? "deferred"
+        : "none");
+    logResolvedRequestUser({
+      authMode: "authenticated",
+      authUserId,
+      route: request.path,
+      userId: cachedPublicUser.userId,
+    });
+    writeResolvedRequestUserCache(cacheKey, {
+      authUserId,
+      userId: cachedPublicUser.userId,
+    });
+    writeResolvedPublicUserByAuthUserCache(authUserId, {
+      displayNameHash: desiredDisplayNameHash,
+      emailHash: desiredEmailHash,
+      userId: cachedPublicUser.userId,
+    });
+    return {
+      authMode: "authenticated",
+      authUserId,
+      userId: cachedPublicUser.userId,
+    };
+  }
+
+  options.timing &&
+    (options.timing.authUserPublicUserCacheHit = false);
   const publicUserLookupStartedAt = Date.now();
   const { data: existingUser, error: selectError } = await client
     .from("users")
@@ -7363,23 +7473,23 @@ async function resolveRequestUser(
     }
 
     if (Object.keys(nextProfilePatch).length > 0) {
-      const publicUserSyncStartedAt = Date.now();
-      const { error: updateError } = await client
-        .from("users")
-        .update({
+      deferPublicUserProfileSync({
+        client,
+        patch: {
           ...nextProfilePatch,
           updated_at: now,
-        })
-        .eq("id", existingUser.id as string);
+        },
+        userId: existingUser.id as string,
+      });
       options.timing &&
-        (options.timing.publicUserUpsertOrSyncMs =
-          Date.now() - publicUserSyncStartedAt);
-
-      if (updateError) {
-        throw new Error(
-          `Failed to sync auth user profile: ${updateError.message}`,
-        );
-      }
+        (options.timing.publicUserUpsertOrSyncMs = 0);
+      options.timing &&
+        (options.timing.publicUserSyncAction = "deferred");
+    } else {
+      options.timing &&
+        (options.timing.publicUserUpsertOrSyncMs = 0);
+      options.timing &&
+        (options.timing.publicUserSyncAction = "none");
     }
 
     logResolvedRequestUser({
@@ -7390,8 +7500,11 @@ async function resolveRequestUser(
     });
     writeResolvedRequestUserCache(cacheKey, {
       authUserId,
-      displayName,
-      email,
+      userId: existingUser.id as string,
+    });
+    writeResolvedPublicUserByAuthUserCache(authUserId, {
+      displayNameHash: desiredDisplayNameHash,
+      emailHash: desiredEmailHash,
       userId: existingUser.id as string,
     });
     return {
@@ -7416,6 +7529,8 @@ async function resolveRequestUser(
   options.timing &&
     (options.timing.publicUserUpsertOrSyncMs =
       Date.now() - publicUserInsertStartedAt);
+  options.timing &&
+    (options.timing.publicUserSyncAction = "insert");
 
   if (insertError || !insertedUser?.id) {
     throw new Error(
@@ -7431,8 +7546,11 @@ async function resolveRequestUser(
   });
   writeResolvedRequestUserCache(cacheKey, {
     authUserId,
-    displayName,
-    email,
+    userId: insertedUser.id as string,
+  });
+  writeResolvedPublicUserByAuthUserCache(authUserId, {
+    displayNameHash: desiredDisplayNameHash,
+    emailHash: desiredEmailHash,
     userId: insertedUser.id as string,
   });
   return {
@@ -7457,6 +7575,10 @@ function hashBearerTokenForRequestUserCache(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function hashProfileValueForCache(value: string | null) {
+  return value ? createHash("sha256").update(value).digest("hex") : null;
+}
+
 function readResolvedRequestUserCache(key: string) {
   const cachedUser = resolvedRequestUserCache.get(key);
 
@@ -7466,6 +7588,21 @@ function readResolvedRequestUserCache(key: string) {
 
   if (cachedUser.expiresAt <= Date.now()) {
     resolvedRequestUserCache.delete(key);
+    return null;
+  }
+
+  return cachedUser;
+}
+
+function readResolvedPublicUserByAuthUserCache(authUserId: string) {
+  const cachedUser = resolvedPublicUserByAuthUserCache.get(authUserId);
+
+  if (!cachedUser) {
+    return null;
+  }
+
+  if (cachedUser.expiresAt <= Date.now()) {
+    resolvedPublicUserByAuthUserCache.delete(authUserId);
     return null;
   }
 
@@ -7487,6 +7624,21 @@ function writeResolvedRequestUserCache(
   pruneResolvedRequestUserCache();
 }
 
+function writeResolvedPublicUserByAuthUserCache(
+  authUserId: string,
+  user: Omit<CachedPublicUserForAuthUser, "expiresAt">,
+) {
+  if (requestUserCacheTtlMs <= 0) {
+    return;
+  }
+
+  resolvedPublicUserByAuthUserCache.set(authUserId, {
+    ...user,
+    expiresAt: Date.now() + requestUserCacheTtlMs,
+  });
+  pruneResolvedPublicUserByAuthUserCache();
+}
+
 function pruneResolvedRequestUserCache() {
   const now = Date.now();
 
@@ -7505,6 +7657,55 @@ function pruneResolvedRequestUserCache() {
 
     resolvedRequestUserCache.delete(oldestKey);
   }
+}
+
+function pruneResolvedPublicUserByAuthUserCache() {
+  const now = Date.now();
+
+  for (const [key, cachedUser] of resolvedPublicUserByAuthUserCache) {
+    if (cachedUser.expiresAt <= now) {
+      resolvedPublicUserByAuthUserCache.delete(key);
+    }
+  }
+
+  while (resolvedPublicUserByAuthUserCache.size > requestUserCacheMaxEntries) {
+    const oldestKey = resolvedPublicUserByAuthUserCache.keys().next().value;
+
+    if (typeof oldestKey !== "string") {
+      return;
+    }
+
+    resolvedPublicUserByAuthUserCache.delete(oldestKey);
+  }
+}
+
+function deferPublicUserProfileSync({
+  client,
+  patch,
+  userId,
+}: {
+  client: SupabaseServerClient;
+  patch: {
+    display_name?: string | null;
+    email?: string | null;
+    updated_at: string;
+  };
+  userId: string;
+}) {
+  setTimeout(() => {
+    void client
+      .from("users")
+      .update(patch)
+      .eq("id", userId)
+      .then(({ error }) => {
+        if (error) {
+          console.warn("[auth]", {
+            event: "deferred_public_user_profile_sync_failed",
+            reason: error.message,
+          });
+        }
+      });
+  }, 0);
 }
 
 function maskExpoPushToken(token: string) {
@@ -7665,12 +7866,20 @@ function logResolvedRequestUser({
 }: ResolvedRequestUser & { fallbackAllowed?: boolean; route: string }) {
   console.info("[auth]", {
     authMode,
-    authUserId,
+    authUserId: maskIdentifierForLog(authUserId),
     event: "resolved_request_user",
     fallbackAllowed,
     route,
-    userId,
+    userId: maskIdentifierForLog(userId),
   });
+}
+
+function maskIdentifierForLog(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  return `${value.slice(0, 8)}...`;
 }
 
 function sendAuthRequiredResponse(

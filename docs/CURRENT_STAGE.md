@@ -257,6 +257,26 @@ Startup Performance Optimization P1.8 implemented, 2026-07-01:
   `performanceCaches.thumbnailSignedUrlCacheTtlMs=1800000` after Render deploy.
 - Because this is server-side only, keep using Build 98 for real-device
   observation after Render deploy. No EAS build or buildNumber change is needed.
+
+Startup Performance Optimization P1.9 implemented, 2026-07-01:
+
+- P1.9 does not remove Supabase `auth.getUser()` verification and does not
+  replace it with local JWT verification. The goal is to reduce cold-path cost
+  after the bearer token has already been verified.
+- Added a 30-minute in-memory cache from verified `authUserId` to the resolved
+  `public.users.id`. This reduces repeated `public.users` lookup cost when the
+  access token hash cache misses but the Auth user is the same.
+- Existing public user profile sync (`display_name` / `email`) is now deferred
+  after userId resolution. New `public.users` inserts remain blocking because
+  the owner `userId` must exist before returning data.
+- `/api/moments` now runs compact evidence lookup and thumbnail signed URL
+  generation in parallel after the moments query. Response shape and client UI
+  are unchanged.
+- Timing logs add non-secret fields: `authUserPublicUserCacheHit`,
+  `publicUserSyncAction`, and `evidenceIdsCount`. Existing timing fields remain.
+- Auth, Recovery, Upload, Storage, AI, no-token/default-user policy, and
+  ownership filtering are unchanged. Build 98 can keep observing this after
+  Render deploy; no EAS build or buildNumber change is needed.
 - Render deployment for the P1.6 server change was confirmed by the Founder
   after deploy completion. `/health` returned HTTP 200 in production. Because
   P1.6 is server-side, no new EAS build is required to observe the effect:

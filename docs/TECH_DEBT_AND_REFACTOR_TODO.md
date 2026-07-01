@@ -490,6 +490,18 @@ Future Detail UX backlog:
   `1800000`, then use Build 98 to compare cache-hit rates, `resolveRequestUserMs`,
   `thumbnailSignedUrlWallMs`, and `serverTotalMs` during re-entry within 30
   minutes.
+- Startup Performance Optimization P1.9 reduces the cache-miss cold path without
+  weakening auth. It keeps Supabase `auth.getUser()` verification, adds a
+  verified `authUserId -> public.users.id` in-memory cache, defers existing
+  profile sync, and parallelizes compact evidence lookup with thumbnail signed
+  URL generation after the moments query. API response shape, DB schema, client
+  UI, no-token/default-user policy, and owner filtering are unchanged.
+- Next P1.9 QA should watch `authUserPublicUserCacheHit`,
+  `publicUserSyncAction`, `evidenceIdsCount`, `publicUserLookupMs`,
+  `publicUserUpsertOrSyncMs`, `evidenceQueryMs`, `thumbnailSignedUrlWallMs`, and
+  `serverTotalMs` in Render `[moments_timing]`. If cold path remains too slow
+  after this, do not remove auth verification; consider DB-side RPC/index
+  analysis or a more explicit list cache with separate security review.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
   deeper list/detail payload tuning, first-paint state changes, or the
   0-record `resolveRequestUser` cache-miss path if post-deploy captures still
