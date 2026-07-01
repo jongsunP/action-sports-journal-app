@@ -150,6 +150,13 @@ Latest product/UX direction update:
     Auth/user resolve and public user sync logic were not weakened; 0-record
     first-load cache-miss cost remains a known path for a separate security-aware
     review.
+  - Startup Performance Optimization P1.7 is implemented after P1.6 logs
+    confirmed thumbnail cache hits are effective but request-user cache misses
+    still dominate slow cases. The default `REQUEST_USER_CACHE_TTL_MS` is now
+    `300000` (5 minutes), up from 45 seconds. `/health` exposes non-secret
+    `performanceCaches` values so Render can confirm effective cache config.
+    Raw bearer tokens are still not stored, no-token/default-user behavior is
+    unchanged, and owner filtering is unchanged.
   - Render deploy for the P1.6 server change has completed and production
     `/health` returned HTTP 200. Since this is server-only, keep using Build 98
     for real-device observation instead of creating a new EAS build. Next

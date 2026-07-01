@@ -213,6 +213,29 @@ Startup Performance Optimization P1.6 implemented, 2026-07-01:
   P1.6. The observed 0-record first-load cost remains a known cache-miss path;
   do not optimize it by bypassing Supabase auth verification without a separate
   security review.
+
+Startup Performance Optimization P1.7 implemented, 2026-07-01:
+
+- Build 98 + P1.6 Render logs confirmed thumbnail signed URL caching works for
+  repeated 7-record cases, with `thumbnailSignedUrlCacheHits=7`,
+  `thumbnailSignedUrlCacheMisses=0`, `thumbnailSignedUrlWallMs=0`, and
+  `serverTotalMs` around `920-1322ms`.
+- Remaining slow cases are now primarily request-user cache misses:
+  7-record slow runs showed `resolveRequestUserMs` around `1220-1684ms`;
+  0-record slow runs showed `resolveRequestUserMs` around `2103ms` and
+  `serverTotalMs` around `2719ms` even with no thumbnail or evidence work.
+- P1.7 increases the default SHA-256 bearer-token-hash request user cache TTL
+  from `45s` to `5min` (`REQUEST_USER_CACHE_TTL_MS=300000`).
+- The cache still stores only the token hash-derived key plus resolved
+  `authUserId`/`userId` metadata, not the raw bearer token. No-token fallback,
+  invalid-token handling, ownership filtering, Recovery, Auth, Upload, and AI
+  flows are unchanged.
+- `/health` now exposes non-secret cache config under `performanceCaches` so
+  Render can confirm the effective `requestUserCacheTtlMs`,
+  `requestUserCacheMaxEntries`, `thumbnailSignedUrlCacheTtlMs`, and
+  `thumbnailSignedUrlCacheMaxEntries`.
+- Next QA should verify repeated app launches/re-entry within five minutes show
+  more `cacheHit=true`, lower `resolveRequestUserMs`, and lower `serverTotalMs`.
 - Render deployment for the P1.6 server change was confirmed by the Founder
   after deploy completion. `/health` returned HTTP 200 in production. Because
   P1.6 is server-side, no new EAS build is required to observe the effect:

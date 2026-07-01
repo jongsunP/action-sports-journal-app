@@ -469,6 +469,16 @@ Future Detail UX backlog:
   verify `thumbnailSignedUrlCacheHits`, `thumbnailSignedUrlCacheMisses`,
   `thumbnailSignedUrlWallMs`, `thumbnailSignedUrlMs`, and `serverTotalMs` from
   Render `[moments_timing]` logs.
+- Startup Performance Optimization P1.7 increases the request user cache default
+  TTL from 45 seconds to 5 minutes (`REQUEST_USER_CACHE_TTL_MS=300000`) because
+  Build 98 + P1.6 logs showed cache-miss user resolution dominates remaining
+  slow 0-record and slow 7-record cases. The cache remains keyed by SHA-256
+  bearer token hash and does not store raw bearer tokens. No-token/default-user
+  policy and ownership filtering are unchanged. `/health` exposes non-secret
+  `performanceCaches` values for deployment verification.
+- Next P1.7 QA should verify more `cacheHit=true`, lower
+  `resolveRequestUserMs`, 0ms auth/public user timing on cache hits, and lower
+  `serverTotalMs` for repeated app use within five minutes.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
   deeper list/detail payload tuning, first-paint state changes, or the
   0-record `resolveRequestUser` cache-miss path if post-deploy captures still

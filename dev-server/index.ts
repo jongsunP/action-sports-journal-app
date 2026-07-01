@@ -77,7 +77,7 @@ const staleProcessingAnalysisMs = readNumberEnv(
 );
 const requestUserCacheTtlMs = readNumberEnv(
   "REQUEST_USER_CACHE_TTL_MS",
-  45_000,
+  5 * 60_000,
 );
 const requestUserCacheMaxEntries = readNumberEnv(
   "REQUEST_USER_CACHE_MAX_ENTRIES",
@@ -336,6 +336,12 @@ app.get("/health", (_request, response) => {
       internalDefaultUserFallbackAllowed: allowInternalDefaultUser,
       internalDefaultUserFallbackPolicy:
         "disabled by default; requires APP_ENV=development/test and ALLOW_INTERNAL_DEFAULT_USER=true",
+    },
+    performanceCaches: {
+      requestUserCacheMaxEntries,
+      requestUserCacheTtlMs,
+      thumbnailSignedUrlCacheMaxEntries,
+      thumbnailSignedUrlCacheTtlMs,
     },
     spendPolicy: "development budget target: under KRW 10,000/month",
     limits: {
