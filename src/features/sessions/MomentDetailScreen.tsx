@@ -36,6 +36,9 @@ export function MomentDetailScreen({
   const [detailEvidence, setDetailEvidence] = useState<
     GeminiEvidenceResult | undefined
   >();
+  const [detailThumbnailUri, setDetailThumbnailUri] = useState<
+    string | undefined
+  >();
   const [detailDiagnostics, setDetailDiagnostics] =
     useState<MomentDetailFetchDiagnostics | null>(null);
 
@@ -49,6 +52,7 @@ export function MomentDetailScreen({
     let isActive = true;
 
     setDetailEvidence(undefined);
+    setDetailThumbnailUri(undefined);
     setDetailDiagnostics(null);
 
     if (!remoteMomentId) {
@@ -64,6 +68,10 @@ export function MomentDetailScreen({
         }
 
         setDetailDiagnostics(result.diagnostics);
+
+        if (result.moment?.thumbnailUri) {
+          setDetailThumbnailUri(result.moment.thumbnailUri);
+        }
 
         if (result.moment?.evidence) {
           setDetailEvidence({
@@ -111,7 +119,8 @@ export function MomentDetailScreen({
     isProcessing: Boolean(runtimeState.extractingEvidenceBySessionId[session.id]),
     sessionStatus: session.momentStatus,
   });
-  const thumbnailUri = runtimeState.thumbnailsBySessionId[session.id];
+  const thumbnailUri =
+    detailThumbnailUri ?? runtimeState.thumbnailsBySessionId[session.id];
   const video = getUserFacingDetailVideo({
     momentStatus,
     thumbnailUri,

@@ -194,6 +194,7 @@ type RemoteMomentListResponse = {
 export type ListMomentsOptions = {
   cursor?: string | null;
   limit?: number;
+  view?: 'full' | 'summary';
 };
 
 export type RemoteMomentPage = {
@@ -954,6 +955,10 @@ export async function listMomentsPage(
 
   if (options.cursor) {
     query.set('cursor', options.cursor);
+  }
+
+  if (options.view) {
+    query.set('view', options.view);
   }
 
   const url = query.toString()

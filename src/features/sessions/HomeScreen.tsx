@@ -1034,6 +1034,7 @@ export function HomeScreen() {
             await recoverUnfinalizedUploadCandidates(currentReason);
             const remoteMomentPage = await listMomentPageWithTimeout({
               limit: MOMENT_LIST_PAGE_SIZE,
+              view: 'summary',
             });
             const remoteMoments = remoteMomentPage.moments;
             const previousRemoteMomentSyncStatus = remoteMomentSyncStatus;
@@ -1450,6 +1451,7 @@ export function HomeScreen() {
 
     listMomentPageWithTimeout({
       limit: MOMENT_LIST_PAGE_SIZE,
+      view: 'summary',
     })
       .then((remoteMomentPage) => {
         const apiMs = getRequestDurationMs(startedAt);
@@ -1575,6 +1577,7 @@ export function HomeScreen() {
     listMomentPageWithTimeout({
       cursor: videoArchiveNextCursor,
       limit: MOMENT_LIST_PAGE_SIZE,
+      view: 'summary',
     })
       .then((remoteMomentPage) => {
         const sessionIds = getSessionIdsForRemoteMoments(
@@ -1779,6 +1782,7 @@ export function HomeScreen() {
       const findRemoteMatch = async (attempt: number) => {
         const remoteMomentPage = await listMomentPageWithTimeout({
           limit: MOMENT_LIST_PAGE_SIZE,
+          view: 'summary',
         });
         const matchedMoment = remoteMomentPage.moments.find(
           (remoteMoment) =>

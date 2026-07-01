@@ -284,6 +284,7 @@ export function useBootSync({
       try {
         const remoteMomentPage = await listMomentPageWithTimeout({
           limit: initialRemoteMomentPageLimit,
+          view: 'summary',
         });
 
         if (!isMounted) {

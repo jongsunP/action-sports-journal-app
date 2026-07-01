@@ -1495,6 +1495,9 @@ app.get("/api/moments", async (request, response) => {
     const staleCleanupMs = Date.now() - staleCleanupStartedAt;
     const limit = parseMomentListLimit(request.query.limit);
     const cursor = decodeMomentCursor(request.query.cursor);
+    const view = request.query.view === "summary" ? "summary" : "full";
+    const shouldIncludeListEvidence = view === "full";
+    const shouldIncludeThumbnailSignedUrls = view === "full";
 
     let momentsQuery = client
       .from("moments")
@@ -1544,7 +1547,7 @@ app.get("/api/moments", async (request, response) => {
     const evidenceResultsPromise = (async () => {
       const evidenceResultsById = new Map<string, Record<string, unknown>>();
 
-      if (evidenceResultIds.length === 0) {
+      if (!shouldIncludeListEvidence || evidenceResultIds.length === 0) {
         return {
           evidenceQueryMs: 0,
           evidenceResultsById,
@@ -1579,6 +1582,14 @@ app.get("/api/moments", async (request, response) => {
       };
     })();
     const thumbnailSignedUrlsPromise = (async () => {
+      if (!shouldIncludeThumbnailSignedUrls) {
+        return {
+          thumbnailSignedUrlMs: 0,
+          thumbnailSignedUrlWallMs: 0,
+          thumbnailUris: pageMomentRows.map(() => null),
+        };
+      }
+
       const thumbnailSignedUrlWallStartedAt = Date.now();
       let thumbnailSignedUrlMs = 0;
       const thumbnailUris = await Promise.all(
@@ -1666,6 +1677,7 @@ app.get("/api/moments", async (request, response) => {
       thumbnailSignedUrlMs,
       thumbnailSignedUrlWallMs,
       totalMs: serverTotalMs,
+      view,
     });
 
     response.type("application/json").send(responseBodyJson);

@@ -502,6 +502,13 @@ Future Detail UX backlog:
   `serverTotalMs` in Render `[moments_timing]`. If cold path remains too slow
   after this, do not remove auth verification; consider DB-side RPC/index
   analysis or a more explicit list cache with separate security review.
+- Startup Performance P2 introduces summary-first boot/list reads. The full
+  `/api/moments` contract remains the default for older builds, while new client
+  boot and Video list requests use `view=summary` to skip list evidence lookup
+  and thumbnail signed URL generation. Detail still fetches full evidence and
+  thumbnail through `GET /api/moments/:momentId`. If P2 still feels slow, the
+  next candidate is a dedicated thumbnail lazy endpoint or visible-row thumbnail
+  fetch, not weakening auth.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
   deeper list/detail payload tuning, first-paint state changes, or the
   0-record `resolveRequestUser` cache-miss path if post-deploy captures still

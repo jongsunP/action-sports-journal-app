@@ -277,6 +277,23 @@ Startup Performance Optimization P1.9 implemented, 2026-07-01:
 - Auth, Recovery, Upload, Storage, AI, no-token/default-user policy, and
   ownership filtering are unchanged. Build 98 can keep observing this after
   Render deploy; no EAS build or buildNumber change is needed.
+
+Startup Performance P2 summary-first boot implemented, 2026-07-01:
+
+- `/api/moments` now supports `view=summary`. The default remains full, so Build
+  98 and older clients stay compatible.
+- Summary view keeps the same response shape but skips compact evidence lookup
+  and thumbnail signed URL generation. `latestEvidenceResult` and `thumbnailUri`
+  can be `null`; Detail still uses `GET /api/moments/:momentId` for full
+  evidence and thumbnail/media data.
+- Boot remote sync, Video first page, Video pagination, remote refresh, and
+  upload reconciliation lookup request `view=summary`.
+- Moment Detail now uses the full detail endpoint thumbnail locally so a
+  summary-first list does not permanently remove the Detail thumbnail.
+- Auth verification, ownership filtering, no-token/default-user policy,
+  DB schema, Storage, Upload, Recovery, and AI behavior are unchanged.
+- This client-visible startup change needs the next standalone build before
+  real-device QA. Server default full mode can still be observed by older builds.
 - Render deployment for the P1.6 server change was confirmed by the Founder
   after deploy completion. `/health` returned HTTP 200 in production. Because
   P1.6 is server-side, no new EAS build is required to observe the effect:

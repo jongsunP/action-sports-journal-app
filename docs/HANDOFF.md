@@ -173,6 +173,14 @@ Latest product/UX direction update:
     `publicUserSyncAction`, and `evidenceIdsCount`. No Auth/Recovery/Upload/AI
     behavior, no-token policy, owner filtering, DB schema, API contract, EAS
     build, or buildNumber changed.
+  - Startup Performance P2 summary-first boot is implemented. `/api/moments`
+    accepts `view=summary` while defaulting to full for backward compatibility.
+    Summary view skips list evidence lookup and thumbnail signed URL generation
+    but keeps the response shape. Boot sync, Video first page/pagination,
+    refresh, and upload reconciliation lookup now request summary. Moment Detail
+    still fetches full data through `GET /api/moments/:momentId` and uses the
+    detail thumbnail locally. This is client-visible and needs a new standalone
+    build for real-device QA; Build 98 remains compatible with the full default.
   - Render deploy for the P1.6 server change has completed and production
     `/health` returned HTTP 200. Since this is server-only, keep using Build 98
     for real-device observation instead of creating a new EAS build. Next
