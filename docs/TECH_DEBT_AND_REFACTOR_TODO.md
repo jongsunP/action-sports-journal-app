@@ -479,6 +479,17 @@ Future Detail UX backlog:
 - Next P1.7 QA should verify more `cacheHit=true`, lower
   `resolveRequestUserMs`, 0ms auth/public user timing on cache hits, and lower
   `serverTotalMs` for repeated app use within five minutes.
+- Startup Performance Optimization P1.8 keeps the same cache strategy but
+  adjusts product-facing TTL defaults after logs confirmed the 5-minute TTL
+  works but is too short for real usage gaps. `REQUEST_USER_CACHE_TTL_MS` and
+  `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS` now default to 30 minutes (`1800000ms`).
+  This is still bounded in-memory cache, not permanent caching. Raw bearer
+  tokens are not stored, no-token/default-user policy is unchanged, and
+  ownership filtering is unchanged.
+- Next P1.8 QA should verify `/health.performanceCaches` shows both TTLs as
+  `1800000`, then use Build 98 to compare cache-hit rates, `resolveRequestUserMs`,
+  `thumbnailSignedUrlWallMs`, and `serverTotalMs` during re-entry within 30
+  minutes.
 - Remaining performance candidates after P1.6: list endpoint cache improvement,
   deeper list/detail payload tuning, first-paint state changes, or the
   0-record `resolveRequestUser` cache-miss path if post-deploy captures still

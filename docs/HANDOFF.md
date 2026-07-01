@@ -157,6 +157,14 @@ Latest product/UX direction update:
     `performanceCaches` values so Render can confirm effective cache config.
     Raw bearer tokens are still not stored, no-token/default-user behavior is
     unchanged, and owner filtering is unchanged.
+  - Startup Performance Optimization P1.8 is implemented after follow-up logs
+    confirmed the 5-minute TTL works but is too short for real usage gaps. Both
+    `REQUEST_USER_CACHE_TTL_MS` and `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS` now
+    default to `1800000` (30 minutes). This is still temporary in-memory cache,
+    not permanent caching. Raw bearer tokens are not stored, no-token/default
+    behavior is unchanged, and owner filtering is unchanged. After Render
+    deploy, keep using Build 98 and confirm `/health.performanceCaches` plus
+    Render `[moments_timing]` cache-hit rates.
   - Render deploy for the P1.6 server change has completed and production
     `/health` returned HTTP 200. Since this is server-only, keep using Build 98
     for real-device observation instead of creating a new EAS build. Next

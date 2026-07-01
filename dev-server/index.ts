@@ -77,7 +77,7 @@ const staleProcessingAnalysisMs = readNumberEnv(
 );
 const requestUserCacheTtlMs = readNumberEnv(
   "REQUEST_USER_CACHE_TTL_MS",
-  5 * 60_000,
+  30 * 60_000,
 );
 const requestUserCacheMaxEntries = readNumberEnv(
   "REQUEST_USER_CACHE_MAX_ENTRIES",
@@ -85,7 +85,7 @@ const requestUserCacheMaxEntries = readNumberEnv(
 );
 const thumbnailSignedUrlCacheTtlMs = readNumberEnv(
   "THUMBNAIL_SIGNED_URL_CACHE_TTL_MS",
-  10 * 60_000,
+  30 * 60_000,
 );
 const thumbnailSignedUrlCacheMaxEntries = readNumberEnv(
   "THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES",

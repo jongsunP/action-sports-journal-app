@@ -102,8 +102,9 @@ Startup Performance Optimization P1 implemented, 2026-07-01:
 - `resolveRequestUser()` now uses a short in-memory TTL cache keyed by a SHA-256
   hash of the bearer token. Raw bearer tokens are not stored. No-token requests
   still cannot use the cache.
-- Cache TTL defaults to 45 seconds through `REQUEST_USER_CACHE_TTL_MS`; max
-  entries defaults to 500 through `REQUEST_USER_CACHE_MAX_ENTRIES`.
+- Cache TTL defaults started at 45 seconds through
+  `REQUEST_USER_CACHE_TTL_MS`, then moved to 5 minutes in P1.7 and 30 minutes in
+  P1.8; max entries defaults to 500 through `REQUEST_USER_CACHE_MAX_ENTRIES`.
 - `/api/moments` timing logs now include `cacheHit`,
   `staleCleanupBlocking=false`, and `thumbnailSignedUrlWallMs`. The previous
   `thumbnailSignedUrlMs` sum remains for compatibility.
@@ -236,6 +237,26 @@ Startup Performance Optimization P1.7 implemented, 2026-07-01:
   `thumbnailSignedUrlCacheMaxEntries`.
 - Next QA should verify repeated app launches/re-entry within five minutes show
   more `cacheHit=true`, lower `resolveRequestUserMs`, and lower `serverTotalMs`.
+
+Startup Performance Optimization P1.8 implemented, 2026-07-01:
+
+- Build 98 + P1.6/P1.7 follow-up logs confirmed the 5-minute TTL works, but it
+  is too short for real usage gaps: cache-hit runs were fast
+  (`serverTotalMs` around `867-1396ms`, `resolveRequestUserMs` around `0-1ms`,
+  `thumbnailSignedUrlWallMs` around `0-1ms`), while cache-miss runs remained
+  around `2.8-4.0s`.
+- P1.8 keeps the cache temporary, in-memory, and bounded, but increases both
+  startup-sensitive defaults to 30 minutes:
+  - `REQUEST_USER_CACHE_TTL_MS=1800000`.
+  - `THUMBNAIL_SIGNED_URL_CACHE_TTL_MS=1800000`.
+- Raw bearer tokens are still not stored. The request user cache remains keyed
+  by a SHA-256 bearer-token hash. No-token/default-user policy, invalid-token
+  handling, ownership filtering, Auth, Recovery, Upload, Storage, API contract,
+  and AI behavior are unchanged.
+- `/health` should show `performanceCaches.requestUserCacheTtlMs=1800000` and
+  `performanceCaches.thumbnailSignedUrlCacheTtlMs=1800000` after Render deploy.
+- Because this is server-side only, keep using Build 98 for real-device
+  observation after Render deploy. No EAS build or buildNumber change is needed.
 - Render deployment for the P1.6 server change was confirmed by the Founder
   after deploy completion. `/health` returned HTTP 200 in production. Because
   P1.6 is server-side, no new EAS build is required to observe the effect:
