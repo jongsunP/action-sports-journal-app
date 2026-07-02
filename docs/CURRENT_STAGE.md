@@ -4,6 +4,11 @@
 system. Read it first for top-level project memory, collaboration rules,
 product philosophy, AI architecture direction, and current resume point.
 
+This file is the current-stage layer. Keep the newest active implementation,
+QA, build, and observation status near the top. Historical build logs may stay
+below as evidence, but a new session should not need to scan the whole file to
+understand the current state.
+
 ## Stage
 
 Stage 1: Initial project setup complete.

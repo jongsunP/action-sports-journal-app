@@ -8,6 +8,10 @@ Do not use this file as the first entry point. The required read order is
 defined in the project `README.md` and `AGENTS.md`. In that order, this file is
 read after `docs/PROJECT_MEMORY.md` and `docs/CURRENT_STAGE.md`.
 
+This file is the next-start layer. Keep the newest resume point near the top
+and avoid duplicating the full stable workstream list here. For "리스트업",
+use `docs/PROJECT_MEMORY.md`; for the immediate next action, use this file.
+
 ## Project
 
 Action Sports Journal is an iOS-first React Native app for action sports athletes.
@@ -518,7 +522,7 @@ terminal work, always provide a copyable command block that starts from the
 project directory, for example:
 
 ```bash
-cd ~/repository/action-sports-journal-app
+cd ~/Repository/action-sports-journal-app
 open -a TextEdit .env.local
 ```
 

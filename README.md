@@ -30,9 +30,9 @@ commit and push durable changes
 
 Full read order:
 
-1. `~/repository/codex-personal-context/AGENTS.md`
-2. `~/repository/codex-personal-context/SESSION_WORKFLOW.md`
-3. `~/repository/codex-personal-context/projects/action-sports-journal-app.md`
+1. `~/Repository/codex-personal-context/AGENTS.md`
+2. `~/Repository/codex-personal-context/SESSION_WORKFLOW.md`
+3. `~/Repository/codex-personal-context/projects/action-sports-journal-app.md`
 4. `README.md`
 5. `AGENTS.md`
 6. `docs/PROJECT_MEMORY.md`
@@ -41,6 +41,16 @@ Full read order:
 9. `docs/TECH_DEBT_AND_REFACTOR_TODO.md`
 
 Do not skip or reorder these unless a file is genuinely missing.
+
+Current-state navigation:
+
+- For "리스트업", "현재 리스트업", "남은 것", or broad project status, use
+  `docs/PROJECT_MEMORY.md` -> `Current stable workstream list`.
+- For what is happening right now, use `docs/CURRENT_STAGE.md`.
+- For where the next session should start, use `docs/HANDOFF.md`.
+- For deferred technical follow-ups, use `docs/TECH_DEBT_AND_REFACTOR_TODO.md`.
+- Do not answer from only the latest chat turn when the Founder asks for the
+  project list or current project state.
 
 Within this project repository, the key docs are:
 
@@ -102,7 +112,7 @@ For ASJ product state, update this project repository, not personal context.
 Cross-project Codex working rules live in:
 
 ```text
-~/repository/codex-personal-context
+~/Repository/codex-personal-context
 ```
 
 That repository should point back to this project for ASJ-specific product
@@ -116,7 +126,7 @@ prompt, use this prompt exactly unless the current task requires a small
 task-specific addition.
 
 ```text
-cd ~/repository/action-sports-journal-app
+cd ~/Repository/action-sports-journal-app
 
 ASJ 개발 세션 초기 셋업입니다.
 
@@ -124,15 +134,15 @@ ASJ 개발 세션 초기 셋업입니다.
 
 1. codex-personal-context와 ASJ 프로젝트 repo를 pull해서 최신화
 2. 아래 순서를 반드시 지켜 읽기
-   - ~/repository/codex-personal-context/AGENTS.md
-   - ~/repository/codex-personal-context/SESSION_WORKFLOW.md
-   - ~/repository/codex-personal-context/projects/action-sports-journal-app.md
-   - ~/repository/action-sports-journal-app/README.md
-   - ~/repository/action-sports-journal-app/AGENTS.md
-   - ~/repository/action-sports-journal-app/docs/PROJECT_MEMORY.md
-   - ~/repository/action-sports-journal-app/docs/CURRENT_STAGE.md
-   - ~/repository/action-sports-journal-app/docs/HANDOFF.md
-   - ~/repository/action-sports-journal-app/docs/TECH_DEBT_AND_REFACTOR_TODO.md
+   - ~/Repository/codex-personal-context/AGENTS.md
+   - ~/Repository/codex-personal-context/SESSION_WORKFLOW.md
+   - ~/Repository/codex-personal-context/projects/action-sports-journal-app.md
+   - ~/Repository/action-sports-journal-app/README.md
+   - ~/Repository/action-sports-journal-app/AGENTS.md
+   - ~/Repository/action-sports-journal-app/docs/PROJECT_MEMORY.md
+   - ~/Repository/action-sports-journal-app/docs/CURRENT_STAGE.md
+   - ~/Repository/action-sports-journal-app/docs/HANDOFF.md
+   - ~/Repository/action-sports-journal-app/docs/TECH_DEBT_AND_REFACTOR_TODO.md
 3. git status와 현재 branch / origin 동기화 상태 확인
 4. 현재 완료된 것, 남은 것, 바로 이어야 할 작업을 짧게 복구
 5. 개발 작업을 시작하기 전 필요한 확인 사항이나 blocker만 보고
@@ -155,7 +165,7 @@ When the Founder asks for a new CTO-session initial setup prompt, use this
 prompt exactly unless the current task requires a small task-specific addition.
 
 ```text
-cd ~/repository/action-sports-journal-app
+cd ~/Repository/action-sports-journal-app
 
 ASJ CTO 세션 초기 셋업입니다.
 
@@ -166,15 +176,15 @@ ASJ CTO 세션 초기 셋업입니다.
 
 1. codex-personal-context와 ASJ 프로젝트 repo를 pull해서 최신화
 2. 아래 순서를 반드시 지켜 읽기
-   - ~/repository/codex-personal-context/AGENTS.md
-   - ~/repository/codex-personal-context/SESSION_WORKFLOW.md
-   - ~/repository/codex-personal-context/projects/action-sports-journal-app.md
-   - ~/repository/action-sports-journal-app/README.md
-   - ~/repository/action-sports-journal-app/AGENTS.md
-   - ~/repository/action-sports-journal-app/docs/PROJECT_MEMORY.md
-   - ~/repository/action-sports-journal-app/docs/CURRENT_STAGE.md
-   - ~/repository/action-sports-journal-app/docs/HANDOFF.md
-   - ~/repository/action-sports-journal-app/docs/TECH_DEBT_AND_REFACTOR_TODO.md
+   - ~/Repository/codex-personal-context/AGENTS.md
+   - ~/Repository/codex-personal-context/SESSION_WORKFLOW.md
+   - ~/Repository/codex-personal-context/projects/action-sports-journal-app.md
+   - ~/Repository/action-sports-journal-app/README.md
+   - ~/Repository/action-sports-journal-app/AGENTS.md
+   - ~/Repository/action-sports-journal-app/docs/PROJECT_MEMORY.md
+   - ~/Repository/action-sports-journal-app/docs/CURRENT_STAGE.md
+   - ~/Repository/action-sports-journal-app/docs/HANDOFF.md
+   - ~/Repository/action-sports-journal-app/docs/TECH_DEBT_AND_REFACTOR_TODO.md
 3. 현재 완료된 것, 남은 것, 바로 이어야 할 작업을 ASJ의 안정 리스트 기준으로 복구
 4. Founder의 답변 스타일과 작업 방식 규칙을 적용
 5. 개발 세션에 넘길 일과 Founder가 직접 해야 할 일을 구분

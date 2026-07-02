@@ -9,6 +9,12 @@ The goal is not to treat every item as urgent. The goal is to keep technical
 debt visible so future Codex/GPT sessions do not mistake temporary structure
 for final product architecture.
 
+Triage rule: this file is for deferred engineering follow-ups, refactors,
+optional future product work, and store-before-release cleanup. Do not add
+transient execution checks such as typecheck, diff-check, simulator QA, build
+readiness, or "waiting for a development-session result" as standalone debt.
+Those belong in `docs/CURRENT_STAGE.md` or `docs/HANDOFF.md` only while active.
+
 ## Current Principle
 
 Action Sports Journal is currently in the AI Analysis Product Completion phase.

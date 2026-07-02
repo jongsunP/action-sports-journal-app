@@ -24,6 +24,26 @@ Agents should normalize the intent, compare it with the existing canonical
 rules, and maintain one updated operating rule instead of preserving repeated
 phrasing as separate memories.
 
+## Current Navigation Rule
+
+This file is intentionally broad and permanent. Do not read it as a linear
+chat log.
+
+For current planning and "리스트업" answers:
+
+1. Use the `Current stable workstream list` below for the full product
+   workstream timeline.
+2. Use `docs/CURRENT_STAGE.md` for active implementation, QA, build, and
+   startup-performance state.
+3. Use `docs/HANDOFF.md` for the newest next starting point.
+4. Use `docs/TECH_DEBT_AND_REFACTOR_TODO.md` for deferred engineering
+   follow-ups and optional later work.
+
+If a new note updates current state, merge it into the appropriate current
+section instead of appending a duplicate status block. If the Founder asks for
+"리스트업", show the full canonical workstream list unless the scope is
+explicitly narrowed.
+
 ## Project Identity
 
 Project name:
@@ -588,7 +608,7 @@ changing into the project directory.
 Example:
 
 ```bash
-cd ~/repository/action-sports-journal-app
+cd ~/Repository/action-sports-journal-app
 open -a TextEdit .env.local
 ```
 
@@ -2490,7 +2510,7 @@ Recommended opening prompt for a new Codex session:
 
 ```text
 Pull codex-personal-context and the ASJ project repository. Then open
-~/repository/action-sports-journal-app, read README.md, and follow the exact
+~/Repository/action-sports-journal-app, read README.md, and follow the exact
 read order defined there. Check git status before edits. Do not print secrets.
 Continue from the current resume point and keep changes scoped.
 ```
