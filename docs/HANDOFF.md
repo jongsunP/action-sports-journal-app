@@ -36,14 +36,16 @@ Latest product/UX direction update:
   - Next session should start from Build 102 quantitative QA: collect QA Debug
     Panel startup values and matching Singapore Render `[moments_timing]` rows,
     then verify Upload/Auth/Recovery regression before deciding whether
-    Startup Performance can pause, whether Virginia can be deleted/suspended,
-    and whether AI Calibration can begin.
+    Startup Performance can pause and whether AI Calibration can begin. The
+    previous Virginia Render service has already been deleted, so there is no
+    rollback service.
 
 - Render Singapore migration / Build 102 endpoint confirmation, 2026-07-02:
   - A new Render Starter Web Service was created in Singapore:
     `https://action-sports-journal-api-sg.onrender.com`.
-  - The existing Virginia service remains available at:
-    `https://action-sports-journal-api.onrender.com`.
+  - The previous Virginia Render service
+    `https://action-sports-journal-api.onrender.com` has been deleted. The
+    only active Render Web Service is now `action-sports-journal-api-sg`.
   - A quick `/health` comparison from Korea showed Singapore warm responses
     around `0.117-0.128s`, while the existing Virginia service was around
     `0.230-0.238s` after warm-up.
@@ -64,9 +66,9 @@ Latest product/UX direction update:
     the standalone install.
   - Startup timing screenshots/values have not been recorded yet, and
     Upload/Auth/Recovery full regression QA has not been recorded yet.
-  - Keep the Virginia Render service alive until Build 102 startup/upload/auth/
-    recovery QA passes against Singapore. Only then decide whether to suspend/
-    delete the Virginia service or keep it temporarily as a rollback.
+  - Because the Virginia rollback service has already been deleted, Build 102
+    startup/upload/auth/recovery QA should confirm the Singapore-only path is
+    stable before Startup Performance is paused.
   - Build 102 QA focus: confirm QA Debug Panel startup timings against
     Singapore, verify `view=summary`, check long-idle and immediate re-entry,
     compare `serverTotalMs`, `authClaimsMs`, `resolveRequestUserMs`,

@@ -93,8 +93,9 @@ Current infrastructure / Build 102 QA:
 - Build 102 is not yet a Startup Performance pass. Quantitative QA Debug Panel
   timing values, matching Singapore Render `[moments_timing]` rows, and
   Upload/Auth/Recovery regression QA are still pending.
-- The existing Virginia service remains online as rollback until Build 102
-  standalone QA confirms Singapore startup/upload/auth/recovery behavior.
+- The previous Virginia Render service has been deleted. The only active Render
+  Web Service is now `action-sports-journal-api-sg`, so the remaining Build 102
+  QA should confirm the Singapore-only path is stable.
 
 ## Validation Cost / Build Policy
 

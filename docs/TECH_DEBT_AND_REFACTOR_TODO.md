@@ -39,9 +39,9 @@ in Build 102 validation before deciding whether to move to AI Calibration.
 
 Render migration state:
 
-- Current Virginia service:
-  `https://action-sports-journal-api.onrender.com`.
-- New Singapore service:
+- Previous Virginia service:
+  `https://action-sports-journal-api.onrender.com` has been deleted.
+- Current Singapore service:
   `https://action-sports-journal-api-sg.onrender.com`.
 - EAS preview `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` points to the Singapore
   analysis endpoint.
@@ -51,8 +51,8 @@ Render migration state:
   Singapore service.
 - Quantitative startup timing and Upload/Auth/Recovery regression QA are still
   pending.
-- Keep Virginia alive until Build 102 standalone QA passes; then decide whether
-  to suspend/delete it or keep it as a short rollback window.
+- There is no Virginia rollback service now; Build 102 QA should confirm the
+  Singapore-only path is stable before Startup Performance is paused.
 
 Implemented:
 

@@ -24,8 +24,9 @@ Build 102 Singapore endpoint QA build complete / quantitative QA pending,
 
 - A new Render Starter Web Service is live in Singapore:
   `https://action-sports-journal-api-sg.onrender.com`.
-- The existing Virginia service remains available at:
-  `https://action-sports-journal-api.onrender.com`.
+- The previous Virginia Render service
+  `https://action-sports-journal-api.onrender.com` has been deleted. The only
+  active Render Web Service is now `action-sports-journal-api-sg`.
 - Health check comparison from Korea showed the Singapore service responding
   faster after warm-up:
   - Virginia warm `/health`: about `0.230-0.238s`.
@@ -47,8 +48,8 @@ Build 102 Singapore endpoint QA build complete / quantitative QA pending,
   Startup Performance passed until QA Debug Panel values and matching Singapore
   Render `[moments_timing]` rows are reviewed.
 - Upload/Auth/Recovery full regression QA has not been recorded yet.
-- Do not suspend/delete the Virginia service until Build 102 startup timing and
-  Upload/Auth/Recovery QA pass.
+- There is no Virginia rollback service now, so Build 102 startup timing and
+  Upload/Auth/Recovery QA should confirm the Singapore-only path is stable.
 - AI Calibration has not started.
 
 Build 101 Startup Performance P2.2 QA build complete / Founder QA pending,
