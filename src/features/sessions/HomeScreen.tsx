@@ -128,19 +128,29 @@ type RequestDiagnosticsStatus =
   | 'timeout';
 type RequestDiagnostics = {
   apiMs: number | null;
+  authClaimsMs: number | null;
+  authGetUserMs: number | null;
+  authVerificationMode: string | null;
   bootPageReused: boolean | null;
   clientNormalizeMs: number | null;
   count: number | null;
   duplicateVideoFetchBlocked: boolean | null;
   durationMs: number | null;
+  evidenceQueryMs: number | null;
   hasMore: boolean | null;
+  momentsQueryMs: number | null;
+  publicUserLookupMs: number | null;
   reason: string | null;
   requestId: string | null;
+  resolveRequestUserMs: number | null;
+  responseBytes: number | null;
   retryCount: number;
   serverTotalMs: number | null;
   source: 'archive_fetch' | 'boot_reuse' | null;
   status: RequestDiagnosticsStatus;
+  thumbnailSignedUrlWallMs: number | null;
   updatedAt: number | null;
+  view: string | null;
 };
 type AuthCacheOwnerKey =
   | 'internalFallback'
@@ -307,19 +317,29 @@ export function HomeScreen() {
   const [videoArchiveDiagnostics, setVideoArchiveDiagnostics] =
     useState<RequestDiagnostics>({
       apiMs: null,
+      authClaimsMs: null,
+      authGetUserMs: null,
+      authVerificationMode: null,
       bootPageReused: null,
       clientNormalizeMs: null,
       count: null,
       duplicateVideoFetchBlocked: null,
       durationMs: null,
+      evidenceQueryMs: null,
       hasMore: null,
+      momentsQueryMs: null,
+      publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      resolveRequestUserMs: null,
+      responseBytes: null,
       retryCount: 0,
       serverTotalMs: null,
       source: null,
       status: 'empty',
+      thumbnailSignedUrlWallMs: null,
       updatedAt: null,
+      view: null,
     });
   const [
     isLoadingMoreVideoArchiveMoments,
@@ -1358,18 +1378,29 @@ export function HomeScreen() {
     setVideoArchiveDiagnostics((current) => ({
       ...current,
       apiMs: remoteMomentSyncDiagnostics.durationMs,
+      authClaimsMs: remoteMomentSyncDiagnostics.authClaimsMs,
+      authGetUserMs: remoteMomentSyncDiagnostics.authGetUserMs,
+      authVerificationMode: remoteMomentSyncDiagnostics.authVerificationMode,
       bootPageReused: true,
       clientNormalizeMs,
       count: initialRemoteMoments.length,
       duplicateVideoFetchBlocked: false,
       durationMs: remoteMomentSyncDiagnostics.durationMs,
+      evidenceQueryMs: remoteMomentSyncDiagnostics.evidenceQueryMs,
       hasMore: initialRemoteMomentPageInfo.hasMore,
+      momentsQueryMs: remoteMomentSyncDiagnostics.momentsQueryMs,
+      publicUserLookupMs: remoteMomentSyncDiagnostics.publicUserLookupMs,
       reason: remoteMomentSyncDiagnostics.reason,
       requestId: remoteMomentSyncDiagnostics.requestId,
+      resolveRequestUserMs: remoteMomentSyncDiagnostics.resolveRequestUserMs,
+      responseBytes: remoteMomentSyncDiagnostics.responseBytes,
       serverTotalMs: remoteMomentSyncDiagnostics.serverTotalMs,
       source: 'boot_reuse',
       status: initialRemoteMoments.length > 0 ? 'ready' : 'empty',
+      thumbnailSignedUrlWallMs:
+        remoteMomentSyncDiagnostics.thumbnailSignedUrlWallMs,
       updatedAt: Date.now(),
+      view: remoteMomentSyncDiagnostics.view,
     }));
   }, [
     applyVideoArchiveFirstPage,
@@ -1380,9 +1411,19 @@ export function HomeScreen() {
     initialRemoteMomentPageInfo.nextCursor,
     initialRemoteMoments,
     remoteMomentSyncDiagnostics.durationMs,
+    remoteMomentSyncDiagnostics.authClaimsMs,
+    remoteMomentSyncDiagnostics.authGetUserMs,
+    remoteMomentSyncDiagnostics.authVerificationMode,
+    remoteMomentSyncDiagnostics.evidenceQueryMs,
+    remoteMomentSyncDiagnostics.momentsQueryMs,
+    remoteMomentSyncDiagnostics.publicUserLookupMs,
     remoteMomentSyncDiagnostics.reason,
     remoteMomentSyncDiagnostics.requestId,
+    remoteMomentSyncDiagnostics.resolveRequestUserMs,
+    remoteMomentSyncDiagnostics.responseBytes,
     remoteMomentSyncDiagnostics.serverTotalMs,
+    remoteMomentSyncDiagnostics.thumbnailSignedUrlWallMs,
+    remoteMomentSyncDiagnostics.view,
     remoteMomentSyncStatus,
   ]);
   const appendVideoArchiveSessionIds = useCallback((sessionIds: string[]) => {
@@ -1430,18 +1471,28 @@ export function HomeScreen() {
     setVideoArchiveDiagnostics((current) => ({
       ...current,
       apiMs: null,
+      authClaimsMs: null,
+      authGetUserMs: null,
+      authVerificationMode: null,
       bootPageReused: false,
       clientNormalizeMs: null,
       count: null,
       duplicateVideoFetchBlocked: false,
       durationMs: null,
+      evidenceQueryMs: null,
       hasMore: null,
+      momentsQueryMs: null,
+      publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      resolveRequestUserMs: null,
+      responseBytes: null,
       serverTotalMs: null,
       source: 'archive_fetch',
       status: 'loading',
+      thumbnailSignedUrlWallMs: null,
       updatedAt: startedAt,
+      view: null,
     }));
 
     console.info('[moment_sync]', {
@@ -1462,18 +1513,28 @@ export function HomeScreen() {
         setVideoArchiveDiagnostics((current) => ({
           ...current,
           apiMs,
+          authClaimsMs: remoteMomentPage.authClaimsMs,
+          authGetUserMs: remoteMomentPage.authGetUserMs,
+          authVerificationMode: remoteMomentPage.authVerificationMode,
           bootPageReused: false,
           clientNormalizeMs,
           count: remoteMomentPage.moments.length,
           durationMs: getRequestDurationMs(startedAt),
           duplicateVideoFetchBlocked: false,
+          evidenceQueryMs: remoteMomentPage.evidenceQueryMs,
           hasMore: remoteMomentPage.hasMore,
+          momentsQueryMs: remoteMomentPage.momentsQueryMs,
+          publicUserLookupMs: remoteMomentPage.publicUserLookupMs,
           reason: null,
           requestId: remoteMomentPage.requestId,
+          resolveRequestUserMs: remoteMomentPage.resolveRequestUserMs,
+          responseBytes: remoteMomentPage.responseBytes,
           serverTotalMs: remoteMomentPage.serverTotalMs,
           source: 'archive_fetch',
           status: remoteMomentPage.moments.length > 0 ? 'ready' : 'empty',
+          thumbnailSignedUrlWallMs: remoteMomentPage.thumbnailSignedUrlWallMs,
           updatedAt: Date.now(),
+          view: remoteMomentPage.view,
         }));
         console.info('[moment_sync]', {
           count: remoteMomentPage.moments.length,
@@ -1490,18 +1551,28 @@ export function HomeScreen() {
         setVideoArchiveDiagnostics((current) => ({
           ...current,
           apiMs: getRequestDurationMs(startedAt),
+          authClaimsMs: null,
+          authGetUserMs: null,
+          authVerificationMode: null,
           bootPageReused: false,
           clientNormalizeMs: null,
           count: null,
           durationMs: getRequestDurationMs(startedAt),
           duplicateVideoFetchBlocked: false,
+          evidenceQueryMs: null,
           hasMore: null,
+          momentsQueryMs: null,
+          publicUserLookupMs: null,
           reason,
           requestId: null,
+          resolveRequestUserMs: null,
+          responseBytes: null,
           serverTotalMs: null,
           source: 'archive_fetch',
           status,
+          thumbnailSignedUrlWallMs: null,
           updatedAt: Date.now(),
+          view: null,
         }));
         console.info('[moment_sync]', {
           durationMs: getRequestDurationMs(startedAt),
@@ -1965,19 +2036,29 @@ export function HomeScreen() {
     setVideoArchiveLoadState('empty');
     setVideoArchiveDiagnostics({
       apiMs: null,
+      authClaimsMs: null,
+      authGetUserMs: null,
+      authVerificationMode: null,
       bootPageReused: null,
       clientNormalizeMs: null,
       count: null,
       duplicateVideoFetchBlocked: null,
       durationMs: null,
+      evidenceQueryMs: null,
       hasMore: null,
+      momentsQueryMs: null,
+      publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      resolveRequestUserMs: null,
+      responseBytes: null,
       retryCount: 0,
       serverTotalMs: null,
       source: null,
       status: 'empty',
+      thumbnailSignedUrlWallMs: null,
       updatedAt: Date.now(),
+      view: null,
     });
     setIsLoadingVideoArchiveInitialPage(false);
     setIsLoadingMoreVideoArchiveMoments(false);
@@ -2546,6 +2627,22 @@ function QADebugPanel({
       <Text style={styles.qaDebugLine}>
         Video req {formatDebugRequestId(snapshot.video.requestId)} · server{' '}
         {snapshot.video.serverTotalMs ?? '-'}ms
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video view {snapshot.video.view ?? '-'} · auth{' '}
+        {snapshot.video.authVerificationMode ?? '-'} · claims{' '}
+        {snapshot.video.authClaimsMs ?? '-'}ms · getUser{' '}
+        {snapshot.video.authGetUserMs ?? '-'}ms
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video resolve {snapshot.video.resolveRequestUserMs ?? '-'}ms · user{' '}
+        {snapshot.video.publicUserLookupMs ?? '-'}ms · query{' '}
+        {snapshot.video.momentsQueryMs ?? '-'}ms
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video ev {snapshot.video.evidenceQueryMs ?? '-'}ms · thumb{' '}
+        {snapshot.video.thumbnailSignedUrlWallMs ?? '-'}ms · bytes{' '}
+        {snapshot.video.responseBytes ?? '-'}
       </Text>
       <Text style={styles.qaDebugLine}>
         Video count {snapshot.video.count ?? '-'} · more{' '}

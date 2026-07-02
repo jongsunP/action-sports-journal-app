@@ -338,6 +338,36 @@ Build 99 Startup Performance P2 summary-first boot QA build complete,
   AI Calibration. If variance remains high, review the 0-record
   `resolveRequestUser` cache-miss path separately with a security-aware plan.
 
+Startup Performance P2.1 auth diagnostics and claims-first verification
+implemented, 2026-07-02:
+
+- Build 99 QA confirmed the summary path is working: Render logs show
+  `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, and list
+  payload size reduced to about 7545 bytes for the 7-record account.
+- Remaining slow cases are no longer thumbnail/evidence list work. The main
+  cold-path suspects are authenticated user verification, public user mapping,
+  and the moments query.
+- Server auth verification now tries Supabase `getClaims()` first and falls
+  back to `getUser()` when claims are unavailable or fail. This keeps token
+  verification and ownership boundaries intact while testing whether the Auth
+  round trip can be reduced.
+- `/api/moments` response headers now expose safe diagnostic values for QA:
+  request view, auth verification mode, claims time, getUser time, request-user
+  resolve time, public user lookup time, moments query time, evidence query
+  time, thumbnail signed URL wall time, response bytes, and server total.
+- The QA Debug Panel now surfaces these values so future device QA does not
+  need Render log lookup for every timing question.
+- Secrets, raw bearer tokens, email, full user ids, full callback URLs, and
+  signed URLs are still not exposed in logs or UI.
+- No DB schema, Storage policy, Auth/Recovery/Upload/AI behavior, EAS build, or
+  buildNumber change was made.
+- Next step: deploy Render, then confirm whether summary requests use
+  `authVerificationMode=claims` with lower `resolveRequestUserMs`. If claims
+  mode is fast, the remaining work is mostly moments query/UX. If claims falls
+  back to `get_user` or remains slow, the remaining latency is primarily
+  Supabase Auth / infrastructure-bound unless a deeper JWT verification strategy
+  is introduced.
+
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
 - Build prep commit is `47f75ea chore: prepare pre-ai calibration qa build`.

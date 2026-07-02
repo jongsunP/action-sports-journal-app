@@ -517,6 +517,16 @@ Future Detail UX backlog:
   `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, list
   placeholder quality, and Detail full evidence/thumbnail hydration before
   deciding whether more startup work is needed.
+- Startup Performance P2.1 adds the next diagnostic and auth-resolve pass.
+  Build 99 logs showed summary mode already removes list evidence and thumbnail
+  signed URL work, so the remaining cold path is now Auth/public-user resolve
+  and moments query. The server now tries Supabase `getClaims()` before
+  fallback `getUser()`, keeps auth/ownership semantics unchanged, and exposes
+  safe timing headers to the app. QA Debug Panel should be preferred over
+  Render-log-only checking for these non-secret values: request view, auth
+  verification mode, claims time, getUser time, request-user resolve time,
+  public user lookup time, moments query time, evidence query time, thumbnail
+  signed URL wall time, response bytes, and server total.
 - Future observability work should prefer QA Debug Panel over Render-log-only
   checks whenever the values are non-secret and useful during device QA.
   Candidate fields include request view, server total, evidence timing,

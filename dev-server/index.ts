@@ -91,6 +91,8 @@ const thumbnailSignedUrlCacheMaxEntries = readNumberEnv(
   "THUMBNAIL_SIGNED_URL_CACHE_MAX_ENTRIES",
   1_000,
 );
+const supabaseClaimsVerificationEnabled =
+  process.env.SUPABASE_CLAIMS_VERIFICATION_ENABLED !== "false";
 const geminiMaxOutputTokens = readNumberEnv("GEMINI_MAX_OUTPUT_TOKENS", 1_200);
 const geminiEvidenceMaxOutputTokens = readNumberEnv(
   "GEMINI_EVIDENCE_MAX_OUTPUT_TOKENS",
@@ -340,6 +342,7 @@ app.get("/health", (_request, response) => {
     performanceCaches: {
       requestUserCacheMaxEntries,
       requestUserCacheTtlMs,
+      supabaseClaimsVerificationEnabled,
       thumbnailSignedUrlCacheMaxEntries,
       thumbnailSignedUrlCacheTtlMs,
     },
@@ -1647,11 +1650,41 @@ app.get("/api/moments", async (request, response) => {
     const serverTotalMs = Date.now() - startedAt;
     response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
     response.setHeader("X-ASJ-Response-Bytes", String(responseBytes));
+    response.setHeader("X-ASJ-Moment-List-View", view);
+    response.setHeader(
+      "X-ASJ-Auth-Verification-Mode",
+      requestUserTiming.authVerificationMode ?? "unknown",
+    );
+    response.setHeader(
+      "X-ASJ-Auth-Claims-Ms",
+      String(requestUserTiming.authClaimsMs ?? 0),
+    );
+    response.setHeader(
+      "X-ASJ-Auth-Get-User-Ms",
+      String(requestUserTiming.authGetUserMs ?? 0),
+    );
+    response.setHeader(
+      "X-ASJ-Resolve-Request-User-Ms",
+      String(resolveRequestUserMs),
+    );
+    response.setHeader(
+      "X-ASJ-Public-User-Lookup-Ms",
+      String(requestUserTiming.publicUserLookupMs ?? 0),
+    );
+    response.setHeader("X-ASJ-Moments-Query-Ms", String(momentsQueryMs));
+    response.setHeader("X-ASJ-Evidence-Query-Ms", String(evidenceQueryMs));
+    response.setHeader(
+      "X-ASJ-Thumbnail-Signed-Url-Wall-Ms",
+      String(thumbnailSignedUrlWallMs),
+    );
 
     console.info("[moments_timing]", {
+      authClaimsMs: requestUserTiming.authClaimsMs ?? null,
       authGetUserMs: requestUserTiming.authGetUserMs ?? null,
       authUserPublicUserCacheHit:
         requestUserTiming.authUserPublicUserCacheHit ?? null,
+      authVerificationMode:
+        requestUserTiming.authVerificationMode ?? null,
       cacheHit: requestUserTiming.cacheHit === true,
       event: "moments_list_completed",
       evidenceIdsCount: evidenceResultIds.length,
@@ -7254,10 +7287,23 @@ type CachedThumbnailSignedUrl = {
   signedUrl: string;
 };
 
+type VerifiedBearerAuthUser = {
+  email: string | null;
+  id: string;
+  userMetadata: Record<string, unknown> | null;
+};
+
 type PublicUserSyncAction = "none" | "insert" | "deferred";
+type AuthVerificationMode =
+  | "claims"
+  | "get_user"
+  | "internal_default_user"
+  | "token_cache";
 
 type RequestUserTimingDiagnostics = {
+  authClaimsMs?: number;
   authUserPublicUserCacheHit?: boolean;
+  authVerificationMode?: AuthVerificationMode;
   authGetUserMs?: number;
   cacheHit?: boolean;
   publicUserSyncAction?: PublicUserSyncAction;
@@ -7310,6 +7356,22 @@ async function resolveRequestUser(
     }
 
     const userId = await getOrCreateDefaultSupabaseUser();
+    options.timing &&
+      (options.timing.authClaimsMs = 0);
+    options.timing &&
+      (options.timing.authGetUserMs = 0);
+    options.timing &&
+      (options.timing.authVerificationMode = "internal_default_user");
+    options.timing &&
+      (options.timing.cacheHit = false);
+    options.timing &&
+      (options.timing.authUserPublicUserCacheHit = false);
+    options.timing &&
+      (options.timing.publicUserLookupMs = 0);
+    options.timing &&
+      (options.timing.publicUserUpsertOrSyncMs = 0);
+    options.timing &&
+      (options.timing.publicUserSyncAction = "none");
     logResolvedRequestUser({
       authMode: "internal_default_user",
       authUserId: null,
@@ -7330,6 +7392,10 @@ async function resolveRequestUser(
   if (cachedUser) {
     options.timing &&
       (options.timing.authGetUserMs = 0);
+    options.timing &&
+      (options.timing.authClaimsMs = 0);
+    options.timing &&
+      (options.timing.authVerificationMode = "token_cache");
     options.timing &&
       (options.timing.cacheHit = true);
     options.timing &&
@@ -7355,13 +7421,13 @@ async function resolveRequestUser(
 
   options.timing &&
     (options.timing.cacheHit = false);
-  const authGetUserStartedAt = Date.now();
-  const { data: authData, error: authError } =
-    await client.auth.getUser(bearerToken);
-  options.timing &&
-    (options.timing.authGetUserMs = Date.now() - authGetUserStartedAt);
+  const verifiedAuthUser = await verifyBearerAuthUser({
+    bearerToken,
+    client,
+    timing: options.timing,
+  });
 
-  if (authError || !authData.user?.id) {
+  if (!verifiedAuthUser?.id) {
     console.warn("[auth]", {
       authMode: "auth_required",
       event: "invalid_bearer_token",
@@ -7372,13 +7438,13 @@ async function resolveRequestUser(
     );
   }
 
-  const authUserId = authData.user.id;
-  const email = authData.user.email ?? null;
+  const authUserId = verifiedAuthUser.id;
+  const email = verifiedAuthUser.email;
   const displayName =
-    readStringUserMetadata(authData.user.user_metadata?.full_name) ??
-    readStringUserMetadata(authData.user.user_metadata?.name) ??
-    readStringUserMetadata(authData.user.user_metadata?.preferred_username) ??
-    readStringUserMetadata(authData.user.user_metadata?.user_name) ??
+    readStringUserMetadata(verifiedAuthUser.userMetadata?.full_name) ??
+    readStringUserMetadata(verifiedAuthUser.userMetadata?.name) ??
+    readStringUserMetadata(verifiedAuthUser.userMetadata?.preferred_username) ??
+    readStringUserMetadata(verifiedAuthUser.userMetadata?.user_name) ??
     email;
   const now = new Date().toISOString();
   const desiredEmailHash = hashProfileValueForCache(email);
@@ -7569,6 +7635,64 @@ async function resolveRequestUser(
     authMode: "authenticated",
     authUserId,
     userId: insertedUser.id as string,
+  };
+}
+
+async function verifyBearerAuthUser({
+  bearerToken,
+  client,
+  timing,
+}: {
+  bearerToken: string;
+  client: SupabaseServerClient;
+  timing?: RequestUserTimingDiagnostics;
+}): Promise<VerifiedBearerAuthUser | null> {
+  if (supabaseClaimsVerificationEnabled) {
+    const claimsStartedAt = Date.now();
+
+    try {
+      const { data: claimsData, error: claimsError } =
+        await client.auth.getClaims(bearerToken);
+
+      timing && (timing.authClaimsMs = Date.now() - claimsStartedAt);
+
+      if (!claimsError && claimsData?.claims?.sub) {
+        timing && (timing.authVerificationMode = "claims");
+        timing && (timing.authGetUserMs = 0);
+
+        return {
+          email: readStringUserMetadata(claimsData.claims.email) ?? null,
+          id: claimsData.claims.sub,
+          userMetadata: readRecordUserMetadata(
+            claimsData.claims.user_metadata,
+          ),
+        };
+      }
+    } catch (error) {
+      timing && (timing.authClaimsMs = Date.now() - claimsStartedAt);
+      console.warn("[auth]", {
+        event: "claims_verification_failed",
+        message: error instanceof Error ? error.name : "unknown",
+      });
+    }
+  } else {
+    timing && (timing.authClaimsMs = 0);
+  }
+
+  const authGetUserStartedAt = Date.now();
+  const { data: authData, error: authError } =
+    await client.auth.getUser(bearerToken);
+  timing && (timing.authGetUserMs = Date.now() - authGetUserStartedAt);
+  timing && (timing.authVerificationMode = "get_user");
+
+  if (authError || !authData.user?.id) {
+    return null;
+  }
+
+  return {
+    email: authData.user.email ?? null,
+    id: authData.user.id,
+    userMetadata: readRecordUserMetadata(authData.user.user_metadata),
   };
 }
 
@@ -7867,6 +7991,14 @@ function looksLikeRawEmail(value: string) {
 
 function readStringUserMetadata(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readRecordUserMetadata(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
 }
 
 function logResolvedRequestUser({

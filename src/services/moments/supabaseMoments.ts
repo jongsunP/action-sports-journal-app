@@ -198,11 +198,21 @@ export type ListMomentsOptions = {
 };
 
 export type RemoteMomentPage = {
+  authClaimsMs: number | null;
+  authGetUserMs: number | null;
+  authVerificationMode: string | null;
+  evidenceQueryMs: number | null;
   hasMore: boolean;
   moments: RemoteMomentRecord[];
+  momentsQueryMs: number | null;
   nextCursor: string | null;
+  publicUserLookupMs: number | null;
   requestId: string | null;
+  resolveRequestUserMs: number | null;
+  responseBytes: number | null;
   serverTotalMs: number | null;
+  thumbnailSignedUrlWallMs: number | null;
+  view: string | null;
 };
 
 const analysisEndpoint = process.env.EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT;
@@ -939,11 +949,21 @@ export async function listMomentsPage(
 ): Promise<RemoteMomentPage> {
   if (!momentsEndpoint) {
     return {
+      authClaimsMs: null,
+      authGetUserMs: null,
+      authVerificationMode: null,
+      evidenceQueryMs: null,
       hasMore: false,
       moments: [],
+      momentsQueryMs: null,
       nextCursor: null,
+      publicUserLookupMs: null,
       requestId: null,
+      resolveRequestUserMs: null,
+      responseBytes: null,
       serverTotalMs: null,
+      thumbnailSignedUrlWallMs: null,
+      view: null,
     };
   }
 
@@ -969,6 +989,7 @@ export async function listMomentsPage(
   const serverTotalMs = asFiniteHeaderNumber(
     response.headers.get('x-asj-server-total-ms'),
   );
+  const listDiagnostics = readMomentListDiagnostics(response.headers);
 
   if (!response.ok) {
     const message = await readRemoteErrorMessage(response);
@@ -980,6 +1001,7 @@ export async function listMomentsPage(
 
   if (!Array.isArray(data.moments)) {
     return {
+      ...listDiagnostics,
       hasMore: false,
       moments: [],
       nextCursor: null,
@@ -989,6 +1011,7 @@ export async function listMomentsPage(
   }
 
   return {
+    ...listDiagnostics,
     hasMore: data.hasMore === true,
     moments: data.moments
       .map(normalizeRemoteMoment)
@@ -1003,6 +1026,28 @@ export async function listMoments(options: ListMomentsOptions = {}) {
   const page = await listMomentsPage(options);
 
   return page.moments;
+}
+
+function readMomentListDiagnostics(headers: Headers) {
+  return {
+    authClaimsMs: asFiniteHeaderNumber(headers.get('x-asj-auth-claims-ms')),
+    authGetUserMs: asFiniteHeaderNumber(headers.get('x-asj-auth-get-user-ms')),
+    authVerificationMode:
+      asString(headers.get('x-asj-auth-verification-mode')) ?? null,
+    evidenceQueryMs: asFiniteHeaderNumber(headers.get('x-asj-evidence-query-ms')),
+    momentsQueryMs: asFiniteHeaderNumber(headers.get('x-asj-moments-query-ms')),
+    publicUserLookupMs: asFiniteHeaderNumber(
+      headers.get('x-asj-public-user-lookup-ms'),
+    ),
+    resolveRequestUserMs: asFiniteHeaderNumber(
+      headers.get('x-asj-resolve-request-user-ms'),
+    ),
+    responseBytes: asFiniteHeaderNumber(headers.get('x-asj-response-bytes')),
+    thumbnailSignedUrlWallMs: asFiniteHeaderNumber(
+      headers.get('x-asj-thumbnail-signed-url-wall-ms'),
+    ),
+    view: asString(headers.get('x-asj-moment-list-view')) ?? null,
+  };
 }
 
 export async function getMomentDetail(

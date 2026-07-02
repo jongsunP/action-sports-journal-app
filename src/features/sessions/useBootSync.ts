@@ -65,14 +65,24 @@ export type RemoteMomentPageInfo = {
   nextCursor: string | null;
 };
 export type RemoteMomentSyncDiagnostics = {
+  authClaimsMs: number | null;
+  authGetUserMs: number | null;
+  authVerificationMode: string | null;
   count: number | null;
   durationMs: number | null;
+  evidenceQueryMs: number | null;
   hasMore: boolean | null;
+  momentsQueryMs: number | null;
+  publicUserLookupMs: number | null;
   reason: string | null;
   requestId: string | null;
+  resolveRequestUserMs: number | null;
+  responseBytes: number | null;
   serverTotalMs: number | null;
   status: RemoteMomentSyncStatus;
+  thumbnailSignedUrlWallMs: number | null;
   updatedAt: number | null;
+  view: string | null;
 };
 
 function getRemoteMomentSyncDuration(startedAt: number) {
@@ -115,16 +125,26 @@ export function useBootSync({
     );
   const [remoteMomentSyncDiagnostics, setRemoteMomentSyncDiagnostics] =
     useState<RemoteMomentSyncDiagnostics>({
+      authClaimsMs: null,
+      authGetUserMs: null,
+      authVerificationMode: null,
       count: null,
       durationMs: null,
+      evidenceQueryMs: null,
       hasMore: null,
+      momentsQueryMs: null,
+      publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      resolveRequestUserMs: null,
+      responseBytes: null,
       serverTotalMs: null,
       status: isRemoteMomentSyncConfigured
         ? 'waiting_for_storage'
         : 'not_configured',
+      thumbnailSignedUrlWallMs: null,
       updatedAt: null,
+      view: null,
     });
   const previousRemoteMomentSyncEnabledRef = useRef(remoteMomentSyncEnabled);
   const hasStartedInitialRemoteSyncRef = useRef(false);
@@ -160,16 +180,26 @@ export function useBootSync({
         hasConfiguredSupabaseMoments() ? 'waiting_for_storage' : 'not_configured',
       );
       setRemoteMomentSyncDiagnostics({
+        authClaimsMs: null,
+        authGetUserMs: null,
+        authVerificationMode: null,
         count: null,
         durationMs: null,
+        evidenceQueryMs: null,
         hasMore: null,
+        momentsQueryMs: null,
+        publicUserLookupMs: null,
         reason: null,
         requestId: null,
+        resolveRequestUserMs: null,
+        responseBytes: null,
         serverTotalMs: null,
         status: hasConfiguredSupabaseMoments()
           ? 'waiting_for_storage'
           : 'not_configured',
+        thumbnailSignedUrlWallMs: null,
         updatedAt: Date.now(),
+        view: null,
       });
       return;
     }
@@ -266,14 +296,24 @@ export function useBootSync({
       setRemoteMomentSyncStatus('loading');
       const startedAt = Date.now();
       setRemoteMomentSyncDiagnostics({
+        authClaimsMs: null,
+        authGetUserMs: null,
+        authVerificationMode: null,
         count: null,
         durationMs: null,
+        evidenceQueryMs: null,
         hasMore: null,
+        momentsQueryMs: null,
+        publicUserLookupMs: null,
         reason: null,
         requestId: null,
+        resolveRequestUserMs: null,
+        responseBytes: null,
         serverTotalMs: null,
         status: 'loading',
+        thumbnailSignedUrlWallMs: null,
         updatedAt: startedAt,
+        view: null,
       });
 
       console.info('[moment_sync]', {
@@ -301,14 +341,24 @@ export function useBootSync({
         didFinishInitialRemoteSync = true;
         setRemoteMomentSyncStatus('completed');
         setRemoteMomentSyncDiagnostics({
+          authClaimsMs: remoteMomentPage.authClaimsMs,
+          authGetUserMs: remoteMomentPage.authGetUserMs,
+          authVerificationMode: remoteMomentPage.authVerificationMode,
           count: remoteMomentPage.moments.length,
           durationMs: getRemoteMomentSyncDuration(startedAt),
+          evidenceQueryMs: remoteMomentPage.evidenceQueryMs,
           hasMore: remoteMomentPage.hasMore,
+          momentsQueryMs: remoteMomentPage.momentsQueryMs,
+          publicUserLookupMs: remoteMomentPage.publicUserLookupMs,
           reason: null,
           requestId: remoteMomentPage.requestId,
+          resolveRequestUserMs: remoteMomentPage.resolveRequestUserMs,
+          responseBytes: remoteMomentPage.responseBytes,
           serverTotalMs: remoteMomentPage.serverTotalMs,
           status: 'completed',
+          thumbnailSignedUrlWallMs: remoteMomentPage.thumbnailSignedUrlWallMs,
           updatedAt: Date.now(),
+          view: remoteMomentPage.view,
         });
         console.info('[moment_sync]', {
           count: remoteMomentPage.moments.length,
@@ -324,14 +374,24 @@ export function useBootSync({
           didFinishInitialRemoteSync = true;
           setRemoteMomentSyncStatus(status);
           setRemoteMomentSyncDiagnostics({
+            authClaimsMs: null,
+            authGetUserMs: null,
+            authVerificationMode: null,
             count: null,
             durationMs: getRemoteMomentSyncDuration(startedAt),
+            evidenceQueryMs: null,
             hasMore: null,
+            momentsQueryMs: null,
+            publicUserLookupMs: null,
             reason,
             requestId: null,
+            resolveRequestUserMs: null,
+            responseBytes: null,
             serverTotalMs: null,
             status,
+            thumbnailSignedUrlWallMs: null,
             updatedAt: Date.now(),
+            view: null,
           });
           console.info('[moment_sync]', {
             durationMs: getRemoteMomentSyncDuration(startedAt),
@@ -382,11 +442,21 @@ export function useBootSync({
     (diagnostics?: {
       count?: number;
       durationMs?: number;
+      evidenceQueryMs?: number | null;
       hasMore?: boolean;
+      momentsQueryMs?: number | null;
+      publicUserLookupMs?: number | null;
       reason?: string | null;
       recoveredFrom?: RemoteMomentSyncStatus;
       requestId?: string | null;
+      resolveRequestUserMs?: number | null;
+      responseBytes?: number | null;
       serverTotalMs?: number | null;
+      thumbnailSignedUrlWallMs?: number | null;
+      view?: string | null;
+      authClaimsMs?: number | null;
+      authGetUserMs?: number | null;
+      authVerificationMode?: string | null;
     }) => {
       setRemoteMomentSyncStatus((currentStatus) => {
         const status =
@@ -398,18 +468,34 @@ export function useBootSync({
             : 'completed';
 
         setRemoteMomentSyncDiagnostics((current) => ({
+          authClaimsMs: diagnostics?.authClaimsMs ?? current.authClaimsMs,
+          authGetUserMs: diagnostics?.authGetUserMs ?? current.authGetUserMs,
+          authVerificationMode:
+            diagnostics?.authVerificationMode ?? current.authVerificationMode,
           count: diagnostics?.count ?? current.count,
           durationMs: diagnostics?.durationMs ?? current.durationMs,
+          evidenceQueryMs:
+            diagnostics?.evidenceQueryMs ?? current.evidenceQueryMs,
           hasMore: diagnostics?.hasMore ?? current.hasMore,
+          momentsQueryMs: diagnostics?.momentsQueryMs ?? current.momentsQueryMs,
+          publicUserLookupMs:
+            diagnostics?.publicUserLookupMs ?? current.publicUserLookupMs,
           reason:
             diagnostics?.reason ??
             (status === 'recovered_after_timeout'
               ? 'Remote moment sync recovered after timeout.'
               : null),
           requestId: diagnostics?.requestId ?? current.requestId,
+          resolveRequestUserMs:
+            diagnostics?.resolveRequestUserMs ?? current.resolveRequestUserMs,
+          responseBytes: diagnostics?.responseBytes ?? current.responseBytes,
           serverTotalMs: diagnostics?.serverTotalMs ?? current.serverTotalMs,
           status,
+          thumbnailSignedUrlWallMs:
+            diagnostics?.thumbnailSignedUrlWallMs ??
+            current.thumbnailSignedUrlWallMs,
           updatedAt: Date.now(),
+          view: diagnostics?.view ?? current.view,
         }));
 
         return status;

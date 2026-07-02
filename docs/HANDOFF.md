@@ -46,6 +46,23 @@ Latest product/UX direction update:
     for summary-first list responses because thumbnail signed URLs are skipped.
     This should be judged with the later full capture set and Render timing rows,
     not treated as the final QA result yet.
+  - Follow-up implementation after Build 99 logs: Startup Performance P2.1 adds
+    claims-first auth verification and safe timing headers. `/api/moments` now
+    tries Supabase `getClaims()` before falling back to `getUser()`, keeps
+    ownership filtering unchanged, and returns non-secret headers for request
+    view, auth verification mode, claims time, getUser time, request-user
+    resolve time, public user lookup time, moments query time, evidence query
+    time, thumbnail signed URL wall time, response bytes, and server total.
+    The QA Debug Panel now displays these values. This does not require a DB
+    migration and does not change Auth/Recovery/Upload/AI behavior. Render must
+    deploy the server change first; a new standalone build is only needed if the
+    Founder wants the expanded QA Debug Panel on device.
+  - P2.1 interpretation rule: if `authVerificationMode=claims` and
+    `resolveRequestUserMs` drops, the remaining startup problem is mostly
+    moments query or UI/lazy media strategy. If it falls back to `get_user` or
+    `getUser` remains slow, the remaining cold-path latency is Supabase Auth /
+    infrastructure-bound unless the project chooses a deeper JWT verification
+    strategy.
 
 - Build 94 Startup Performance Observability preview/internal build is complete.
   This is an observation build, not an optimization build. The next session
