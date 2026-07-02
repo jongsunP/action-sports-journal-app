@@ -22,7 +22,7 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
-- Render Singapore migration / Build 102 readiness, 2026-07-02:
+- Render Singapore migration / Build 102 endpoint confirmation, 2026-07-02:
   - A new Render Starter Web Service was created in Singapore:
     `https://action-sports-journal-api-sg.onrender.com`.
   - The existing Virginia service remains available at:
@@ -34,13 +34,22 @@ Latest product/UX direction update:
     `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` has been updated to the Singapore
     analysis endpoint:
     `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
-  - iOS `buildNumber` has been prepared as `102`.
-  - EAS Build has not been started yet. The next action is Founder approval to
-    run the iOS preview/internal Build 102.
-  - Keep the Virginia Render service alive until Build 102 is installed and
-    startup/upload/auth/recovery QA passes against Singapore. Only then decide
-    whether to suspend/delete the Virginia service or keep it temporarily as a
-    rollback.
+  - iOS `buildNumber` is `102`.
+  - Build 102 has been run and installed:
+    - Build commit: `2584872 chore: prepare singapore endpoint qa build`.
+    - EAS Build ID: `2f1620ae-1a9e-4323-a935-710803b0aeeb`.
+    - Install page:
+      `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/2f1620ae-1a9e-4323-a935-710803b0aeeb`.
+    - IPA URL:
+      `https://expo.dev/artifacts/eas/F40umop-OycaD0QSDvistiHn7rr0I5wbquhkuG7XhoA.ipa`.
+  - Founder confirmed the Build 102 app launches and that real app logs appear
+    in the Singapore Render service, so the endpoint transition is applied in
+    the standalone install.
+  - Startup timing screenshots/values have not been recorded yet, and
+    Upload/Auth/Recovery full regression QA has not been recorded yet.
+  - Keep the Virginia Render service alive until Build 102 startup/upload/auth/
+    recovery QA passes against Singapore. Only then decide whether to suspend/
+    delete the Virginia service or keep it temporarily as a rollback.
   - Build 102 QA focus: confirm QA Debug Panel startup timings against
     Singapore, verify `view=summary`, check long-idle and immediate re-entry,
     compare `serverTotalMs`, `authClaimsMs`, `resolveRequestUserMs`,

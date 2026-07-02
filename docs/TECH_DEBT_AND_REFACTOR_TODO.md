@@ -35,8 +35,7 @@ feels stable.
 ## Active Startup Performance Follow-Up
 
 Startup Performance P2.2 is implemented, and Render Singapore migration is now
-prepared for Build 102 validation before deciding whether to move to AI
-Calibration.
+in Build 102 validation before deciding whether to move to AI Calibration.
 
 Render migration state:
 
@@ -46,8 +45,12 @@ Render migration state:
   `https://action-sports-journal-api-sg.onrender.com`.
 - EAS preview `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` points to the Singapore
   analysis endpoint.
-- iOS buildNumber `102` is prepared.
-- EAS Build 102 has not been run yet.
+- iOS buildNumber `102` has been built.
+- EAS Build 102 ID is `2f1620ae-1a9e-4323-a935-710803b0aeeb`.
+- Founder confirmed the standalone Build 102 app launches and logs to the
+  Singapore service.
+- Quantitative startup timing and Upload/Auth/Recovery regression QA are still
+  pending.
 - Keep Virginia alive until Build 102 standalone QA passes; then decide whether
   to suspend/delete it or keep it as a short rollback window.
 

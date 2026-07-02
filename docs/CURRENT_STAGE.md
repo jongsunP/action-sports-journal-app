@@ -19,7 +19,8 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
-Render Singapore endpoint applied / Build 102 ready, 2026-07-02:
+Build 102 Singapore endpoint QA build complete / quantitative QA pending,
+2026-07-02:
 
 - A new Render Starter Web Service is live in Singapore:
   `https://action-sports-journal-api-sg.onrender.com`.
@@ -32,12 +33,22 @@ Render Singapore endpoint applied / Build 102 ready, 2026-07-02:
 - EAS `preview` env `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` now points to the
   Singapore analysis endpoint:
   `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
-- iOS `buildNumber` is prepared as `102`.
-- EAS Build has not been started. The next action is to ask the Founder before
-  running the iOS preview/internal Build 102.
-- Do not suspend/delete the Virginia service until Build 102 confirms the
-  Singapore endpoint in a standalone install and Upload/Auth/Recovery/startup
-  QA passes.
+- iOS `buildNumber` is `102`.
+- Build commit is `2584872 chore: prepare singapore endpoint qa build`.
+- EAS Build ID is `2f1620ae-1a9e-4323-a935-710803b0aeeb`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/2f1620ae-1a9e-4323-a935-710803b0aeeb`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/F40umop-OycaD0QSDvistiHn7rr0I5wbquhkuG7XhoA.ipa`.
+- Founder confirmed Build 102 installed, launched, and sent real app logs to
+  the Singapore Render service. This confirms the standalone app is using the
+  Singapore endpoint.
+- Quantitative startup timing values have not been recorded yet. Do not mark
+  Startup Performance passed until QA Debug Panel values and matching Singapore
+  Render `[moments_timing]` rows are reviewed.
+- Upload/Auth/Recovery full regression QA has not been recorded yet.
+- Do not suspend/delete the Virginia service until Build 102 startup timing and
+  Upload/Auth/Recovery QA pass.
 - AI Calibration has not started.
 
 Build 101 Startup Performance P2.2 QA build complete / Founder QA pending,

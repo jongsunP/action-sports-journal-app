@@ -79,13 +79,20 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
-Current infrastructure / build readiness:
+Current infrastructure / Build 102 QA:
 
 - Render Singapore migration is prepared. A new Singapore Starter service is
   live at `https://action-sports-journal-api-sg.onrender.com`.
 - EAS preview `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` now points to
   `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
-- iOS buildNumber `102` is prepared, but Build 102 has not been run yet.
+- iOS buildNumber `102` has been built. Build 102 EAS Build ID is
+  `2f1620ae-1a9e-4323-a935-710803b0aeeb`, from commit `2584872 chore:
+  prepare singapore endpoint qa build`.
+- Founder confirmed Build 102 installs, launches, and sends real app logs to
+  the Singapore Render service.
+- Build 102 is not yet a Startup Performance pass. Quantitative QA Debug Panel
+  timing values, matching Singapore Render `[moments_timing]` rows, and
+  Upload/Auth/Recovery regression QA are still pending.
 - The existing Virginia service remains online as rollback until Build 102
   standalone QA confirms Singapore startup/upload/auth/recovery behavior.
 
@@ -476,6 +483,7 @@ Current stable workstream list:
 - Startup Performance P2.1 Auth Resolve Diagnostics(시작 성능 2.1차 Auth 진단): 구현 완료 / Render 배포 후 관찰 대기. Build 99 로그에서 summary path는 정상 동작했고 `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, responseBytes 약 7545로 확인됐다. 남은 cold-path 후보는 thumbnail/evidence가 아니라 Auth verification, public user mapping, moments query다. 서버는 Supabase `getClaims()`를 먼저 시도하고 실패하면 `getUser()`로 fallback한다. `/api/moments`는 safe response headers로 `view`, `authVerificationMode`, `authClaimsMs`, `authGetUserMs`, `resolveRequestUserMs`, `publicUserLookupMs`, `momentsQueryMs`, `evidenceQueryMs`, `thumbnailSignedUrlWallMs`, `responseBytes`를 노출하고, QA Debug Panel도 이 값을 표시한다. raw token/email/full user id/signed URL/full callback URL은 노출하지 않는다. DB/Auth/Storage/Upload/Recovery/AI flow는 변경하지 않았고, buildNumber/EAS Build도 변경하지 않았다
 - Startup Performance P2.1 Public User Lookup Cache(시작 성능 2.1차 public user lookup cache): 구현 완료 / Render 배포 후 Build 100으로 관찰 대기. Build 100 QA에서 `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, responseBytes 약 7545가 확인되어 list payload/thumbnail/evidence는 병목에서 제외됐다. 느린 케이스는 `authVerificationMode=claims`, `authClaimsMs` 약 880ms, `publicUserLookupMs` 약 918ms, `resolveRequestUserMs` 약 1799ms였고 빠른 케이스는 token/public user cache hit으로 `publicUserLookupMs=0`, `resolveRequestUserMs=0`이었다. `public.users.auth_user_id`는 schema상 `unique`라 index가 있어야 하고 lookup query도 `id, display_name, email`만 선택하므로, P2.1은 auth 검증을 우회하지 않고 verified `authUserId -> public.users.id` cache를 request token cache와 분리했다. `AUTH_USER_PUBLIC_USER_CACHE_TTL_MS` 기본값은 6시간, `AUTH_USER_PUBLIC_USER_CACHE_MAX_ENTRIES` 기본값은 500이며 `/health.performanceCaches`에 노출된다. raw bearer token 저장, no-token/default-user 정책, ownership filtering, Auth/Recovery/Upload/AI flow, DB schema, API contract, EAS build, buildNumber는 변경하지 않았다
 - Build 101 Startup Performance P2.2 QA(빌드 101 시작 성능 2.2차 QA): EAS preview/internal build 완료 / Founder 실기기 QA 대기. Build prep commit `c939257`, base implementation commit `7ded0ba`, iOS buildNumber `101`, EAS Build ID `cda7e537-ed24-4365-b117-e7b5b0ac9061`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/cda7e537-ed24-4365-b117-e7b5b0ac9061`, IPA URL은 `https://expo.dev/artifacts/eas/WLDNFrq_Ti9CDD-kJXjkPu6Qtux0t6obSYjT_uoAGSQ.ipa`. Build 101은 summary-first boot/list, claims-first auth diagnostics, verified public-user cache separation, same-token in-flight request-user resolution dedupe, phase 14 moment list index migration file을 포함한다. Render latest deploy와 Supabase index SQL 적용은 사용자/CTO 세션에서 완료 확인됐다. QA 기준은 long-idle 첫 진입, 바로 재진입, QA panel의 auth mode/claims/resolve/query/server timing, Render `[moments_timing]` requestId 대조, Home/Video thumbnail placeholder, Detail full thumbnail/evidence 보강, Upload/Auth/Recovery 회귀 확인이다
+- Build 102 Singapore Endpoint QA(빌드 102 싱가포르 엔드포인트 QA): EAS preview/internal build 완료 / endpoint 전환 확인 완료 / 정량 startup 및 Upload/Auth/Recovery QA 대기. Build commit `2584872`, iOS buildNumber `102`, EAS Build ID `2f1620ae-1a9e-4323-a935-710803b0aeeb`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/2f1620ae-1a9e-4323-a935-710803b0aeeb`, IPA URL은 `https://expo.dev/artifacts/eas/F40umop-OycaD0QSDvistiHn7rr0I5wbquhkuG7XhoA.ipa`. Founder가 설치/실행 정상과 Singapore Render 실제 앱 로그 유입을 확인했다. 아직 `serverTotalMs`, `authClaimsMs`, `resolveRequestUserMs`, `publicUserLookupMs`, `momentsQueryMs`, `responseBytes` 등 정량 수치와 Upload/Auth/Recovery full regression 결과는 미기록이다
 - Startup Performance Optimization P1.5 QA(시작 성능 최적화 1.5차 QA): 구현 완료 / Build 98 QA 대기. list에서 compact evidence만 반환하고 Detail에서 full evidence를 별도 조회하는 최소 list/detail payload 분리를 적용했다. Moment Detail QA/debug에서 detail request id/server ms/fetch ms/response bytes를 볼 수 있다. Build 98에서 7개 계정 list `responseBytes`/`serverTotalMs`와 Detail fetch diagnostics를 Build 97 대비 확인한다
 - Build 95 Startup Performance Observability P2 QA(빌드 95 시작 성능 관측 2차 QA): EAS preview/internal build 완료 / Founder timing QA 대기. Build commit `f49481e`, iOS buildNumber `95`, EAS Build ID `b45e226d-60f7-458d-ab2e-e814f33ca6c6`. 다음 작업 재개 시 앱 QA Debug `apiMs`와 Render `[moments_timing] serverTotalMs/requestId`를 먼저 비교한다
 - Build 94 Startup Performance Observability QA(빌드 94 시작 성능 관측 QA): EAS preview/internal build 완료 / Founder multi-day 실사용 관측 대기. Build commit `880ed23`, iOS buildNumber `94`, EAS Build ID `9ee5a132-44c5-4760-95d6-f76c2e4b3a67`. 다음 작업 재개 시 Startup / Video ready QA Debug 값과 server `/api/moments` timing 로그를 먼저 확인한다
