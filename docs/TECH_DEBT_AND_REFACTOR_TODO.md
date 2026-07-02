@@ -577,6 +577,15 @@ Future Detail UX backlog:
   `authUserPublicUserCacheHit=true`, `publicUserLookupMs=0`, and lower
   `resolveRequestUserMs`; if not, the next candidates are Supabase public user
   lookup/index inspection or moments query tuning, not auth bypass.
+- Build 101 is the current Startup Performance P2.2 standalone QA build.
+  Build prep commit: `c939257`; base implementation commit: `7ded0ba`; iOS
+  buildNumber: `101`; EAS Build ID:
+  `cda7e537-ed24-4365-b117-e7b5b0ac9061`. It includes summary-first boot/list,
+  claims-first auth diagnostics, verified public-user cache separation,
+  same-token in-flight request-user resolution dedupe, and the phase 14 moments
+  list index migration file. Founder QA should decide whether Startup
+  Performance can pause before AI Calibration or whether more work is needed on
+  moments query / thumbnail lazy hydration / remaining infra variance.
 - Future observability work should prefer QA Debug Panel over Render-log-only
   checks whenever the values are non-secret and useful during device QA.
   Candidate fields include request view, server total, evidence timing,

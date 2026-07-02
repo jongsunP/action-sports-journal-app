@@ -19,6 +19,33 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 101 Startup Performance P2.2 QA build complete / Founder QA pending,
+2026-07-02:
+
+- Build prep commit is `c939257 chore: prepare startup dedupe qa build`.
+- Base implementation commit is `7ded0ba fix: dedupe startup user resolution`.
+- iOS buildNumber is `101`.
+- EAS Build ID is `cda7e537-ed24-4365-b117-e7b5b0ac9061`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/cda7e537-ed24-4365-b117-e7b5b0ac9061`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/WLDNFrq_Ti9CDD-kJXjkPu6Qtux0t6obSYjT_uoAGSQ.ipa`.
+- Build 101 includes summary-first boot/list, claims-first auth diagnostics,
+  verified public-user cache separation, same-token in-flight request-user
+  resolution dedupe, and the phase 14 moment list index migration file. The
+  Founder reported the Render latest deploy and Supabase index SQL were already
+  applied before this build.
+- QA focus:
+  - long-idle first entry timing,
+  - immediate re-entry timing,
+  - QA Debug auth mode / claims / resolve / query / server timing,
+  - Render `[moments_timing]` and requestId matching,
+  - Home/Video thumbnail placeholder state,
+  - Detail full thumbnail/evidence hydration,
+  - Upload/Auth/Recovery regression.
+- AI Calibration has not started. Wait for Founder Build 101 screenshots and
+  timing values before deciding whether Startup Performance can pause.
+
 Startup Performance P2.2 implemented, 2026-07-02:
 
 - Goal: keep pushing startup toward an industry-normal summary-first boot path

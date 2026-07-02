@@ -22,6 +22,22 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 101 Startup Performance P2.2 QA build is complete. Founder real-device
+  QA is pending; do not mark P2.2 passed until installed-device captures are
+  reviewed.
+  - Build prep commit: `c939257 chore: prepare startup dedupe qa build`.
+  - Base implementation commit: `7ded0ba fix: dedupe startup user resolution`.
+  - iOS buildNumber: `101`.
+  - EAS Build ID: `cda7e537-ed24-4365-b117-e7b5b0ac9061`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/cda7e537-ed24-4365-b117-e7b5b0ac9061`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/WLDNFrq_Ti9CDD-kJXjkPu6Qtux0t6obSYjT_uoAGSQ.ipa`.
+  - QA purpose: verify long-idle first entry, immediate re-entry, QA Debug
+    auth/request timing, Render `[moments_timing]` requestId matching,
+    Home/Video thumbnail placeholder quality, Detail full thumbnail/evidence
+    hydration, and Upload/Auth/Recovery regression.
+
 - Startup Performance P2.2 is implemented after Build 100 diagnostics showed
   that summary-first and claims-first were working, while remaining cold-path
   delay was concentrated around request-user resolution and the moments query.
