@@ -83,6 +83,14 @@ const requestUserCacheMaxEntries = readNumberEnv(
   "REQUEST_USER_CACHE_MAX_ENTRIES",
   500,
 );
+const authUserPublicUserCacheTtlMs = readNumberEnv(
+  "AUTH_USER_PUBLIC_USER_CACHE_TTL_MS",
+  6 * 60 * 60_000,
+);
+const authUserPublicUserCacheMaxEntries = readNumberEnv(
+  "AUTH_USER_PUBLIC_USER_CACHE_MAX_ENTRIES",
+  500,
+);
 const thumbnailSignedUrlCacheTtlMs = readNumberEnv(
   "THUMBNAIL_SIGNED_URL_CACHE_TTL_MS",
   30 * 60_000,
@@ -340,6 +348,8 @@ app.get("/health", (_request, response) => {
         "disabled by default; requires APP_ENV=development/test and ALLOW_INTERNAL_DEFAULT_USER=true",
     },
     performanceCaches: {
+      authUserPublicUserCacheMaxEntries,
+      authUserPublicUserCacheTtlMs,
       requestUserCacheMaxEntries,
       requestUserCacheTtlMs,
       supabaseClaimsVerificationEnabled,
@@ -7764,13 +7774,13 @@ function writeResolvedPublicUserByAuthUserCache(
   authUserId: string,
   user: Omit<CachedPublicUserForAuthUser, "expiresAt">,
 ) {
-  if (requestUserCacheTtlMs <= 0) {
+  if (authUserPublicUserCacheTtlMs <= 0) {
     return;
   }
 
   resolvedPublicUserByAuthUserCache.set(authUserId, {
     ...user,
-    expiresAt: Date.now() + requestUserCacheTtlMs,
+    expiresAt: Date.now() + authUserPublicUserCacheTtlMs,
   });
   pruneResolvedPublicUserByAuthUserCache();
 }
@@ -7804,7 +7814,10 @@ function pruneResolvedPublicUserByAuthUserCache() {
     }
   }
 
-  while (resolvedPublicUserByAuthUserCache.size > requestUserCacheMaxEntries) {
+  while (
+    resolvedPublicUserByAuthUserCache.size >
+    authUserPublicUserCacheMaxEntries
+  ) {
     const oldestKey = resolvedPublicUserByAuthUserCache.keys().next().value;
 
     if (typeof oldestKey !== "string") {

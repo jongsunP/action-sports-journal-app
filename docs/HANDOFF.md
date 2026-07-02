@@ -63,6 +63,18 @@ Latest product/UX direction update:
     `getUser` remains slow, the remaining cold-path latency is Supabase Auth /
     infrastructure-bound unless the project chooses a deeper JWT verification
     strategy.
+  - Build 100 follow-up: summary-first and claims diagnostics are working, and
+    the remaining slow sample is now `authClaimsMs` plus `publicUserLookupMs`.
+    `public.users.auth_user_id` is schema-unique and the lookup query is small,
+    so the next server-only pass separates the verified
+    `authUserId -> public.users.id` cache from the bearer-token request cache.
+    Defaults are `AUTH_USER_PUBLIC_USER_CACHE_TTL_MS=21600000` (6 hours) and
+    `AUTH_USER_PUBLIC_USER_CACHE_MAX_ENTRIES=500`. Auth verification still runs
+    first; raw bearer tokens are not stored; owner filtering and no-token policy
+    are unchanged. After Render deploy, Build 100 can continue observing
+    `authUserPublicUserCacheHit`, `publicUserLookupMs`,
+    `resolveRequestUserMs`, `momentsQueryMs`, and `serverTotalMs`; no new EAS
+    build is required for this server-only change.
 
 - Build 94 Startup Performance Observability preview/internal build is complete.
   This is an observation build, not an optimization build. The next session

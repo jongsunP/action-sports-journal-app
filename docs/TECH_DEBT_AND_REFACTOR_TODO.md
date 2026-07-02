@@ -527,6 +527,18 @@ Future Detail UX backlog:
   verification mode, claims time, getUser time, request-user resolve time,
   public user lookup time, moments query time, evidence query time, thumbnail
   signed URL wall time, response bytes, and server total.
+- Startup Performance P2.1 follow-up separates the verified
+  `authUserId -> public.users.id` cache from the bearer-token request cache.
+  Build 100 showed the remaining slow path as `authClaimsMs` plus
+  `publicUserLookupMs`, while cache-hit samples already reached sub-second
+  server totals. The public user mapping cache now defaults to 6 hours
+  (`AUTH_USER_PUBLIC_USER_CACHE_TTL_MS=21600000`) with 500 max entries. This is
+  still in-memory, bounded, and only used after Supabase auth verification. It
+  does not weaken no-token/default-user policy or owner filtering. After Render
+  deploy, watch whether token-cache misses still show
+  `authUserPublicUserCacheHit=true`, `publicUserLookupMs=0`, and lower
+  `resolveRequestUserMs`; if not, the next candidates are Supabase public user
+  lookup/index inspection or moments query tuning, not auth bypass.
 - Future observability work should prefer QA Debug Panel over Render-log-only
   checks whenever the values are non-secret and useful during device QA.
   Candidate fields include request view, server total, evidence timing,

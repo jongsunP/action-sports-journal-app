@@ -363,10 +363,38 @@ implemented, 2026-07-02:
   buildNumber change was made.
 - Next step: deploy Render, then confirm whether summary requests use
   `authVerificationMode=claims` with lower `resolveRequestUserMs`. If claims
-  mode is fast, the remaining work is mostly moments query/UX. If claims falls
-  back to `get_user` or remains slow, the remaining latency is primarily
-  Supabase Auth / infrastructure-bound unless a deeper JWT verification strategy
-  is introduced.
+  verification still leaves long-idle first entry above target, inspect
+  `publicUserLookupMs` and `momentsQueryMs` separately before considering any
+  deeper auth strategy.
+
+Startup Performance P2.1 public user lookup cache pass implemented,
+2026-07-02:
+
+- Build 100 QA confirmed the remaining slow path is now mostly auth claims plus
+  public user mapping. The slow sample showed `authClaimsMs` around 880ms,
+  `publicUserLookupMs` around 918ms, `resolveRequestUserMs` around 1799ms, and
+  `serverTotalMs` around 2465ms while summary mode still had
+  `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, and responseBytes around
+  7545.
+- Fast samples hit the bearer-token/public-user caches and showed
+  `authClaimsMs=0`, `publicUserLookupMs=0`, `resolveRequestUserMs=0`, and
+  `serverTotalMs` around 676-909ms.
+- `public.users.auth_user_id` is declared `unique`, so the mapping should have
+  an index. The lookup query is already small (`id`, `display_name`, `email`),
+  so the safer P2.1 optimization is not a query rewrite but a longer verified
+  authUserId mapping cache.
+- Added separate in-memory config for verified `authUserId -> public.users.id`:
+  `AUTH_USER_PUBLIC_USER_CACHE_TTL_MS` defaults to 6 hours and
+  `AUTH_USER_PUBLIC_USER_CACHE_MAX_ENTRIES` defaults to 500. The bearer-token
+  request cache remains 30 minutes.
+- Auth verification still runs before this cache can be used. Raw bearer tokens
+  are not stored, no-token/default-user behavior is unchanged, and ownership
+  filtering still uses the resolved `public.users.id`.
+- `/health.performanceCaches` now exposes the public-user cache TTL and max
+  entries. After Render deploy, Build 100 can keep observing
+  `authUserPublicUserCacheHit`, `publicUserLookupMs`, `resolveRequestUserMs`,
+  `momentsQueryMs`, and `serverTotalMs`; no new EAS build is required for this
+  server-only change.
 
 Build 93 pre-AI QA build complete / Founder QA pending, 2026-06-30:
 
