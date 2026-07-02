@@ -1681,6 +1681,14 @@ app.get("/api/moments", async (request, response) => {
       "X-ASJ-Public-User-Lookup-Ms",
       String(requestUserTiming.publicUserLookupMs ?? 0),
     );
+    response.setHeader(
+      "X-ASJ-Request-User-Inflight-Hit",
+      requestUserTiming.requestUserInflightHit === true ? "true" : "false",
+    );
+    response.setHeader(
+      "X-ASJ-Request-User-Inflight-Wait-Ms",
+      String(requestUserTiming.requestUserInflightWaitMs ?? 0),
+    );
     response.setHeader("X-ASJ-Moments-Query-Ms", String(momentsQueryMs));
     response.setHeader("X-ASJ-Evidence-Query-Ms", String(evidenceQueryMs));
     response.setHeader(
@@ -1709,6 +1717,10 @@ app.get("/api/moments", async (request, response) => {
       publicUserSyncAction: requestUserTiming.publicUserSyncAction ?? null,
       publicUserUpsertOrSyncMs:
         requestUserTiming.publicUserUpsertOrSyncMs ?? null,
+      requestUserInflightHit:
+        requestUserTiming.requestUserInflightHit ?? null,
+      requestUserInflightWaitMs:
+        requestUserTiming.requestUserInflightWaitMs ?? null,
       requestId,
       resolveRequestUserMs,
       responseBytes,
@@ -7307,6 +7319,7 @@ type PublicUserSyncAction = "none" | "insert" | "deferred";
 type AuthVerificationMode =
   | "claims"
   | "get_user"
+  | "inflight"
   | "internal_default_user"
   | "token_cache";
 
@@ -7318,6 +7331,8 @@ type RequestUserTimingDiagnostics = {
   cacheHit?: boolean;
   publicUserSyncAction?: PublicUserSyncAction;
   publicUserLookupMs?: number;
+  requestUserInflightHit?: boolean;
+  requestUserInflightWaitMs?: number;
   publicUserUpsertOrSyncMs?: number;
 };
 
@@ -7327,6 +7342,10 @@ type ThumbnailSignedUrlCacheDiagnostics = {
 };
 
 const resolvedRequestUserCache = new Map<string, CachedResolvedRequestUser>();
+const resolvedRequestUserInflight = new Map<
+  string,
+  Promise<ResolvedRequestUser>
+>();
 const resolvedPublicUserByAuthUserCache = new Map<
   string,
   CachedPublicUserForAuthUser
@@ -7341,6 +7360,103 @@ class AuthRequiredRequestError extends Error {
 }
 
 async function resolveRequestUser(
+  request: express.Request,
+  options: {
+    timing?: RequestUserTimingDiagnostics;
+  } = {},
+): Promise<ResolvedRequestUser> {
+  const bearerToken = readBearerToken(request);
+
+  if (!bearerToken) {
+    return resolveRequestUserCore(request, options);
+  }
+
+  const cacheKey = hashBearerTokenForRequestUserCache(bearerToken);
+  const cachedUser = readResolvedRequestUserCache(cacheKey);
+
+  if (cachedUser) {
+    options.timing &&
+      (options.timing.authGetUserMs = 0);
+    options.timing &&
+      (options.timing.authClaimsMs = 0);
+    options.timing &&
+      (options.timing.authVerificationMode = "token_cache");
+    options.timing &&
+      (options.timing.cacheHit = true);
+    options.timing &&
+      (options.timing.authUserPublicUserCacheHit = true);
+    options.timing &&
+      (options.timing.requestUserInflightHit = false);
+    options.timing &&
+      (options.timing.requestUserInflightWaitMs = 0);
+    options.timing &&
+      (options.timing.publicUserLookupMs = 0);
+    options.timing &&
+      (options.timing.publicUserUpsertOrSyncMs = 0);
+    options.timing &&
+      (options.timing.publicUserSyncAction = "none");
+    logResolvedRequestUser({
+      authMode: "authenticated",
+      authUserId: cachedUser.authUserId,
+      route: request.path,
+      userId: cachedUser.userId,
+    });
+    return {
+      authMode: "authenticated",
+      authUserId: cachedUser.authUserId,
+      userId: cachedUser.userId,
+    };
+  }
+
+  const inflightUser = resolvedRequestUserInflight.get(cacheKey);
+
+  if (inflightUser) {
+    const inflightWaitStartedAt = Date.now();
+    const resolvedUser = await inflightUser;
+    options.timing &&
+      (options.timing.authGetUserMs = 0);
+    options.timing &&
+      (options.timing.authClaimsMs = 0);
+    options.timing &&
+      (options.timing.authVerificationMode = "inflight");
+    options.timing &&
+      (options.timing.cacheHit = false);
+    options.timing &&
+      (options.timing.authUserPublicUserCacheHit =
+        resolvedUser.authUserId !== null);
+    options.timing &&
+      (options.timing.requestUserInflightHit = true);
+    options.timing &&
+      (options.timing.requestUserInflightWaitMs =
+        Date.now() - inflightWaitStartedAt);
+    options.timing &&
+      (options.timing.publicUserLookupMs = 0);
+    options.timing &&
+      (options.timing.publicUserUpsertOrSyncMs = 0);
+    options.timing &&
+      (options.timing.publicUserSyncAction = "none");
+    logResolvedRequestUser({
+      authMode: resolvedUser.authMode,
+      authUserId: resolvedUser.authUserId,
+      route: request.path,
+      userId: resolvedUser.userId,
+    });
+    return resolvedUser;
+  }
+
+  const resolvingUser = resolveRequestUserCore(request, options);
+  resolvedRequestUserInflight.set(cacheKey, resolvingUser);
+
+  try {
+    return await resolvingUser;
+  } finally {
+    if (resolvedRequestUserInflight.get(cacheKey) === resolvingUser) {
+      resolvedRequestUserInflight.delete(cacheKey);
+    }
+  }
+}
+
+async function resolveRequestUserCore(
   request: express.Request,
   options: {
     timing?: RequestUserTimingDiagnostics;
@@ -7377,6 +7493,10 @@ async function resolveRequestUser(
     options.timing &&
       (options.timing.authUserPublicUserCacheHit = false);
     options.timing &&
+      (options.timing.requestUserInflightHit = false);
+    options.timing &&
+      (options.timing.requestUserInflightWaitMs = 0);
+    options.timing &&
       (options.timing.publicUserLookupMs = 0);
     options.timing &&
       (options.timing.publicUserUpsertOrSyncMs = 0);
@@ -7411,6 +7531,10 @@ async function resolveRequestUser(
     options.timing &&
       (options.timing.authUserPublicUserCacheHit = true);
     options.timing &&
+      (options.timing.requestUserInflightHit = false);
+    options.timing &&
+      (options.timing.requestUserInflightWaitMs = 0);
+    options.timing &&
       (options.timing.publicUserLookupMs = 0);
     options.timing &&
       (options.timing.publicUserUpsertOrSyncMs = 0);
@@ -7431,6 +7555,10 @@ async function resolveRequestUser(
 
   options.timing &&
     (options.timing.cacheHit = false);
+  options.timing &&
+    (options.timing.requestUserInflightHit = false);
+  options.timing &&
+    (options.timing.requestUserInflightWaitMs = 0);
   const verifiedAuthUser = await verifyBearerAuthUser({
     bearerToken,
     client,

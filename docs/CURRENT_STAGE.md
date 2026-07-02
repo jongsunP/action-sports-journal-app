@@ -19,6 +19,41 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Startup Performance P2.2 implemented, 2026-07-02:
+
+- Goal: keep pushing startup toward an industry-normal summary-first boot path
+  before AI Calibration, unless the remaining delay is clearly infrastructure
+  or unavoidable mobile/network variance.
+- Implemented same-token in-flight request-user resolution dedupe on the
+  server. When startup fires overlapping authenticated requests such as
+  `/api/push-tokens` and `/api/moments`, a second request with the same bearer
+  token now waits for the first verified resolve instead of repeating the full
+  user-resolution path.
+- Added safe diagnostics to `/api/moments` response headers, Render
+  `[moments_timing]`, and the app QA Debug Panel:
+  - `requestUserInflightHit`
+  - `requestUserInflightWaitMs`
+- Added `supabase/phase14_moment_list_index.sql`:
+  `moments(user_id, occurred_at desc, id desc)`.
+- Guardrails kept:
+  - Auth verification is not removed.
+  - Raw bearer tokens are not stored.
+  - No-token/default-user policy is unchanged.
+  - Ownership filtering is unchanged.
+  - `/api/moments` full default remains backward-compatible.
+  - `view=summary` remains additive and list-only.
+  - No EAS build, buildNumber change, AI API call, Auth/Recovery/Upload flow
+    change, or DB data mutation was performed.
+- Next start point:
+  - Wait for Render deploy.
+  - Apply the SQL index migration if it is not applied automatically.
+  - Existing Build 100 can verify server logs after Render deploy, but it will
+    not show the new in-flight QA Debug Panel line unless a new app build
+    includes the client change.
+  - In Render `[moments_timing]`, check whether `requestUserInflightHit=true`
+    appears on overlapping startup requests and whether `resolveRequestUserMs`
+    drops for those cases.
+
 Build 94 Startup Performance Observability QA build complete / Founder
 multi-day observation pending, 2026-06-30:
 

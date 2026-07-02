@@ -76,6 +76,8 @@ export type RemoteMomentSyncDiagnostics = {
   publicUserLookupMs: number | null;
   reason: string | null;
   requestId: string | null;
+  requestUserInflightHit: boolean | null;
+  requestUserInflightWaitMs: number | null;
   resolveRequestUserMs: number | null;
   responseBytes: number | null;
   serverTotalMs: number | null;
@@ -136,6 +138,8 @@ export function useBootSync({
       publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      requestUserInflightHit: null,
+      requestUserInflightWaitMs: null,
       resolveRequestUserMs: null,
       responseBytes: null,
       serverTotalMs: null,
@@ -191,6 +195,8 @@ export function useBootSync({
         publicUserLookupMs: null,
         reason: null,
         requestId: null,
+        requestUserInflightHit: null,
+        requestUserInflightWaitMs: null,
         resolveRequestUserMs: null,
         responseBytes: null,
         serverTotalMs: null,
@@ -307,6 +313,8 @@ export function useBootSync({
         publicUserLookupMs: null,
         reason: null,
         requestId: null,
+        requestUserInflightHit: null,
+        requestUserInflightWaitMs: null,
         resolveRequestUserMs: null,
         responseBytes: null,
         serverTotalMs: null,
@@ -352,6 +360,8 @@ export function useBootSync({
           publicUserLookupMs: remoteMomentPage.publicUserLookupMs,
           reason: null,
           requestId: remoteMomentPage.requestId,
+          requestUserInflightHit: remoteMomentPage.requestUserInflightHit,
+          requestUserInflightWaitMs: remoteMomentPage.requestUserInflightWaitMs,
           resolveRequestUserMs: remoteMomentPage.resolveRequestUserMs,
           responseBytes: remoteMomentPage.responseBytes,
           serverTotalMs: remoteMomentPage.serverTotalMs,
@@ -385,6 +395,8 @@ export function useBootSync({
             publicUserLookupMs: null,
             reason,
             requestId: null,
+            requestUserInflightHit: null,
+            requestUserInflightWaitMs: null,
             resolveRequestUserMs: null,
             responseBytes: null,
             serverTotalMs: null,
@@ -449,6 +461,8 @@ export function useBootSync({
       reason?: string | null;
       recoveredFrom?: RemoteMomentSyncStatus;
       requestId?: string | null;
+      requestUserInflightHit?: boolean | null;
+      requestUserInflightWaitMs?: number | null;
       resolveRequestUserMs?: number | null;
       responseBytes?: number | null;
       serverTotalMs?: number | null;
@@ -486,6 +500,12 @@ export function useBootSync({
               ? 'Remote moment sync recovered after timeout.'
               : null),
           requestId: diagnostics?.requestId ?? current.requestId,
+          requestUserInflightHit:
+            diagnostics?.requestUserInflightHit ??
+            current.requestUserInflightHit,
+          requestUserInflightWaitMs:
+            diagnostics?.requestUserInflightWaitMs ??
+            current.requestUserInflightWaitMs,
           resolveRequestUserMs:
             diagnostics?.resolveRequestUserMs ?? current.resolveRequestUserMs,
           responseBytes: diagnostics?.responseBytes ?? current.responseBytes,

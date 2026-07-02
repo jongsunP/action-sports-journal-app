@@ -207,6 +207,8 @@ export type RemoteMomentPage = {
   momentsQueryMs: number | null;
   nextCursor: string | null;
   publicUserLookupMs: number | null;
+  requestUserInflightHit: boolean | null;
+  requestUserInflightWaitMs: number | null;
   requestId: string | null;
   resolveRequestUserMs: number | null;
   responseBytes: number | null;
@@ -958,6 +960,8 @@ export async function listMomentsPage(
       momentsQueryMs: null,
       nextCursor: null,
       publicUserLookupMs: null,
+      requestUserInflightHit: null,
+      requestUserInflightWaitMs: null,
       requestId: null,
       resolveRequestUserMs: null,
       responseBytes: null,
@@ -1038,6 +1042,12 @@ function readMomentListDiagnostics(headers: Headers) {
     momentsQueryMs: asFiniteHeaderNumber(headers.get('x-asj-moments-query-ms')),
     publicUserLookupMs: asFiniteHeaderNumber(
       headers.get('x-asj-public-user-lookup-ms'),
+    ),
+    requestUserInflightHit: asNullableBooleanHeader(
+      headers.get('x-asj-request-user-inflight-hit'),
+    ),
+    requestUserInflightWaitMs: asFiniteHeaderNumber(
+      headers.get('x-asj-request-user-inflight-wait-ms'),
     ),
     resolveRequestUserMs: asFiniteHeaderNumber(
       headers.get('x-asj-resolve-request-user-ms'),
@@ -1564,6 +1574,18 @@ function asFiniteHeaderNumber(value: string | null) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function asNullableBooleanHeader(value: string | null) {
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return null;
 }
 
 function withTimeout<T>(

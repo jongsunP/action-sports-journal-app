@@ -137,6 +137,24 @@ Short form:
 Cost is not the real enemy. If a paid build, paid AI call, or infrastructure
 upgrade is the right move, ASJ should pay for it. First verify that the issue
 is not product logic, unclear state handling, or an unintelligible UX flow.
+
+Startup performance standard:
+
+- ASJ is not being treated as a disposable MVP. If the current startup path is
+  slower because the app has not yet adopted common production patterns, fix
+  those patterns before moving on.
+- Acceptable stopping points are:
+  - the app follows a normal mobile production shape, and the remaining delay is
+    infrastructure/network variance;
+  - or further optimization would require a deliberate product tradeoff that the
+    Founder accepts.
+- Do not accept avoidable startup cost simply because the current app is still
+  pre-release.
+- Current accepted direction:
+  - list/boot uses summary-first data;
+  - detail uses full hydration;
+  - logs and QA Debug Panel should expose safe timing values whenever possible;
+  - secrets, raw tokens, emails, and full user ids must not be exposed.
 Users can tolerate a process that is a little slow when the app explains what
 is happening and recovers predictably; unexplained loading or broken-looking
 behavior is a trust problem, not merely a cost problem.

@@ -142,6 +142,8 @@ type RequestDiagnostics = {
   publicUserLookupMs: number | null;
   reason: string | null;
   requestId: string | null;
+  requestUserInflightHit: boolean | null;
+  requestUserInflightWaitMs: number | null;
   resolveRequestUserMs: number | null;
   responseBytes: number | null;
   retryCount: number;
@@ -187,6 +189,14 @@ function compactDebugReason(reason: string | null) {
 
 function formatDebugRequestId(requestId: string | null) {
   return requestId ? requestId.slice(0, 8) : '-';
+}
+
+function formatDebugBoolean(value: boolean | null) {
+  if (value === null) {
+    return '-';
+  }
+
+  return value ? 'Y' : 'N';
 }
 
 function formatDebugTimestamp(updatedAt: number | null) {
@@ -331,6 +341,8 @@ export function HomeScreen() {
       publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      requestUserInflightHit: null,
+      requestUserInflightWaitMs: null,
       resolveRequestUserMs: null,
       responseBytes: null,
       retryCount: 0,
@@ -1389,10 +1401,14 @@ export function HomeScreen() {
       evidenceQueryMs: remoteMomentSyncDiagnostics.evidenceQueryMs,
       hasMore: initialRemoteMomentPageInfo.hasMore,
       momentsQueryMs: remoteMomentSyncDiagnostics.momentsQueryMs,
-      publicUserLookupMs: remoteMomentSyncDiagnostics.publicUserLookupMs,
-      reason: remoteMomentSyncDiagnostics.reason,
-      requestId: remoteMomentSyncDiagnostics.requestId,
-      resolveRequestUserMs: remoteMomentSyncDiagnostics.resolveRequestUserMs,
+        publicUserLookupMs: remoteMomentSyncDiagnostics.publicUserLookupMs,
+        reason: remoteMomentSyncDiagnostics.reason,
+        requestId: remoteMomentSyncDiagnostics.requestId,
+        requestUserInflightHit:
+          remoteMomentSyncDiagnostics.requestUserInflightHit,
+        requestUserInflightWaitMs:
+          remoteMomentSyncDiagnostics.requestUserInflightWaitMs,
+        resolveRequestUserMs: remoteMomentSyncDiagnostics.resolveRequestUserMs,
       responseBytes: remoteMomentSyncDiagnostics.responseBytes,
       serverTotalMs: remoteMomentSyncDiagnostics.serverTotalMs,
       source: 'boot_reuse',
@@ -1419,6 +1435,8 @@ export function HomeScreen() {
     remoteMomentSyncDiagnostics.publicUserLookupMs,
     remoteMomentSyncDiagnostics.reason,
     remoteMomentSyncDiagnostics.requestId,
+    remoteMomentSyncDiagnostics.requestUserInflightHit,
+    remoteMomentSyncDiagnostics.requestUserInflightWaitMs,
     remoteMomentSyncDiagnostics.resolveRequestUserMs,
     remoteMomentSyncDiagnostics.responseBytes,
     remoteMomentSyncDiagnostics.serverTotalMs,
@@ -1485,6 +1503,8 @@ export function HomeScreen() {
       publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      requestUserInflightHit: null,
+      requestUserInflightWaitMs: null,
       resolveRequestUserMs: null,
       responseBytes: null,
       serverTotalMs: null,
@@ -1527,6 +1547,8 @@ export function HomeScreen() {
           publicUserLookupMs: remoteMomentPage.publicUserLookupMs,
           reason: null,
           requestId: remoteMomentPage.requestId,
+          requestUserInflightHit: remoteMomentPage.requestUserInflightHit,
+          requestUserInflightWaitMs: remoteMomentPage.requestUserInflightWaitMs,
           resolveRequestUserMs: remoteMomentPage.resolveRequestUserMs,
           responseBytes: remoteMomentPage.responseBytes,
           serverTotalMs: remoteMomentPage.serverTotalMs,
@@ -1565,6 +1587,8 @@ export function HomeScreen() {
           publicUserLookupMs: null,
           reason,
           requestId: null,
+          requestUserInflightHit: null,
+          requestUserInflightWaitMs: null,
           resolveRequestUserMs: null,
           responseBytes: null,
           serverTotalMs: null,
@@ -2050,6 +2074,8 @@ export function HomeScreen() {
       publicUserLookupMs: null,
       reason: null,
       requestId: null,
+      requestUserInflightHit: null,
+      requestUserInflightWaitMs: null,
       resolveRequestUserMs: null,
       responseBytes: null,
       retryCount: 0,
@@ -2633,6 +2659,10 @@ function QADebugPanel({
         {snapshot.video.authVerificationMode ?? '-'} · claims{' '}
         {snapshot.video.authClaimsMs ?? '-'}ms · getUser{' '}
         {snapshot.video.authGetUserMs ?? '-'}ms
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Video inflight {formatDebugBoolean(snapshot.video.requestUserInflightHit)} ·
+        wait {snapshot.video.requestUserInflightWaitMs ?? '-'}ms
       </Text>
       <Text style={styles.qaDebugLine}>
         Video resolve {snapshot.video.resolveRequestUserMs ?? '-'}ms · user{' '}

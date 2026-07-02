@@ -22,6 +22,27 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Startup Performance P2.2 is implemented after Build 100 diagnostics showed
+  that summary-first and claims-first were working, while remaining cold-path
+  delay was concentrated around request-user resolution and the moments query.
+  - Implementation commit pending at the time of this note.
+  - Server now dedupes concurrent in-flight request-user resolution for the
+    same bearer token. This targets startup overlap such as `/api/push-tokens`
+    and `/api/moments`.
+  - New safe diagnostics are exposed in Render `[moments_timing]`, response
+    headers, and the QA Debug Panel:
+    `requestUserInflightHit` and `requestUserInflightWaitMs`.
+  - Added migration file:
+    `supabase/phase14_moment_list_index.sql`, creating
+    `moments_user_occurred_at_id_idx` on
+    `(user_id, occurred_at desc, id desc)`.
+  - No Auth verification bypass, raw-token storage, no-token/default-user
+    policy change, ownership-filtering change, EAS build, buildNumber change,
+    AI API call, or Auth/Recovery/Upload behavior change.
+  - Next action: after Render deploy, continue observing with Build 100 for
+    server log fields. The newly added QA Debug Panel in-flight line requires a
+    future app build before it appears on device.
+
 - Build 99 Startup Performance P2 summary-first boot QA build is complete.
   Founder real-device QA is pending; do not mark P2 passed until the installed
   build is tested.

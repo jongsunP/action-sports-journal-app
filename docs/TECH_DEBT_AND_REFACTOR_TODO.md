@@ -32,6 +32,38 @@ one real video upload
 Do not start AI Coach, progression, or broad UI redesign work until this loop
 feels stable.
 
+## Active Startup Performance Follow-Up
+
+Startup Performance P2.2 is implemented and should be validated before deciding
+whether to move to AI Calibration.
+
+Implemented:
+
+- Concurrent in-flight request-user resolution dedupe for the same bearer token.
+- Safe diagnostics:
+  - `requestUserInflightHit`
+  - `requestUserInflightWaitMs`
+- App QA Debug Panel support for the same diagnostics.
+- Supabase migration file:
+  `supabase/phase14_moment_list_index.sql`.
+
+Still to verify:
+
+- Render deploy includes the P2.2 server change.
+- SQL index migration is applied in Supabase.
+- Build 100 server logs show whether startup overlap produces
+  `requestUserInflightHit=true`.
+- A future app build is needed before the new in-flight QA Debug Panel line is
+  visible on device.
+
+If startup remains slow after P2.2:
+
+- Inspect whether the remaining path is `authClaimsMs`, `momentsQueryMs`, or
+  network/app overhead.
+- Consider DB/index verification for the moments list query.
+- Consider visible thumbnail lazy loading only if the blank list cards remain a
+  product problem after speed is acceptable.
+
 ## Foundation Safety Check
 
 ### Problem
