@@ -22,6 +22,31 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Render Singapore migration / Build 102 readiness, 2026-07-02:
+  - A new Render Starter Web Service was created in Singapore:
+    `https://action-sports-journal-api-sg.onrender.com`.
+  - The existing Virginia service remains available at:
+    `https://action-sports-journal-api.onrender.com`.
+  - A quick `/health` comparison from Korea showed Singapore warm responses
+    around `0.117-0.128s`, while the existing Virginia service was around
+    `0.230-0.238s` after warm-up.
+  - EAS `preview` environment variable
+    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` has been updated to the Singapore
+    analysis endpoint:
+    `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  - iOS `buildNumber` has been prepared as `102`.
+  - EAS Build has not been started yet. The next action is Founder approval to
+    run the iOS preview/internal Build 102.
+  - Keep the Virginia Render service alive until Build 102 is installed and
+    startup/upload/auth/recovery QA passes against Singapore. Only then decide
+    whether to suspend/delete the Virginia service or keep it temporarily as a
+    rollback.
+  - Build 102 QA focus: confirm QA Debug Panel startup timings against
+    Singapore, verify `view=summary`, check long-idle and immediate re-entry,
+    compare `serverTotalMs`, `authClaimsMs`, `resolveRequestUserMs`,
+    `publicUserLookupMs`, and `momentsQueryMs`, and verify Upload/Auth/Recovery
+    regressions.
+
 - Session closeout, 2026-07-02:
   - Build 101 has been created and documented. No Founder real-device QA result
     has been recorded yet.

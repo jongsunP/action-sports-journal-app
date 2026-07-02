@@ -19,6 +19,27 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Render Singapore endpoint applied / Build 102 ready, 2026-07-02:
+
+- A new Render Starter Web Service is live in Singapore:
+  `https://action-sports-journal-api-sg.onrender.com`.
+- The existing Virginia service remains available at:
+  `https://action-sports-journal-api.onrender.com`.
+- Health check comparison from Korea showed the Singapore service responding
+  faster after warm-up:
+  - Virginia warm `/health`: about `0.230-0.238s`.
+  - Singapore warm `/health`: about `0.117-0.128s`.
+- EAS `preview` env `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` now points to the
+  Singapore analysis endpoint:
+  `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+- iOS `buildNumber` is prepared as `102`.
+- EAS Build has not been started. The next action is to ask the Founder before
+  running the iOS preview/internal Build 102.
+- Do not suspend/delete the Virginia service until Build 102 confirms the
+  Singapore endpoint in a standalone install and Upload/Auth/Recovery/startup
+  QA passes.
+- AI Calibration has not started.
+
 Build 101 Startup Performance P2.2 QA build complete / Founder QA pending,
 2026-07-02:
 

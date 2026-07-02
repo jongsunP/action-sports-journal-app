@@ -79,6 +79,16 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
+Current infrastructure / build readiness:
+
+- Render Singapore migration is prepared. A new Singapore Starter service is
+  live at `https://action-sports-journal-api-sg.onrender.com`.
+- EAS preview `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` now points to
+  `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+- iOS buildNumber `102` is prepared, but Build 102 has not been run yet.
+- The existing Virginia service remains online as rollback until Build 102
+  standalone QA confirms Singapore startup/upload/auth/recovery behavior.
+
 ## Validation Cost / Build Policy
 
 ASJ should validate product behavior through the cheapest trustworthy path
