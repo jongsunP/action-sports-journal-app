@@ -45,6 +45,9 @@ Build 101 Startup Performance P2.2 QA build complete / Founder QA pending,
   - Upload/Auth/Recovery regression.
 - AI Calibration has not started. Wait for Founder Build 101 screenshots and
   timing values before deciding whether Startup Performance can pause.
+- Session closeout note: no additional code, build, deploy, DB change, or AI API
+  call followed Build 101. QA Debug Panel stays in preview/internal builds until
+  the store-distribution hide/gate policy is applied.
 
 Startup Performance P2.2 implemented, 2026-07-02:
 

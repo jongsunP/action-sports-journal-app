@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Session closeout, 2026-07-02:
+  - Build 101 has been created and documented. No Founder real-device QA result
+    has been recorded yet.
+  - Startup Performance is waiting on Build 101 captures/timing values. The
+    next session should first interpret those values before changing code or
+    starting AI Calibration.
+  - AI Calibration has not started.
+  - QA Debug Panel remains available for preview/internal QA and should stay
+    gated/hidden before store distribution.
+  - Next action: receive Build 101 QA results, then decide whether Startup
+    Performance can pause or whether remaining latency belongs to auth/public
+    user mapping, moments query, client/network overhead, or thumbnail/detail
+    hydration.
+
 - Build 101 Startup Performance P2.2 QA build is complete. Founder real-device
   QA is pending; do not mark P2.2 passed until installed-device captures are
   reviewed.
