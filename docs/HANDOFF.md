@@ -22,6 +22,23 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Development Session 2 closeout, 2026-07-02:
+  - This session started as the ASJ development-session continuation lane and
+    synced both `codex-personal-context` and this project repo.
+  - The Build 102 handoff from the previous session reported that Build 102 had
+    already been run, installed, and confirmed to send real app logs to the
+    Singapore Render service.
+  - Local docs still described Build 102 as not yet started, so the durable
+    project docs were corrected and pushed in
+    `c9d848a docs: record build 102 endpoint confirmation`.
+  - No app/server code, app env, Render setting, Supabase setting, DB data,
+    buildNumber, EAS build, or AI API call was changed in this session.
+  - Next session should start from Build 102 quantitative QA: collect QA Debug
+    Panel startup values and matching Singapore Render `[moments_timing]` rows,
+    then verify Upload/Auth/Recovery regression before deciding whether
+    Startup Performance can pause, whether Virginia can be deleted/suspended,
+    and whether AI Calibration can begin.
+
 - Render Singapore migration / Build 102 endpoint confirmation, 2026-07-02:
   - A new Render Starter Web Service was created in Singapore:
     `https://action-sports-journal-api-sg.onrender.com`.
