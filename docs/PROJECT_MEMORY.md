@@ -81,6 +81,20 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Build 106 is complete and waiting for Founder standalone iPhone QA. It is a
+  pre-AI final polish QA build, not an AI Calibration build. iOS `buildNumber`
+  is `106`; build prep commit is `1290577`; EAS Build ID is
+  `aaea033e-cd5e-401f-9772-24e388b50ed6`; build page is
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aaea033e-cd5e-401f-9772-24e388b50ed6`;
+  IPA URL is
+  `https://expo.dev/artifacts/eas/I4vLlCRWSszjsMODaxcHeO455sXdWYzbVB4Vg0bDwtE.ipa`.
+  Build 106 includes list thumbnail lazy hydration (`f03d096`), no-build media
+  loading polish (`83cb785`), film-only media placeholder icons (`3d372bb`),
+  and the post-Build-105 app icon asset rework. Founder QA should verify
+  summary-first boot, post-boot `view=thumbnails` hydration, film skeleton
+  placeholders, thumbnail fade-in, Detail loading skeleton, updated app/Push
+  icon appearance, and the existing Upload -> Push -> Detail completed-state
+  stability.
 - Post-Build-105 / pre-Build-106 no-build UX polish is implemented but not
   built. Build 105 QA showed normal Home boot / QA Debug Panel / Recovery
   surfaces, and revealed that recovered remote Video list rows still showed

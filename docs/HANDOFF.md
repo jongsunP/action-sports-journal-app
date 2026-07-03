@@ -22,6 +22,35 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 106 pre-AI final polish QA build complete / Founder QA pending, 2026-07-03:
+  - iOS `buildNumber` is `106`.
+  - Build 106 is a standalone iPhone QA build for post-Build-105 final polish
+    before AI Calibration. AI Calibration has not started.
+  - Build prep commit: `1290577 chore: prepare build 106 qa`.
+  - EAS Build ID: `aaea033e-cd5e-401f-9772-24e388b50ed6`.
+  - Build page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aaea033e-cd5e-401f-9772-24e388b50ed6`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/I4vLlCRWSszjsMODaxcHeO455sXdWYzbVB4Vg0bDwtE.ipa`.
+  - Preview build env was confirmed to point at the Singapore analysis endpoint:
+    `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  - Active backend remains `action-sports-journal-api-sg`.
+  - Included required polish commits:
+    `f03d096 fix: lazy hydrate list thumbnails`,
+    `83cb785 fix: polish no-build media loading states`, and
+    `3d372bb fix: use film icons for media placeholders`.
+  - Founder QA should focus on:
+    - Home/Video boot still uses `view=summary`;
+    - post-boot list thumbnail hydration uses `view=thumbnails`;
+    - recovered remote Video rows show film skeleton placeholders instead of
+      `CLIP`;
+    - hydrated thumbnails fade in naturally;
+    - Detail loading skeleton feels natural while detail/thumbnail data loads;
+    - app icon and Push notification icon reflect the updated icon asset;
+    - Upload -> Push -> Detail still has completed-state stability, no stale
+      upload failure alert, no processing/failed downgrade, and no completed
+      Moment retry CTA / "already requesting analysis" copy.
+
 - Post-Build-105 / pre-Build-106 no-build UX polish implemented, no build run, 2026-07-03:
   - Founder Build 105 QA showed Home boot, QA Debug Panel, and Recovery surfaces
     look normal.

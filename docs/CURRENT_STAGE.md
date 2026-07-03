@@ -19,6 +19,39 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 106 pre-AI final polish QA build complete / Founder QA pending, 2026-07-03:
+
+- iOS `buildNumber` is `106`.
+- Build 106 is a standalone iPhone QA build for post-Build-105 final polish
+  before AI Calibration. It is not an AI Calibration build.
+- Build prep commit is `1290577 chore: prepare build 106 qa`.
+- EAS Build ID is `aaea033e-cd5e-401f-9772-24e388b50ed6`.
+- Build page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/aaea033e-cd5e-401f-9772-24e388b50ed6`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/I4vLlCRWSszjsMODaxcHeO455sXdWYzbVB4Vg0bDwtE.ipa`.
+- EAS preview env `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` was confirmed as:
+  `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+- Active backend remains `action-sports-journal-api-sg`.
+- Build 106 includes the required post-Build-105 polish commits:
+  - `f03d096 fix: lazy hydrate list thumbnails`;
+  - `83cb785 fix: polish no-build media loading states`;
+  - `3d372bb fix: use film icons for media placeholders`.
+- Founder QA focus:
+  - boot/list initial path remains `/api/moments?view=summary`;
+  - post-boot thumbnail hydration uses `/api/moments?view=thumbnails`;
+  - recovered remote Video list rows show a film skeleton instead of `CLIP`;
+  - hydrated thumbnails fade in naturally;
+  - Detail loading shows a natural media skeleton while detail/thumbnail data
+    hydrates;
+  - home-screen app icon and iOS Push notification icon reflect the
+    post-Build-105 icon asset rework;
+  - Upload -> Push -> Detail remains stable with completed state, no stale
+    upload-failure alert, no processing/failed downgrade, and no completed
+    Moment retry CTA or "already requesting analysis" copy.
+- No Render/Supabase setting change, DB write/migration, Auth/Recovery/Upload
+  structure change, paid AI/API call, or AI Calibration work was performed.
+
 Post-Build-105 / pre-Build-106 no-build UX polish implemented, no build run, 2026-07-03:
 
 - Founder Build 105 QA showed Home boot / QA Debug Panel / Recovery screens look
