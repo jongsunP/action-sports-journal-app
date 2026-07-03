@@ -23,11 +23,17 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 Latest product/UX direction update:
 
 - Build 103 pre-AI regression QA prep, 2026-07-03:
-  - iOS `buildNumber` is being advanced to `103`.
+  - iOS `buildNumber` is `103`.
   - Build 103 is a focused preview/internal QA build for the two Build 102
     smoke regressions fixed in code:
     - Email Recovery same-current-email no-op guard (`0c26ad3`).
     - Upload completed stale failure alert suppression (`49218e1`).
+  - Build prep commit: `9887914 chore: prepare build 103 qa`.
+  - EAS Build ID: `ee3b219d-4302-4a06-88de-81f0bf05bbcc`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/ee3b219d-4302-4a06-88de-81f0bf05bbcc`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/d-QSheCxyDpoZrXmDFffMNDeO4aBlSB07T_u_CT0DKw.ipa`.
   - AI Calibration has not started.
   - EAS preview env remains pointed at the Singapore analysis endpoint:
     `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.

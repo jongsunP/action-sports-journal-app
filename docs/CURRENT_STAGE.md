@@ -21,16 +21,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 Build 103 pre-AI regression QA prep, 2026-07-03:
 
-- iOS `buildNumber` is being advanced to `103` for a focused preview/internal
-  QA build.
+- iOS `buildNumber` is `103` for a focused preview/internal QA build.
 - Build 103 is not an AI Calibration build and does not add new product scope.
+- Build prep commit is `9887914 chore: prepare build 103 qa`.
+- EAS Build ID is `ee3b219d-4302-4a06-88de-81f0bf05bbcc`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/ee3b219d-4302-4a06-88de-81f0bf05bbcc`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/d-QSheCxyDpoZrXmDFffMNDeO4aBlSB07T_u_CT0DKw.ipa`.
 - QA purpose:
   - verify the Email Recovery same-current-email no-op fix from `0c26ad3`;
   - verify the Upload completed stale failure alert fix from `49218e1`.
 - EAS preview env is expected to stay on the Singapore analysis endpoint:
   `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
 - No Render/Supabase setting change, DB write/migration, Auth/Recovery/Upload
-  architecture change, or paid AI/API calibration was made for this prep.
+  architecture change, or paid AI/API calibration was made for this build.
 
 Detail upload-failure stale state fix, 2026-07-03:
 
