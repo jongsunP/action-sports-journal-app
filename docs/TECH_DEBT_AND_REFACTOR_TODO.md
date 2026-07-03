@@ -154,6 +154,13 @@ not replace standalone QA for native, auth, or recovery behavior.
 Current ASJ constraints:
 
 - Expo SDK is `~54.0.35`.
+- No-EAS physical iPhone testing was possible before through Expo Go. The
+  recent EAS-heavy phase happened because the active QA targets were mostly
+  standalone/runtime-sensitive: Push delivery, Kakao/Email deep-link return,
+  installed env parity, and native upload/compression. Now that those
+  foundation risks are largely closed, the default order is no-EAS Simulator or
+  physical iPhone Expo Go first, then EAS only when standalone or Development
+  Build behavior is the actual test target.
 - Native/config-sensitive dependencies include `react-native-compressor`,
   `react-native-nitro-modules`, `expo-notifications`, app scheme
   `actionsportsjournal`, and the `react-native-compressor` config plugin.
@@ -286,6 +293,14 @@ EAS without-build boundary:
   testing of custom native runtime parity, Push notification delivery,
   app-scheme/deep-link return, Kakao Recovery return, Email Recovery link
   return, and native compression/file-provider behavior.
+
+Postico operations backlog:
+
+- Founder can continue using Postico 2 with the current Supabase Session
+  pooler connection for read-only QA inspection.
+- Do not run production mutations from Postico.
+- Creating a dedicated read-only DB user is a later operations safety backlog
+  item, not a blocker for local/no-EAS testing or AI Calibration.
 
 ## Foundation Safety Check
 

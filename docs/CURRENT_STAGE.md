@@ -23,6 +23,13 @@ Physical iPhone + Expo Go LAN path check, 2026-07-03:
 
 - No EAS build, buildNumber change, Render/Supabase setting change, DB
   write/migration, AI Calibration, or paid AI/API call was made.
+- No-EAS physical-device testing was never impossible; earlier work used EAS
+  repeatedly because the active QA targets were mostly standalone-only items
+  such as Push, recovery deep-link return, installed env parity, and native
+  upload/compression behavior. With those foundation items largely closed, ASJ
+  should now treat no-EAS Simulator / physical iPhone Expo Go checks as the
+  default first QA path, and reserve EAS builds for cases that truly require an
+  installed standalone or Development Build runtime.
 - Current local `.env.local` has `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` pointed at
   the Singapore Render endpoint, so the previous local Virginia endpoint caveat
   is cleared for Singapore-mode Expo Go testing.
@@ -105,8 +112,8 @@ Postico 2 local DB inspection setup, 2026-07-03:
   `recovery_attempts`, and `users`.
 - Use this setup for read-only inspection only. Do not run `UPDATE`, `DELETE`,
   `TRUNCATE`, `DROP`, migrations, or production data cleanup from Postico.
-- Current recommendation remains to create/use a dedicated read-only DB user
-  before making Postico a regular QA workflow.
+- A dedicated read-only DB user is not required before the next stage. Keep it
+  as an operations safety backlog item if Postico becomes a regular QA habit.
 
 Completed Moment redundant evidence/upload request hardening, 2026-07-03:
 

@@ -23,6 +23,12 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 Latest product/UX direction update:
 
 - Physical iPhone + Expo Go LAN path check, 2026-07-03:
+  - No-EAS physical-device testing was possible before, but recent active QA
+    work mostly required EAS/standalone validation: Push, Kakao/Email recovery
+    return, installed env parity, and native upload/compression behavior.
+    Now that those foundation risks are largely closed, ASJ should use
+    Simulator or physical iPhone + Expo Go as the default first QA path and
+    reserve EAS builds for standalone-only or Development-Build-only behavior.
   - `npx expo start --lan --clear` starts Metro in Expo Go mode and exposes a
     LAN QR at `exp://<MAC_LAN_IP>:8081`.
   - Current local `.env.local` points `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the
@@ -78,7 +84,8 @@ Latest product/UX direction update:
   - Founder connected Postico 2 to Supabase Postgres with Session pooler
     parameters and confirmed `select now();` works. Postico is now available
     for read-only DB inspection during QA, but production mutations from
-    Postico remain prohibited.
+    Postico remain prohibited. A dedicated read-only DB user is only an
+    operations safety backlog item for later, not a pre-AI blocker.
   - Startup/Region/Upload/Auth/Recovery have no known blocker for AI
     Calibration.
   - Next action is to set up the local/physical-device test environment so ASJ

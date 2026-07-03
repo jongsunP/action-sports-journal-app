@@ -100,6 +100,14 @@ Current infrastructure / pre-AI hardening:
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
 - The next step is local/physical-device test environment setup to reduce EAS
   preview/internal build usage, not another EAS build by default.
+- No-EAS physical-device testing was not newly unlocked; it was always possible
+  through Expo Go. The reason recent QA used many EAS builds was that the
+  active foundation work depended on standalone-only behavior such as Push,
+  recovery deep-link return, installed env parity, and native
+  upload/compression. Going forward, no-EAS Simulator / physical iPhone Expo Go
+  checks are the default first QA path, and EAS builds should be reserved for
+  behavior that truly needs an installed standalone or Development Build
+  runtime.
 - Local no-build environment was checked on 2026-07-03: typecheck passes,
   local backend `/health` works on localhost and Mac LAN IP, Singapore Render
   `/health` works, and Metro/iOS Simulator launch works in Expo Go mode.
