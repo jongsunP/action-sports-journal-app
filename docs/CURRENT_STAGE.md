@@ -19,6 +19,24 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 104 focused completed-status regression QA prep, 2026-07-03:
+
+- iOS `buildNumber` is `104` for a focused preview/internal QA build.
+- Build 104 is not an AI Calibration build and does not add new product scope.
+- Required included fix: `559e94c fix: prevent completed moment status downgrade`.
+- QA purpose:
+  - Upload -> Push notification -> Detail keeps the completed state;
+  - completed Moment does not downgrade to processing or failed;
+  - "영상 업로드에 실패했습니다" alert does not appear for completed Moments;
+  - Video list does not later switch the new completed Moment to a failed badge;
+  - Detail does not show retry CTA or "already requesting analysis" copy for a
+    completed Moment.
+- EAS preview env is expected to stay on the Singapore analysis endpoint:
+  `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+- No AI Calibration, Render/Supabase setting change, DB write/migration,
+  Auth/Recovery flow change, Upload architecture change, or paid AI/API call is
+  part of this build.
+
 Build 103 completed Moment status regression fix, 2026-07-03:
 
 - Founder Build 103 QA found a stronger Upload state regression than the earlier
