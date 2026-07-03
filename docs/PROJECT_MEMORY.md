@@ -81,6 +81,10 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / Build 102 QA:
 
+- Build 103 prep is a focused pre-AI regression QA build, not an AI Calibration
+  build. It advances iOS `buildNumber` to `103` to verify the Email Recovery
+  same-current-email no-op guard (`0c26ad3`) and Upload completed stale failure
+  alert suppression (`49218e1`) on a standalone iPhone build.
 - Render Singapore migration is prepared. A new Singapore Starter service is
   live at `https://action-sports-journal-api-sg.onrender.com`.
 - EAS preview `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` now points to

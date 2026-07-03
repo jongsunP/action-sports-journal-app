@@ -22,6 +22,18 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 103 pre-AI regression QA prep, 2026-07-03:
+  - iOS `buildNumber` is being advanced to `103`.
+  - Build 103 is a focused preview/internal QA build for the two Build 102
+    smoke regressions fixed in code:
+    - Email Recovery same-current-email no-op guard (`0c26ad3`).
+    - Upload completed stale failure alert suppression (`49218e1`).
+  - AI Calibration has not started.
+  - EAS preview env remains pointed at the Singapore analysis endpoint:
+    `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  - Founder QA should focus on Email Recovery connected-email behavior and
+    Upload -> Push -> Detail with no stale upload-failure alert.
+
 - Detail upload-failure stale state fix, 2026-07-03:
   - Build 102 Upload smoke showed a stale local upload-failure alert after Push
     even though the remote Moment was completed and Detail displayed completed

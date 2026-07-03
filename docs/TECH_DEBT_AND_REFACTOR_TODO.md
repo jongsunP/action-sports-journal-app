@@ -39,6 +39,9 @@ pause before AI Calibration.
 
 Render migration state:
 
+- Build 103 is the focused pre-AI regression QA build for the two Build 102
+  smoke fixes: Email Recovery same-current-email no-op guard and Upload
+  completed stale failure alert suppression.
 - Previous Virginia service:
   `https://action-sports-journal-api.onrender.com` has been deleted.
 - Current Singapore service:
