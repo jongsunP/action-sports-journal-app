@@ -1544,9 +1544,15 @@ app.get("/api/moments", async (request, response) => {
     const staleCleanupMs = Date.now() - staleCleanupStartedAt;
     const limit = parseMomentListLimit(request.query.limit);
     const cursor = decodeMomentCursor(request.query.cursor);
-    const view = request.query.view === "summary" ? "summary" : "full";
+    const view =
+      request.query.view === "summary"
+        ? "summary"
+        : request.query.view === "thumbnails"
+          ? "thumbnails"
+          : "full";
     const shouldIncludeListEvidence = view === "full";
-    const shouldIncludeThumbnailSignedUrls = view === "full";
+    const shouldIncludeThumbnailSignedUrls =
+      view === "full" || view === "thumbnails";
 
     let momentsQuery = client
       .from("moments")

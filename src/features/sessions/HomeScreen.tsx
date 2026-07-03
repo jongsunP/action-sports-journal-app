@@ -161,6 +161,7 @@ type AuthCacheOwnerKey =
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
+const LIST_THUMBNAIL_HYDRATION_DELAY_MS = 500;
 const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
@@ -383,6 +384,8 @@ export function HomeScreen() {
   const pendingVideoArchiveSessionIdsRef = useRef<Set<string>>(new Set());
   const recoveringUploadSessionIdsRef = useRef<Set<string>>(new Set());
   const hasAttemptedBootUploadRecoveryRef = useRef(false);
+  const lastVideoArchiveThumbnailHydrationKeyRef = useRef<string | null>(null);
+  const isHydratingVideoArchiveThumbnailsRef = useRef(false);
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -1834,6 +1837,26 @@ export function HomeScreen() {
   const visibleVideoArchiveSessionSummaries = shouldUseVideoArchiveSessionFallback
     ? homeSessionSummaries
     : videoArchiveSessionSummaries;
+  const videoArchiveThumbnailHydrationKey = useMemo(
+    () => {
+      const sessionIdsNeedingThumbnail = visibleVideoArchiveSessionSummaries
+        .filter(
+          (summary) =>
+            Boolean(remoteMomentIdsBySessionId[summary.session.id]) &&
+            !thumbnailsBySessionId[summary.session.id],
+        )
+        .map((summary) => summary.session.id);
+
+      return sessionIdsNeedingThumbnail.length > 0
+        ? sessionIdsNeedingThumbnail.join('|')
+        : null;
+    },
+    [
+      remoteMomentIdsBySessionId,
+      thumbnailsBySessionId,
+      visibleVideoArchiveSessionSummaries,
+    ],
+  );
   const hasRemoteMomentSyncDelay =
     remoteMomentSyncStatus === 'timeout' || remoteMomentSyncStatus === 'failed';
   const videoArchiveUiLoadState: VideoArchiveLoadState =
@@ -1848,6 +1871,68 @@ export function HomeScreen() {
           : videoArchiveLoadState;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
+
+  useEffect(() => {
+    if (
+      isHydratingVideoArchiveThumbnailsRef.current ||
+      !videoArchiveThumbnailHydrationKey ||
+      lastVideoArchiveThumbnailHydrationKeyRef.current ===
+        videoArchiveThumbnailHydrationKey ||
+      !canUseRemoteApi ||
+      !isStorageLoaded ||
+      !isRemoteMomentSyncLoaded ||
+      remoteMomentSyncStatus !== 'completed'
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const timeoutId = setTimeout(() => {
+      InteractionManager.runAfterInteractions(() => {
+        if (isCancelled) {
+          return;
+        }
+
+        lastVideoArchiveThumbnailHydrationKeyRef.current =
+          videoArchiveThumbnailHydrationKey;
+        isHydratingVideoArchiveThumbnailsRef.current = true;
+
+        listMomentPageWithTimeout({
+          limit: MOMENT_LIST_PAGE_SIZE,
+          view: 'thumbnails',
+        })
+          .then((remoteMomentPage) => {
+            if (isCancelled) {
+              return;
+            }
+
+            syncRemoteMoments(remoteMomentPage.moments);
+          })
+          .catch((error) => {
+            lastVideoArchiveThumbnailHydrationKeyRef.current = null;
+            console.warn(
+              'Video archive thumbnail hydration failed:',
+              error instanceof Error ? error.message : 'Unknown error',
+            );
+          })
+          .finally(() => {
+            isHydratingVideoArchiveThumbnailsRef.current = false;
+          });
+      });
+    }, LIST_THUMBNAIL_HYDRATION_DELAY_MS);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [
+    canUseRemoteApi,
+    isRemoteMomentSyncLoaded,
+    isStorageLoaded,
+    remoteMomentSyncStatus,
+    syncRemoteMoments,
+    videoArchiveThumbnailHydrationKey,
+  ]);
 
   const removeSessionLocally = useCallback((sessionId: string) => {
     removeSessionDataLocally(sessionId);
@@ -2064,6 +2149,8 @@ export function HomeScreen() {
     isLoadingVideoArchiveInitialPageRef.current = false;
     completedBootSyncAtRef.current = null;
     hasAttemptedBootUploadRecoveryRef.current = false;
+    lastVideoArchiveThumbnailHydrationKeyRef.current = null;
+    isHydratingVideoArchiveThumbnailsRef.current = false;
     didNavigateToUploadRef.current = false;
 
     setVideoArchiveSessionIds([]);

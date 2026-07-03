@@ -22,6 +22,23 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Post-Build-105 list thumbnail / icon follow-up implemented, no build run, 2026-07-03:
+  - Founder Build 105 QA showed Home boot, QA Debug Panel, and Recovery surfaces
+    look normal.
+  - Recovered remote records in the Video list still showed the `CLIP`
+    placeholder, while Detail displayed the representative image.
+  - Cause: summary-first list loading intentionally skips thumbnail signed URL
+    generation for boot speed; Detail hydrates full thumbnail separately.
+  - Fix after Build 105: `/api/moments?view=thumbnails` now provides a
+    thumbnail-only list hydration path. Home/Video keeps first paint on
+    `view=summary`, then performs one delayed post-boot thumbnail hydration and
+    merges `thumbnailUri` into local sessions.
+  - Startup guardrail remains intact: boot/refresh still use `view=summary`.
+  - `assets/icon.png` was also reworked to remove the pre-rounded inner icon
+    plate and use a full-bleed navy background. Already-installed Build 105 will
+    not show this; verify it only on the next standalone build.
+  - No EAS build was run. AI Calibration has not started.
+
 - Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-03:
   - iOS `buildNumber` is `105`.
   - Build 105 is the final pre-AI offline physical-device QA baseline build.

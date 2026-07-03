@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Post-Build-105 list thumbnail / icon follow-up is implemented but not built.
+  Build 105 QA showed normal Home boot / QA Debug Panel / Recovery surfaces, and
+  revealed that recovered remote Video list rows still showed `CLIP` while
+  Detail displayed the image. This was the intended summary-first tradeoff:
+  `/api/moments?view=summary` skips thumbnail signed URL generation. A new
+  `view=thumbnails` path now keeps evidence skipped but returns thumbnail signed
+  URLs, and Home/Video performs one delayed post-boot thumbnail hydration
+  without blocking startup. `assets/icon.png` was also reworked to remove the
+  pre-rounded inner icon plate. Both changes require a later standalone build
+  if the Founder wants installed-app verification.
 - Build 105 is complete and waiting for Founder standalone iPhone QA. It is the
   final pre-AI offline physical-device QA baseline build, not an AI Calibration
   build. iOS `buildNumber` is `105`; build prep commit is `c0391dd`; EAS Build
@@ -91,8 +101,8 @@ Current infrastructure / pre-AI hardening:
   Build 105 includes post-Build-104 hardening/docs and an attempted app icon
   white-border removal, and uses the Singapore Render analysis endpoint in the
   EAS preview environment. Founder home-screen capture showed the iOS app icon
-  still feels like it has a white border, so icon work is deferred to later
-  visual/icon polish and should not block AI Calibration.
+  still feels like it has a white border in Build 105; a stronger asset fix was
+  made after Build 105 and needs a later build to verify.
 - Pre-AI Foundation Closeout is complete from the CTO/PM/QA standpoint.
 - Next product work can start with AI Calibration, beginning at TS/HS Evidence
   stabilization. Use no-EAS Simulator / physical iPhone Expo Go first whenever

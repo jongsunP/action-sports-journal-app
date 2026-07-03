@@ -48,6 +48,12 @@ blocker before AI Calibration:
   after Build 104.
 - `67f67cb` is Render structured summary log observability hardening after
   Build 104.
+- Post-Build-105 thumbnail follow-up is implemented without a build:
+  `view=thumbnails` keeps evidence skipped and hydrates list thumbnails after
+  first paint, preserving summary-first startup.
+- Post-Build-105 icon follow-up is implemented without a build:
+  `assets/icon.png` no longer contains the pre-rounded inner icon plate, but
+  installed-app verification requires the next standalone build.
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
 - The next process improvement is local/physical-device test environment setup,
   not another EAS build by default.
@@ -121,8 +127,9 @@ Non-blocking follow-up backlog:
 - Custom domain for endpoint stability and branding.
 - Advanced infra tuning if future captures prove Supabase/Auth/query/network
   variance is product-visible.
-- Visible thumbnail lazy loading only if blank list cards remain a product
-  problem after speed is acceptable.
+- Monitor visible list thumbnail hydration after the next build or Expo Go QA;
+  it should fill recovered remote list thumbnails after first paint without
+  regressing boot timing.
 
 ## Pre-AI Foundation Regression Smoke
 

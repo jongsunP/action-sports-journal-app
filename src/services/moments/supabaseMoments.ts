@@ -194,7 +194,7 @@ type RemoteMomentListResponse = {
 export type ListMomentsOptions = {
   cursor?: string | null;
   limit?: number;
-  view?: 'full' | 'summary';
+  view?: 'full' | 'summary' | 'thumbnails';
 };
 
 export type RemoteMomentPage = {

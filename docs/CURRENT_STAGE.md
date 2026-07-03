@@ -19,6 +19,30 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Post-Build-105 list thumbnail / icon follow-up implemented, no build run, 2026-07-03:
+
+- Founder Build 105 QA showed Home boot / QA Debug Panel / Recovery screens look
+  normal, but recovered remote records in Video list still showed the `CLIP`
+  placeholder while Detail displayed the representative image.
+- Cause: this is the expected side effect of Startup Performance P2
+  summary-first list loading. `/api/moments?view=summary` intentionally skips
+  thumbnail signed URL generation so boot remains fast, while Detail hydrates
+  the full thumbnail through `GET /api/moments/:momentId`.
+- Fix implemented after Build 105: added `/api/moments?view=thumbnails`, which
+  still skips evidence lookup but includes thumbnail signed URLs. Home/Video
+  performs one delayed post-boot thumbnail hydration request and merges
+  `thumbnailUri` into local sessions without blocking first paint.
+- Startup guardrail remains: boot and refresh still use `view=summary`, so
+  `evidenceQueryMs=0` and `thumbnailSignedUrlWallMs=0` for the critical startup
+  path are preserved.
+- App icon asset was reworked again: the pre-rounded inner icon plate was
+  removed from `assets/icon.png`, leaving a full-bleed navy background so iOS
+  applies the only rounded mask. This is not visible on already-installed
+  Build 105; it requires the next standalone build to verify.
+- No EAS build, buildNumber change, Render/Supabase setting change, DB
+  write/migration, Auth/Recovery/Upload flow change, paid AI/API call, or AI
+  Calibration work was performed.
+
 Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-03:
 
 - iOS `buildNumber` is `105`.
