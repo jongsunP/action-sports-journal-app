@@ -115,6 +115,12 @@ Current infrastructure / pre-AI hardening:
   `npx expo start --lan --clear`; current local `.env.local` points the public
   analysis endpoint at Singapore. Use local Mac backend mode only after
   overriding the endpoint before Metro starts.
+- Founder physical iPhone Expo Go capture confirmed the no-EAS path works with
+  Singapore Render: Home loads remote summary/read data, QA Debug Panel is
+  visible, `view=summary`, evidence and thumbnail timings are `0ms`, response
+  bytes are `48`, and `/api/moments` no longer 404s. This is a successful
+  no-EAS physical-device read/sync smoke; Push/deep-link/native-runtime proof
+  still belongs to standalone or Development Build QA.
 - Build 104 is a focused pre-AI regression QA build for
   `559e94c fix: prevent completed moment status downgrade`. iOS `buildNumber`
   is `104`; build prep commit is `714e382`; EAS Build ID is

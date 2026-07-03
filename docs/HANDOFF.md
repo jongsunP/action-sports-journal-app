@@ -23,6 +23,12 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 Latest product/UX direction update:
 
 - Physical iPhone + Expo Go LAN path check, 2026-07-03:
+  - Founder physical iPhone Expo Go capture confirmed the no-EAS path works:
+    Home loads via Singapore Render, remote summary/read data appears, QA Debug
+    Panel is visible, `view=summary` is used, evidence and thumbnail timings are
+    `0ms`, response bytes are `48`, and `/api/moments` no longer 404s. Treat
+    this as a successful no-EAS physical-device read/sync smoke, not as
+    standalone Push/deep-link/native-runtime proof.
   - No-EAS physical-device testing was possible before, but recent active QA
     work mostly required EAS/standalone validation: Push, Kakao/Email recovery
     return, installed env parity, and native upload/compression behavior.
@@ -88,8 +94,9 @@ Latest product/UX direction update:
     operations safety backlog item for later, not a pre-AI blocker.
   - Startup/Region/Upload/Auth/Recovery have no known blocker for AI
     Calibration.
-  - Next action is to set up the local/physical-device test environment so ASJ
-    can reduce EAS preview/internal build usage. Do not start AI Calibration yet.
+  - Next action is pre-AI foundation closeout sharing, then decide whether to
+    enter AI Calibration. Do not start AI Calibration until that closeout is
+    explicitly accepted.
   - No new EAS build is the default next step unless a later standalone-only
     behavior needs it.
 

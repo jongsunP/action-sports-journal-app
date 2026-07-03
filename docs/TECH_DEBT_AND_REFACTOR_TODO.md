@@ -195,6 +195,10 @@ Verified on 2026-07-03, physical iPhone Expo Go path:
 - `npx expo start --lan --clear` starts Metro with a LAN QR.
 - Expo CLI waits on `exp://<MAC_LAN_IP>:8081`; scan this with iPhone Camera or
   Expo Go while the iPhone and Mac are on the same LAN.
+- Founder capture confirmed the physical iPhone Expo Go app loads Home through
+  the Singapore Render endpoint with remote summary/read data, QA Debug Panel,
+  `view=summary`, evidence and thumbnail timings at `0ms`, response bytes
+  `48`, and no `/api/moments` 404.
 - Current local `.env.local` points `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the
   Singapore Render endpoint.
 - Singapore Render `/health` succeeds.

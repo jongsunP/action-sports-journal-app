@@ -23,6 +23,12 @@ Physical iPhone + Expo Go LAN path check, 2026-07-03:
 
 - No EAS build, buildNumber change, Render/Supabase setting change, DB
   write/migration, AI Calibration, or paid AI/API call was made.
+- Founder physical iPhone Expo Go capture confirmed the no-EAS path works:
+  Home loads through the Singapore Render endpoint, remote summary/read data
+  appears, QA Debug Panel is visible, `view=summary` is used, evidence and
+  thumbnail timings are `0ms`, response bytes are `48`, and there is no
+  `/api/moments` 404. This is a successful no-EAS physical-device read/sync
+  smoke, not a standalone Push/deep-link/native-runtime proof.
 - No-EAS physical-device testing was never impossible; earlier work used EAS
   repeatedly because the active QA targets were mostly standalone-only items
   such as Push, recovery deep-link return, installed env parity, and native
@@ -74,9 +80,8 @@ Local / physical-device no-build test environment check, 2026-07-03:
   - Full Push notification, Kakao/Email deep-link return, native compression,
     and installed-app environment parity still require an existing standalone
     build or a future Development Build.
-- Next step is to choose the local endpoint mode for the next smoke:
-  Singapore Render for production-like backend checks, or Mac LAN backend for
-  local backend checks. EAS is still not the default next step.
+- Next step is pre-AI foundation closeout sharing. EAS is still not the default
+  next step; use it only if a later standalone-only behavior needs bundled QA.
 
 Pre-AI hardening docs/logging closeout, 2026-07-03:
 
