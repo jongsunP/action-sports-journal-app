@@ -19,7 +19,41 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
-Build 102 Singapore endpoint QA build complete / quantitative QA pending,
+Pre-AI Foundation Closeout, 2026-07-03:
+
+- Startup Performance / Region Alignment can pause before AI Calibration.
+- Build 102 confirmed the Singapore-only backend path after the Virginia Render
+  service was deleted.
+- Founder Build 102 captures showed:
+  - `view=summary`
+  - `evidenceQueryMs=0`
+  - `thumbnailSignedUrlWallMs=0`
+  - 0-record response bytes: `48`
+  - 7-record response bytes: about `7545`
+  - boot/API generally about `0.6s-1.9s`
+  - server generally about `0.3s-1.7s`
+- Interpretation:
+  - summary-first boot/list is working;
+  - evidence and thumbnail signed URL generation are removed from the boot
+    bottleneck;
+  - remaining variance is more likely Supabase/Auth/query/network variance than
+    an app-structure blocker;
+  - local-first cache, stale-while-revalidate, custom domain, and deeper infra
+    tuning are follow-up backlog, not AI Calibration blockers.
+- Do not start AI Calibration until the final pre-AI regression smoke below is
+  checked or consciously accepted by the Founder:
+  - Upload selection -> compression -> upload -> analysis request reaches
+    `action-sports-journal-api-sg`.
+  - Auth/session restore works after app restart.
+  - Kakao Recovery entry/cancel/return state is sane.
+  - Email Recovery screen and single CTA state are sane.
+  - QA Debug Panel exposes no token, refresh token, full user id, email, full
+    callback URL, signed URL, secret, or API key.
+- No additional EAS build, buildNumber change, Render deploy/service setting,
+  Supabase write/migration, paid AI/API call, or app/server code change was
+  made for this closeout.
+
+Build 102 Singapore endpoint QA build complete / regression smoke pending,
 2026-07-02:
 
 - A new Render Starter Web Service is live in Singapore:
@@ -44,12 +78,12 @@ Build 102 Singapore endpoint QA build complete / quantitative QA pending,
 - Founder confirmed Build 102 installed, launched, and sent real app logs to
   the Singapore Render service. This confirms the standalone app is using the
   Singapore endpoint.
-- Quantitative startup timing values have not been recorded yet. Do not mark
-  Startup Performance passed until QA Debug Panel values and matching Singapore
-  Render `[moments_timing]` rows are reviewed.
-- Upload/Auth/Recovery full regression QA has not been recorded yet.
-- There is no Virginia rollback service now, so Build 102 startup timing and
-  Upload/Auth/Recovery QA should confirm the Singapore-only path is stable.
+- Quantitative startup timing was later reviewed in the 2026-07-03 Pre-AI
+  Foundation Closeout above. Startup Performance / Region Alignment can pause.
+- Upload/Auth/Recovery full regression QA still needs the short pre-AI smoke
+  listed above.
+- There is no Virginia rollback service now; continue using the Singapore-only
+  path.
 - AI Calibration has not started.
 
 Build 101 Startup Performance P2.2 QA build complete / Founder QA pending,

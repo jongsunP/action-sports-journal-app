@@ -34,8 +34,8 @@ feels stable.
 
 ## Active Startup Performance Follow-Up
 
-Startup Performance P2.2 is implemented, and Render Singapore migration is now
-in Build 102 validation before deciding whether to move to AI Calibration.
+Startup Performance P2.2 and Render Singapore migration are closed enough to
+pause before AI Calibration.
 
 Render migration state:
 
@@ -49,10 +49,14 @@ Render migration state:
 - EAS Build 102 ID is `2f1620ae-1a9e-4323-a935-710803b0aeeb`.
 - Founder confirmed the standalone Build 102 app launches and logs to the
   Singapore service.
-- Quantitative startup timing and Upload/Auth/Recovery regression QA are still
-  pending.
-- There is no Virginia rollback service now; Build 102 QA should confirm the
-  Singapore-only path is stable before Startup Performance is paused.
+- Founder Build 102 captures confirmed `view=summary`, `evidenceQueryMs=0`,
+  `thumbnailSignedUrlWallMs=0`, 0-record bytes `48`, 7-record bytes about
+  `7545`, boot/API generally about `0.6s-1.9s`, and server generally about
+  `0.3s-1.7s`.
+- There is no Virginia rollback service now; Build 102 is the Singapore-only
+  baseline.
+- Upload/Auth/Recovery regression smoke is still pending as the final pre-AI
+  foundation check.
 
 Implemented:
 
@@ -64,22 +68,97 @@ Implemented:
 - Supabase migration file:
   `supabase/phase14_moment_list_index.sql`.
 
-Still to verify:
+Still to verify before AI Calibration:
 
-- Render deploy includes the P2.2 server change.
-- SQL index migration is applied in Supabase.
-- Build 100 server logs show whether startup overlap produces
-  `requestUserInflightHit=true`.
-- A future app build is needed before the new in-flight QA Debug Panel line is
-  visible on device.
+- Upload selection -> compression -> upload -> analysis request reaches
+  `action-sports-journal-api-sg`.
+- Auth/session restore works after app restart.
+- Kakao Recovery entry/cancel/return state is sane.
+- Email Recovery screen and single CTA state are sane.
+- QA Debug Panel exposes no token, refresh token, full user id, email, full
+  callback URL, signed URL, secret, or API key.
 
-If startup remains slow after P2.2:
+Non-blocking follow-up backlog:
 
-- Inspect whether the remaining path is `authClaimsMs`, `momentsQueryMs`, or
-  network/app overhead.
-- Consider DB/index verification for the moments list query.
-- Consider visible thumbnail lazy loading only if the blank list cards remain a
-  product problem after speed is acceptable.
+- Local-first cache or stale-while-revalidate for even faster perceived boot.
+- Custom domain for endpoint stability and branding.
+- Advanced infra tuning if future captures prove Supabase/Auth/query/network
+  variance is product-visible.
+- Visible thumbnail lazy loading only if blank list cards remain a product
+  problem after speed is acceptable.
+
+## Pre-AI Foundation Regression Smoke
+
+Purpose:
+
+Before AI Calibration, verify that the existing app foundation still works on
+the Singapore-only backend. This is a smoke checklist, not a new implementation
+project.
+
+Minimum checks:
+
+| Area | Check | Preferred environment |
+| --- | --- | --- |
+| Startup | Home/Video boot uses `view=summary`, keeps `evidenceQueryMs=0` and `thumbnailSignedUrlWallMs=0`, and shows no new long blocking state. | Build 102 standalone iPhone + Singapore Render logs |
+| Upload | Pick video -> optional compression -> upload target -> source upload -> finalize -> analysis request reaches `action-sports-journal-api-sg`. | Build 102 standalone iPhone |
+| Auth | Existing session restores after app restart and remote Moments still belong to the current app user. | Build 102 standalone iPhone; Simulator can only spot-check UI |
+| Kakao Recovery | Enter Kakao recovery, cancel/return, and confirm the app state remains sane. | Standalone iPhone, because OAuth/deep-link behavior is native |
+| Email Recovery | Recovery screen and single CTA state render correctly; full email-link return remains standalone E2E. | UI in Simulator; link return in standalone iPhone |
+| QA Debug Panel | No token, refresh token, full user id, email, full callback URL, signed URL, secret, or API key is visible. | Simulator and standalone iPhone |
+
+If the smoke passes, AI Calibration can start from TS/HS Evidence without more
+startup or region-alignment work.
+
+## No-Build Local / Device Test Matrix
+
+This matrix exists to reduce unnecessary EAS preview/internal builds. It does
+not replace standalone QA for native, auth, or recovery behavior.
+
+Current ASJ constraints:
+
+- Expo SDK is `~54.0.35`.
+- Native/config-sensitive dependencies include `react-native-compressor`,
+  `react-native-nitro-modules`, `expo-notifications`, app scheme
+  `actionsportsjournal`, and the `react-native-compressor` config plugin.
+- Official Expo guidance treats Expo Go as a fixed native runtime and
+  development builds as the path for apps that need custom native libraries or
+  native config:
+  https://docs.expo.dev/develop/development-builds/introduction/
+- Official Expo development build setup notes that EAS development builds make
+  the native side customizable and can be reused with a restarted JS bundler:
+  https://docs.expo.dev/develop/development-builds/create-a-build/
+
+Recommended split:
+
+| Environment | Good for | Not enough for |
+| --- | --- | --- |
+| Expo Go / Simulator via `npm run ios` | UI layout, navigation, text wrapping, Settings/Recovery screen IA, QA Debug Panel visibility, non-native list/detail rendering. | `react-native-compressor`, push token/device behavior, standalone OAuth/deep-link return, EAS env baked into installed app. |
+| Expo Go / physical iPhone | Quick visual checks on real screen size and same-network dev-server access when the feature uses Expo Go bundled modules only. | Compression, push registration, standalone app identity, Kakao/Email deep-link return, installed-build env behavior. |
+| Local dev server + physical iPhone browser | Verify Mac LAN reachability to local backend: start `npm run server:dev`, then open `http://<MAC_LAN_IP>:8787/health` from iPhone Safari. | Proving the installed Build 102 app uses a changed endpoint; `EXPO_PUBLIC_*` endpoint changes require a new build. |
+| iOS Simulator with Expo Go | Fastest no-build UI and state smoke for Home/Video/Detail/Recovery screens. | Native compression and real iPhone file/provider behavior; full Auth/Kakao/Email recovery E2E. |
+| Existing standalone Build 102 | Current best no-new-build validation for production-like backend, startup QA, Upload/Auth/Recovery smoke, and QA Debug Panel sensitive-value checks. | New JS/native/env changes that are not already included in Build 102. |
+| Future Development Build | Best way to reduce repeated preview/internal builds once ASJ needs frequent native-module or config-sensitive QA with local Metro iteration. | It still requires an initial development build and signing; do not create it without Founder approval. |
+
+Useful commands, from the project directory:
+
+```bash
+cd ~/Repository/action-sports-journal-app
+npm run ios
+```
+
+```bash
+cd ~/Repository/action-sports-journal-app
+npm run server:dev
+```
+
+```bash
+cd ~/Repository/action-sports-journal-app
+curl http://127.0.0.1:8787/health
+```
+
+For physical iPhone -> Mac local backend tests, the iPhone and Mac must be on
+the same network, the Mac firewall must allow the dev server port, and the app
+or browser must use the Mac LAN IP rather than `127.0.0.1`.
 
 ## Foundation Safety Check
 

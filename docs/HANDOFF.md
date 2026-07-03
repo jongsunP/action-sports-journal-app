@@ -22,6 +22,26 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI Foundation Closeout / next start, 2026-07-03:
+  - Startup Performance / Region Alignment can pause before AI Calibration.
+  - Build 102 captures confirmed the intended startup shape:
+    `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`,
+    0-record response bytes `48`, 7-record response bytes about `7545`,
+    boot/API generally about `0.6s-1.9s`, and server generally about
+    `0.3s-1.7s`.
+  - The remaining startup variance is classified as Supabase/Auth/query/network
+    variance rather than an app-structure blocker.
+  - Virginia has already been deleted. The active backend is Singapore-only:
+    `action-sports-journal-api-sg`.
+  - AI Calibration has not started.
+  - Next session should run or receive the final pre-AI regression smoke:
+    Upload selection -> compression -> upload -> analysis request on Singapore,
+    Auth/session restore, Kakao Recovery entry/cancel/return, Email Recovery
+    screen/CTA, and QA Debug Panel sensitive-value check.
+  - If that smoke passes, the project can move into AI Calibration. Local-first
+    cache, stale-while-revalidate, custom domain, Development Build workflow,
+    and advanced infra tuning remain follow-up backlog, not blockers.
+
 - Development Session 2 closeout, 2026-07-02:
   - This session started as the ASJ development-session continuation lane and
     synced both `codex-personal-context` and this project repo.
@@ -33,10 +53,9 @@ Latest product/UX direction update:
     `c9d848a docs: record build 102 endpoint confirmation`.
   - No app/server code, app env, Render setting, Supabase setting, DB data,
     buildNumber, EAS build, or AI API call was changed in this session.
-  - Next session should start from Build 102 quantitative QA: collect QA Debug
-    Panel startup values and matching Singapore Render `[moments_timing]` rows,
-    then verify Upload/Auth/Recovery regression before deciding whether
-    Startup Performance can pause and whether AI Calibration can begin. The
+  - That next step was later completed in the 2026-07-03 Pre-AI Foundation
+    Closeout: Startup Performance / Region Alignment can pause, and the
+    remaining pre-AI check is Upload/Auth/Recovery regression smoke. The
     previous Virginia Render service has already been deleted, so there is no
     rollback service.
 
