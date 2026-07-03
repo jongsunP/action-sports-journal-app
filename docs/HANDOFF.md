@@ -36,6 +36,10 @@ Latest product/UX direction update:
   - `67f67cb feat: add structured upload analysis summary logs` is
     post-Build-104 Render observability hardening. Build 104 does not include
     it.
+  - Founder connected Postico 2 to Supabase Postgres with Session pooler
+    parameters and confirmed `select now();` works. Postico is now available
+    for read-only DB inspection during QA, but production mutations from
+    Postico remain prohibited.
   - Startup/Region/Upload/Auth/Recovery have no known blocker for AI
     Calibration.
   - Next action is to set up the local/physical-device test environment so ASJ

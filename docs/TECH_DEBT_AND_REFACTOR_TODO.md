@@ -52,6 +52,21 @@ blocker before AI Calibration:
 - The next process improvement is local/physical-device test environment setup,
   not another EAS build by default.
 
+Local DB inspection setup:
+
+- Founder installed and connected Postico 2 to Supabase Postgres using the
+  Supabase `Connect -> Direct -> Session pooler` parameters.
+- The connection was verified with `select now();`, and the ASJ tables are
+  visible in Postico.
+- Use Postico as a read-only QA/diagnostic tool for checking recent
+  `moments`, `analysis_jobs`, `evidence_results`, `upload_targets`, push
+  delivery attempts, and recovery attempts.
+- Do not use Postico for production mutations. Avoid `UPDATE`, `DELETE`,
+  `TRUNCATE`, `DROP`, migrations, or QA data cleanup unless a separate explicit
+  destructive operation is approved.
+- Follow-up: create/use a dedicated read-only DB user before treating Postico
+  as a regular workflow tool.
+
 Render migration state:
 
 - Build 104 is the focused pre-AI regression QA build for the completed Moment

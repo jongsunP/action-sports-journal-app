@@ -33,12 +33,28 @@ Pre-AI hardening docs/logging closeout, 2026-07-03:
   re-triggering Detail-open evidence/source upload requests.
 - `67f67cb feat: add structured upload analysis summary logs` is a post-Build-104
   observability improvement for Render upload/analysis summary logs.
+- Postico 2 is connected to the Supabase Postgres database for local read-only
+  inspection. It should be used as a QA/diagnostic companion to the QA Debug
+  Panel and Render logs, not as a place to mutate production data.
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
 - Build 104 does not include `43e9eda` or `67f67cb`, but the user-facing upload
   blocker is already verified normal in Build 104.
 - Next step is local/physical-device test environment setup to reduce EAS build
   usage, not another EAS build by default.
 - AI Calibration has not started.
+
+Postico 2 local DB inspection setup, 2026-07-03:
+
+- Founder connected Postico 2 to Supabase Postgres through the Supabase
+  Dashboard `Connect -> Direct -> Session pooler` parameters.
+- `select now();` succeeded and ASJ tables are visible, including
+  `moments`, `analysis_jobs`, `evidence_results`, `upload_targets`,
+  `analysis_push_delivery_attempts`, `device_push_tokens`,
+  `recovery_attempts`, and `users`.
+- Use this setup for read-only inspection only. Do not run `UPDATE`, `DELETE`,
+  `TRUNCATE`, `DROP`, migrations, or production data cleanup from Postico.
+- Current recommendation remains to create/use a dedicated read-only DB user
+  before making Postico a regular QA workflow.
 
 Completed Moment redundant evidence/upload request hardening, 2026-07-03:
 
