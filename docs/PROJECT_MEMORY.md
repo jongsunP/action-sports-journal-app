@@ -100,6 +100,12 @@ Current infrastructure / pre-AI hardening:
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
 - The next step is local/physical-device test environment setup to reduce EAS
   preview/internal build usage, not another EAS build by default.
+- Local no-build environment was checked on 2026-07-03: typecheck passes,
+  local backend `/health` works on localhost and Mac LAN IP, Singapore Render
+  `/health` works, and Metro/iOS Simulator launch works in Expo Go mode. Before
+  meaningful Simulator/Expo Go remote-data smoke, fix or override the local
+  `.env.local` analysis endpoint because it still points at the deleted
+  Virginia backend.
 - Build 104 is a focused pre-AI regression QA build for
   `559e94c fix: prevent completed moment status downgrade`. iOS `buildNumber`
   is `104`; build prep commit is `714e382`; EAS Build ID is

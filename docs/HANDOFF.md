@@ -22,6 +22,27 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local / physical-device no-build test environment check, 2026-07-03:
+  - `npm run typecheck` passed.
+  - Local backend starts with `npm run server:dev` and `/health` responds on
+    localhost and the Mac LAN IP.
+  - Singapore Render `/health` responds.
+  - `npx expo start --localhost` starts Metro in Expo Go mode; pressing `i`
+    opens the iOS Simulator and bundles successfully.
+  - Current blocker for meaningful Simulator/Expo Go remote-data smoke is local
+    environment, not code: `.env.local` still points
+    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the deleted Virginia endpoint, which
+    caused `/api/moments` 404 in Simulator logs.
+  - Do not silently edit `.env.local`. Before the next no-build smoke, choose
+    one endpoint mode:
+    - Singapore Render backend for production-like read/upload path;
+    - Mac LAN backend for local backend reachability and API behavior.
+  - EAS build is still not the default next step. Use Simulator/Expo Go for
+    UI/navigation/copy/debug-panel checks, physical iPhone browser for LAN
+    `/health`, and standalone/Development Build only for Push, native
+    compression, installed env parity, and OAuth/deep-link return.
+  - AI Calibration has not started.
+
 - Pre-AI hardening and observability closeout, 2026-07-03:
   - Build 104 user-facing Upload -> Push -> Detail QA is normal. The completed
     Moment state no longer downgrades, no stale upload-failure alert appears,

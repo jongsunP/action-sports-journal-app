@@ -164,6 +164,11 @@ Current ASJ constraints:
 - Official Expo development build setup notes that EAS development builds make
   the native side customizable and can be reused with a restarted JS bundler:
   https://docs.expo.dev/develop/development-builds/create-a-build/
+- Official Expo environment-variable guidance says Expo CLI automatically loads
+  `EXPO_PUBLIC_` variables from `.env` files into the local JavaScript bundle
+  and that these values are visible in the compiled app, so do not put secrets
+  in `EXPO_PUBLIC_` values:
+  https://docs.expo.dev/guides/environment-variables/
 
 Recommended split:
 
@@ -172,9 +177,41 @@ Recommended split:
 | Expo Go / Simulator via `npm run ios` | UI layout, navigation, text wrapping, Settings/Recovery screen IA, QA Debug Panel visibility, non-native list/detail rendering. | `react-native-compressor`, push token/device behavior, standalone OAuth/deep-link return, EAS env baked into installed app. |
 | Expo Go / physical iPhone | Quick visual checks on real screen size and same-network dev-server access when the feature uses Expo Go bundled modules only. | Compression, push registration, standalone app identity, Kakao/Email deep-link return, installed-build env behavior. |
 | Local dev server + physical iPhone browser | Verify Mac LAN reachability to local backend: start `npm run server:dev`, then open `http://<MAC_LAN_IP>:8787/health` from iPhone Safari. | Proving the installed Build 102 app uses a changed endpoint; `EXPO_PUBLIC_*` endpoint changes require a new build. |
+| Simulator or Expo Go + Singapore Render backend | Production-like read/list/detail API behavior without running local backend. Good for UI and basic remote sync if local `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` points at Singapore. | Native compression, Push delivery, installed app env parity, and standalone deep links. |
+| Simulator or Expo Go + local Mac backend | Local backend `/health`, route reachability, and non-native UI/API smoke when `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://<MAC_LAN_IP>:8787/api/analyze-session-video`. | Production Render region behavior, APNs push delivery, and any standalone-only native identity/deep-link behavior. |
 | iOS Simulator with Expo Go | Fastest no-build UI and state smoke for Home/Video/Detail/Recovery screens. | Native compression and real iPhone file/provider behavior; full Auth/Kakao/Email recovery E2E. |
-| Existing standalone Build 102 | Current best no-new-build validation for production-like backend, startup QA, Upload/Auth/Recovery smoke, and QA Debug Panel sensitive-value checks. | New JS/native/env changes that are not already included in Build 102. |
+| Existing standalone Build 104 | Current best no-new-build validation for the latest installed user-facing Upload -> Push -> Detail regression QA, production-like backend path, startup QA, Upload/Auth/Recovery smoke, and QA Debug Panel sensitive-value checks. | New JS/native/env changes that are not already included in Build 104. |
 | Future Development Build | Best way to reduce repeated preview/internal builds once ASJ needs frequent native-module or config-sensitive QA with local Metro iteration. | It still requires an initial development build and signing; do not create it without Founder approval. |
+
+Verified on 2026-07-03:
+
+- `npm run typecheck` passes.
+- `npm run server:dev` starts the backend on `0.0.0.0:8787`.
+- `curl http://127.0.0.1:8787/health` succeeds.
+- `curl http://<MAC_LAN_IP>:8787/health` succeeds from the Mac. A physical
+  iPhone on the same LAN should use the same host/IP from Safari to verify
+  device-to-Mac reachability.
+- `curl https://action-sports-journal-api-sg.onrender.com/health` succeeds.
+- `npx expo start --localhost` starts Metro in Expo Go mode.
+- Pressing `i` in Expo CLI opens the iOS Simulator and bundles `index.ts`
+  successfully.
+- Current local `.env.local` has `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` pointing at
+  the deleted Virginia backend, so Simulator/Expo Go remote moment sync fails
+  with 404 until the endpoint is corrected or overridden. Do not edit
+  `.env.local` silently; choose the endpoint mode before starting Metro.
+
+Endpoint modes:
+
+| Mode | `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` shape | Use when |
+| --- | --- | --- |
+| Singapore Render | `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video` | You want production-like API behavior without running the local backend. |
+| Local Mac backend | `http://<MAC_LAN_IP>:8787/api/analyze-session-video` | You want the app/phone/simulator to hit the local `npm run server:dev` backend. |
+| Localhost simulator only | `http://127.0.0.1:8787/api/analyze-session-video` | Simulator-only checks where the iPhone device does not need to reach the backend. |
+
+Do not store secrets in `EXPO_PUBLIC_` values. Supabase publishable URL/key and
+API endpoints may be public client configuration, but service role keys,
+provider API keys, tokens, signed URLs, emails, and full user identifiers must
+not be printed in logs, screenshots, or QA reports.
 
 Useful commands, from the project directory:
 
@@ -193,9 +230,31 @@ cd ~/Repository/action-sports-journal-app
 curl http://127.0.0.1:8787/health
 ```
 
+```bash
+cd ~/Repository/action-sports-journal-app
+npx expo start --localhost
+```
+
+```bash
+cd ~/Repository/action-sports-journal-app
+ipconfig getifaddr en0
+```
+
 For physical iPhone -> Mac local backend tests, the iPhone and Mac must be on
 the same network, the Mac firewall must allow the dev server port, and the app
 or browser must use the Mac LAN IP rather than `127.0.0.1`.
+
+EAS without-build boundary:
+
+- EAS is not needed for typecheck, backend `/health`, Metro startup, Simulator
+  UI/copy/navigation checks, QA Debug Panel visibility checks, or physical
+  iPhone browser reachability to the local backend.
+- Existing standalone Build 104 remains the best no-new-build proof for the
+  already-installed user-facing Upload -> Push -> Detail regression result.
+- A future Development Build or standalone build is needed for repeated local
+  testing of custom native runtime parity, Push notification delivery,
+  app-scheme/deep-link return, Kakao Recovery return, Email Recovery link
+  return, and native compression/file-provider behavior.
 
 ## Foundation Safety Check
 

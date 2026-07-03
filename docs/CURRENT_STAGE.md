@@ -19,6 +19,37 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local / physical-device no-build test environment check, 2026-07-03:
+
+- No EAS build, buildNumber change, Render/Supabase setting change, DB
+  write/migration, AI Calibration, or paid AI/API call was made.
+- Verified locally:
+  - `npm run typecheck` passes.
+  - `npm run server:dev` starts the backend on `0.0.0.0:8787`.
+  - `/health` responds on both `127.0.0.1:8787` and the Mac LAN IP.
+  - Singapore Render `/health` responds.
+  - `npx expo start --localhost` starts Metro in Expo Go mode.
+  - Pressing `i` opens the iOS Simulator and bundles `index.ts` successfully.
+- Current local `.env.local` caveat:
+  - Expo CLI loads `.env.local` for `npx expo start`.
+  - The local `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` currently points at the old
+    deleted Virginia endpoint, so Simulator/Expo Go moment sync fails with a
+    404 until the local endpoint is overridden or corrected.
+  - Do not edit `.env.local` silently. For local app testing, set the endpoint
+    explicitly to either the Singapore Render API or the Mac LAN backend before
+    running Metro.
+- Current practical split:
+  - Simulator/Expo Go is usable for UI/navigation/copy/debug-panel visibility
+    and can prove local Metro starts.
+  - Physical iPhone browser can prove Mac LAN backend reachability via
+    `http://<MAC_LAN_IP>:8787/health`.
+  - Full Push notification, Kakao/Email deep-link return, native compression,
+    and installed-app environment parity still require an existing standalone
+    build or a future Development Build.
+- Next step is to choose the local endpoint mode for the next smoke:
+  Singapore Render for production-like backend checks, or Mac LAN backend for
+  local backend checks. EAS is still not the default next step.
+
 Pre-AI hardening docs/logging closeout, 2026-07-03:
 
 - Build 104 user-facing Upload -> Push -> Detail QA is normal: completed state
