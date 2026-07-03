@@ -4764,15 +4764,6 @@ const baseStyles = StyleSheet.create({
     marginBottom: 18,
     width: 68,
   },
-  detailMediaPlaceholderPlay: {
-    borderBottomColor: 'transparent',
-    borderBottomWidth: 11,
-    borderLeftColor: 'rgba(203, 213, 225, 0.7)',
-    borderLeftWidth: 16,
-    borderTopColor: 'transparent',
-    borderTopWidth: 11,
-    marginLeft: 4,
-  },
   detailMediaPlaceholderLineWide: {
     backgroundColor: 'rgba(203, 213, 225, 0.16)',
     borderRadius: 999,

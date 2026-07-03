@@ -192,11 +192,9 @@ function MomentStatusLabel({
 }
 
 function SessionMediaPreview({
-  hasVideo,
   styles,
   thumbnailUri,
 }: {
-  hasVideo: boolean;
   styles: HomeScreenStyles;
   thumbnailUri?: string;
 }) {
@@ -236,7 +234,7 @@ function SessionMediaPreview({
       <View style={styles.recentThumbFallbackIcon}>
         <Ionicons
           color="rgba(203, 213, 225, 0.66)"
-          name={hasVideo ? 'film-outline' : 'document-text-outline'}
+          name="film-outline"
           size={22}
         />
       </View>
@@ -419,7 +417,6 @@ export function RecentSessionsRail({
         >
           <View style={styles.recentPreview}>
             <SessionMediaPreview
-              hasVideo={Boolean(session.videoUri)}
               styles={styles}
               thumbnailUri={card.thumbnailUri}
             />
@@ -644,7 +641,6 @@ export function VideoArchiveList({
       >
         <View style={styles.videoArchiveThumb}>
           <SessionMediaPreview
-            hasVideo={Boolean(session.videoUri)}
             styles={styles}
             thumbnailUri={card.thumbnailUri}
           />

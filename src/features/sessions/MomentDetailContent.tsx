@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useEventListener } from 'expo';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Alert,
@@ -94,7 +95,11 @@ function DetailMediaPlaceholder() {
     <View style={styles.detailMediaPlaceholder}>
       <View style={styles.detailMediaPlaceholderGlow} />
       <View style={styles.detailMediaPlaceholderIcon}>
-        <View style={styles.detailMediaPlaceholderPlay} />
+        <Ionicons
+          color="rgba(203, 213, 225, 0.7)"
+          name="film-outline"
+          size={30}
+        />
       </View>
       <View style={styles.detailMediaPlaceholderLineWide} />
       <View style={styles.detailMediaPlaceholderLineNarrow} />
