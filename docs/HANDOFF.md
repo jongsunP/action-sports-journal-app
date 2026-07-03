@@ -22,6 +22,35 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-03:
+  - iOS `buildNumber` is `105`.
+  - Build 105 is the final pre-AI offline physical-device QA baseline build.
+    AI Calibration has not started.
+  - Build prep commit: `c0391dd chore: prepare build 105 qa`.
+  - EAS Build ID: `1db79d70-ee69-43ef-9a5b-571422297fd2`.
+  - Build page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/1db79d70-ee69-43ef-9a5b-571422297fd2`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/E26B5XmLFBEopsxDRz-s0a3VaO1EVi6v4h_KM_qGu5w.ipa`.
+  - Preview build env was confirmed to point at the Singapore analysis endpoint:
+    `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  - Active backend remains `action-sports-journal-api-sg`.
+  - Included baseline since Build 104:
+    redundant completed Moment evidence-request hardening, structured JSON
+    backend summary logs, Postico read-only inspection docs, no-EAS local/device
+    workflow docs, pre-AI closeout/listup docs, and app icon white-border
+    removal.
+  - Founder QA should focus on:
+    - app icon white border removal and Push notification icon appearance;
+    - Home boot and QA Debug Panel sensitive-value check;
+    - Upload -> Push -> Detail completed-state stability;
+    - no stale upload-failure alert or processing/failed badge downgrade;
+    - no completed Moment retry CTA / "already requesting analysis" copy;
+    - Kakao Recovery entry/cancel/return;
+    - Email Recovery screen and CTA state.
+  - During Build 105 QA, focus on standalone-only checks. The no-EAS
+    Simulator/Expo Go routine is already documented and verified.
+
 - Pre-AI Foundation Closeout, 2026-07-03:
   - Pre-AI foundation closeout is complete from the CTO/PM/QA standpoint.
   - Startup / Region / boot performance is not an AI Calibration blocker.

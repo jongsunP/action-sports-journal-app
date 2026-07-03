@@ -19,6 +19,45 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-03:
+
+- iOS `buildNumber` is `105`.
+- Build 105 is the final pre-AI offline physical-device QA baseline build. It
+  is not an AI Calibration build.
+- Build prep commit is `c0391dd chore: prepare build 105 qa`.
+- EAS Build ID is `1db79d70-ee69-43ef-9a5b-571422297fd2`.
+- Build page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/1db79d70-ee69-43ef-9a5b-571422297fd2`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/E26B5XmLFBEopsxDRz-s0a3VaO1EVi6v4h_KM_qGu5w.ipa`.
+- EAS preview env `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` was confirmed as:
+  `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+- Active backend remains `action-sports-journal-api-sg`.
+- Build 105 includes the post-Build-104 hardening/docs/icon baseline:
+  - `43e9eda fix: skip redundant completed moment evidence requests`;
+  - `67f67cb feat: add structured upload analysis summary logs`;
+  - `05ec575 chore: document pre-ai hardening and json logs`;
+  - `bff4977 docs: record postico db inspection setup`;
+  - `c78479e docs: record no-build local test workflow`;
+  - `d633405 docs: record iphone expo go no-build path`;
+  - `6a2450e docs: clarify no-eas device qa policy`;
+  - `533351c docs: record expo go device smoke pass`;
+  - `eba274e docs: close pre-ai foundation and group listup`;
+  - `bcf81aa chore: remove white border from app icon`.
+- Founder QA focus:
+  - Home icon no longer feels like it has a white border.
+  - Push notification icon looks natural enough for the current iOS baseline.
+  - Home boots and QA Debug Panel exposes no token, refresh token, full user
+    id, email, full callback URL, signed URL, secret, or API key.
+  - Upload -> Push -> Detail keeps completed state with no stale upload failure
+    alert, no processing/failed downgrade, and no completed Moment retry CTA or
+    "already requesting analysis" copy.
+  - Kakao Recovery entry/cancel/return and Email Recovery screen/CTA state have
+    no obvious regression. Fresh email-link E2E can be checked later only if
+    needed.
+- No Render/Supabase setting change, DB write/migration, Auth/Recovery/Upload
+  structure change, paid AI/API call, or AI Calibration work was performed.
+
 Pre-AI Foundation Closeout, 2026-07-03:
 
 - Pre-AI foundation closeout is complete from the CTO/PM/QA standpoint.

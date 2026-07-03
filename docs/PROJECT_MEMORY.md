@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Build 105 is complete and waiting for Founder standalone iPhone QA. It is the
+  final pre-AI offline physical-device QA baseline build, not an AI Calibration
+  build. iOS `buildNumber` is `105`; build prep commit is `c0391dd`; EAS Build
+  ID is `1db79d70-ee69-43ef-9a5b-571422297fd2`; build page is
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/1db79d70-ee69-43ef-9a5b-571422297fd2`;
+  IPA URL is
+  `https://expo.dev/artifacts/eas/E26B5XmLFBEopsxDRz-s0a3VaO1EVi6v4h_KM_qGu5w.ipa`.
+  Build 105 includes post-Build-104 hardening/docs and app icon white-border
+  removal, and uses the Singapore Render analysis endpoint in the EAS preview
+  environment.
 - Pre-AI Foundation Closeout is complete from the CTO/PM/QA standpoint.
 - Next product work can start with AI Calibration, beginning at TS/HS Evidence
   stabilization. Use no-EAS Simulator / physical iPhone Expo Go first whenever
