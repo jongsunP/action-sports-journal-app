@@ -89,6 +89,19 @@ function DetailThumbnailPreview({
   );
 }
 
+function DetailMediaPlaceholder() {
+  return (
+    <View style={styles.detailMediaPlaceholder}>
+      <View style={styles.detailMediaPlaceholderGlow} />
+      <View style={styles.detailMediaPlaceholderIcon}>
+        <View style={styles.detailMediaPlaceholderPlay} />
+      </View>
+      <View style={styles.detailMediaPlaceholderLineWide} />
+      <View style={styles.detailMediaPlaceholderLineNarrow} />
+    </View>
+  );
+}
+
 function LocalSessionVideoPlayer({
   momentStatus,
   thumbnailUri,
@@ -168,6 +181,7 @@ export type MomentDetailContentProps = {
   detailDiagnostics?: MomentDetailFetchDiagnostics | null;
   evidence?: GeminiEvidenceResult;
   isDeleting?: boolean;
+  isDetailDataLoading?: boolean;
   isLoading: boolean;
   momentStatus?: MomentStatus;
   onClose: () => void;
@@ -185,6 +199,7 @@ export function MomentDetailContent({
   detailDiagnostics,
   evidence,
   isDeleting = false,
+  isDetailDataLoading = false,
   isLoading,
   momentStatus,
   onClose,
@@ -292,6 +307,8 @@ export function MomentDetailContent({
               momentStatus={momentStatus}
               thumbnailUri={thumbnailUri}
             />
+          ) : isDetailDataLoading ? (
+            <DetailMediaPlaceholder />
           ) : (
             <View style={styles.videoMissingFallback}>
               <Text style={styles.videoMissingTitle}>{missingMediaCopy.title}</Text>

@@ -19,7 +19,7 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
-Post-Build-105 list thumbnail / icon follow-up implemented, no build run, 2026-07-03:
+Post-Build-105 / pre-Build-106 no-build UX polish implemented, no build run, 2026-07-03:
 
 - Founder Build 105 QA showed Home boot / QA Debug Panel / Recovery screens look
   normal, but recovered remote records in Video list still showed the `CLIP`
@@ -32,6 +32,11 @@ Post-Build-105 list thumbnail / icon follow-up implemented, no build run, 2026-0
   still skips evidence lookup but includes thumbnail signed URLs. Home/Video
   performs one delayed post-boot thumbnail hydration request and merges
   `thumbnailUri` into local sessions without blocking first paint.
+- Follow-up UX polish before Build 106: the Video list no longer shows the
+  strong `CLIP` text placeholder while thumbnails are hydrating. It now uses a
+  soft media skeleton/icon placeholder, list thumbnails fade in when hydrated,
+  and Detail shows a media skeleton while remote detail/thumbnail data is still
+  loading.
 - Startup guardrail remains: boot and refresh still use `view=summary`, so
   `evidenceQueryMs=0` and `thumbnailSignedUrlWallMs=0` for the critical startup
   path are preserved.
@@ -42,6 +47,8 @@ Post-Build-105 list thumbnail / icon follow-up implemented, no build run, 2026-0
 - No EAS build, buildNumber change, Render/Supabase setting change, DB
   write/migration, Auth/Recovery/Upload flow change, paid AI/API call, or AI
   Calibration work was performed.
+- Build 106 should be treated as a later CTO/Founder-approved standalone QA
+  build, not part of this no-build polish task.
 
 Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-03:
 

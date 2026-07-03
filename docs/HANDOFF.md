@@ -22,7 +22,7 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
-- Post-Build-105 list thumbnail / icon follow-up implemented, no build run, 2026-07-03:
+- Post-Build-105 / pre-Build-106 no-build UX polish implemented, no build run, 2026-07-03:
   - Founder Build 105 QA showed Home boot, QA Debug Panel, and Recovery surfaces
     look normal.
   - Recovered remote records in the Video list still showed the `CLIP`
@@ -33,11 +33,16 @@ Latest product/UX direction update:
     thumbnail-only list hydration path. Home/Video keeps first paint on
     `view=summary`, then performs one delayed post-boot thumbnail hydration and
     merges `thumbnailUri` into local sessions.
+  - Follow-up polish before Build 106: the strong `CLIP` text placeholder was
+    replaced with a soft media skeleton/icon placeholder, hydrated thumbnails
+    now fade in, and Detail shows a media skeleton while remote
+    detail/thumbnail data is still loading.
   - Startup guardrail remains intact: boot/refresh still use `view=summary`.
   - `assets/icon.png` was also reworked to remove the pre-rounded inner icon
     plate and use a full-bleed navy background. Already-installed Build 105 will
     not show this; verify it only on the next standalone build.
-  - No EAS build was run. AI Calibration has not started.
+  - No EAS build was run. Build 106 remains a separate CTO/Founder-approved
+    standalone QA step. AI Calibration has not started.
 
 - Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-03:
   - iOS `buildNumber` is `105`.

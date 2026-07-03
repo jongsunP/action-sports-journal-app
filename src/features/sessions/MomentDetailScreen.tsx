@@ -41,6 +41,7 @@ export function MomentDetailScreen({
   >();
   const [detailDiagnostics, setDetailDiagnostics] =
     useState<MomentDetailFetchDiagnostics | null>(null);
+  const [isDetailDataLoading, setIsDetailDataLoading] = useState(false);
 
   useEffect(() => {
     if (runtimeState.isReady && !session && navigation.canGoBack()) {
@@ -54,6 +55,7 @@ export function MomentDetailScreen({
     setDetailEvidence(undefined);
     setDetailThumbnailUri(undefined);
     setDetailDiagnostics(null);
+    setIsDetailDataLoading(Boolean(remoteMomentId));
 
     if (!remoteMomentId) {
       return () => {
@@ -87,6 +89,11 @@ export function MomentDetailScreen({
           message,
           momentId: remoteMomentId,
         });
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsDetailDataLoading(false);
+        }
       });
 
     return () => {
@@ -133,6 +140,7 @@ export function MomentDetailScreen({
       debugEndpoint={runtimeState.debugEndpoint}
       detailDiagnostics={detailDiagnostics}
       evidence={evidence}
+      isDetailDataLoading={isDetailDataLoading}
       isDeleting={Boolean(runtimeState.deletingSessionIds[session.id])}
       isLoading={Boolean(runtimeState.extractingEvidenceBySessionId[session.id])}
       momentStatus={momentStatus}

@@ -81,16 +81,19 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
-- Post-Build-105 list thumbnail / icon follow-up is implemented but not built.
-  Build 105 QA showed normal Home boot / QA Debug Panel / Recovery surfaces, and
-  revealed that recovered remote Video list rows still showed `CLIP` while
-  Detail displayed the image. This was the intended summary-first tradeoff:
-  `/api/moments?view=summary` skips thumbnail signed URL generation. A new
-  `view=thumbnails` path now keeps evidence skipped but returns thumbnail signed
-  URLs, and Home/Video performs one delayed post-boot thumbnail hydration
-  without blocking startup. `assets/icon.png` was also reworked to remove the
-  pre-rounded inner icon plate. Both changes require a later standalone build
-  if the Founder wants installed-app verification.
+- Post-Build-105 / pre-Build-106 no-build UX polish is implemented but not
+  built. Build 105 QA showed normal Home boot / QA Debug Panel / Recovery
+  surfaces, and revealed that recovered remote Video list rows still showed
+  `CLIP` while Detail displayed the image. This was the intended summary-first
+  tradeoff: `/api/moments?view=summary` skips thumbnail signed URL generation.
+  A new `view=thumbnails` path now keeps evidence skipped but returns thumbnail
+  signed URLs, and Home/Video performs one delayed post-boot thumbnail
+  hydration without blocking startup. The follow-up polish replaces the strong
+  `CLIP` text with a soft media skeleton/icon placeholder, fades thumbnails in
+  after hydration, and shows a Detail media skeleton while full detail/thumbnail
+  data is loading. `assets/icon.png` was also reworked to remove the
+  pre-rounded inner icon plate. These changes require a later standalone build
+  only if the Founder wants installed-app verification before AI Calibration.
 - Build 105 is complete and waiting for Founder standalone iPhone QA. It is the
   final pre-AI offline physical-device QA baseline build, not an AI Calibration
   build. iOS `buildNumber` is `105`; build prep commit is `c0391dd`; EAS Build

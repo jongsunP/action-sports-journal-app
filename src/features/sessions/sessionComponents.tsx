@@ -1,10 +1,10 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   type GestureResponderEvent,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -201,23 +201,47 @@ function SessionMediaPreview({
   thumbnailUri?: string;
 }) {
   const [didImageFail, setDidImageFail] = useState(false);
+  const fadeValue = useRef(new Animated.Value(thumbnailUri ? 0 : 1)).current;
+
+  useEffect(() => {
+    setDidImageFail(false);
+
+    if (!thumbnailUri) {
+      fadeValue.setValue(1);
+      return;
+    }
+
+    fadeValue.setValue(0);
+    Animated.timing(fadeValue, {
+      duration: 180,
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeValue, thumbnailUri]);
 
   if (thumbnailUri && !didImageFail) {
     return (
-      <Image
+      <Animated.Image
         onError={() => setDidImageFail(true)}
         resizeMode="cover"
         source={{ uri: thumbnailUri }}
-        style={styles.recentThumbImage}
+        style={[styles.recentThumbImage, { opacity: fadeValue }]}
       />
     );
   }
 
   return (
     <View style={styles.recentThumbFallback}>
-      <Text style={styles.recentThumbFallbackText}>
-        {hasVideo ? 'CLIP' : 'NOTE'}
-      </Text>
+      <View style={styles.recentThumbFallbackGlow} />
+      <View style={styles.recentThumbFallbackIcon}>
+        <Ionicons
+          color="rgba(203, 213, 225, 0.66)"
+          name={hasVideo ? 'film-outline' : 'document-text-outline'}
+          size={22}
+        />
+      </View>
+      <View style={styles.recentThumbFallbackLineWide} />
+      <View style={styles.recentThumbFallbackLineNarrow} />
     </View>
   );
 }
