@@ -44,9 +44,11 @@ Build 105 pre-AI offline device QA build complete / Founder QA pending, 2026-07-
   - `533351c docs: record expo go device smoke pass`;
   - `eba274e docs: close pre-ai foundation and group listup`;
   - `bcf81aa chore: remove white border from app icon`.
+- Founder home-screen capture showed the app icon still feels like it has a
+  white border on iOS. Do not spend more time on it before AI Calibration; keep
+  this as a later visual/icon polish item. Build 105 remains the pre-AI
+  offline physical-device baseline for the functional QA items below.
 - Founder QA focus:
-  - Home icon no longer feels like it has a white border.
-  - Push notification icon looks natural enough for the current iOS baseline.
   - Home boots and QA Debug Panel exposes no token, refresh token, full user
     id, email, full callback URL, signed URL, secret, or API key.
   - Upload -> Push -> Detail keeps completed state with no stale upload failure

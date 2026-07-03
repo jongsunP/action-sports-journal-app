@@ -38,10 +38,12 @@ Latest product/UX direction update:
   - Included baseline since Build 104:
     redundant completed Moment evidence-request hardening, structured JSON
     backend summary logs, Postico read-only inspection docs, no-EAS local/device
-    workflow docs, pre-AI closeout/listup docs, and app icon white-border
-    removal.
+    workflow docs, pre-AI closeout/listup docs, and an attempted app icon
+    white-border removal.
+  - Founder home-screen capture showed the app icon still feels like it has a
+    white border on iOS. Defer further icon work to later visual/icon polish;
+    do not block AI Calibration on this.
   - Founder QA should focus on:
-    - app icon white border removal and Push notification icon appearance;
     - Home boot and QA Debug Panel sensitive-value check;
     - Upload -> Push -> Detail completed-state stability;
     - no stale upload-failure alert or processing/failed badge downgrade;

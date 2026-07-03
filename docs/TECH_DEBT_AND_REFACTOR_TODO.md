@@ -842,8 +842,11 @@ Future Detail UX backlog:
   Calibration depending on CTO/founder priority.
 - Push Notification Icon Polish is a later visual polish item. It should check
   the OS notification/app icon asset shown in Push notifications so it does not
-  feel like a default placeholder. Do not reopen Push delivery, ownership, or
-  observability logic for this item.
+  feel like a default placeholder. Build 105 confirmed the current iOS home
+  screen icon still feels like it has a white border even after the first asset
+  edit, so the later fix should treat this as proper icon asset polish or
+  recreation rather than another small masking tweak. Do not reopen Push
+  delivery, ownership, or observability logic for this item.
 - Do next only after product approval: choose one of image export, native share
   sheet, ShareResult route, or a theme-token adoption pass.
 
