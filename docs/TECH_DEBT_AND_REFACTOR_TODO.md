@@ -175,13 +175,27 @@ Recommended split:
 | Environment | Good for | Not enough for |
 | --- | --- | --- |
 | Expo Go / Simulator via `npm run ios` | UI layout, navigation, text wrapping, Settings/Recovery screen IA, QA Debug Panel visibility, non-native list/detail rendering. | `react-native-compressor`, push token/device behavior, standalone OAuth/deep-link return, EAS env baked into installed app. |
-| Expo Go / physical iPhone | Quick visual checks on real screen size and same-network dev-server access when the feature uses Expo Go bundled modules only. | Compression, push registration, standalone app identity, Kakao/Email deep-link return, installed-build env behavior. |
-| Local dev server + physical iPhone browser | Verify Mac LAN reachability to local backend: start `npm run server:dev`, then open `http://<MAC_LAN_IP>:8787/health` from iPhone Safari. | Proving the installed Build 102 app uses a changed endpoint; `EXPO_PUBLIC_*` endpoint changes require a new build. |
-| Simulator or Expo Go + Singapore Render backend | Production-like read/list/detail API behavior without running local backend. Good for UI and basic remote sync if local `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` points at Singapore. | Native compression, Push delivery, installed app env parity, and standalone deep links. |
-| Simulator or Expo Go + local Mac backend | Local backend `/health`, route reachability, and non-native UI/API smoke when `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://<MAC_LAN_IP>:8787/api/analyze-session-video`. | Production Render region behavior, APNs push delivery, and any standalone-only native identity/deep-link behavior. |
+| Expo Go / physical iPhone via `npx expo start --lan --clear` | Quick visual checks on real screen size, UI/navigation/copy/basic recovery screens, QA Debug Panel visibility, and same-network backend reachability when the feature uses Expo Go bundled modules only. | Compression, push registration/delivery, standalone app identity, Kakao/Email deep-link return, installed-build env behavior. |
+| Local dev server + physical iPhone browser | Verify Mac LAN reachability to local backend: start `npm run server:dev`, then open `http://<MAC_LAN_IP>:8787/health` from iPhone Safari. | Proving an already installed standalone Build 104 uses a changed endpoint; `EXPO_PUBLIC_*` endpoint changes require a new build for standalone apps. |
+| Physical iPhone Expo Go + Singapore Render backend | Production-like backend read/list/detail API behavior without running local backend. Current local `.env.local` points `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at Singapore, so this is the default no-EAS iPhone route. | Native compression parity, Push delivery, installed app env parity, and standalone deep links. |
+| Physical iPhone Expo Go + local Mac backend | Local backend `/health`, route reachability, and non-native UI/API smoke when `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://<MAC_LAN_IP>:8787/api/analyze-session-video` is set before Metro starts. | Production Render region behavior, APNs push delivery, and any standalone-only native identity/deep-link behavior. |
 | iOS Simulator with Expo Go | Fastest no-build UI and state smoke for Home/Video/Detail/Recovery screens. | Native compression and real iPhone file/provider behavior; full Auth/Kakao/Email recovery E2E. |
 | Existing standalone Build 104 | Current best no-new-build validation for the latest installed user-facing Upload -> Push -> Detail regression QA, production-like backend path, startup QA, Upload/Auth/Recovery smoke, and QA Debug Panel sensitive-value checks. | New JS/native/env changes that are not already included in Build 104. |
 | Future Development Build | Best way to reduce repeated preview/internal builds once ASJ needs frequent native-module or config-sensitive QA with local Metro iteration. | It still requires an initial development build and signing; do not create it without Founder approval. |
+
+Verified on 2026-07-03, physical iPhone Expo Go path:
+
+- `npx expo start --lan --clear` starts Metro with a LAN QR.
+- Expo CLI waits on `exp://<MAC_LAN_IP>:8081`; scan this with iPhone Camera or
+  Expo Go while the iPhone and Mac are on the same LAN.
+- Current local `.env.local` points `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the
+  Singapore Render endpoint.
+- Singapore Render `/health` succeeds.
+- Local Mac backend mode network check succeeds after `npm run server:dev`:
+  localhost `/health` and `http://<MAC_LAN_IP>:8787/health` both respond.
+- Port note: if Expo says port `8081` is already running, check whether it is an
+  older ASJ `expo start` process before choosing a different port. Keeping
+  `8081` avoids confusing saved QR/device state.
 
 Verified on 2026-07-03:
 
@@ -195,10 +209,9 @@ Verified on 2026-07-03:
 - `npx expo start --localhost` starts Metro in Expo Go mode.
 - Pressing `i` in Expo CLI opens the iOS Simulator and bundles `index.ts`
   successfully.
-- Current local `.env.local` has `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` pointing at
-  the deleted Virginia backend, so Simulator/Expo Go remote moment sync fails
-  with 404 until the endpoint is corrected or overridden. Do not edit
-  `.env.local` silently; choose the endpoint mode before starting Metro.
+- Current local `.env.local` now has `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` pointing
+  at the Singapore Render backend. For local Mac backend testing, override the
+  endpoint before starting Metro.
 
 Endpoint modes:
 
@@ -237,12 +250,30 @@ npx expo start --localhost
 
 ```bash
 cd ~/Repository/action-sports-journal-app
+npx expo start --lan --clear
+```
+
+```bash
+cd ~/Repository/action-sports-journal-app
 ipconfig getifaddr en0
 ```
 
 For physical iPhone -> Mac local backend tests, the iPhone and Mac must be on
 the same network, the Mac firewall must allow the dev server port, and the app
 or browser must use the Mac LAN IP rather than `127.0.0.1`.
+
+Physical iPhone + Expo Go operating notes:
+
+- Start with the Singapore Render endpoint when the goal is UI/basic remote
+  sync smoke without EAS.
+- Start `npm run server:dev` first and override
+  `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` before Metro when the goal is local Mac
+  backend route/reachability smoke.
+- Restart Metro after changing any `EXPO_PUBLIC_` value, because Expo embeds
+  those values into the local JavaScript bundle.
+- If iPhone cannot open the QR, verify both devices are on the same LAN,
+  disable VPN/private relay if needed, and confirm the Mac LAN IP with
+  `ipconfig getifaddr en0`.
 
 EAS without-build boundary:
 

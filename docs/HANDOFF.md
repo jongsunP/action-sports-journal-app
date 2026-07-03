@@ -22,6 +22,25 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Physical iPhone + Expo Go LAN path check, 2026-07-03:
+  - `npx expo start --lan --clear` starts Metro in Expo Go mode and exposes a
+    LAN QR at `exp://<MAC_LAN_IP>:8081`.
+  - Current local `.env.local` points `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the
+    Singapore Render endpoint, so physical iPhone + Expo Go can use Singapore
+    mode without a new EAS build.
+  - Singapore Render `/health` responds.
+  - Local Mac backend mode also works at the network layer:
+    `npm run server:dev` listens on `0.0.0.0:8787`, and `/health` responds on
+    localhost and the Mac LAN IP.
+  - For local Mac backend app testing, override
+    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` to
+    `http://<MAC_LAN_IP>:8787/api/analyze-session-video` before starting Metro.
+  - Expo Go can cover physical-device UI/navigation/copy/basic recovery screen
+    and QA Debug Panel visibility checks. It cannot cover Push delivery,
+    standalone installed env parity, app-scheme/deep-link return, Kakao/Email
+    recovery return, or native compression parity.
+  - EAS build is still not part of the next step.
+
 - Local / physical-device no-build test environment check, 2026-07-03:
   - `npm run typecheck` passed.
   - Local backend starts with `npm run server:dev` and `/health` responds on
@@ -29,12 +48,11 @@ Latest product/UX direction update:
   - Singapore Render `/health` responds.
   - `npx expo start --localhost` starts Metro in Expo Go mode; pressing `i`
     opens the iOS Simulator and bundles successfully.
-  - Current blocker for meaningful Simulator/Expo Go remote-data smoke is local
-    environment, not code: `.env.local` still points
-    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the deleted Virginia endpoint, which
-    caused `/api/moments` 404 in Simulator logs.
-  - Do not silently edit `.env.local`. Before the next no-build smoke, choose
-    one endpoint mode:
+  - Previous blocker for meaningful Simulator/Expo Go remote-data smoke was
+    local environment, not code: `.env.local` had pointed
+    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at the deleted Virginia endpoint. It is
+    now set to Singapore locally, but future sessions should still choose one
+    endpoint mode before starting Metro:
     - Singapore Render backend for production-like read/upload path;
     - Mac LAN backend for local backend reachability and API behavior.
   - EAS build is still not the default next step. Use Simulator/Expo Go for

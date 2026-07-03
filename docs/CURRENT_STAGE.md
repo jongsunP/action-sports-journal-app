@@ -19,6 +19,32 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Physical iPhone + Expo Go LAN path check, 2026-07-03:
+
+- No EAS build, buildNumber change, Render/Supabase setting change, DB
+  write/migration, AI Calibration, or paid AI/API call was made.
+- Current local `.env.local` has `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` pointed at
+  the Singapore Render endpoint, so the previous local Virginia endpoint caveat
+  is cleared for Singapore-mode Expo Go testing.
+- `npx expo start --lan --clear` starts Metro with a LAN QR and waits on
+  `exp://<MAC_LAN_IP>:8081`, which is the path to scan from iPhone with Expo Go.
+- Singapore Render `/health` responds.
+- Local Mac backend mode was also checked:
+  - `npm run server:dev` starts on `0.0.0.0:8787`.
+  - `/health` responds on both `127.0.0.1:8787` and
+    `http://<MAC_LAN_IP>:8787/health`.
+- Endpoint mode split:
+  - Singapore Render endpoint: best no-EAS path for physical iPhone + Expo Go
+    UI/navigation/basic remote sync smoke against the production-like backend.
+  - Local Mac backend endpoint: possible only after overriding
+    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` to
+    `http://<MAC_LAN_IP>:8787/api/analyze-session-video` before starting Metro;
+    best for local backend route/reachability smoke.
+- Expo Go can confirm UI/navigation/copy/basic recovery screens, QA Debug Panel
+  visibility, and basic remote read/sync shape. It cannot prove Push delivery,
+  standalone installed env parity, app-scheme/deep-link return, Kakao/Email
+  recovery return, or native compression parity.
+
 Local / physical-device no-build test environment check, 2026-07-03:
 
 - No EAS build, buildNumber change, Render/Supabase setting change, DB
@@ -30,14 +56,9 @@ Local / physical-device no-build test environment check, 2026-07-03:
   - Singapore Render `/health` responds.
   - `npx expo start --localhost` starts Metro in Expo Go mode.
   - Pressing `i` opens the iOS Simulator and bundles `index.ts` successfully.
-- Current local `.env.local` caveat:
-  - Expo CLI loads `.env.local` for `npx expo start`.
-  - The local `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` currently points at the old
-    deleted Virginia endpoint, so Simulator/Expo Go moment sync fails with a
-    404 until the local endpoint is overridden or corrected.
-  - Do not edit `.env.local` silently. For local app testing, set the endpoint
-    explicitly to either the Singapore Render API or the Mac LAN backend before
-    running Metro.
+- Current local `.env.local` now points `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT` at
+  the Singapore Render API. For local Mac backend testing, override this before
+  starting Metro rather than editing secrets or service-role values.
 - Current practical split:
   - Simulator/Expo Go is usable for UI/navigation/copy/debug-panel visibility
     and can prove local Metro starts.
