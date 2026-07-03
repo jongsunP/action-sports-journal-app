@@ -19,6 +19,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Email Recovery small fix, 2026-07-03:
+
+- Build 102 pre-AI smoke found that an already connected current-account email
+  could still be submitted through the Email CTA, moving the UI into an email
+  pending state even when no new email was received.
+- `AccountRecoveryScreen` now blocks the same-current-email no-op before calling
+  `updateUser({ email })`, shows the already-connected state naturally, and
+  softens the pending copy so it does not imply inbox delivery is guaranteed.
+- Existing Email Recovery sign-in fallback is preserved: only the
+  current-account connection path with a different email can fall through from
+  `email_exists` into `signInWithOtp({ shouldCreateUser: false,
+  emailRedirectTo })`.
+- No EAS build, buildNumber change, Render/Supabase setting change, DB write,
+  actual email resend, AI Calibration, or paid AI/API call was made.
+
 Pre-AI Foundation Closeout, 2026-07-03:
 
 - Startup Performance / Region Alignment can pause before AI Calibration.

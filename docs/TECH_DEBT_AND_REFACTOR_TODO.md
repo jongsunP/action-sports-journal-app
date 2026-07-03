@@ -74,7 +74,8 @@ Still to verify before AI Calibration:
   `action-sports-journal-api-sg`.
 - Auth/session restore works after app restart.
 - Kakao Recovery entry/cancel/return state is sane.
-- Email Recovery screen and single CTA state are sane.
+- Email Recovery screen and single CTA state are sane; same-current-email no-op
+  submission is blocked in code after Build 102 and needs later UI/build QA.
 - QA Debug Panel exposes no token, refresh token, full user id, email, full
   callback URL, signed URL, secret, or API key.
 

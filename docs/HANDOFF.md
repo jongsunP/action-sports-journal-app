@@ -22,6 +22,19 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Email Recovery small fix, 2026-07-03:
+  - Build 102 pre-AI smoke found an Email Recovery UI/flow confusion: an already
+    connected current-account email could still be submitted, and the UI could
+    show an email pending state although no new inbox email arrived.
+  - `AccountRecoveryScreen` now blocks same-current-email no-op submission
+    before `updateUser({ email })`, labels the connected email state directly,
+    and softens pending copy to avoid implying guaranteed inbox delivery.
+  - The existing recovery sign-in fallback remains unchanged for true
+    `email_exists` cases: different-email connection attempt -> local-work guard
+    -> `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })`.
+  - No build was run. Next validation can use local/simulator UI first; a
+    standalone build is only needed to confirm the changed UI on device.
+
 - Pre-AI Foundation Closeout / next start, 2026-07-03:
   - Startup Performance / Region Alignment can pause before AI Calibration.
   - Build 102 captures confirmed the intended startup shape:

@@ -335,11 +335,17 @@ export function AccountRecoveryScreen() {
   const normalizedEmail = useMemo(() => normalizeRecoveryEmail(email), [email]);
   const isAnonymousUser = hasAnonymousFlag(user);
   const currentEmail = user?.email ?? null;
+  const normalizedCurrentEmail = currentEmail
+    ? normalizeRecoveryEmail(currentEmail)
+    : null;
+  const isCurrentEmailInput =
+    Boolean(normalizedCurrentEmail) && normalizedEmail === normalizedCurrentEmail;
   const hasKakaoIdentity = hasKakaoProviderIdentity(user);
   const kakaoNickname = getKakaoNickname(user?.user_metadata);
   const canSubmitEmail =
     authMode === 'authenticated' &&
     normalizedEmail.includes('@') &&
+    !isCurrentEmailInput &&
     !isSubmittingEmail &&
     !isRefreshingSession &&
     !isLinkingKakao &&
@@ -467,6 +473,17 @@ export function AccountRecoveryScreen() {
   };
 
   const handleContinueWithEmail = async () => {
+    if (isCurrentEmailInput) {
+      setSelectedRecoveryMethod('email');
+      setErrorMessage(null);
+      setKakaoFeedback(null);
+      setEmailRecoveryMessage('이미 연결된 이메일입니다.');
+      setPendingEmail('');
+      setEmailContinueFlow('connection');
+      setStep('linked');
+      return;
+    }
+
     if (!canSubmitEmail) {
       return;
     }
@@ -1024,7 +1041,9 @@ export function AccountRecoveryScreen() {
                       </View>
                       <View style={styles.methodTitleBlock}>
                         <Text style={styles.methodLabel}>Email</Text>
-                        <Text style={styles.methodTitle}>이메일로 계속하기</Text>
+                        <Text style={styles.methodTitle}>
+                          {currentEmail ? '이메일 연결됨' : '이메일로 계속하기'}
+                        </Text>
                       </View>
                     </View>
                     <View
@@ -1165,7 +1184,9 @@ export function AccountRecoveryScreen() {
                       <ActivityIndicator color="#050507" />
                     ) : (
                       <Text style={styles.primaryButtonText}>
-                        이메일로 계속하기
+                        {isCurrentEmailInput
+                          ? '이미 연결된 이메일'
+                          : '이메일로 계속하기'}
                       </Text>
                     )}
                   </Pressable>
@@ -1174,8 +1195,8 @@ export function AccountRecoveryScreen() {
                     <View style={styles.codeBlock}>
                       <Text style={styles.formLabel}>이메일 확인 대기 중</Text>
                       <Text style={styles.helperText}>
-                        {pendingEmail} 주소로 보낸 메일에서 확인 링크를 눌러주세요.
-                        링크를 열면 앱으로 돌아와{' '}
+                        확인 메일이 도착하면 링크를 눌러주세요. 링크를 열면
+                        앱으로 돌아와{' '}
                         {emailContinueFlow === 'recovery'
                           ? '기존 기록을 불러옵니다.'
                           : '복구 수단 연결을 확인합니다.'}
@@ -1223,7 +1244,7 @@ export function AccountRecoveryScreen() {
                     <View style={styles.successPanel}>
                       <Text style={styles.successTitle}>복구 준비 완료</Text>
                       <Text style={styles.successText}>
-                        이 이메일이 현재 기기 계정의 복구 수단으로 연결되었습니다.
+                        이미 연결된 이메일로 현재 기록을 복구할 수 있습니다.
                       </Text>
                     </View>
                   ) : null}

@@ -97,6 +97,10 @@ Current infrastructure / Build 102 QA:
 - Startup Performance / Region Alignment can pause before AI Calibration.
   Remaining variance is classified as Supabase/Auth/query/network variance, not
   an app-structure blocker.
+- Email Recovery small fix after Build 102 blocks same-current-email no-op
+  submission before `updateUser({ email })`, shows the already-connected state,
+  and keeps the existing `email_exists` -> recovery sign-in fallback intact. This
+  is not included in Build 102 until a later build is made.
 - Upload/Auth/Recovery regression smoke is still the final pre-AI foundation
   check.
 - The previous Virginia Render service has been deleted. The only active Render
@@ -441,7 +445,7 @@ Current stable workstream list:
 - Real-use Loading Diagnosis / Auth Bootstrap Timeout & Remote Moment Sync P1(실사용 로딩 진단 / 인증 부트스트랩 타임아웃 / 원격 기록 동기화 관측성 1차)
 - Auth Bootstrap Timeout / Observability(인증 부트스트랩 타임아웃 / 관측성): 구현 가능한 현재 범위 완료. `getSession` / `getUser` / anonymous sign-in 단계별 status, durationMs, reason을 QA Debug Panel에서 확인 가능
 - Email Recovery Connection P1(이메일 복구 수단 연결 1차): Build 89 fresh-link QA 성공
-- Email Recovery Sign-in P1(이메일 기존 기록 복구 로그인 1차): 코드 구현 완료. Build 92 피드백 후 UI는 Kakao처럼 single CTA로 정리됨. 사용자는 이메일 입력 후 `이메일로 계속하기`만 누르고, 내부에서는 `updateUser({ email })` current-account 연결을 먼저 시도한 뒤 이미 등록된 이메일이면 local-work guard 후 `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` recovery sign-in으로 이어감. Standalone E2E QA는 다음 빌드 승인 후 확인 필요
+- Email Recovery Sign-in P1(이메일 기존 기록 복구 로그인 1차): 코드 구현 완료. Build 92 피드백 후 UI는 Kakao처럼 single CTA로 정리됨. 사용자는 이메일 입력 후 `이메일로 계속하기`만 누르고, 내부에서는 `updateUser({ email })` current-account 연결을 먼저 시도한 뒤 이미 등록된 이메일이면 local-work guard 후 `signInWithOtp({ shouldCreateUser: false, emailRedirectTo })` recovery sign-in으로 이어감. Build 102 pre-AI smoke에서 발견된 same-current-email no-op pending 혼선은 이후 코드에서 차단했다. Standalone E2E QA는 다음 빌드 승인 후 확인 필요
 - Compression / Upload Optimization POC(영상 압축 / 업로드 최적화 POC): Build 89 실기기 QA 성공
 - Compression Upload Flow P1(압축 업로드 플로우 1차): Build 91 실기기 QA 성공. 압축된 영상 업로드 후 분석 완료까지 정상 확인
 - Video no-records timeout UI fix(영상 탭 무기록 타임아웃 UI 보정): Build 91 실기기 QA 성공
