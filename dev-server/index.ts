@@ -247,6 +247,11 @@ type StoredVideoInput = {
   provider: string;
 };
 
+type SummaryLogFields = Record<
+  string,
+  boolean | number | string | null | undefined
+>;
+
 const allowedVideoMimeTypes = new Set([
   "video/mp4",
   "video/quicktime",
@@ -1137,6 +1142,7 @@ app.post(
   "/api/moments/from-uploaded-source",
   uploadRateLimit,
   async (request, response) => {
+    const startedAt = Date.now();
     try {
       const client = getSupabaseServerClient();
 
@@ -1165,6 +1171,19 @@ app.post(
         });
       }
 
+      logSummary("upload_finalize_completed", {
+        analysisJobIdShort: shortId(queuedJob?.id),
+        fileSize: Number.isFinite(Number(request.body?.fileSize))
+          ? Number(request.body?.fileSize)
+          : null,
+        mimeType: nullableString(request.body?.mimeType),
+        momentIdShort: shortId(result.momentId),
+        status: "queued",
+        totalMs: Date.now() - startedAt,
+        uploadIdShort: shortId(request.body?.uploadId),
+        uploadTargetStatus: "finalized",
+      });
+
       response.json({
         momentId: result.momentId,
         status: "queued",
@@ -1185,6 +1204,15 @@ app.post(
         error instanceof Error
           ? error.message
           : "Uploaded source finalize failed.";
+      const safeError = sanitizeLogError(error);
+      logSummary("upload_finalize_failed", {
+        errorCategory: safeError.errorCategory,
+        errorCode: safeError.errorCode,
+        stage: "finalize",
+        statusCode: safeError.statusCode,
+        totalMs: Date.now() - startedAt,
+        uploadIdShort: shortId(request.body?.uploadId),
+      });
       console.error("Uploaded source finalize failed:", message);
       response.status(500).json({ error: message });
     }
@@ -3440,6 +3468,114 @@ function getField(value: unknown, fallback: string) {
   return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
+function shortId(id: unknown) {
+  const value = nullableString(id);
+
+  if (!value) {
+    return null;
+  }
+
+  return value.length <= 12 ? value : `${value.slice(0, 8)}...${value.slice(-6)}`;
+}
+
+function hashValue(value: unknown) {
+  const text = nullableString(value);
+
+  if (!text) {
+    return null;
+  }
+
+  return createHash("sha256").update(text).digest("hex").slice(0, 12);
+}
+
+function sanitizeLogError(error: unknown) {
+  if (error instanceof UploadPolicyError) {
+    return {
+      errorCategory: "upload_policy",
+      errorCode: error.code,
+      statusCode: error.status,
+    };
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("timeout") || normalized.includes("timed out")) {
+    return {
+      errorCategory: "timeout",
+      errorCode: "timeout",
+      statusCode: null,
+    };
+  }
+
+  if (normalized.includes("rate limit") || normalized.includes("limit reached")) {
+    return {
+      errorCategory: "rate_limit",
+      errorCode: "rate_limited",
+      statusCode: 429,
+    };
+  }
+
+  if (normalized.includes("auth") || normalized.includes("bearer")) {
+    return {
+      errorCategory: "auth",
+      errorCode: "auth_required",
+      statusCode: 401,
+    };
+  }
+
+  if (normalized.includes("storage")) {
+    return {
+      errorCategory: "storage",
+      errorCode: "storage_error",
+      statusCode: null,
+    };
+  }
+
+  if (normalized.includes("gemini") || normalized.includes("evidence")) {
+    return {
+      errorCategory: "analysis",
+      errorCode: "analysis_error",
+      statusCode: null,
+    };
+  }
+
+  return {
+    errorCategory: "unknown",
+    errorCode: "unknown",
+    statusCode: null,
+  };
+}
+
+function logSummary(event: string, fields: SummaryLogFields = {}) {
+  const blockedKeyPattern =
+    /(token|email|secret|signed|callback|storagepath|storage_path|userid|authuserid|auth_user_id)/i;
+  const safeFields = Object.fromEntries(
+    Object.entries(fields).filter(([key, value]) => {
+      if (value === undefined || blockedKeyPattern.test(key)) {
+        return false;
+      }
+
+      if (
+        typeof value === "string" &&
+        (/^https?:\/\//i.test(value) || value.includes("supabase://"))
+      ) {
+        return false;
+      }
+
+      return true;
+    }),
+  );
+
+  console.info(
+    JSON.stringify({
+      tag: "asj_summary",
+      event,
+      ...safeFields,
+    }),
+  );
+}
+
 async function applyMockAiLatency() {
   if (mockAiLatencyMs > 0) {
     await sleep(mockAiLatencyMs);
@@ -4311,6 +4447,7 @@ async function persistEvidenceResultForLinkedMoment({
     userId: linkedMoment.user_id,
     analysisJobId: resolvedAnalysisJobId,
     evidenceResultId: evidenceResult.id as string,
+    hadCompletedEvidenceFallback: shouldKeepMomentCompleted,
   };
 }
 
@@ -4356,12 +4493,15 @@ async function createCompletedEvidenceAnalysisJob({
 }
 
 async function createQueuedEvidenceAnalysisJob({
+  source = "unknown",
   userId,
   momentId,
 }: {
+  source?: string;
   userId: string;
   momentId: string;
 }) {
+  const startedAt = Date.now();
   const client = getSupabaseServerClient();
 
   if (!client) {
@@ -4444,6 +4584,14 @@ async function createQueuedEvidenceAnalysisJob({
     analysisJobId: data.id as string,
     status: completedEvidenceResultIdAfterInsert ? "completed" : "queued",
     userId,
+  });
+
+  logSummary("analysis_job_queued", {
+    analysisJobIdShort: shortId(data.id),
+    momentIdShort: shortId(momentId),
+    source,
+    status: completedEvidenceResultIdAfterInsert ? "completed" : "queued",
+    totalMs: Date.now() - startedAt,
   });
 
   return {
@@ -4621,6 +4769,7 @@ async function createStoredMomentFromSourceVideo({
 
   try {
     const queuedJob = await createQueuedEvidenceAnalysisJob({
+      source: "multipart_upload",
       userId,
       momentId,
     });
@@ -4864,6 +5013,7 @@ async function createStoredMomentFromUploadedSource({
 
     try {
       const queuedJob = await createQueuedEvidenceAnalysisJob({
+        source: "direct_upload_finalize",
         userId,
         momentId,
       });
@@ -5214,6 +5364,7 @@ async function getOrCreateStoredEvidenceAnalysisJob(momentId: string) {
   }
 
   const queuedJob = await createQueuedEvidenceAnalysisJob({
+    source: "stored_video_request",
     userId: momentUserId,
     momentId,
   });
@@ -5341,6 +5492,7 @@ async function getOrCreateQueuedEvidenceAnalysisJob(
   }
 
   const queuedJob = await createQueuedEvidenceAnalysisJob({
+    source: "evidence_request",
     userId: linkedMoment.user_id,
     momentId: linkedMoment.id,
   });
@@ -5842,6 +5994,7 @@ async function markEvidenceAnalysisJobFailed({
   momentId: string;
   errorMessage: string;
 }) {
+  const startedAt = Date.now();
   const client = getSupabaseServerClient();
 
   if (!client) {
@@ -5868,12 +6021,13 @@ async function markEvidenceAnalysisJobFailed({
     client,
     momentId,
   });
+  const hadCompletedEvidenceFallback = Boolean(completedEvidenceResultId);
   const { error: momentError } = await client
     .from("moments")
     .update({
-      status: completedEvidenceResultId ? "completed" : "failed",
+      status: hadCompletedEvidenceFallback ? "completed" : "failed",
       latest_analysis_job_id: analysisJobId,
-      ...(completedEvidenceResultId
+      ...(hadCompletedEvidenceFallback
         ? { latest_evidence_result_id: completedEvidenceResultId }
         : {}),
       updated_at: now,
@@ -5887,7 +6041,17 @@ async function markEvidenceAnalysisJobFailed({
   void broadcastMomentUpdated({
     momentId,
     analysisJobId,
-    status: completedEvidenceResultId ? "completed" : "failed",
+    status: hadCompletedEvidenceFallback ? "completed" : "failed",
+  });
+
+  const safeError = sanitizeLogError(errorMessage);
+  logSummary("analysis_job_failed", {
+    analysisJobIdShort: shortId(analysisJobId),
+    errorCategory: safeError.errorCategory,
+    errorCode: safeError.errorCode,
+    hadCompletedEvidenceFallback,
+    momentIdShort: shortId(momentId),
+    totalMs: Date.now() - startedAt,
   });
 }
 
@@ -5900,6 +6064,7 @@ async function runGeminiEvidenceExtraction({
   metadata: SessionMetadata;
   file: EvidenceJobVideoFile;
 }) {
+  const startedAt = Date.now();
   const usageKey = todayKey("gemini-evidence");
 
   if (!mockAiAnalysisEnabled && isDailyUsageLimitExceeded(usageKey)) {
@@ -6104,6 +6269,29 @@ async function runGeminiEvidenceExtraction({
     Object.assign(evidenceResponse, {
       supabasePersistence: persistence,
     });
+
+    if (normalizedEvidence.parseFailed) {
+      logSummary("analysis_job_failed", {
+        analysisJobIdShort: shortId(persistence.analysisJobId),
+        errorCategory: "analysis",
+        errorCode: "parse_failed",
+        hadCompletedEvidenceFallback: persistence.hadCompletedEvidenceFallback,
+        momentIdShort: shortId(persistence.momentId),
+        totalMs: Date.now() - startedAt,
+      });
+    } else {
+      logSummary("analysis_job_completed", {
+        analysisJobIdShort: shortId(persistence.analysisJobId),
+        evidenceResultIdShort: shortId(persistence.evidenceResultId),
+        model: actualModel,
+        momentIdShort: shortId(persistence.momentId),
+        parseStatus: "completed",
+        pushQueued: true,
+        qualityMode,
+        requiresReview: requiresUserConfirmation,
+        totalMs: Date.now() - startedAt,
+      });
+    }
 
     if (!normalizedEvidence.parseFailed) {
       void sendAnalysisCompletedPushNotification({
