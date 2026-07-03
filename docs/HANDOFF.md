@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Detail upload-failure stale state fix, 2026-07-03:
+  - Build 102 Upload smoke showed a stale local upload-failure alert after Push
+    even though the remote Moment was completed and Detail displayed completed
+    media/thumbnail/share preview.
+  - `HomeScreen` now uses latest-state refs for upload failure remote reconcile
+    checks, so async upload failure handling does not use stale
+    `remoteMomentIdsBySessionId` / `sessions` / reconciliation candidates from
+    upload start.
+  - `useUploadMoment` now treats a remotely reconciled failure as suppressed and
+    skips removing the local session or setting `upload_failed`; completed remote
+    state stays dominant.
+  - No build was run. Next validation can use simulator/local state inspection,
+    but the exact Push -> Detail regression needs a later standalone build.
+
 - Email Recovery small fix, 2026-07-03:
   - Build 102 pre-AI smoke found an Email Recovery UI/flow confusion: an already
     connected current-account email could still be submitted, and the UI could

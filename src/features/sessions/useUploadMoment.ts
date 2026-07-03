@@ -595,13 +595,7 @@ export function useUploadMoment({
             localSessionId: nextSession.id,
             reason: 'no_stored_moment',
           });
-          setSessions((current) =>
-            current.filter((session) => session.id !== nextSession.id),
-          );
-          onOptimisticSessionRejected?.(nextSession.id);
-          onUploadReconciliationCandidateResolved?.(nextSession.id);
-          setUploadDraftStatus('upload_failed');
-          await showUploadFailureAlertIfActive({
+          const alertSuppressed = await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
@@ -611,6 +605,22 @@ export function useUploadMoment({
             title: '영상 업로드에 실패했습니다',
             uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
+
+          if (!alertSuppressed) {
+            setSessions((current) =>
+              current.filter((session) => session.id !== nextSession.id),
+            );
+            onOptimisticSessionRejected?.(nextSession.id);
+            onUploadReconciliationCandidateResolved?.(nextSession.id);
+            setUploadDraftStatus('upload_failed');
+          }
+
+          setUploadDraft(null);
+          setSelectedVideo(null);
+          selectedVideoThumbnailUriRef.current = null;
+          setSelectedVideoThumbnailUri(null);
+          setIsComposerOpen(false);
+          setUploadProgress(null);
           return;
         }
 
@@ -691,24 +701,14 @@ export function useUploadMoment({
           return;
         }
 
-        setSessions((current) =>
-          current.filter((session) => session.id !== nextSession.id),
-        );
-        onOptimisticSessionRejected?.(nextSession.id);
-        onUploadReconciliationCandidateResolved?.(nextSession.id);
-        setUploadDraftStatus('upload_failed');
-        setUploadDraft(null);
-        setSelectedVideo(null);
-        selectedVideoThumbnailUriRef.current = null;
-        setSelectedVideoThumbnailUri(null);
-        setIsComposerOpen(false);
-        setUploadProgress(null);
         console.warn(
           'Stored Moment source upload failed:',
           errorMessage,
         );
+        let alertSuppressed = false;
+
         if (isLocalVideoAccessFailure(errorMessage)) {
-          await showUploadFailureAlertIfActive({
+          alertSuppressed = await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '선택한 영상 파일에 다시 접근하지 못했습니다. 영상을 다시 선택한 뒤 업로드해주세요.',
@@ -720,7 +720,7 @@ export function useUploadMoment({
           });
         } else if (isUploadPolicyFailure(error)) {
           const policyCopy = getUploadPolicyFailureCopy(error);
-          await showUploadFailureAlertIfActive({
+          alertSuppressed = await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message: policyCopy.message,
             reason: errorMessage,
@@ -730,7 +730,7 @@ export function useUploadMoment({
             uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         } else if (isUploadTargetRateLimitFailure(error)) {
-          await showUploadFailureAlertIfActive({
+          alertSuppressed = await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '연속 업로드 요청이 잠시 몰렸습니다. 잠깐 기다린 뒤 다시 업로드해주세요.',
@@ -741,7 +741,7 @@ export function useUploadMoment({
             uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         } else {
-          await showUploadFailureAlertIfActive({
+          alertSuppressed = await showUploadFailureAlertIfActive({
             localSessionId: nextSession.id,
             message:
               '업로드가 완료되지 않아 분석을 시작하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
@@ -752,6 +752,22 @@ export function useUploadMoment({
             uploadId: directUploadedTarget?.uploadId ?? activeUploadDraft?.uploadId,
           });
         }
+
+        if (!alertSuppressed) {
+          setSessions((current) =>
+            current.filter((session) => session.id !== nextSession.id),
+          );
+          onOptimisticSessionRejected?.(nextSession.id);
+          onUploadReconciliationCandidateResolved?.(nextSession.id);
+          setUploadDraftStatus('upload_failed');
+        }
+
+        setUploadDraft(null);
+        setSelectedVideo(null);
+        selectedVideoThumbnailUriRef.current = null;
+        setSelectedVideoThumbnailUri(null);
+        setIsComposerOpen(false);
+        setUploadProgress(null);
       } finally {
         isUploadingSessionRef.current = false;
         setIsUploadingSession(false);
@@ -845,7 +861,7 @@ async function showUploadFailureAlertIfActive({
       suppressReason: classification.suppressReason,
       uploadId,
     });
-    return;
+    return true;
   }
 
   const classification = classifyUploadFailure({
@@ -868,7 +884,7 @@ async function showUploadFailureAlertIfActive({
       suppressReason: classification.suppressReason,
       uploadId,
     });
-    return;
+    return true;
   }
 
   console.info('[upload_timing]', {
@@ -880,6 +896,7 @@ async function showUploadFailureAlertIfActive({
     uploadId,
   });
   Alert.alert(title, message);
+  return false;
 }
 
 function isLocalVideoAccessFailure(message: string) {

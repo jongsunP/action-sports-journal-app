@@ -19,6 +19,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Detail upload-failure stale state fix, 2026-07-03:
+
+- Build 102 Upload smoke found a stale local upload-failure alert after Push:
+  the remote Moment was already completed and Detail showed completed media,
+  thumbnail, and share preview, but the old local upload failure path could still
+  present "영상 업로드에 실패했습니다".
+- Upload failure alert suppression now reads the latest remote/session state
+  through a ref so an async upload failure does not rely on stale state captured
+  when upload started.
+- If remote reconciliation suppresses the alert, the local optimistic session is
+  no longer removed or marked `upload_failed`; completed remote state remains the
+  visible priority.
+- No EAS build, buildNumber change, Render/Supabase setting change, DB write,
+  actual upload/email retry, AI Calibration, or paid AI/API call was made.
+
 Email Recovery small fix, 2026-07-03:
 
 - Build 102 pre-AI smoke found that an already connected current-account email

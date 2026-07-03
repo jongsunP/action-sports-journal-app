@@ -101,6 +101,10 @@ Current infrastructure / Build 102 QA:
   submission before `updateUser({ email })`, shows the already-connected state,
   and keeps the existing `email_exists` -> recovery sign-in fallback intact. This
   is not included in Build 102 until a later build is made.
+- Detail upload-failure stale state fix after Build 102 prevents an async local
+  upload failure from presenting "영상 업로드에 실패했습니다" or marking local state
+  `upload_failed` when latest remote reconciliation already has the Moment. This
+  is not included in Build 102 until a later build is made.
 - Upload/Auth/Recovery regression smoke is still the final pre-AI foundation
   check.
 - The previous Virginia Render service has been deleted. The only active Render

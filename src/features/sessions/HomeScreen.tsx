@@ -406,6 +406,11 @@ export function HomeScreen() {
     videosBySessionId,
   } = useSessionRepository();
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const uploadFailureReconcileStateRef = useRef({
+    remoteMomentIdsBySessionId,
+    sessions,
+    uploadReconciliationCandidatesBySessionId,
+  });
   const didNavigateToUploadRef = useRef(false);
   const pendingRealtimeCompletionNoticeRef =
     useRef<AnalysisCompletionNotice | null>(null);
@@ -432,6 +437,11 @@ export function HomeScreen() {
     videosBySessionId,
   });
   selectMomentDetailRef.current = selectMomentDetail;
+  uploadFailureReconcileStateRef.current = {
+    remoteMomentIdsBySessionId,
+    sessions,
+    uploadReconciliationCandidatesBySessionId,
+  };
 
   const clearUploadReconciliationCandidate = useCallback(
     (sessionId: string) => {
@@ -1858,11 +1868,15 @@ export function HomeScreen() {
       stage: string;
       uploadId?: string;
     }) => {
-      if (remoteMomentIdsBySessionId[localSessionId]) {
+      const latestState = uploadFailureReconcileStateRef.current;
+      const existingRemoteMomentId =
+        latestState.remoteMomentIdsBySessionId[localSessionId];
+
+      if (existingRemoteMomentId) {
         console.info('[upload_timing]', {
           event: 'upload_failure_remote_reconcile_existing',
           localSessionId,
-          momentId: remoteMomentIdsBySessionId[localSessionId],
+          momentId: existingRemoteMomentId,
           reason,
           stage,
           uploadId,
@@ -1883,9 +1897,10 @@ export function HomeScreen() {
           (remoteMoment) =>
             resolveLocalSessionIdForRemoteMoment(
               remoteMoment,
-              remoteMomentIdsBySessionId,
-              sessions,
-              uploadReconciliationCandidatesBySessionId,
+              uploadFailureReconcileStateRef.current.remoteMomentIdsBySessionId,
+              uploadFailureReconcileStateRef.current.sessions,
+              uploadFailureReconcileStateRef.current
+                .uploadReconciliationCandidatesBySessionId,
             ) === localSessionId,
         );
 
@@ -1940,10 +1955,7 @@ export function HomeScreen() {
     },
     [
       applyVideoArchiveFirstPage,
-      remoteMomentIdsBySessionId,
-      sessions,
       syncRemoteMoments,
-      uploadReconciliationCandidatesBySessionId,
     ],
   );
 
