@@ -22,10 +22,16 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
-- Build 104 focused completed-status regression QA prep, 2026-07-03:
+- Build 104 focused completed-status regression QA build complete / Founder QA pending, 2026-07-03:
   - iOS `buildNumber` is `104`.
   - Build 104 is a focused preview/internal QA build for
     `559e94c fix: prevent completed moment status downgrade`.
+  - Build prep commit: `714e382 chore: prepare build 104 qa`.
+  - EAS Build ID: `0d68f6e9-380f-4ba9-8b19-21435ef79ba7`.
+  - Install page:
+    `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0d68f6e9-380f-4ba9-8b19-21435ef79ba7`.
+  - IPA URL:
+    `https://expo.dev/artifacts/eas/q2j7iyIncxHV0P_83PhASlWudo0JMXvRACU-uIc0hjo.ipa`.
   - QA should verify Upload -> Push notification -> Detail keeps completed
     state, completed Moments do not downgrade to processing/failed, no upload
     failure alert appears for completed Moments, Video list does not switch the
@@ -34,6 +40,8 @@ Latest product/UX direction update:
   - AI Calibration has not started.
   - EAS preview env remains pointed at the Singapore analysis endpoint:
     `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  - Next action: Founder installs Build 104 and runs the focused Upload -> Push
+    -> Detail regression QA.
 
 - Build 103 completed Moment status regression fix, 2026-07-03:
   - Founder Build 103 QA showed a completed Upload Moment downgrading through

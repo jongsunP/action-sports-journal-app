@@ -19,11 +19,17 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
-Build 104 focused completed-status regression QA prep, 2026-07-03:
+Build 104 focused completed-status regression QA build complete / Founder QA pending, 2026-07-03:
 
 - iOS `buildNumber` is `104` for a focused preview/internal QA build.
 - Build 104 is not an AI Calibration build and does not add new product scope.
 - Required included fix: `559e94c fix: prevent completed moment status downgrade`.
+- Build prep commit is `714e382 chore: prepare build 104 qa`.
+- EAS Build ID is `0d68f6e9-380f-4ba9-8b19-21435ef79ba7`.
+- Install page:
+  `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/0d68f6e9-380f-4ba9-8b19-21435ef79ba7`.
+- IPA URL:
+  `https://expo.dev/artifacts/eas/q2j7iyIncxHV0P_83PhASlWudo0JMXvRACU-uIc0hjo.ipa`.
 - QA purpose:
   - Upload -> Push notification -> Detail keeps the completed state;
   - completed Moment does not downgrade to processing or failed;
@@ -36,6 +42,7 @@ Build 104 focused completed-status regression QA prep, 2026-07-03:
 - No AI Calibration, Render/Supabase setting change, DB write/migration,
   Auth/Recovery flow change, Upload architecture change, or paid AI/API call is
   part of this build.
+- Founder standalone iPhone QA is pending.
 
 Build 103 completed Moment status regression fix, 2026-07-03:
 

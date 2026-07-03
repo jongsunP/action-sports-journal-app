@@ -82,11 +82,13 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 Current infrastructure / Build 102 QA:
 
 - Build 104 is a focused pre-AI regression QA build for
-  `559e94c fix: prevent completed moment status downgrade`. It should verify on
-  a standalone iPhone that Upload -> Push -> Detail keeps completed state, does
-  not downgrade to processing/failed, does not show the upload failure alert,
-  does not show a failed badge in Video list, and does not show retry CTA or
-  "already requesting analysis" copy for completed Moments.
+  `559e94c fix: prevent completed moment status downgrade`. iOS `buildNumber`
+  is `104`; build prep commit is `714e382`; EAS Build ID is
+  `0d68f6e9-380f-4ba9-8b19-21435ef79ba7`. It should verify on a standalone
+  iPhone that Upload -> Push -> Detail keeps completed state, does not downgrade
+  to processing/failed, does not show the upload failure alert, does not show a
+  failed badge in Video list, and does not show retry CTA or "already requesting
+  analysis" copy for completed Moments.
 - Build 103 QA found a completed Moment status downgrade regression: a newly
   uploaded Moment could show completed in Video list, then processing in Detail,
   then failed with an upload failure alert. The follow-up fix makes completed
