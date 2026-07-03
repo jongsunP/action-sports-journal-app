@@ -81,6 +81,10 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Pre-AI Foundation Closeout is complete from the CTO/PM/QA standpoint.
+- Next product work can start with AI Calibration, beginning at TS/HS Evidence
+  stabilization. Use no-EAS Simulator / physical iPhone Expo Go first whenever
+  possible, and reserve EAS or Development Build for standalone-only behavior.
 - Build 104 user-facing Upload -> Push -> Detail QA is normal. Completed
   Moments stay completed, no stale upload-failure alert appears, and Video list
   does not downgrade the new Moment to processing/failed.
@@ -98,8 +102,8 @@ Current infrastructure / pre-AI hardening:
 - Build 104 does not include `43e9eda` or `67f67cb`, but the user-facing upload
   blocker is already verified normal in Build 104.
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
-- The next step is local/physical-device test environment setup to reduce EAS
-  preview/internal build usage, not another EAS build by default.
+- Local/physical-device test environment setup is complete and reduces EAS
+  preview/internal build usage before the next phase.
 - No-EAS physical-device testing was not newly unlocked; it was always possible
   through Expo Go. The reason recent QA used many EAS builds was that the
   active foundation work depended on standalone-only behavior such as Push,
@@ -448,9 +452,9 @@ If the development session can proceed directly and the Founder does not need
 to decide or act, do not add a user-facing action section.
 
 When the Founder asks what remains or asks for current status, do not list only
-recent chat items. Use the remote-backed stable ASJ workstream list below as
-the canonical source. Do not improvise a new list structure per session. Show
-it with these two sections:
+recent chat items. Use the remote-backed grouped ASJ listup view below as the
+canonical source. Do not improvise a new list structure per session. Show it
+with these two sections:
 
 ```text
 완료:
@@ -459,8 +463,8 @@ it with these two sections:
 
 Keep this summary concise and easy to scan.
 Unless the Founder explicitly asks for a summary, subset, or priority-only
-answer, show the full canonical list. Do not shorten the completed section to a
-partial list just because the immediate discussion is about the next task.
+answer, show the grouped canonical list. Do not shorten the completed section
+to a partial list just because the immediate discussion is about the next task.
 For workstream names, prefer paired labels in the form
 `English term(한국어 설명)` when an English term is a known project term. Use
 plain Korean only when there is no useful English project term. Do not force
@@ -470,13 +474,56 @@ named in the project memory or conversation, do not silently rename, merge, or
 omit it just because it is not active today. Preserve the same list structure
 so the Founder can recognize continuity over time. If an item is completed,
 blocked, deferred, or split, keep the item visible and mark its status.
-When showing the remaining work list, distinguish unimplemented work from
-implemented-but-not-yet-QA-verified work. Do not describe a code-complete item
-as "not done" just because standalone E2E QA is pending. Use wording such as
-`미구현`, `구현 완료 / QA 대기`, `실기기 QA 대기`, or `Store 전 확인` so the Founder can
-separate product/code scope from validation scope.
+When showing the remaining work list, group items by intent instead of attaching
+`필수`, `옵션`, or `QA` to every individual item. Distinguish unimplemented
+product work from implemented-but-not-yet-QA-verified work at the group level.
+QA waiting items are not product features; keep them under `QA / 검증 대기`.
 
-Current stable workstream list:
+Current grouped listup view:
+
+```text
+완료:
+- Core Foundation
+  - Auth / Anonymous auth / Ownership / Realtime
+  - Push registration / delivery / observability
+  - Kakao / Email Recovery 기반
+  - Upload / Compression / Detail 안정화
+  - Startup / Region / boot performance 정리
+
+- Product UX Foundation
+  - Home / Journal UX
+  - Upload entry UX
+  - Analysis Trust UX
+  - Detail media state
+  - Archive card hierarchy
+  - Settings / Theme / visible polish
+
+- QA / Operations Foundation
+  - QA Debug Panel
+  - Render Singapore 단일 backend
+  - Render JSON summary logs
+  - Postico DB 조회 환경
+  - no-EAS Simulator / physical iPhone Expo Go 테스트 루틴
+  - Pre-AI Closeout
+
+현재 남은 과제:
+- 필수
+  - AI Calibration: TS/HS Evidence 안정화로 시작하고, 이후 trick-name accuracy로 확장. MediaPipe / pose landmark는 보조 근거 feasibility로 검토.
+
+- QA / 검증 대기
+  - Recovery E2E: Email Recovery 기존 계정 sign-in standalone deep-link 확인, Account Recovery UI 작은 화면/취소/복귀 추가 확인.
+
+- Store 전 운영
+  - Production Readiness: QA Debug Panel hide/gate, Kakao/Supabase OAuth 표시/redirect/consent 점검, Push notification icon polish.
+
+- 옵션 / 나중
+  - Media / Share: image export, native share sheet, ShareResult route.
+  - Detail / Journal UX: Detail representative media selection, Moment memo / rider note.
+  - Auth Expansion: Apple Login.
+  - Developer / Ops Workflow: Development Build / Local Build workflow, Postico read-only DB user 분리, custom domain, local-first cache / stale-while-revalidate / advanced infra tuning.
+```
+
+Detailed historical stable workstream list:
 
 ```text
 완료:

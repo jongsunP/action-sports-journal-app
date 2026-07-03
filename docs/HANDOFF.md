@@ -22,6 +22,25 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI Foundation Closeout, 2026-07-03:
+  - Pre-AI foundation closeout is complete from the CTO/PM/QA standpoint.
+  - Startup / Region / boot performance is not an AI Calibration blocker.
+  - Upload / Compression / Push / Detail foundation is not an AI Calibration
+    blocker. Build 104 user-facing QA passed, and DB inspection confirmed the
+    earlier upload failure alert/status issue was local UI/state conflict rather
+    than remote upload or analysis failure.
+  - Auth / Recovery foundation is not an AI Calibration blocker. Remaining
+    Email Recovery sign-in and Account Recovery checks are standalone/deep-link
+    QA or Store-before-launch validation, not product blockers.
+  - Observability / operations foundation is ready: QA Debug Panel remains
+    enabled until Store-ready policy work, Render key ASJ logs are JSON
+    one-line, Postico read-only inspection works, and no-EAS Simulator /
+    physical iPhone Expo Go smoke is verified.
+  - Next product work can start with AI Calibration, beginning at TS/HS Evidence
+    stabilization. Do not default to EAS; use no-EAS Simulator / physical iPhone
+    Expo Go first and reserve EAS or Development Build for standalone-only
+    behavior.
+
 - Physical iPhone + Expo Go LAN path check, 2026-07-03:
   - Founder physical iPhone Expo Go capture confirmed the no-EAS path works:
     Home loads via Singapore Render, remote summary/read data appears, QA Debug
@@ -94,9 +113,8 @@ Latest product/UX direction update:
     operations safety backlog item for later, not a pre-AI blocker.
   - Startup/Region/Upload/Auth/Recovery have no known blocker for AI
     Calibration.
-  - Next action is pre-AI foundation closeout sharing, then decide whether to
-    enter AI Calibration. Do not start AI Calibration until that closeout is
-    explicitly accepted.
+  - Pre-AI foundation closeout sharing is complete. The next product decision is
+    AI Calibration start, beginning with TS/HS Evidence stabilization.
   - No new EAS build is the default next step unless a later standalone-only
     behavior needs it.
 

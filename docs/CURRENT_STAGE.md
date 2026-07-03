@@ -19,6 +19,32 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Pre-AI Foundation Closeout, 2026-07-03:
+
+- Pre-AI foundation closeout is complete from the CTO/PM/QA standpoint.
+- Startup / Region / boot performance is not an AI Calibration blocker:
+  Singapore-only Render backend is active, `view=summary` startup is confirmed,
+  evidence and thumbnail generation are skipped in summary mode, and remaining
+  latency variance is classified as Supabase/Auth/query/network variance rather
+  than an app-structure blocker.
+- Upload / Compression / Push / Detail foundation is not an AI Calibration
+  blocker: Build 104 user-facing Upload -> Push -> Detail QA is normal, and DB
+  inspection confirmed the earlier Build 103/104 failure alert/status issue was
+  local UI/state conflict rather than remote upload or analysis failure.
+- Auth / Recovery foundation is not an AI Calibration blocker: Email-first
+  current-account flow works, Kakao/Email recovery foundations are in place,
+  and remaining recovery work is standalone/deep-link QA or Store-before-launch
+  checking rather than a product blocker.
+- Observability / operations foundation is ready for the next phase: QA Debug
+  Panel stays enabled until Store-ready policy work, Render summary logs are
+  JSON one-line for key ASJ events, Postico 2 read-only inspection works, and
+  no-EAS Simulator / physical iPhone Expo Go smoke is documented and verified.
+- The next product work can start with AI Calibration, beginning at TS/HS
+  Evidence stabilization. EAS is not the default next step; use no-EAS
+  Simulator / physical iPhone Expo Go first, and reserve EAS or Development
+  Build only for standalone-only behavior.
+- AI Calibration has not started yet.
+
 Physical iPhone + Expo Go LAN path check, 2026-07-03:
 
 - No EAS build, buildNumber change, Render/Supabase setting change, DB
@@ -80,7 +106,7 @@ Local / physical-device no-build test environment check, 2026-07-03:
   - Full Push notification, Kakao/Email deep-link return, native compression,
     and installed-app environment parity still require an existing standalone
     build or a future Development Build.
-- Next step is pre-AI foundation closeout sharing. EAS is still not the default
+- Pre-AI foundation closeout sharing is complete. EAS is still not the default
   next step; use it only if a later standalone-only behavior needs bundled QA.
 
 Pre-AI hardening docs/logging closeout, 2026-07-03:
@@ -103,8 +129,8 @@ Pre-AI hardening docs/logging closeout, 2026-07-03:
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
 - Build 104 does not include `43e9eda` or `67f67cb`, but the user-facing upload
   blocker is already verified normal in Build 104.
-- Next step is local/physical-device test environment setup to reduce EAS build
-  usage, not another EAS build by default.
+- Local/physical-device test environment setup is complete and reduces EAS
+  build usage before the next phase.
 - AI Calibration has not started.
 
 Postico 2 local DB inspection setup, 2026-07-03:
