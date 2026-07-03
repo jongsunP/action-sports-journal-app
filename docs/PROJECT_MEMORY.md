@@ -79,13 +79,27 @@ Stage 2 local ActivityGroup / Session prototype complete
 Stage 3 standalone iPhone video-to-analysis prototype in progress
 ```
 
-Current infrastructure / Build 102 QA:
+Current infrastructure / pre-AI hardening:
 
-- After Build 104, DB verification confirmed the Build 103/104 upload issue was
-  local UI/state conflict rather than remote upload/analysis failure. A follow-up
-  hardening prevents completed Moment Detail open from triggering redundant
-  evidence/source upload requests when session status or evidence is already
-  completed.
+- Build 104 user-facing Upload -> Push -> Detail QA is normal. Completed
+  Moments stay completed, no stale upload-failure alert appears, and Video list
+  does not downgrade the new Moment to processing/failed.
+- DB verification confirmed the Build 103/104 upload issue was local UI/state
+  conflict rather than remote upload/analysis failure.
+- `559e94c fix: prevent completed moment status downgrade` is the user-facing
+  completed-status regression fix verified by Build 104.
+- `43e9eda fix: skip redundant completed moment evidence requests` is
+  post-Build-104 pre-AI hardening that prevents completed Moment Detail open
+  from triggering redundant evidence/source upload requests when session status
+  or evidence is already completed.
+- `67f67cb feat: add structured upload analysis summary logs` is
+  post-Build-104 Render observability hardening for upload/analysis summary
+  logs.
+- Build 104 does not include `43e9eda` or `67f67cb`, but the user-facing upload
+  blocker is already verified normal in Build 104.
+- Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
+- The next step is local/physical-device test environment setup to reduce EAS
+  preview/internal build usage, not another EAS build by default.
 - Build 104 is a focused pre-AI regression QA build for
   `559e94c fix: prevent completed moment status downgrade`. iOS `buildNumber`
   is `104`; build prep commit is `714e382`; EAS Build ID is

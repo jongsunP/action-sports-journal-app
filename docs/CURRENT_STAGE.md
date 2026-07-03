@@ -19,6 +19,27 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Pre-AI hardening docs/logging closeout, 2026-07-03:
+
+- Build 104 user-facing Upload -> Push -> Detail QA is normal: completed state
+  stays stable, no stale upload-failure alert appears, and Video list does not
+  downgrade the new Moment to processing/failed.
+- DB verification confirmed the Build 103/104 issue was a local optimistic
+  UI/state priority conflict, not a remote upload or analysis failure.
+- `559e94c fix: prevent completed moment status downgrade` is the user-facing
+  regression fix verified by Build 104.
+- `43e9eda fix: skip redundant completed moment evidence requests` is a
+  post-Build-104 pre-AI hardening fix. It prevents completed Moments from
+  re-triggering Detail-open evidence/source upload requests.
+- `67f67cb feat: add structured upload analysis summary logs` is a post-Build-104
+  observability improvement for Render upload/analysis summary logs.
+- Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
+- Build 104 does not include `43e9eda` or `67f67cb`, but the user-facing upload
+  blocker is already verified normal in Build 104.
+- Next step is local/physical-device test environment setup to reduce EAS build
+  usage, not another EAS build by default.
+- AI Calibration has not started.
+
 Completed Moment redundant evidence/upload request hardening, 2026-07-03:
 
 - Build 104 QA and DB verification confirmed the previous upload failure alert

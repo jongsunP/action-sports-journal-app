@@ -37,6 +37,21 @@ feels stable.
 Startup Performance P2.2 and Render Singapore migration are closed enough to
 pause before AI Calibration.
 
+Build 104 and DB follow-up now close the user-facing Upload/Push/Detail
+blocker before AI Calibration:
+
+- Build 104 user-facing QA is normal for Upload -> Push -> Detail completed
+  state, stale upload-failure alert suppression, and Video list stability.
+- DB verification confirmed the issue was local UI/state priority conflict, not
+  remote upload/analysis failure.
+- `43e9eda` is redundant completed Moment evidence/source request hardening
+  after Build 104.
+- `67f67cb` is Render structured summary log observability hardening after
+  Build 104.
+- Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
+- The next process improvement is local/physical-device test environment setup,
+  not another EAS build by default.
+
 Render migration state:
 
 - Build 104 is the focused pre-AI regression QA build for the completed Moment
@@ -60,8 +75,9 @@ Render migration state:
   `0.3s-1.7s`.
 - There is no Virginia rollback service now; Build 102 is the Singapore-only
   baseline.
-- Upload/Auth/Recovery regression smoke is still pending as the final pre-AI
-  foundation check.
+- Upload/Auth/Recovery smoke has no known blocker after Build 104 user-facing
+  upload QA and the Email Recovery same-current-email guard; remaining checks
+  are final confirmation and local/physical-device test workflow setup.
 
 Implemented:
 
@@ -73,14 +89,14 @@ Implemented:
 - Supabase migration file:
   `supabase/phase14_moment_list_index.sql`.
 
-Still to verify before AI Calibration:
+Final confirmation before AI Calibration:
 
 - Upload selection -> compression -> upload -> analysis request reaches
-  `action-sports-journal-api-sg`.
+  `action-sports-journal-api-sg` in the chosen local/physical-device test path.
 - Auth/session restore works after app restart.
 - Kakao Recovery entry/cancel/return state is sane.
 - Email Recovery screen and single CTA state are sane; same-current-email no-op
-  submission is blocked in code after Build 102 and needs later UI/build QA.
+  submission is blocked in code.
 - QA Debug Panel exposes no token, refresh token, full user id, email, full
   callback URL, signed URL, secret, or API key.
 

@@ -247,10 +247,7 @@ type StoredVideoInput = {
   provider: string;
 };
 
-type SummaryLogFields = Record<
-  string,
-  boolean | number | string | null | undefined
->;
+type SummaryLogFields = Record<string, unknown>;
 
 const allowedVideoMimeTypes = new Set([
   "video/mp4",
@@ -457,13 +454,12 @@ app.post("/api/push-tokens", async (request, response) => {
       throw new Error(`Failed to upsert device push token: ${error.message}`);
     }
 
-    console.info("[push_token]", {
+    logSummary("registered_push_token", {
       authMode: requestUser.authMode,
-      event: "registered_push_token",
-      expoPushToken: maskExpoPushToken(expoPushToken),
       ownerChanged,
-      previousUserId,
-      userId,
+      previousOwnerHash: hashValue(previousUserId),
+      tag: "push_token",
+      userOwnerHash: hashValue(userId),
     });
 
     response.json({ ok: true });
@@ -549,6 +545,17 @@ app.post("/api/recovery-attempts", async (request, response) => {
     if (error) {
       throw new Error(`Failed to record recovery attempt: ${error.message}`);
     }
+
+    logSummary("recovery_attempt_recorded", {
+      attemptIdShort: shortId(nullableString(data?.id)),
+      errorCode,
+      flow,
+      provider,
+      reasonCode,
+      recoveryEvent: event,
+      status,
+      tag: "recovery_observability",
+    });
 
     response.json({
       id: nullableString(data?.id),
@@ -830,12 +837,14 @@ app.post(
         userId: requestUser.userId,
       });
 
-      console.warn("[upload_timing] direct_upload_failure", {
+      const safeFailure = sanitizeLogError(reason);
+      logSummary("direct_upload_failure", {
         blobSize: Number.isFinite(blobSize) ? blobSize : undefined,
-        reason,
+        errorCategory: safeFailure.errorCategory,
+        errorCode: safeFailure.errorCode,
         stage,
-        storagePath,
-        uploadId,
+        tag: "upload_timing",
+        uploadIdShort: shortId(uploadId),
         videoUriScheme,
       });
 
@@ -1016,9 +1025,9 @@ app.post(
   uploadRateLimit,
   (_request, response, next) => {
     response.locals.sourceVideoRequestStartedAt = Date.now();
-    console.info("[source_video_timing]", {
+    logSummary("from_source_video_request_received", {
       elapsedMs: 0,
-      event: "from_source_video_request_received",
+      tag: "source_video_timing",
     });
     next();
   },
@@ -1032,9 +1041,9 @@ app.post(
       event: string,
       details?: Record<string, unknown>,
     ) => {
-      console.info("[source_video_timing]", {
+      logSummary(event, {
         elapsedMs: Date.now() - requestStartedAt,
-        event,
+        tag: "source_video_timing",
         ...details,
       });
     };
@@ -1095,13 +1104,12 @@ app.post(
         });
       }
 
-      console.info("[upload_timing]", {
-        analysisJobId: queuedJob?.id,
-        event: "uploaded_source_finalize_response_sent",
-        momentId: result.momentId,
+      logSummary("uploaded_source_finalize_response_sent", {
+        analysisJobIdShort: shortId(queuedJob?.id),
+        momentIdShort: shortId(result.momentId),
         response_sent: true,
-        storagePath: result.storedVideo.path,
-        uploadId: getField(request.body?.uploadId, ""),
+        tag: "upload_timing",
+        uploadIdShort: shortId(getField(request.body?.uploadId, "")),
       });
 
       response.json({
@@ -1526,10 +1534,10 @@ app.get("/api/moments", async (request, response) => {
     response.once("finish", () => {
       const cleanupStartedAt = Date.now();
       void cleanupStaleAnalysisJobs({ client, userId }).finally(() => {
-        console.info("[moments_cleanup_timing]", {
-          event: "moments_stale_cleanup_completed",
+        logSummary("moments_stale_cleanup_completed", {
           requestId,
           staleCleanupMs: Date.now() - cleanupStartedAt,
+          tag: "moments_cleanup_timing",
         });
       });
     });
@@ -1724,7 +1732,7 @@ app.get("/api/moments", async (request, response) => {
       String(thumbnailSignedUrlWallMs),
     );
 
-    console.info("[moments_timing]", {
+    logSummary("moments_list_completed", {
       authClaimsMs: requestUserTiming.authClaimsMs ?? null,
       authGetUserMs: requestUserTiming.authGetUserMs ?? null,
       authUserPublicUserCacheHit:
@@ -1732,7 +1740,6 @@ app.get("/api/moments", async (request, response) => {
       authVerificationMode:
         requestUserTiming.authVerificationMode ?? null,
       cacheHit: requestUserTiming.cacheHit === true,
-      event: "moments_list_completed",
       evidenceIdsCount: evidenceResultIds.length,
       evidenceQueryMs,
       includeEvidenceCount: evidenceResultsById.size,
@@ -1755,6 +1762,7 @@ app.get("/api/moments", async (request, response) => {
       serverTotalMs,
       staleCleanupMs,
       staleCleanupBlocking: false,
+      tag: "moments_timing",
       thumbnailSignedUrlCacheHits: thumbnailSignedUrlCacheDiagnostics.hits,
       thumbnailSignedUrlCacheMisses: thumbnailSignedUrlCacheDiagnostics.misses,
       thumbnailSignedUrlMs,
@@ -1871,12 +1879,12 @@ app.get("/api/moments/:momentId", async (request, response) => {
     response.setHeader("X-ASJ-Server-Total-Ms", String(serverTotalMs));
     response.setHeader("X-ASJ-Response-Bytes", String(responseBytes));
 
-    console.info("[moment_detail_timing]", {
-      event: "moment_detail_completed",
+    logSummary("moment_detail_completed", {
       evidenceIncluded: Boolean(evidenceResult),
       requestId,
       responseBytes,
       serverTotalMs,
+      tag: "moment_detail_timing",
       thumbnailSignedUrlWallMs,
     });
 
@@ -3549,10 +3557,24 @@ function sanitizeLogError(error: unknown) {
 
 function logSummary(event: string, fields: SummaryLogFields = {}) {
   const blockedKeyPattern =
-    /(token|email|secret|signed|callback|storagepath|storage_path|userid|authuserid|auth_user_id)/i;
+    /(token|email|secret|signed|callback|storagepath|storage_path|userid|authuserid|auth_user_id|(?:^|_)?(?:moment|analysisjob|evidenceresult|upload|attempt|authuser|user)id$)/i;
+  const safeMetricKeyPattern = /(count|ms|bytes|size)$/i;
+  const { tag, ...fieldEntries } = fields;
   const safeFields = Object.fromEntries(
-    Object.entries(fields).filter(([key, value]) => {
-      if (value === undefined || blockedKeyPattern.test(key)) {
+    Object.entries(fieldEntries).filter(([key, value]) => {
+      if (
+        value === undefined ||
+        (blockedKeyPattern.test(key) && !safeMetricKeyPattern.test(key))
+      ) {
+        return false;
+      }
+
+      if (
+        value !== null &&
+        typeof value !== "boolean" &&
+        typeof value !== "number" &&
+        typeof value !== "string"
+      ) {
         return false;
       }
 
@@ -3569,7 +3591,7 @@ function logSummary(event: string, fields: SummaryLogFields = {}) {
 
   console.info(
     JSON.stringify({
-      tag: "asj_summary",
+      tag: typeof tag === "string" && tag.trim().length > 0 ? tag : "asj_summary",
       event,
       ...safeFields,
     }),
@@ -4944,11 +4966,10 @@ async function createStoredMomentFromUploadedSource({
         userId,
       });
 
-      console.info("[upload_timing]", {
-        event: "uploaded_source_finalize_idempotent_reuse",
-        momentId: existingMoment.id,
-        storagePath,
-        uploadId,
+      logSummary("uploaded_source_finalize_idempotent_reuse", {
+        momentIdShort: shortId(existingMoment.id),
+        tag: "upload_timing",
+        uploadIdShort: shortId(uploadId),
       });
 
       return {
@@ -6422,16 +6443,15 @@ async function sendAnalysisCompletedPushNotification({
       enabledTokenRows.filter(isValidDevicePushTokenRow),
     );
 
-    console.info("[push_observability]", {
+    logSummary("analysis_push_tokens_loaded", {
       disabledTokenCount,
       enabledTokenCount,
-      event: "analysis_push_tokens_loaded",
-      evidenceResultId,
+      evidenceResultIdShort: shortId(evidenceResultId),
       invalidTokenCount,
-      momentId,
+      momentIdShort: shortId(momentId),
       registeredTokenCount,
+      tag: "push_observability",
       tokenCount: validEnabledTokenRows.length,
-      userId,
     });
 
     if (registeredTokenCount === 0) {
@@ -6445,10 +6465,9 @@ async function sendAnalysisCompletedPushNotification({
         status: "skipped_no_tokens",
         userId,
       });
-      console.info("[push_observability]", {
-        event: "analysis_push_skipped_no_tokens",
-        momentId,
-        userId,
+      logSummary("analysis_push_skipped_no_tokens", {
+        momentIdShort: shortId(momentId),
+        tag: "push_observability",
       });
       return;
     }
@@ -6471,12 +6490,11 @@ async function sendAnalysisCompletedPushNotification({
         })),
         userId,
       });
-      console.info("[push_observability]", {
+      logSummary("analysis_push_skipped_disabled_only", {
         disabledTokenCount,
-        event: "analysis_push_skipped_disabled_only",
-        momentId,
+        momentIdShort: shortId(momentId),
         registeredTokenCount,
-        userId,
+        tag: "push_observability",
       });
       return;
     }
@@ -6499,12 +6517,11 @@ async function sendAnalysisCompletedPushNotification({
         })),
         userId,
       });
-      console.info("[push_observability]", {
+      logSummary("analysis_push_skipped_no_valid_tokens", {
         enabledTokenCount,
-        event: "analysis_push_skipped_no_valid_tokens",
         invalidTokenCount,
-        momentId,
-        userId,
+        momentIdShort: shortId(momentId),
+        tag: "push_observability",
       });
       return;
     }
@@ -6525,10 +6542,10 @@ async function sendAnalysisCompletedPushNotification({
       userId,
     });
 
-    console.info("[push_observability]", {
-      event: "analysis_push_send_started",
-      evidenceResultId,
-      momentId,
+    logSummary("analysis_push_send_started", {
+      evidenceResultIdShort: shortId(evidenceResultId),
+      momentIdShort: shortId(momentId),
+      tag: "push_observability",
       tokenCount: validEnabledTokenRows.length,
     });
 
@@ -6591,12 +6608,11 @@ async function sendAnalysisCompletedPushNotification({
       tokenResults: pushTicketSummary.tokenResults,
     });
 
-    console.info("[push_observability]", {
+    logSummary("analysis_push_ticket_result", {
       errorCount: pushTicketSummary.errorCount,
-      errors: pushTicketSummary.errors,
-      event: "analysis_push_ticket_result",
       okCount: pushTicketSummary.okCount,
-      ticketIds: pushTicketSummary.ticketIds,
+      tag: "push_observability",
+      ticketCount: pushTicketSummary.ticketIds.length,
     });
 
     if (pushErrors.length > 0) {
@@ -6898,10 +6914,10 @@ async function createPushDeliveryAttempt(
 
     const attemptId = nullableString(data?.id);
 
-    console.info("[push_observability]", {
-      attemptId,
-      event: "analysis_push_delivery_attempt_recorded",
+    logSummary("analysis_push_delivery_attempt_recorded", {
+      attemptIdShort: shortId(attemptId),
       status,
+      tag: "push_observability",
     });
 
     return attemptId;
@@ -6981,9 +6997,9 @@ async function disableDevicePushTokensForDeviceNotRegistered({
     return;
   }
 
-  console.info("[push_observability]", {
-    disabledTokenIds: tokenIds,
-    event: "analysis_push_tokens_disabled_device_not_registered",
+  logSummary("analysis_push_tokens_disabled_device_not_registered", {
+    disabledTokenCount: tokenIds.length,
+    tag: "push_observability",
   });
 }
 
@@ -7076,13 +7092,13 @@ async function checkPushDeliveryAttemptReceipts({
       })),
   });
 
-  console.info("[push_observability]", {
-    attemptId,
+  logSummary("analysis_push_receipt_result", {
+    attemptIdShort: shortId(attemptId),
     errorCount: receiptSummary.errorCount,
-    event: "analysis_push_receipt_result",
     missingCount: receiptSummary.missingCount,
     okCount: receiptSummary.okCount,
     status: receiptSummary.status,
+    tag: "push_observability",
   });
 
   return {

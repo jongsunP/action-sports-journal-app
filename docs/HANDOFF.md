@@ -22,6 +22,27 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI hardening and observability closeout, 2026-07-03:
+  - Build 104 user-facing Upload -> Push -> Detail QA is normal. The completed
+    Moment state no longer downgrades, no stale upload-failure alert appears,
+    and Video list remains stable.
+  - DB verification confirmed the earlier Build 103/104 failure alert/status
+    issue was local UI/state conflict, not actual remote upload/analysis
+    failure.
+  - `559e94c fix: prevent completed moment status downgrade` is verified by the
+    Build 104 user-facing QA path.
+  - `43e9eda fix: skip redundant completed moment evidence requests` is
+    post-Build-104 pre-AI hardening. Build 104 does not include it.
+  - `67f67cb feat: add structured upload analysis summary logs` is
+    post-Build-104 Render observability hardening. Build 104 does not include
+    it.
+  - Startup/Region/Upload/Auth/Recovery have no known blocker for AI
+    Calibration.
+  - Next action is to set up the local/physical-device test environment so ASJ
+    can reduce EAS preview/internal build usage. Do not start AI Calibration yet.
+  - No new EAS build is the default next step unless a later standalone-only
+    behavior needs it.
+
 - Completed Moment redundant evidence/upload request hardening, 2026-07-03:
   - Build 104 QA and DB verification confirmed recent uploaded Moments are
     completed remotely with completed analysis/evidence, finalized upload
