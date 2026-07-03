@@ -420,6 +420,7 @@ export function HomeScreen() {
     handleExtractEvidence,
     updateLocalMomentStatus,
   } = useEvidenceExtraction({
+    geminiEvidenceBySessionId,
     remoteMomentIdsBySessionId,
     selectMomentDetail: (sessionId) => selectMomentDetailRef.current(sessionId),
     sessions,
@@ -2313,8 +2314,14 @@ export function HomeScreen() {
     navigation.navigate('MomentDetail', { sessionId: session.id });
 
     const video = videosBySessionId[session.id] ?? getVideoAssetFromSession(session);
+    const evidence = geminiEvidenceBySessionId[session.id];
+    const momentStatus = getMomentStatus({
+      evidence,
+      isProcessing: Boolean(extractingEvidenceBySessionId[session.id]),
+      sessionStatus: session.momentStatus,
+    });
 
-    if (video && !geminiEvidenceBySessionId[session.id]) {
+    if (video && !evidence && momentStatus !== 'completed') {
       void handleExtractEvidence(session, { openSheet: false });
     }
   };

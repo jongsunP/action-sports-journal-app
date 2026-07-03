@@ -18,7 +18,12 @@ import {
   uploadMomentSourceVideo,
 } from '../../services/moments';
 
-import type { MomentStatus, PersistedMomentStatus, Session } from '../../types';
+import type {
+  GeminiEvidenceResult,
+  MomentStatus,
+  PersistedMomentStatus,
+  Session,
+} from '../../types';
 import { getVideoAssetFromSession } from './sessionFormatters';
 import { mergeMomentStatus } from './sessionMerge';
 
@@ -36,6 +41,7 @@ type ExtractEvidenceOptions = {
 };
 
 type UseEvidenceExtractionParams = {
+  geminiEvidenceBySessionId: Record<string, GeminiEvidenceResult>;
   remoteMomentIdsBySessionId: Record<string, string>;
   selectMomentDetail: (sessionId: string) => void;
   sessions: Session[];
@@ -45,6 +51,7 @@ type UseEvidenceExtractionParams = {
 };
 
 export function useEvidenceExtraction({
+  geminiEvidenceBySessionId,
   remoteMomentIdsBySessionId,
   selectMomentDetail,
   sessions,
@@ -54,7 +61,12 @@ export function useEvidenceExtraction({
 }: UseEvidenceExtractionParams) {
   const [extractingEvidenceBySessionId, setExtractingEvidenceBySessionId] =
     useState<Record<string, boolean>>({});
+  const geminiEvidenceRef = useRef(geminiEvidenceBySessionId);
   const sessionsRef = useRef(sessions);
+
+  useEffect(() => {
+    geminiEvidenceRef.current = geminiEvidenceBySessionId;
+  }, [geminiEvidenceBySessionId]);
 
   useEffect(() => {
     sessionsRef.current = sessions;
@@ -63,6 +75,14 @@ export function useEvidenceExtraction({
   function isCompletedSession(sessionId: string) {
     return sessionsRef.current.find((session) => session.id === sessionId)
       ?.momentStatus === 'completed';
+  }
+
+  function hasCompletedEvidence(sessionId: string) {
+    return geminiEvidenceRef.current[sessionId]?.status === 'completed';
+  }
+
+  function isCompletedMoment(sessionId: string) {
+    return isCompletedSession(sessionId) || hasCompletedEvidence(sessionId);
   }
 
   function updateLocalMomentStatus(
@@ -144,6 +164,10 @@ export function useEvidenceExtraction({
     options?: ExtractEvidenceOptions,
   ) {
     if (extractingEvidenceBySessionId[session.id]) {
+      return;
+    }
+
+    if (isCompletedMoment(session.id)) {
       return;
     }
 

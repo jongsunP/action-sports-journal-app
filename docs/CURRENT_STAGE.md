@@ -19,6 +19,20 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Completed Moment redundant evidence/upload request hardening, 2026-07-03:
+
+- Build 104 QA and DB verification confirmed the previous upload failure alert
+  was local UI/state conflict, not a remote upload or analysis failure.
+- Follow-up hardening now skips automatic evidence extraction/source upload
+  requests when opening Detail for a Moment that is already completed by local
+  session status or completed evidence.
+- Retry flow for non-completed failed/stale states remains unchanged.
+- No AI Calibration, EAS build, buildNumber change, Render/Supabase setting
+  change, DB write/migration, Auth/Recovery flow change, Upload architecture
+  change, or paid AI/API call was made.
+- This fix is after Build 104 and needs a later build only if the Founder wants
+  it verified on standalone iPhone before AI Calibration.
+
 Build 104 focused completed-status regression QA build complete / Founder QA pending, 2026-07-03:
 
 - iOS `buildNumber` is `104` for a focused preview/internal QA build.

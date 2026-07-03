@@ -22,6 +22,17 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Completed Moment redundant evidence/upload request hardening, 2026-07-03:
+  - Build 104 QA and DB verification confirmed recent uploaded Moments are
+    completed remotely with completed analysis/evidence, finalized upload
+    targets, thumbnail, and push ticket.
+  - The remaining risk was a redundant Detail-open auto request: local evidence
+    could still be absent while the remote/session Moment was already completed.
+  - Detail open and `handleExtractEvidence` now skip evidence/source upload
+    requests for completed session status or completed evidence.
+  - Retry behavior for non-completed failed/stale states remains unchanged.
+  - No build was run. This is after Build 104.
+
 - Build 104 focused completed-status regression QA build complete / Founder QA pending, 2026-07-03:
   - iOS `buildNumber` is `104`.
   - Build 104 is a focused preview/internal QA build for

@@ -81,6 +81,11 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / Build 102 QA:
 
+- After Build 104, DB verification confirmed the Build 103/104 upload issue was
+  local UI/state conflict rather than remote upload/analysis failure. A follow-up
+  hardening prevents completed Moment Detail open from triggering redundant
+  evidence/source upload requests when session status or evidence is already
+  completed.
 - Build 104 is a focused pre-AI regression QA build for
   `559e94c fix: prevent completed moment status downgrade`. iOS `buildNumber`
   is `104`; build prep commit is `714e382`; EAS Build ID is
