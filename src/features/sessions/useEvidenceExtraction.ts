@@ -1,4 +1,10 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { Alert } from 'react-native';
 
 import {
@@ -14,6 +20,7 @@ import {
 
 import type { MomentStatus, PersistedMomentStatus, Session } from '../../types';
 import { getVideoAssetFromSession } from './sessionFormatters';
+import { mergeMomentStatus } from './sessionMerge';
 
 const PERSISTED_MOMENT_STATUSES: ReadonlySet<MomentStatus> = new Set([
   'queued',
@@ -31,6 +38,7 @@ type ExtractEvidenceOptions = {
 type UseEvidenceExtractionParams = {
   remoteMomentIdsBySessionId: Record<string, string>;
   selectMomentDetail: (sessionId: string) => void;
+  sessions: Session[];
   setSessions: Dispatch<SetStateAction<Session[]>>;
   userConfirmedTrickBySessionId: Record<string, string>;
   videosBySessionId: Record<string, SessionVideoAsset>;
@@ -39,28 +47,52 @@ type UseEvidenceExtractionParams = {
 export function useEvidenceExtraction({
   remoteMomentIdsBySessionId,
   selectMomentDetail,
+  sessions,
   setSessions,
   userConfirmedTrickBySessionId,
   videosBySessionId,
 }: UseEvidenceExtractionParams) {
   const [extractingEvidenceBySessionId, setExtractingEvidenceBySessionId] =
     useState<Record<string, boolean>>({});
+  const sessionsRef = useRef(sessions);
+
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  function isCompletedSession(sessionId: string) {
+    return sessionsRef.current.find((session) => session.id === sessionId)
+      ?.momentStatus === 'completed';
+  }
 
   function updateLocalMomentStatus(
     sessionId: string,
     momentStatus: Session['momentStatus'],
   ) {
-    setSessions((current) =>
-      current.map((session) =>
-        session.id === sessionId
-          ? {
-              ...session,
-              momentStatus,
-              updatedAt: new Date().toISOString(),
-            }
-          : session,
-      ),
-    );
+    const mergeSessions = (current: Session[]) =>
+      current.map((session) => {
+        if (session.id !== sessionId) {
+          return session;
+        }
+
+        const nextMomentStatus = mergeMomentStatus(
+          session.momentStatus,
+          momentStatus,
+        );
+
+        if (nextMomentStatus === session.momentStatus) {
+          return session;
+        }
+
+        return {
+          ...session,
+          momentStatus: nextMomentStatus,
+          updatedAt: new Date().toISOString(),
+        };
+      });
+
+    sessionsRef.current = mergeSessions(sessionsRef.current);
+    setSessions(mergeSessions);
   }
 
   async function syncMomentStatus(
@@ -69,6 +101,10 @@ export function useEvidenceExtraction({
     remoteMomentIdOverride?: string,
   ) {
     if (!momentStatus) {
+      return;
+    }
+
+    if (momentStatus !== 'completed' && isCompletedSession(sessionId)) {
       return;
     }
 
@@ -82,6 +118,10 @@ export function useEvidenceExtraction({
     }
 
     if (!isPersistedMomentStatus(momentStatus)) {
+      return;
+    }
+
+    if (momentStatus !== 'completed' && isCompletedSession(sessionId)) {
       return;
     }
 
@@ -177,6 +217,9 @@ export function useEvidenceExtraction({
             storageMessage,
           );
           await syncMomentStatus(session.id, 'upload_failed', momentId);
+          if (isCompletedSession(session.id)) {
+            return;
+          }
           Alert.alert(
             '영상 업로드에 실패했습니다',
             '분석을 시작하려면 원본 영상을 서버에 먼저 업로드해야 합니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
@@ -221,6 +264,9 @@ export function useEvidenceExtraction({
       }
 
       await syncMomentStatus(session.id, 'failed', options?.momentIdOverride);
+      if (isCompletedSession(session.id)) {
+        return;
+      }
       Alert.alert(
         '분석 시작에 실패했습니다',
         '영상 상태를 실패로 표시했습니다. 더보기 메뉴에서 다시 시도할 수 있습니다.',

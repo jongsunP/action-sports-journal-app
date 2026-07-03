@@ -19,6 +19,27 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 103 completed Moment status regression fix, 2026-07-03:
+
+- Founder Build 103 QA found a stronger Upload state regression than the earlier
+  stale-alert case: a newly uploaded Moment could appear completed in Video list,
+  then downgrade to processing in Detail, then later failed with the upload
+  failure alert.
+- The root issue was status downgrade rather than only an alert condition. Local
+  optimistic upload/analysis status could still overwrite a confirmed completed
+  Moment after remote refresh or Detail retry state ran later.
+- Code now treats completed as the top user-facing status priority across
+  session merge, local status updates, retry eligibility, and Detail action
+  visibility.
+- A completed Moment must not show upload failure alerts, failed/processing
+  badges, retry CTA, or "already requesting analysis" copy.
+- No AI Calibration, EAS build, buildNumber change, Render/Supabase setting
+  change, DB write/migration, Auth/Recovery flow change, or paid AI/API call was
+  made for this fix.
+- This fix is not included in Build 103. A later focused QA build is needed to
+  verify Upload -> Push -> Detail on a standalone iPhone before entering AI
+  Calibration.
+
 Build 103 pre-AI regression QA prep, 2026-07-03:
 
 - iOS `buildNumber` is `103` for a focused preview/internal QA build.

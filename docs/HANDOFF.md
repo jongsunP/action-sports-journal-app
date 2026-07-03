@@ -22,6 +22,21 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 103 completed Moment status regression fix, 2026-07-03:
+  - Founder Build 103 QA showed a completed Upload Moment downgrading through
+    Detail: Video list completed -> Detail processing with retry panel -> Video
+    list processing -> failed -> upload failure alert.
+  - This was not just a stale alert. Completed remote/local state could still be
+    downgraded by later optimistic upload/analysis status writes.
+  - Completed is now the top priority in status merge/local update paths, and
+    Detail retry eligibility/action rendering treats completed evidence/status
+    as terminal.
+  - Completed Moments should no longer show processing/failed badges, retry CTA,
+    "already requesting analysis" copy, or upload failure alerts.
+  - No build was run for this fix. Next validation needs a focused standalone QA
+    build after commit/push; AI Calibration remains paused until this regression
+    is verified.
+
 - Build 103 pre-AI regression QA prep, 2026-07-03:
   - iOS `buildNumber` is `103`.
   - Build 103 is a focused preview/internal QA build for the two Build 102

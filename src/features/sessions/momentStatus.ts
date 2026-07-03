@@ -34,6 +34,13 @@ export function getRetryEligibility({
   session: Session;
   video?: SessionVideoAsset | null;
 }): RetryEligibility {
+  if (momentStatus === 'completed' || evidence?.status === 'completed') {
+    return {
+      canRetry: false,
+      reason: '이미 정상 완료된 분석입니다.',
+    };
+  }
+
   if (!canRequestGeminiEvidence) {
     return {
       canRetry: false,
@@ -97,27 +104,9 @@ export function getRetryEligibility({
     };
   }
 
-  if (evidence.status !== 'completed') {
-    return {
-      canRetry: true,
-      reason: '분석 근거가 완료 상태가 아닙니다.',
-    };
-  }
-
-  if (
-    momentStatus === 'uploading' ||
-    momentStatus === 'processing' ||
-    momentStatus === 'queued'
-  ) {
-    return {
-      canRetry: false,
-      reason: '현재 분석이 진행 중입니다.',
-    };
-  }
-
   return {
-    canRetry: false,
-    reason: '이미 정상 완료된 분석입니다.',
+    canRetry: true,
+    reason: '분석 근거가 완료 상태가 아닙니다.',
   };
 }
 

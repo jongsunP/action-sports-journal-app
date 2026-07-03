@@ -422,6 +422,7 @@ export function HomeScreen() {
   } = useEvidenceExtraction({
     remoteMomentIdsBySessionId,
     selectMomentDetail: (sessionId) => selectMomentDetailRef.current(sessionId),
+    sessions,
     setSessions,
     userConfirmedTrickBySessionId,
     videosBySessionId,

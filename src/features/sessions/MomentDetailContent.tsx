@@ -202,6 +202,8 @@ export function MomentDetailContent({
     return null;
   }
 
+  const isCompleted =
+    momentStatus === 'completed' || evidence?.status === 'completed';
   const retryEligibility = getRetryEligibility({
     canRequestGeminiEvidence,
     evidence,
@@ -232,9 +234,10 @@ export function MomentDetailContent({
       '검토가 필요한 분석입니다. 기술 확정은 다음 단계에서 action sheet로 제공할 예정입니다.',
     );
   };
-  const hasDetailActions = Boolean(onRetry || onDelete);
+  const shouldShowRetryAction = Boolean(onRetry && !isCompleted);
+  const hasDetailActions = Boolean(shouldShowRetryAction || onDelete);
   const canPressRetry = Boolean(
-    onRetry && retryEligibility.canRetry && !isDeleting,
+    shouldShowRetryAction && retryEligibility.canRetry && !isDeleting,
   );
   const canPressDelete = Boolean(onDelete && !isDeleting);
   const missingMediaCopy = getMissingMediaCopy(momentStatus);
@@ -313,7 +316,7 @@ export function MomentDetailContent({
             <View style={styles.detailActionPanel}>
               <Text style={styles.detailActionTitle}>작업</Text>
               <View style={styles.detailActionRow}>
-                {onRetry ? (
+                {shouldShowRetryAction ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ disabled: !canPressRetry }}
@@ -353,7 +356,7 @@ export function MomentDetailContent({
                   </Pressable>
                 ) : null}
               </View>
-              {onRetry ? (
+              {shouldShowRetryAction ? (
                 <Text style={styles.detailHint}>{retryEligibility.reason}</Text>
               ) : null}
             </View>

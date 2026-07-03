@@ -81,6 +81,12 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / Build 102 QA:
 
+- Build 103 QA found a completed Moment status downgrade regression: a newly
+  uploaded Moment could show completed in Video list, then processing in Detail,
+  then failed with an upload failure alert. The follow-up fix makes completed
+  the highest-priority user-facing status across merge/local update/retry/action
+  paths. This fix is after Build 103 and needs a later focused standalone QA
+  build before AI Calibration.
 - Build 103 is a focused pre-AI regression QA build, not an AI Calibration
   build. iOS `buildNumber` is `103`; build prep commit is `9887914`; EAS Build
   ID is `ee3b219d-4302-4a06-88de-81f0bf05bbcc`. It verifies the Email Recovery

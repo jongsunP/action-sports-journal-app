@@ -118,7 +118,7 @@ export function mergeMomentStatus(
   localStatus?: MomentStatus,
   remoteStatus?: MomentStatus,
 ): MomentStatus | undefined {
-  if (remoteStatus === 'completed') {
+  if (localStatus === 'completed' || remoteStatus === 'completed') {
     return 'completed';
   }
 
