@@ -19,6 +19,38 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Session paused before Local-first Cache P1 no-build QA, 2026-07-06:
+
+- Founder is pausing here and will continue later.
+- Full Local-first Journal Cache P1 implementation is complete, but no-build QA
+  is still pending.
+- Important Expo mode note: `expo-dev-client` is installed in the project, but
+  no Development Build app is installed on the simulator or physical iPhone
+  yet. Therefore `npm run start:dev-client` or an Expo CLI `i` flow that targets
+  a development build can fail with:
+  `No development build (com.parksunl88.actionsportsjournal) for this project is installed.`
+- Until a Development Build app is actually installed, Local-first Cache P1
+  no-build QA should use Expo Go mode explicitly:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npx expo start --clear --go
+  ```
+
+  For physical iPhone Expo Go over LAN, use:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npx expo start --clear --go --lan
+  ```
+
+- Local/native Development Build remains paused until the Founder handles the
+  Mac/iPhone setup items: physical iPhone recognition by
+  `xcrun devicectl list devices` and CocoaPods availability via
+  `pod --version`.
+- AI Calibration remains paused until reference videos are prepared and the
+  remaining foundation QA/workflow items are intentionally closed.
+
 Full Local-first Journal Cache P1 implemented, no build run, 2026-07-06:
 
 - `b0cf233` design was implemented as the approved small P1. AI Calibration,

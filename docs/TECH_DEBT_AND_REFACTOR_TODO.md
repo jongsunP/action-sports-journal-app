@@ -168,6 +168,12 @@ Pre-AI foundation follow-up:
   - Verification performed:
     - `npm run typecheck` passed.
   - Remaining no-build verification before marking this fully QA-closed:
+    - use Expo Go mode explicitly until a Development Build app is installed:
+      `npx expo start --clear --go` for simulator, or
+      `npx expo start --clear --go --lan` for physical iPhone Expo Go;
+    - do not use `npm run start:dev-client` for this QA yet because
+      `expo-dev-client` is installed in the repo but no Development Build app
+      is installed on the target device/simulator;
     - `git diff --check`;
     - first launch cache miss -> remote summary writes snapshot;
     - restart/cache hit -> recent Home/Video rows appear before remote refresh;

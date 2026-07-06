@@ -22,6 +22,27 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Paused before Local-first Cache P1 no-build QA, 2026-07-06:
+  - Founder paused here. Next session should resume with Local-first Cache P1
+    no-build QA before moving to AI Calibration.
+  - `expo-dev-client` exists in package dependencies, but no Development Build
+    app is installed yet. If Expo CLI tries to launch a development build, it
+    can fail with `No development build (com.parksunl88.actionsportsjournal)
+    for this project is installed.`
+  - For Local-first Cache P1 no-build QA, use Expo Go mode explicitly:
+    `npx expo start --clear --go`. For physical iPhone Expo Go over LAN, use
+    `npx expo start --clear --go --lan`.
+  - Do not use `npm run start:dev-client` until a Development Build app is
+    installed.
+  - Local/native Development Build remains paused until the Founder handles
+    local Mac setup: physical iPhone must appear in
+    `xcrun devicectl list devices`, and CocoaPods must be available via
+    `pod --version`.
+  - Local-first Cache P1 QA checklist for next session:
+    first run cache miss -> remote summary writes snapshot -> restart cache hit
+    -> background refresh replaces snapshot -> thumbnail hydration still uses
+    `view=thumbnails` -> delete does not resurrect a cached row.
+
 - Full Local-first Journal Cache P1 implemented, no build run, 2026-07-06:
   - Implemented the approved small P1 from `b0cf233`.
   - Added `journalSnapshotCache.ts` as a separate owner-bound recent journal

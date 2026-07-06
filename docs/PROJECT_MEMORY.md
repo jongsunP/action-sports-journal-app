@@ -654,8 +654,10 @@ Current grouped listup view:
   - Boot Flicker Fix(부팅 깜박임 방지)
   - Detail Loading UX Polish(상세 로딩 UX 정리)
   - Media Placeholder First Paint Fix(썸네일 전 빈 박스 방지)
+  - Full Local-first Journal Cache P1(완전한 로컬 우선 기록 캐시 1차): 구현 완료, no-build QA 대기
 
 - QA / 검증 대기
+  - Local-first Cache P1 no-build QA(로컬 우선 캐시 1차 무빌드 QA): Expo Go 모드에서 cache miss/write/restart-hit/background refresh/delete safety 확인
   - Email Recovery Standalone Deep-link(이메일 복구 standalone 딥링크)
   - Account Recovery Small-screen QA(계정 복구 작은 화면/취소/복귀)
   - 다음 standalone 빌드에서 post-Build-106 수정 확인
