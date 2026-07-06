@@ -121,14 +121,26 @@ Final confirmation before AI Calibration:
 - QA Debug Panel exposes no token, refresh token, full user id, email, full
   callback URL, signed URL, secret, or API key.
 
+Pre-AI foundation follow-up:
+
+- Development Build / Local Build Workflow should be set up before AI
+  Calibration. Expo Go + LAN no-EAS device testing is already possible, but
+  native/standalone-sensitive flows still depend too much on EAS preview builds.
+  The goal is to reduce EAS build frequency during AI Calibration by documenting
+  and verifying either an Expo Development Build path or a local native build
+  path on the Founder's physical device.
+- Full local-first journal cache / stale-while-revalidate should be designed
+  before AI Calibration and implemented only if the P1 scope is small and safe.
+  The current app already has partial local/remote merge, request dedupe,
+  token/public-user cache, thumbnail signed URL cache, and summary-first +
+  thumbnail hydration. This follow-up means a fuller journal cache that shows
+  local journal data immediately and refreshes remote data in the background.
+  Do not start with a broad sync rewrite; first prove whether recent journal
+  cache + background remote refresh can avoid breaking summary-first boot,
+  recovery, thumbnail hydration, deletion, and completed-state merge rules.
+
 Non-blocking follow-up backlog:
 
-- Full local-first journal cache / stale-while-revalidate for even faster
-  perceived boot. The current app already has partial local/remote merge,
-  request dedupe, token/public-user cache, thumbnail signed URL cache, and
-  summary-first + thumbnail hydration. This backlog item means a fuller
-  journal cache that shows local journal data immediately and refreshes remote
-  data in the background.
 - Custom domain for endpoint stability and branding.
 - Advanced infra tuning if future captures prove Supabase/Auth/query/network
   variance is product-visible.

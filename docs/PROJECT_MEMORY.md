@@ -586,6 +586,10 @@ Current grouped listup view:
   - Postico DB Read Path(Postico DB 조회 환경)
 
 현재 남은 과제:
+- AI 전 기반 정리 / 다음 진행
+  - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우): EAS 빌드 의존도를 줄이기 위해 AI Calibration 전에 구축한다. Expo Go no-EAS 테스트는 이미 가능하지만, Push/deep link/native compression 같은 native/standalone 성격을 더 자주 확인할 수 있는 development build 또는 local native build 루틴은 아직 별도 정리되지 않았다.
+  - Full Local-first Journal Cache(완전한 로컬 우선 기록 캐시): 바로 대규모 구현으로 들어가지 말고 먼저 설계/범위를 확정한다. 현재 부분 캐시와 summary-first boot는 완료되어 있으므로, P1은 "최근 journal 로컬 캐시 + 백그라운드 remote refresh"처럼 startup/summary-first/thumbnail hydration을 깨지 않는 범위로 작게 끊을 수 있는지 판단한 뒤 진행한다.
+
 - 필수 / 아직 미시작
   - AI Calibration(AI 캘리브레이션): TS/HS Evidence(TS/HS 근거) 안정화부터 시작
   - Reference Video Set(기준 영상 세트) 준비/정의
@@ -608,8 +612,6 @@ Current grouped listup view:
   - Push Notification Icon Polish(푸시 알림 아이콘 정리)
 
 - 옵션 / 나중
-  - Full Local-first Journal Cache(완전한 로컬 우선 기록 캐시)
-  - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우)
   - Postico Read-only DB User(Postico 읽기 전용 DB 사용자)
   - Custom Domain(커스텀 도메인)
   - Share Export / Native Share Sheet / ShareResult Route(공유 내보내기 / 네이티브 공유 / 공유 결과 경로)

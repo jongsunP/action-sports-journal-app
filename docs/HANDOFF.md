@@ -22,6 +22,25 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI foundation next sequence update, 2026-07-06:
+  - Founder clarified that ASJ should finish reasonable foundation work before
+    AI Calibration, even if that means doing several separate stages first.
+  - Next development handoff should start with Development Build / Local Build
+    Workflow. Expo Go + LAN no-EAS device testing is already possible, but ASJ
+    still needs a documented Development Build or local native build path to
+    reduce EAS preview-build dependence for native/standalone-sensitive checks
+    during AI Calibration.
+  - After that, Full Local-first Journal Cache should be designed before
+    implementation. Current partial cache behavior is already present; do not
+    rewrite sync broadly. First decide whether a small P1 such as recent
+    journal local cache + background remote refresh can be done safely without
+    breaking summary-first boot, recovery, thumbnail hydration, deletion, or
+    completed-state merge rules.
+  - Sequence: Development Build / Local Build Workflow -> physical-device
+    verification -> Full Local-first Journal Cache P1 design -> implement only
+    if the scope is small and safe -> AI Calibration reference videos -> TS/HS
+    Evidence calibration.
+
 - Session closeout before AI Calibration, 2026-07-06:
   - Pre-AI foundation and polish work is effectively complete from the CTO/PM
     standpoint. There is no known mandatory Startup/Upload/Recovery/local-test

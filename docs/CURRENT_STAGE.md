@@ -19,6 +19,32 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Pre-AI foundation next sequence update, 2026-07-06:
+
+- Founder clarified the operating intent: if a foundation task is reasonable to
+  complete before AI Calibration, do it before moving on. This does not mean
+  combining unrelated implementation into one large change; it means finishing
+  the remaining foundation items in separate stages before AI Calibration.
+- Development Build / Local Build Workflow is now a pre-AI foundation task, not
+  a distant optional item. Expo Go + LAN no-EAS device testing is already
+  possible, but a Development Build or local native build workflow should be
+  evaluated and set up so native/standalone-sensitive flows can be tested with
+  fewer EAS preview builds during AI Calibration.
+- Full Local-first Journal Cache is also worth evaluating before AI
+  Calibration, but it must start with design and scope control. The current app
+  already has partial cache/merge behavior, request dedupe, token/public-user
+  cache, thumbnail signed URL cache, and summary-first + thumbnail hydration.
+  The next step is not a broad rewrite; it is to define whether a small P1 such
+  as recent journal local cache + background remote refresh can be implemented
+  without breaking summary-first boot, recovery, thumbnail hydration, deletion,
+  or completed-state merge rules.
+- Recommended sequence:
+  1. Set up Development Build / Local Build Workflow.
+  2. Verify the new workflow on physical device.
+  3. Design Full Local-first Journal Cache P1 and confirm scope/risk.
+  4. Implement only if the P1 scope is small and safe.
+  5. Then enter AI Calibration with the reference video set.
+
 Session closeout before AI Calibration, 2026-07-06:
 
 - Pre-AI foundation and polish work is effectively complete from the CTO/PM
