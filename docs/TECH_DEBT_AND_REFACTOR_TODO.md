@@ -123,12 +123,31 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
-- Development Build / Local Build Workflow should be set up before AI
-  Calibration. Expo Go + LAN no-EAS device testing is already possible, but
-  native/standalone-sensitive flows still depend too much on EAS preview builds.
-  The goal is to reduce EAS build frequency during AI Calibration by documenting
-  and verifying either an Expo Development Build path or a local native build
-  path on the Founder's physical device.
+- Development Build / Local Build Workflow has been investigated and is the
+  recommended next foundation workflow step before AI Calibration. Expo Go +
+  LAN no-EAS device testing is already possible, but native/standalone-sensitive
+  flows still depend too much on EAS preview builds.
+  - Current state: Expo SDK `~54.0.35`, managed-app style, no checked-in
+    `ios/` or `android/` native directories, no `expo-dev-client` installed,
+    and no `development` profile in `eas.json`.
+  - Native/config-sensitive surfaces: `react-native-compressor`,
+    `react-native-nitro-modules`, `expo-notifications`, app scheme
+    `actionsportsjournal`, `expo-video`, `expo-web-browser`, and the
+    `react-native-compressor` config plugin.
+  - Recommended P1: after Founder approval, install `expo-dev-client`, add an
+    `eas.json` `development` profile, and create/install one development build
+    on the Founder iPhone. After that, JS-only ASJ work can use local Metro
+    through `npx expo start --dev-client` / LAN instead of repeated preview
+    builds.
+  - Approval boundary: do not run `npx expo run:ios --device`,
+    `eas build --local`, `eas build`, signing/provisioning, or install steps
+    without explicit approval. These can generate native directories, invoke
+    Xcode signing, require Expo/Apple credentials, or install binaries.
+  - Local native compilation (`npx expo run:ios --device`) is useful for a
+    local device development build once approved. `eas build --local` is mainly
+    for debugging EAS-like build behavior locally and still depends on Expo
+    auth/signing/credentials, so it is not the first ASJ recommendation for
+    day-to-day EAS reduction.
 - Full local-first journal cache / stale-while-revalidate should be designed
   before AI Calibration and implemented only if the P1 scope is small and safe.
   The current app already has partial local/remote merge, request dedupe,
@@ -218,7 +237,24 @@ Recommended split:
 | Physical iPhone Expo Go + local Mac backend | Local backend `/health`, route reachability, and non-native UI/API smoke when `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT=http://<MAC_LAN_IP>:8787/api/analyze-session-video` is set before Metro starts. | Production Render region behavior, APNs push delivery, and any standalone-only native identity/deep-link behavior. |
 | iOS Simulator with Expo Go | Fastest no-build UI and state smoke for Home/Video/Detail/Recovery screens. | Native compression and real iPhone file/provider behavior; full Auth/Kakao/Email recovery E2E. |
 | Existing standalone Build 104 | Current best no-new-build validation for the latest installed user-facing Upload -> Push -> Detail regression QA, production-like backend path, startup QA, Upload/Auth/Recovery smoke, and QA Debug Panel sensitive-value checks. | New JS/native/env changes that are not already included in Build 104. |
-| Future Development Build | Best way to reduce repeated preview/internal builds once ASJ needs frequent native-module or config-sensitive QA with local Metro iteration. | It still requires an initial development build and signing; do not create it without Founder approval. |
+| Development Build on physical iPhone | Best repeated-QA path for native-sensitive local iteration after the first approved install: Push registration/delivery behavior, app-scheme/deep-link return, Kakao/Email recovery return, native compression/runtime parity, and installed app identity while still loading JS from local Metro. | Requires initial `expo-dev-client` setup, a native build/install, signing/provisioning, and rebuilds whenever native dependencies or config plugins change. |
+| Local native compilation with `npx expo run:ios --device` | No-EAS way to create/install a local debug/development build on a connected iPhone once approved and signing is available. | Can generate `ios/` native directories through prebuild, invokes Xcode/signing, and should not be used as routine JS-only QA. |
+| Local EAS build with `eas build --local` | Debugging EAS-like iOS build failures on the Mac or producing a local artifact with the EAS build process. | Still uses EAS CLI auth/project checks and signing/credential behavior; not the first recommended ASJ path for quick device iteration. |
+| Standalone EAS preview/internal build | Final installed-app QA, distribution-like behavior, baked EAS env parity, Push/deep-link behavior against the same native runtime Founder will install. | Slowest/most expensive validation path; avoid for routine JS-only polish when Expo Go or Development Build can cover the risk. |
+
+Pre-AI workflow coverage matrix:
+
+| QA target | Expo Go + LAN | Development Build | Standalone EAS preview/internal |
+| --- | --- | --- | --- |
+| Home/Video/Detail UI, skeleton/fade polish, text/layout | Good first pass | Good | Final installed verification only if needed |
+| Summary-first boot and `view=summary` / `view=thumbnails` read behavior | Good with Singapore Render or local backend endpoint | Good | Good |
+| Local Mac backend `/health` and non-native route reachability | Good | Good | Only if endpoint is baked into that installed build |
+| Native compression / `react-native-compressor` parity | Not sufficient | Recommended | Good final proof |
+| Push token registration and remote push delivery | Not sufficient | Recommended | Good final proof |
+| Push notification icon/banner behavior | Not sufficient | Useful but platform/cache-sensitive | Best final installed proof |
+| Kakao/Email app-scheme or recovery deep-link return | Not sufficient | Recommended | Good final proof |
+| Installed env parity / EAS preview env | Not applicable | Depends on build env used for dev build | Best final proof |
+| App icon/native asset changes | Not sufficient | Useful after dev build rebuild | Final installed proof |
 
 Verified on 2026-07-03, physical iPhone Expo Go path:
 

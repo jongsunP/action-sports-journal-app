@@ -81,6 +81,20 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Pre-AI Development Build / Local Build Workflow investigation is complete as
+  a no-build workflow step. Current repo is Expo SDK `~54.0.35`, managed-app
+  style with no checked-in native directories, native/config-sensitive
+  dependencies already present, no `expo-dev-client` dependency yet, and no
+  `development` profile in `eas.json`. Readiness checks confirmed Expo CLI,
+  EAS CLI command availability, Xcode, iOS Simulator, Singapore Render
+  `/health`, and local dev-server `/health` on localhost/LAN. Recommendation:
+  keep Expo Go + LAN as the first QA pass, then set up Development Build P1
+  only after Founder approval to install `expo-dev-client`, add a development
+  profile, and run the first native/signing/install step. Use Development Build
+  for repeated native-sensitive QA; keep EAS preview/internal builds for final
+  installed-app QA or native-runtime refreshes. Full Local-first Journal Cache
+  remains design-only: consider only a small recent-journal cache + background
+  refresh P1 after separate approval.
 - Build 106 follow-up no-build UX polish addressed the remaining pre-AI
   polish items without a new EAS build. List/recent media previews now keep the
   film skeleton as the base layer so empty media boxes should not flash before

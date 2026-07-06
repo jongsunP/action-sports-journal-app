@@ -19,6 +19,72 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Pre-AI Development Build / Local Build Workflow investigation, 2026-07-06:
+
+- No EAS build, iOS native build, signing/provisioning/install step, buildNumber
+  change, app feature change, Render/Supabase/DB/Auth setting change, paid
+  AI/API call, or AI Calibration work was performed.
+- Current app/runtime state:
+  - Expo SDK is `~54.0.35`; `npx expo config --type public` reports SDK
+    `54.0.0`.
+  - `app.json` is managed-app style with no checked-in `ios/` or `android/`
+    native directories.
+  - iOS bundle id remains `com.parksunl88.actionsportsjournal`, scheme remains
+    `actionsportsjournal`, and buildNumber remains `106`.
+  - Native/config-sensitive dependencies include `react-native-compressor`,
+    `react-native-nitro-modules`, `expo-notifications`, `expo-video`,
+    `expo-web-browser`, app scheme config, and the
+    `react-native-compressor` config plugin.
+  - `expo-dev-client` is not currently installed, and `eas.json` has no
+    `development` profile yet. `eas.json` currently has `preview` internal
+    distribution and `production` profiles only.
+- Local readiness checks:
+  - Expo CLI reports `54.0.25`.
+  - EAS CLI availability checked with `npx eas-cli --version`
+    (`eas-cli/20.5.1` was resolved by npm for the command).
+  - Xcode is available (`xcodebuild -version` reports Xcode 26.6).
+  - An iOS Simulator is available and currently includes a booted iPhone 17.
+  - Singapore Render `/health` returned HTTP 200.
+  - Local dev server `npm run server:dev` starts on `0.0.0.0:8787`; localhost
+    `/health` and Mac LAN IP `/health` both returned HTTP 200.
+  - Local `.env.local` has the public analysis endpoint pointed at the
+    Singapore Render analysis route. Sensitive env values were not printed;
+    only key presence/shape was checked.
+- Recommended workflow split:
+  - Keep Expo Go + LAN as the default first pass for UI/navigation/copy,
+    summary/list/detail rendering, QA Debug Panel visibility, Singapore Render
+    read/sync smoke, and local backend `/health` reachability.
+  - Add a Development Build path next, but only after Founder approval to
+    install `expo-dev-client`, add an `eas.json` `development` profile, and run
+    either local native compilation or a CTO-approved development build.
+  - Use local native compilation (`npx expo run:ios --device`) only as an
+    explicit native-build step because it can generate native directories,
+    invoke Xcode signing, and install to a device. This should pause for
+    approval before execution.
+  - Use `eas build --local` only for debugging EAS-like builds locally. It
+    still depends on Expo authentication and signing/credential behavior, so it
+    is not the first recommended ASJ path for reducing routine preview builds.
+- ASJ recommendation:
+  - P1 should be a Development Build setup, not a broad local native build
+    migration. Once installed on the Founder iPhone, JS-only changes can be
+    tested through local Metro with `npx expo start --dev-client` or
+    `npx expo start --lan`, reducing repeated EAS preview builds for
+    native-runtime-sensitive QA.
+  - Continue using standalone EAS preview/internal builds only for final
+    installed-app QA, distribution/parity checks, or when the native runtime
+    itself changes and a dev build is not enough.
+- Environment coverage:
+  - Push delivery, device push token behavior, native compression parity,
+    app-scheme/deep-link return, Kakao/Email recovery return, and installed env
+    parity need Development Build or standalone runtime.
+  - Expo Go can still cover Home/Video/Detail UI, no-build skeleton/fade polish,
+    basic Recovery screen layout, public endpoint mode switching, and backend
+    reachability.
+- Full Local-first Journal Cache was not implemented. The safe next step is a
+  separate design approval for a small P1: recent journal local cache +
+  background remote refresh only, preserving summary-first boot,
+  thumbnail hydration, recovery, deletion, and completed-state merge priority.
+
 Pre-AI foundation next sequence update, 2026-07-06:
 
 - Founder clarified the operating intent: if a foundation task is reasonable to

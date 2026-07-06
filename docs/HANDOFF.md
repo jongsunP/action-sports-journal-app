@@ -22,6 +22,41 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI Development Build / Local Build Workflow investigation, 2026-07-06:
+  - No EAS build, iOS native build, signing/provisioning/install step,
+    buildNumber change, app feature change, Render/Supabase/DB/Auth setting
+    change, paid AI/API call, or AI Calibration work was performed.
+  - Current ASJ state: Expo SDK `~54.0.35`, managed-app style with no checked-in
+    `ios/` or `android/` directories, `expo-dev-client` not installed, and
+    `eas.json` has `preview`/`production` only with no `development` profile.
+  - Native/config-sensitive surfaces are `react-native-compressor`,
+    `react-native-nitro-modules`, `expo-notifications`, app scheme
+    `actionsportsjournal`, `expo-video`, `expo-web-browser`, and the
+    `react-native-compressor` config plugin.
+  - Readiness checked: Expo CLI `54.0.25`, EAS CLI command available through
+    `npx eas-cli`, Xcode 26.6 available, iOS Simulator available, Singapore
+    Render `/health` HTTP 200, local dev server `/health` HTTP 200 on localhost
+    and Mac LAN IP.
+  - Recommended next action is Development Build setup P1, not broad native
+    migration: with Founder approval, install `expo-dev-client`, add an
+    `eas.json` `development` profile, then create/install a development build
+    through either local native compilation or a separately approved build path.
+  - Do not run `npx expo run:ios --device`, `eas build --local`, or any
+    signing/provisioning/install step without explicit approval. Those commands
+    can generate native directories, invoke Xcode signing, install to a device,
+    or require Expo/Apple credentials.
+  - Use Expo Go + LAN first for UI/navigation/copy/list/detail/Recovery layout,
+    QA Debug Panel visibility, Singapore Render read/sync smoke, and local
+    backend reachability. Use Development Build for repeated native-sensitive
+    QA such as Push, native compression, app-scheme/deep-link return,
+    Kakao/Email recovery return, and installed runtime parity. Keep standalone
+    EAS preview/internal builds for final installed-app QA or native-runtime
+    refreshes.
+  - Full Local-first Journal Cache was not implemented. Next step is only a
+    separate design approval for a small P1: recent journal local cache +
+    background remote refresh, without breaking summary-first boot,
+    thumbnail hydration, recovery, deletion, or completed-state merge.
+
 - Pre-AI foundation next sequence update, 2026-07-06:
   - Founder clarified that ASJ should finish reasonable foundation work before
     AI Calibration, even if that means doing several separate stages first.
