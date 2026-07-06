@@ -22,6 +22,31 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Development Build P1 repo setup, no build run, 2026-07-06:
+  - Repository setup is ready for the first ASJ Development Build.
+  - `expo-dev-client` was added at the Expo SDK 54-compatible version selected
+    by `npx expo install` (`~6.0.21`).
+  - `package.json` now has `start:dev-client` for local Metro:
+    `expo start --dev-client`.
+  - `eas.json` now has a `development` profile with
+    `developmentClient: true`, `distribution: internal`, and
+    `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`.
+  - `app.json` was not changed and iOS buildNumber remains `106`.
+  - No EAS build, local EAS build, `npx expo run:ios --device`, iOS native
+    build, device install, Render/Supabase/DB/Auth setting change, app feature
+    change, paid AI/API call, or AI Calibration work was performed.
+  - First Development Build execution remains approval-gated. Candidate
+    commands after approval:
+    - Cloud development build:
+      `npx eas-cli build --platform ios --profile development`.
+    - Local/native device build:
+      `npx expo run:ios --device`.
+    - After a dev build is installed, start local Metro with:
+      `npm run start:dev-client -- --lan`.
+  - Use Expo Go + LAN first for JS/UI/backend reachability. Use Development
+    Build for repeated native-sensitive QA. Keep standalone EAS preview/internal
+    for final installed-app QA.
+
 - Pre-AI Development Build / Local Build Workflow investigation, 2026-07-06:
   - No EAS build, iOS native build, signing/provisioning/install step,
     buildNumber change, app feature change, Render/Supabase/DB/Auth setting

@@ -81,6 +81,17 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Development Build P1 repo setup is complete as a no-build step.
+  `expo-dev-client` is installed at `~6.0.21`, `package.json` has
+  `start:dev-client`, and `eas.json` has a `development` profile with
+  `developmentClient: true`, `distribution: internal`, and
+  `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`. `app.json` was not changed,
+  iOS buildNumber remains `106`, and no EAS/local/native build or device
+  install was run. The first Development Build execution remains
+  Founder/CTO-approval-gated. After approval, use either
+  `npx eas-cli build --platform ios --profile development` for a cloud
+  Development Build or `npx expo run:ios --device` for local/native device
+  build, then `npm run start:dev-client -- --lan` for local Metro iteration.
 - Pre-AI Development Build / Local Build Workflow investigation is complete as
   a no-build workflow step. Current repo is Expo SDK `~54.0.35`, managed-app
   style with no checked-in native directories, native/config-sensitive

@@ -19,6 +19,39 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Development Build P1 repo setup, no build run, 2026-07-06:
+
+- Development Build foundation is now prepared at the repository level.
+- `expo-dev-client` was added with the Expo SDK 54-compatible version selected
+  by `npx expo install` (`~6.0.21`).
+- `package.json` now includes `start:dev-client`:
+  `expo start --dev-client`.
+- `eas.json` now includes a `development` profile with
+  `developmentClient: true`, `distribution: internal`, and the same
+  `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true` flag used by preview builds.
+- `app.json` was not changed. iOS buildNumber remains `106`.
+- No EAS build, local EAS build, `npx expo run:ios --device`, iOS native build,
+  device install, Render/Supabase/DB/Auth setting change, app feature change,
+  paid AI/API call, or AI Calibration work was performed.
+- Next approved execution options:
+  - Cloud Development Build for the Founder iPhone:
+    `npx eas-cli build --platform ios --profile development`.
+  - Local/native Development Build path:
+    `npx expo run:ios --device`.
+  - Local Metro after a Development Build is installed:
+    `npm run start:dev-client -- --lan`.
+- Approval boundary remains: the first Development Build/native install step
+  can involve signing/provisioning, Expo/Apple credentials, native directory
+  generation, or device install. Do not run it without explicit Founder/CTO
+  approval.
+- QA split after this setup:
+  - Expo Go + LAN remains first pass for JS/UI/layout and backend reachability.
+  - Development Build becomes the intended repeated QA path for native
+    compression, Push registration/delivery, app-scheme/deep-link return,
+    Kakao/Email recovery return, and installed runtime parity.
+  - Standalone EAS preview/internal remains the final installed-app QA path, not
+    the default iteration loop.
+
 Pre-AI Development Build / Local Build Workflow investigation, 2026-07-06:
 
 - No EAS build, iOS native build, signing/provisioning/install step, buildNumber

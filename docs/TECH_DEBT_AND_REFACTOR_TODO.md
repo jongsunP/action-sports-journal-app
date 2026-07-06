@@ -123,6 +123,35 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Development Build P1 repo setup is complete:
+  - `expo-dev-client` is installed at `~6.0.21`.
+  - `package.json` includes `start:dev-client` for
+    `expo start --dev-client`.
+  - `eas.json` includes a `development` profile:
+    `developmentClient: true`, `distribution: internal`, and
+    `EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC=true`.
+  - `app.json` was not changed, and iOS buildNumber remains `106`.
+  - No EAS build, local EAS build, local native build, device install, or
+    signing/provisioning step was run.
+  - Approval-gated next commands:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npx eas-cli build --platform ios --profile development
+    ```
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npx expo run:ios --device
+    ```
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run start:dev-client -- --lan
+    ```
+
+  - Run the first two commands only after explicit Founder/CTO approval. The
+    Metro command is useful after a Development Build is already installed.
 - Development Build / Local Build Workflow has been investigated and is the
   recommended next foundation workflow step before AI Calibration. Expo Go +
   LAN no-EAS device testing is already possible, but native/standalone-sensitive

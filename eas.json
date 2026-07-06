@@ -1,5 +1,12 @@
 {
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_ENABLE_UPLOAD_COMPRESSION_POC": "true"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "env": {
