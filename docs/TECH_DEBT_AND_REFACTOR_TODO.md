@@ -123,7 +123,12 @@ Final confirmation before AI Calibration:
 
 Non-blocking follow-up backlog:
 
-- Local-first cache or stale-while-revalidate for even faster perceived boot.
+- Full local-first journal cache / stale-while-revalidate for even faster
+  perceived boot. The current app already has partial local/remote merge,
+  request dedupe, token/public-user cache, thumbnail signed URL cache, and
+  summary-first + thumbnail hydration. This backlog item means a fuller
+  journal cache that shows local journal data immediately and refreshes remote
+  data in the background.
 - Custom domain for endpoint stability and branding.
 - Advanced infra tuning if future captures prove Supabase/Auth/query/network
   variance is product-visible.

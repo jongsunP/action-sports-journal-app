@@ -560,44 +560,62 @@ Current grouped listup view:
 
 ```text
 완료:
-- Core Foundation
-  - Auth / Anonymous auth / Ownership / Realtime
-  - Push registration / delivery / observability
-  - Kakao / Email Recovery 기반
-  - Upload / Compression / Detail 안정화
-  - Startup / Region / boot performance 정리
+- Core Foundation(핵심 기반)
+  - Auth / Anonymous Auth(인증 / 익명 인증)
+  - Ownership / Realtime(소유권 / 실시간 동기화)
+  - Push Registration / Delivery(푸시 등록 / 전달)
+  - Kakao / Email Recovery(카카오 / 이메일 계정 복구)
+  - Upload / Compression / Detail Stability(업로드 / 압축 / 상세 안정화)
+  - Startup Performance / Region Alignment(부팅 성능 / 리전 정렬)
+  - Summary-first Boot(요약 우선 부팅)
+  - no-EAS Local Testing Path(EAS 없는 로컬/실기기 테스트 경로)
 
-- Product UX Foundation
-  - Home / Journal UX
-  - Upload entry UX
-  - Analysis Trust UX
-  - Detail media state
-  - Archive card hierarchy
-  - Settings / Theme / visible polish
+- Product UX Foundation(제품 UX 기반)
+  - Home / Journal UX(홈 / 기록 UX)
+  - Upload Entry UX(업로드 진입 UX)
+  - Analysis Trust UX(분석 신뢰 UX)
+  - Detail Media State(상세 미디어 상태)
+  - Media Placeholder Polish(미디어 로딩/스켈레톤 정리)
+  - Theme Mode(시스템/라이트/다크 테마)
+  - Visible UI Polish(가시 UI 정리)
 
-- QA / Operations Foundation
-  - QA Debug Panel
-  - Render Singapore 단일 backend
-  - Render JSON summary logs
-  - Postico DB 조회 환경
-  - no-EAS Simulator / physical iPhone Expo Go 테스트 루틴
-  - Pre-AI Closeout
+- Operations Foundation(운영 기반)
+  - Render Singapore Backend(렌더 싱가포르 단일 백엔드)
+  - Render JSON Summary Logs(렌더 JSON 요약 로그)
+  - QA Debug Panel(QA 디버그 패널)
+  - Postico DB Read Path(Postico DB 조회 환경)
 
 현재 남은 과제:
-- 필수
-  - AI Calibration: TS/HS Evidence 안정화로 시작하고, 이후 trick-name accuracy로 확장. MediaPipe / pose landmark는 보조 근거 feasibility로 검토.
+- 필수 / 아직 미시작
+  - AI Calibration(AI 캘리브레이션): TS/HS Evidence(TS/HS 근거) 안정화부터 시작
+  - Reference Video Set(기준 영상 세트) 준비/정의
+  - Trick-name Accuracy(트릭명 정확도 개선)
+  - MediaPipe / Pose Landmark(미디어파이프 / 포즈 랜드마크)는 보조 근거로 검토
+
+- 구현 완료 / 다음 빌드에 포함될 항목
+  - Boot Flicker Fix(부팅 깜박임 방지)
+  - Detail Loading UX Polish(상세 로딩 UX 정리)
+  - Media Placeholder First Paint Fix(썸네일 전 빈 박스 방지)
 
 - QA / 검증 대기
-  - Recovery E2E: Email Recovery 기존 계정 sign-in standalone deep-link 확인, Account Recovery UI 작은 화면/취소/복귀 추가 확인.
+  - Email Recovery Standalone Deep-link(이메일 복구 standalone 딥링크)
+  - Account Recovery Small-screen QA(계정 복구 작은 화면/취소/복귀)
+  - 다음 standalone 빌드에서 post-Build-106 수정 확인
 
 - Store 전 운영
-  - Production Readiness: QA Debug Panel hide/gate, Kakao/Supabase OAuth 표시/redirect/consent 점검, Push notification icon polish.
+  - QA Debug Panel Hide/Gate(QA 디버그 패널 숨김/차단)
+  - Kakao/Supabase OAuth Review(카카오/슈파베이스 OAuth 표시/redirect/consent 점검)
+  - Push Notification Icon Polish(푸시 알림 아이콘 정리)
 
 - 옵션 / 나중
-  - Media / Share: image export, native share sheet, ShareResult route.
-  - Detail / Journal UX: Detail representative media selection, Moment memo / rider note.
-  - Auth Expansion: Apple Login.
-  - Developer / Ops Workflow: Development Build / Local Build workflow, Postico read-only DB user 분리, custom domain, local-first cache / stale-while-revalidate / advanced infra tuning.
+  - Full Local-first Journal Cache(완전한 로컬 우선 기록 캐시)
+  - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우)
+  - Postico Read-only DB User(Postico 읽기 전용 DB 사용자)
+  - Custom Domain(커스텀 도메인)
+  - Share Export / Native Share Sheet / ShareResult Route(공유 내보내기 / 네이티브 공유 / 공유 결과 경로)
+  - Detail Representative Media Selection(상세 대표 미디어 선택)
+  - Moment Memo / Rider Note(기록 메모 / 라이더 노트)
+  - Apple Login(애플 로그인)
 ```
 
 Detailed historical stable workstream list:
