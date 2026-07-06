@@ -22,6 +22,22 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Session closeout before AI Calibration, 2026-07-06:
+  - Pre-AI foundation and polish work is effectively complete from the CTO/PM
+    standpoint. There is no known mandatory Startup/Upload/Recovery/local-test
+    blocker before AI Calibration.
+  - AI Calibration has not started.
+  - Founder has not yet prepared the AI Calibration reference videos. Next
+    session should begin by collecting or defining that reference video set,
+    then decide how to start TS/HS Evidence calibration.
+  - `9680d9b` boot flicker fix and `c0c4750` media/detail UX polish are after
+    Build 106 and are not included in the installed Build 106 standalone app.
+    They are no-build-smoke verified and should ride the next standalone build
+    only when a build is otherwise needed.
+  - Push notification icon remains a non-AI-blocking visual/platform backlog
+    item. QA Debug Panel repeated checking can stop for this phase; Store
+    hide/gate policy remains required before release.
+
 - Build 106 follow-up no-build UX polish, no EAS build run, 2026-07-06:
   - Founder QA update: Upload -> Push -> Detail completed state remains normal.
     QA Debug Panel repeated checks can stop for this phase; keep only

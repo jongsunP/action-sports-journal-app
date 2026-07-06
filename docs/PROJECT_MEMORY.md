@@ -111,6 +111,14 @@ Current infrastructure / pre-AI hardening:
   persists after reinstall/device cache refresh, treat it as platform rendering
   or installed-app cache behavior unless future evidence points to an asset
   generation issue.
+- Pre-AI foundation and polish work is effectively complete from the CTO/PM
+  standpoint as of 2026-07-06. AI Calibration has not started because the
+  Founder has not yet prepared the reference video set. The next session should
+  collect or define those AI Calibration reference videos first, then begin
+  with TS/HS Evidence calibration. `9680d9b` boot flicker fix and `c0c4750`
+  media/detail UX polish are post-Build-106 no-build-smoke-verified changes
+  and should be included in the next standalone build only when a build is
+  otherwise needed.
 - Build 106 is complete and waiting for Founder standalone iPhone QA. It is a
   pre-AI final polish QA build, not an AI Calibration build. iOS `buildNumber`
   is `106`; build prep commit is `1290577`; EAS Build ID is

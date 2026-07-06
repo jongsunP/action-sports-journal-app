@@ -19,6 +19,23 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Session closeout before AI Calibration, 2026-07-06:
+
+- Pre-AI foundation and polish work is effectively complete from the CTO/PM
+  standpoint. No known mandatory Startup/Upload/Recovery/Local-testing blocker
+  remains before AI Calibration.
+- AI Calibration has not started.
+- Founder has not yet prepared the AI Calibration reference videos. The next
+  session should start by collecting or defining the reference video set before
+  asking a development session to calibrate TS/HS Evidence.
+- `9680d9b` boot flicker fix and `c0c4750` media/detail UX polish are after
+  Build 106 and are not included in the installed Build 106 standalone app.
+  They are verified by no-build Simulator / Expo Go smoke and should be
+  included in the next standalone build only when a build is otherwise needed.
+- Push notification icon remains a non-AI-blocking visual/platform backlog
+  item. QA Debug Panel repeated checks can stop for this phase; keep the
+  Store-before-release hide/gate policy as the later required action.
+
 Build 106 follow-up no-build UX polish, no EAS build run, 2026-07-06:
 
 - Founder QA update:
