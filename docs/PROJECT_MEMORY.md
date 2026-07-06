@@ -81,6 +81,17 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Local/native Development Build was attempted once without EAS cloud usage and
+  did not reach device install. `npx expo run:ios --device` generated a
+  temporary ignored `ios/` prebuild output, but local prerequisites blocked the
+  path: no physical iPhone was visible through `xcrun devicectl list devices`,
+  CocoaPods CLI was missing, Gem install failed, and Homebrew CocoaPods install
+  would have changed machine-level packages, so it was declined. Expo then only
+  offered Simulator choices. Generated `ios/` output was removed, Expo's
+  temporary package script rewrite was restored, and no EAS build, local EAS
+  build, buildNumber change, device install, or AI Calibration was performed.
+  Next local-first step is to connect/trust the physical iPhone and explicitly
+  set up CocoaPods locally before retrying `npx expo run:ios --device`.
 - Development Build P1 repo setup is complete as a no-build step.
   `expo-dev-client` is installed at `~6.0.21`, `package.json` has
   `start:dev-client`, and `eas.json` has a `development` profile with

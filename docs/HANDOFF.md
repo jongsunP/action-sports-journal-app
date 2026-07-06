@@ -22,6 +22,35 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local/native Development Build attempt, no EAS build run, 2026-07-06:
+  - Local/native route was attempted once with
+    `npx expo run:ios --device` to check whether ASJ can install a Development
+    Build on the Founder iPhone without EAS cloud/paid build usage.
+  - Precheck: Node `v24.4.1`, npm `11.4.2`, Expo CLI `54.0.25`, Xcode `26.6`,
+    `xcode-select` points to `/Applications/Xcode.app/Contents/Developer`.
+    iOS Simulator exists, but `xcrun devicectl list devices` reported no
+    physical devices.
+  - The command generated a temporary `ios/` directory and completed prebuild,
+    then stopped at local build prerequisites:
+    - CocoaPods CLI was missing.
+    - Gem install failed.
+    - Homebrew install prompted for `cocoapods` plus system package changes
+      (`ruby`, `libyaml`, `ca-certificates`, `openssl@3`), which was declined
+      because it is a machine-level change.
+    - Expo then reported unexpected `devicectl` JSON version output and only
+      offered Simulator choices, not a physical iPhone.
+  - Cleanup: Expo's temporary script rewrite of `package.json` `ios/android` to
+    `expo run:*` was restored to `expo start --ios` / `expo start --android`.
+    The generated ignored `ios/` directory was removed and was not committed.
+  - Result: no iPhone install, no Development Build runtime, and no LAN Metro
+    dev-client smoke yet.
+  - Next local-first action: connect/trust the physical iPhone so `devicectl`
+    sees it, then intentionally install/configure CocoaPods locally before
+    retrying `npx expo run:ios --device`. Signing/team/provisioning may appear
+    after those blockers are cleared.
+  - Do not switch to Cloud Development Build just because this attempt failed;
+    the current blockers are local setup/device recognition first.
+
 - Development Build P1 repo setup, no build run, 2026-07-06:
   - Repository setup is ready for the first ASJ Development Build.
   - `expo-dev-client` was added at the Expo SDK 54-compatible version selected

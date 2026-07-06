@@ -123,6 +123,46 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Local/native Development Build attempt result:
+  - `npx expo run:ios --device` was attempted once to avoid EAS cloud usage.
+  - It generated a temporary `ios/` directory and completed prebuild, but did
+    not install on a physical iPhone.
+  - `xcrun devicectl list devices` reported no physical devices, so the iPhone
+    connection/trust path still needs to be fixed.
+  - CocoaPods CLI was missing. Expo's Gem install failed. Homebrew install would
+    have installed/upgraded machine-level packages (`cocoapods`, `ruby`,
+    `libyaml`, `ca-certificates`, `openssl@3`), so it was not auto-approved.
+  - Signing/team/provisioning was not reached.
+  - The generated `ios/` directory is ignored by `/ios`, was removed, and should
+    not be committed unless ASJ intentionally switches to checked-in native
+    directories later.
+  - Expo temporarily rewrote `package.json` `ios/android` scripts to
+    `expo run:*`; this was restored so the existing Expo Go scripts remain:
+    `expo start --ios` and `expo start --android`.
+  - Recommended next local-first setup before retry:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    xcrun devicectl list devices
+    ```
+
+    Confirm the physical iPhone appears after USB connection/trust.
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    pod --version
+    ```
+
+    If CocoaPods is missing, install/configure it intentionally at the machine
+    level, then retry:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npx expo run:ios --device
+    ```
+
+  - Do not jump to Cloud Development Build solely because this attempt failed;
+    the first blockers are local device recognition and CocoaPods setup.
 - Development Build P1 repo setup is complete:
   - `expo-dev-client` is installed at `~6.0.21`.
   - `package.json` includes `start:dev-client` for

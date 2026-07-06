@@ -19,6 +19,48 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local/native Development Build attempt, no EAS build run, 2026-07-06:
+
+- Goal was to check whether ASJ can install a Development Build on the
+  Founder's physical iPhone without using EAS paid/cloud builds.
+- Precheck:
+  - Node `v24.4.1`, npm `11.4.2`, Expo CLI `54.0.25`.
+  - Xcode `26.6`; `xcode-select -p` points at
+    `/Applications/Xcode.app/Contents/Developer`.
+  - iOS Simulator is available, but `xcrun devicectl list devices` reported no
+    physical devices.
+- Command attempted once:
+  `npx expo run:ios --device`.
+- Result:
+  - Expo generated a temporary `ios/` native directory and finished prebuild.
+  - CocoaPods CLI was missing. Expo first tried Gem install, which failed.
+  - Expo then prompted to install CocoaPods through Homebrew, including system
+    package changes (`ruby`, `libyaml`, `ca-certificates`, `openssl@3`). This
+    was not auto-approved because it is a machine-level package change outside
+    the repo.
+  - After CocoaPods install was declined, Expo reported an unexpected
+    `devicectl` JSON version output and showed only Simulator choices, not a
+    physical iPhone.
+  - The command was stopped before any Simulator/native install path.
+- Cleanup:
+  - Expo had changed `package.json` `ios` / `android` scripts to
+    `expo run:*`; these were restored to the existing Expo Go scripts:
+    `expo start --ios` and `expo start --android`.
+  - The generated `ios/` directory is already ignored by `.gitignore` via
+    `/ios`; it was removed from the workspace and not committed.
+- Current conclusion:
+  - Local/native Development Build is still plausible, but not currently ready
+    on this Mac without setup.
+  - Blocking items are physical iPhone connection/trust visibility and
+    CocoaPods/Xcode local build dependency setup. Signing/team/provisioning was
+    not reached.
+  - Do not move to Cloud Development Build yet if the primary goal is reducing
+    EAS usage. First connect/trust the iPhone and intentionally approve/install
+    CocoaPods or an equivalent local CocoaPods setup.
+- No EAS build, `eas build --local`, standalone preview/internal build,
+  buildNumber change, AI Calibration, Render/Supabase/DB/Auth setting change,
+  or device install was performed.
+
 Development Build P1 repo setup, no build run, 2026-07-06:
 
 - Development Build foundation is now prepared at the repository level.
