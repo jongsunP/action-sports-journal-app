@@ -63,6 +63,12 @@ import {
   type PersistedSessionState,
 } from './sessionStorage';
 import {
+  clearRecentJournalSnapshot,
+  getJournalSnapshotCacheOwnerKeyHash,
+  removeMomentFromRecentJournalSnapshot,
+  saveRecentJournalSnapshot,
+} from './journalSnapshotCache';
+import {
   resetMomentDetailRuntimeState,
   setMomentDetailRuntimeState,
 } from './momentDetailRuntimeStore';
@@ -148,7 +154,7 @@ type RequestDiagnostics = {
   responseBytes: number | null;
   retryCount: number;
   serverTotalMs: number | null;
-  source: 'archive_fetch' | 'boot_reuse' | null;
+  source: 'archive_fetch' | 'boot_reuse' | 'local_snapshot' | null;
   status: RequestDiagnosticsStatus;
   thumbnailSignedUrlWallMs: number | null;
   updatedAt: number | null;
@@ -307,6 +313,14 @@ export function HomeScreen() {
       : authMode === 'internalFallback'
         ? ANALYSIS_REALTIME_INTERNAL_FALLBACK_CHANNEL
         : null;
+  const journalSnapshotCacheOwnerKey = useMemo(
+    () =>
+      getAuthCacheOwnerKey({
+        authMode,
+        userId: user?.id,
+      }),
+    [authMode, user?.id],
+  );
   const [selectedGroupId, setSelectedGroupId] = useState(
     ACTIVE_WAKEBOARD_GROUP_ID,
   );
@@ -380,6 +394,9 @@ export function HomeScreen() {
   const hasLoadedVideoArchiveFirstPageRef = useRef(false);
   const isLoadingVideoArchiveInitialPageRef = useRef(false);
   const completedBootSyncAtRef = useRef<number | null>(null);
+  const appliedBootVideoArchivePageSourceRef = useRef<
+    'local_snapshot' | 'remote_summary' | null
+  >(null);
   const didTriggerSwipeHapticRef = useRef(false);
   const pendingVideoArchiveSessionIdsRef = useRef<Set<string>>(new Set());
   const recoveringUploadSessionIdsRef = useRef<Set<string>>(new Set());
@@ -737,6 +754,7 @@ export function HomeScreen() {
 
   const {
     hasInitialRemoteMomentPage,
+    initialRemoteMomentPageSource,
     isInitialRemoteMomentSyncPending,
     isLoadingInitialMoments,
     isRemoteMomentSyncLoaded,
@@ -749,6 +767,7 @@ export function HomeScreen() {
   } = useBootSync({
     initialGroupId: ACTIVE_WAKEBOARD_GROUP_ID,
     initialRemoteMomentPageLimit: MOMENT_LIST_PAGE_SIZE,
+    journalSnapshotCacheOwnerKey,
     normalizeRestoredSession,
     remoteMomentIdsBySessionId,
     remoteMomentSyncEnabled: canUseRemoteApi,
@@ -1091,6 +1110,15 @@ export function HomeScreen() {
               sessions,
             });
             syncRemoteMoments(remoteMoments);
+            void saveRecentJournalSnapshot({
+              ownerKey: journalSnapshotCacheOwnerKey,
+              page: remoteMomentPage,
+            }).catch((error) => {
+              console.warn(
+                'Recent journal snapshot save failed:',
+                error instanceof Error ? error.message : 'Unknown error',
+              );
+            });
             markRemoteMomentSyncCompleted({
               count: remoteMoments.length,
               hasMore: remoteMomentPage.hasMore,
@@ -1131,6 +1159,7 @@ export function HomeScreen() {
       remoteMomentIdsBySessionId,
       remoteMomentSyncStatus,
       recoverUnfinalizedUploadCandidates,
+      journalSnapshotCacheOwnerKey,
       sessions,
       syncRemoteMoments,
     ],
@@ -1384,17 +1413,26 @@ export function HomeScreen() {
     [sessions, selectedGroup?.id],
   );
   useEffect(() => {
+    const appliedSource = appliedBootVideoArchivePageSourceRef.current;
+    const isReplacingLocalSnapshotWithRemote =
+      appliedSource === 'local_snapshot' &&
+      initialRemoteMomentPageSource === 'remote_summary';
+
     if (
-      hasAppliedBootVideoArchivePageRef.current ||
       !canUseRemoteApi ||
-      hasLoadedVideoArchiveFirstPage ||
       !hasInitialRemoteMomentPage ||
-      remoteMomentSyncStatus !== 'completed'
+      !initialRemoteMomentPageSource ||
+      appliedSource === 'remote_summary' ||
+      appliedSource === initialRemoteMomentPageSource ||
+      (hasLoadedVideoArchiveFirstPage && !isReplacingLocalSnapshotWithRemote) ||
+      (remoteMomentSyncStatus !== 'completed' &&
+        initialRemoteMomentPageSource !== 'local_snapshot')
     ) {
       return;
     }
 
     hasAppliedBootVideoArchivePageRef.current = true;
+    appliedBootVideoArchivePageSourceRef.current = initialRemoteMomentPageSource;
     const normalizeStartedAt = Date.now();
     applyVideoArchiveFirstPage({
       moments: initialRemoteMoments,
@@ -1426,7 +1464,10 @@ export function HomeScreen() {
         resolveRequestUserMs: remoteMomentSyncDiagnostics.resolveRequestUserMs,
       responseBytes: remoteMomentSyncDiagnostics.responseBytes,
       serverTotalMs: remoteMomentSyncDiagnostics.serverTotalMs,
-      source: 'boot_reuse',
+      source:
+        initialRemoteMomentPageSource === 'local_snapshot'
+          ? 'local_snapshot'
+          : 'boot_reuse',
       status: initialRemoteMoments.length > 0 ? 'ready' : 'empty',
       thumbnailSignedUrlWallMs:
         remoteMomentSyncDiagnostics.thumbnailSignedUrlWallMs,
@@ -1440,6 +1481,7 @@ export function HomeScreen() {
     hasLoadedVideoArchiveFirstPage,
     initialRemoteMomentPageInfo.hasMore,
     initialRemoteMomentPageInfo.nextCursor,
+    initialRemoteMomentPageSource,
     initialRemoteMoments,
     remoteMomentSyncDiagnostics.durationMs,
     remoteMomentSyncDiagnostics.authClaimsMs,
@@ -1543,6 +1585,15 @@ export function HomeScreen() {
         const apiMs = getRequestDurationMs(startedAt);
         const normalizeStartedAt = Date.now();
         syncRemoteMoments(remoteMomentPage.moments);
+        void saveRecentJournalSnapshot({
+          ownerKey: journalSnapshotCacheOwnerKey,
+          page: remoteMomentPage,
+        }).catch((error) => {
+          console.warn(
+            'Recent journal snapshot save failed:',
+            error instanceof Error ? error.message : 'Unknown error',
+          );
+        });
         applyVideoArchiveFirstPage(remoteMomentPage);
         const clientNormalizeMs = getRequestDurationMs(normalizeStartedAt);
         setVideoArchiveDiagnostics((current) => ({
@@ -1633,6 +1684,7 @@ export function HomeScreen() {
     canUseRemoteApi,
     hasLoadedVideoArchiveFirstPage,
     isLoadingVideoArchiveInitialPage,
+    journalSnapshotCacheOwnerKey,
     syncRemoteMoments,
   ]);
   const handleRetryVideoArchiveFirstPage = useCallback(() => {
@@ -1940,6 +1992,18 @@ export function HomeScreen() {
   }, [closeMomentDetailIfSelected, removeSessionDataLocally]);
 
   const { deletingSessionIds, handleDeleteSession } = useDeleteMoment({
+    onDeleteResolved: ({ remoteMomentId, sessionId }) => {
+      void removeMomentFromRecentJournalSnapshot({
+        localSessionId: sessionId,
+        ownerKey: journalSnapshotCacheOwnerKey,
+        remoteMomentId,
+      }).catch((error) => {
+        console.warn(
+          'Recent journal snapshot delete cleanup failed:',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      });
+    },
     remoteMomentIdsBySessionId,
     removeSessionLocally,
   });
@@ -2125,6 +2189,12 @@ export function HomeScreen() {
         error instanceof Error ? error.message : 'Unknown error',
       );
     });
+    void clearRecentJournalSnapshot(previousOwnerKey).catch((error) => {
+      console.warn(
+        'Recent journal snapshot clear failed after auth owner change:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    });
 
     setSelectedGroupId(ACTIVE_WAKEBOARD_GROUP_ID);
     setSessions([]);
@@ -2145,6 +2215,7 @@ export function HomeScreen() {
     pendingRealtimeCompletionNoticeRef.current = null;
     isRefreshingRemoteMomentsRef.current = false;
     hasAppliedBootVideoArchivePageRef.current = false;
+    appliedBootVideoArchivePageSourceRef.current = null;
     hasLoadedVideoArchiveFirstPageRef.current = false;
     isLoadingVideoArchiveInitialPageRef.current = false;
     completedBootSyncAtRef.current = null;
@@ -2199,8 +2270,9 @@ export function HomeScreen() {
 
     console.info('[auth_cache_boundary]', {
       event: 'user_cache_cleared',
-      nextOwnerKey,
-      previousOwnerKey,
+      nextOwnerKeyHash: getJournalSnapshotCacheOwnerKeyHash(nextOwnerKey),
+      previousOwnerKeyHash:
+        getJournalSnapshotCacheOwnerKeyHash(previousOwnerKey),
     });
 
     if (canUseRemoteApi && hasConfiguredSupabaseMoments()) {
@@ -2668,6 +2740,12 @@ function QADebugPanel({
       count: number | null;
       durationMs: number | null;
       hasMore: boolean | null;
+      journalCacheAgeMs?: number | null;
+      journalCacheCount?: number | null;
+      journalCacheReason?: string | null;
+      journalCacheRefreshStatus?: string;
+      journalCacheSource?: string;
+      journalCacheStale?: boolean | null;
       reason: string | null;
       status: string;
       updatedAt: number | null;
@@ -2737,6 +2815,22 @@ function QADebugPanel({
       <Text style={styles.qaDebugLine}>
         Boot at {formatDebugTimestamp(snapshot.boot.updatedAt)} · reason{' '}
         {compactDebugReason(snapshot.boot.reason)}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Journal cache {snapshot.boot.journalCacheSource ?? '-'} · refresh{' '}
+        {snapshot.boot.journalCacheRefreshStatus ?? '-'} · count{' '}
+        {snapshot.boot.journalCacheCount ?? '-'} · age{' '}
+        {snapshot.boot.journalCacheAgeMs ?? '-'}ms
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Journal stale{' '}
+        {snapshot.boot.journalCacheStale === null ||
+        snapshot.boot.journalCacheStale === undefined
+          ? '-'
+          : snapshot.boot.journalCacheStale
+            ? 'Y'
+            : 'N'}{' '}
+        · reason {compactDebugReason(snapshot.boot.journalCacheReason ?? null)}
       </Text>
       <Text style={styles.qaDebugLine}>
         Video {snapshot.video.status} · {snapshot.video.durationMs ?? '-'}ms ·

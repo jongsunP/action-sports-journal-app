@@ -19,6 +19,51 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Full Local-first Journal Cache P1 implemented, no build run, 2026-07-06:
+
+- `b0cf233` design was implemented as the approved small P1. AI Calibration,
+  EAS build, local native build, DB schema work, Render/Supabase/Auth setting
+  changes, paid AI/API calls, Upload/Push/Detail state-machine changes, and
+  Recovery structure changes were not performed.
+- Added a separate owner-bound recent journal snapshot cache. It does not
+  replace `SESSION_STORAGE_KEY`.
+- Cache shape:
+  - key prefix: `action-sports-journal:journal-snapshot`;
+  - schema version: `1`;
+  - TTL: `24h`;
+  - owner boundary: hashed owner key;
+  - endpoint boundary: hashed `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`;
+  - contents: first `/api/moments?view=summary` page only, plus `hasMore`,
+    `nextCursor`, `fetchedAt`, owner hash, endpoint hash, and schema version.
+- Snapshot writes happen after successful first-page summary fetches. Snapshot
+  reads happen during boot after storage/auth owner context is available.
+- Cache hit behavior:
+  - applies cached moments through the existing `syncRemoteMoments` path;
+  - reuses the cached first page through the same Video first-page archive path;
+  - releases the boot screen before the remote summary refresh finishes;
+  - immediately continues the normal background `/api/moments?view=summary`
+    refresh;
+  - replaces the cached first page with the fresh remote summary page when it
+    completes.
+- Guardrails:
+  - persisted snapshot strips `video`, `thumbnailUri`, `evidence`, and
+    `session.videoUri` so signed URLs/raw storage paths are not treated as
+    durable cache truth;
+  - thumbnail hydration remains post-boot `view=thumbnails`;
+  - completed-state priority remains in the existing `mergeMomentStatus` path;
+  - delete success removes the local/remote Moment from the snapshot;
+  - auth owner changes clear the previous owner's snapshot and existing session
+    cache boundary;
+  - QA Debug Panel only shows safe cache source/age/count/stale/refresh fields.
+- Verification performed:
+  - `npm run typecheck` passed before documentation update.
+- Remaining verification before treating this as complete:
+  - `git diff --check`;
+  - no-build Simulator/Expo Go smoke if available: first run cache miss, remote
+    summary writes snapshot, restart cache hit, remote refresh replacement,
+    thumbnail hydration still fills via `view=thumbnails`, delete does not
+    resurrect a cached row.
+
 Full Local-first Journal Cache P1 design, no implementation, 2026-07-06:
 
 - This was a design/read-only code investigation. No app code, DB schema,

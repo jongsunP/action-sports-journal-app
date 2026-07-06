@@ -6,11 +6,16 @@ import { deleteMoment } from '../../services/moments';
 import type { Session } from '../../types';
 
 type UseDeleteMomentParams = {
+  onDeleteResolved?: (details: {
+    remoteMomentId?: string;
+    sessionId: string;
+  }) => void;
   remoteMomentIdsBySessionId: Record<string, string>;
   removeSessionLocally: (sessionId: string) => void;
 };
 
 export function useDeleteMoment({
+  onDeleteResolved,
   remoteMomentIdsBySessionId,
   removeSessionLocally,
 }: UseDeleteMomentParams) {
@@ -41,6 +46,7 @@ export function useDeleteMoment({
             }));
 
             if (!remoteMomentId) {
+              onDeleteResolved?.({ sessionId: session.id });
               removeSessionLocally(session.id);
               setDeletingSessionIds((current) => {
                 const next = { ...current };
@@ -52,6 +58,10 @@ export function useDeleteMoment({
 
             deleteMoment(remoteMomentId)
               .then(() => {
+                onDeleteResolved?.({
+                  remoteMomentId,
+                  sessionId: session.id,
+                });
                 removeSessionLocally(session.id);
               })
               .catch((error) => {
@@ -75,7 +85,12 @@ export function useDeleteMoment({
         },
       ]);
     },
-    [deletingSessionIds, remoteMomentIdsBySessionId, removeSessionLocally],
+    [
+      deletingSessionIds,
+      onDeleteResolved,
+      remoteMomentIdsBySessionId,
+      removeSessionLocally,
+    ],
   );
 
   return {

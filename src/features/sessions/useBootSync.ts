@@ -20,11 +20,17 @@ import {
   loadPersistedSessionState,
   type PersistedSessionState,
 } from './sessionStorage';
+import {
+  loadRecentJournalSnapshot,
+  saveRecentJournalSnapshot,
+  type JournalSnapshotCacheOwnerKey,
+} from './journalSnapshotCache';
 import type { UploadReconciliationCandidate } from './sessionMerge';
 
 type UseBootSyncParams = {
   initialGroupId: string;
   initialRemoteMomentPageLimit?: number;
+  journalSnapshotCacheOwnerKey?: JournalSnapshotCacheOwnerKey | null;
   normalizeRestoredSession: (session: Session) => Session;
   remoteMomentIdsBySessionId: Record<string, string>;
   remoteMomentSyncEnabled?: boolean;
@@ -64,6 +70,7 @@ export type RemoteMomentPageInfo = {
   hasMore: boolean;
   nextCursor: string | null;
 };
+export type InitialRemoteMomentPageSource = 'local_snapshot' | 'remote_summary';
 export type RemoteMomentSyncDiagnostics = {
   authClaimsMs: number | null;
   authGetUserMs: number | null;
@@ -72,6 +79,12 @@ export type RemoteMomentSyncDiagnostics = {
   durationMs: number | null;
   evidenceQueryMs: number | null;
   hasMore: boolean | null;
+  journalCacheAgeMs: number | null;
+  journalCacheCount: number | null;
+  journalCacheReason: string | null;
+  journalCacheRefreshStatus: 'idle' | 'loading' | 'completed' | 'failed';
+  journalCacheSource: 'local_snapshot' | 'none' | 'remote_summary';
+  journalCacheStale: boolean | null;
   momentsQueryMs: number | null;
   publicUserLookupMs: number | null;
   reason: string | null;
@@ -94,6 +107,7 @@ function getRemoteMomentSyncDuration(startedAt: number) {
 export function useBootSync({
   initialGroupId,
   initialRemoteMomentPageLimit,
+  journalSnapshotCacheOwnerKey = null,
   normalizeRestoredSession,
   remoteMomentSyncEnabled = true,
   setAnalysisBySessionId,
@@ -118,7 +132,11 @@ export function useBootSync({
   const [initialRemoteMoments, setInitialRemoteMoments] = useState<
     RemoteMomentRecord[]
   >([]);
+  const [initialRemoteMomentPageSource, setInitialRemoteMomentPageSource] =
+    useState<InitialRemoteMomentPageSource | null>(null);
   const [hasInitialRemoteMomentPage, setHasInitialRemoteMomentPage] =
+    useState(false);
+  const [hasAppliedJournalSnapshotCache, setHasAppliedJournalSnapshotCache] =
     useState(false);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [remoteMomentSyncStatus, setRemoteMomentSyncStatus] =
@@ -134,6 +152,12 @@ export function useBootSync({
       durationMs: null,
       evidenceQueryMs: null,
       hasMore: null,
+      journalCacheAgeMs: null,
+      journalCacheCount: null,
+      journalCacheReason: null,
+      journalCacheRefreshStatus: 'idle',
+      journalCacheSource: 'none',
+      journalCacheStale: null,
       momentsQueryMs: null,
       publicUserLookupMs: null,
       reason: null,
@@ -176,6 +200,8 @@ export function useBootSync({
       hasStartedInitialRemoteSyncRef.current = false;
       setHasInitialRemoteMomentPage(false);
       setInitialRemoteMoments([]);
+      setInitialRemoteMomentPageSource(null);
+      setHasAppliedJournalSnapshotCache(false);
       setInitialRemoteMomentPageInfo({
         hasMore: false,
         nextCursor: null,
@@ -191,6 +217,12 @@ export function useBootSync({
         durationMs: null,
         evidenceQueryMs: null,
         hasMore: null,
+        journalCacheAgeMs: null,
+        journalCacheCount: null,
+        journalCacheReason: null,
+        journalCacheRefreshStatus: 'idle',
+        journalCacheSource: 'none',
+        journalCacheStale: null,
         momentsQueryMs: null,
         publicUserLookupMs: null,
         reason: null,
@@ -301,6 +333,7 @@ export function useBootSync({
     async function loadRemoteMoments() {
       setRemoteMomentSyncStatus('loading');
       const startedAt = Date.now();
+      let snapshotCacheApplied = false;
       setRemoteMomentSyncDiagnostics({
         authClaimsMs: null,
         authGetUserMs: null,
@@ -309,6 +342,12 @@ export function useBootSync({
         durationMs: null,
         evidenceQueryMs: null,
         hasMore: null,
+        journalCacheAgeMs: null,
+        journalCacheCount: null,
+        journalCacheReason: null,
+        journalCacheRefreshStatus: 'loading',
+        journalCacheSource: 'none',
+        journalCacheStale: null,
         momentsQueryMs: null,
         publicUserLookupMs: null,
         reason: null,
@@ -323,6 +362,68 @@ export function useBootSync({
         updatedAt: startedAt,
         view: null,
       });
+
+      try {
+        const snapshotResult = await loadRecentJournalSnapshot(
+          journalSnapshotCacheOwnerKey,
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (snapshotResult.hit) {
+          snapshotCacheApplied = true;
+          const snapshot = snapshotResult.snapshot;
+
+          syncRemoteMoments(snapshot.moments);
+          setInitialRemoteMoments(snapshot.moments);
+          setInitialRemoteMomentPageInfo({
+            hasMore: snapshot.hasMore,
+            nextCursor: snapshot.nextCursor,
+          });
+          setInitialRemoteMomentPageSource('local_snapshot');
+          setHasInitialRemoteMomentPage(true);
+          setHasAppliedJournalSnapshotCache(true);
+          setRemoteMomentSyncDiagnostics((current) => ({
+            ...current,
+            count: snapshot.snapshotCount,
+            hasMore: snapshot.hasMore,
+            journalCacheAgeMs: snapshot.ageMs,
+            journalCacheCount: snapshot.snapshotCount,
+            journalCacheReason: 'hit',
+            journalCacheRefreshStatus: 'loading',
+            journalCacheSource: 'local_snapshot',
+            journalCacheStale: false,
+            updatedAt: Date.now(),
+            view: 'summary',
+          }));
+          console.info('[moment_sync]', {
+            count: snapshot.snapshotCount,
+            event: 'boot_journal_snapshot_cache_hit',
+            status: 'hit',
+          });
+        } else {
+          setRemoteMomentSyncDiagnostics((current) => ({
+            ...current,
+            journalCacheReason: snapshotResult.reason,
+            journalCacheRefreshStatus: 'loading',
+            journalCacheSource: 'none',
+            journalCacheStale: snapshotResult.reason === 'expired',
+            updatedAt: Date.now(),
+          }));
+        }
+      } catch (error) {
+        setRemoteMomentSyncDiagnostics((current) => ({
+          ...current,
+          journalCacheReason:
+            error instanceof Error ? error.message : 'snapshot_cache_error',
+          journalCacheRefreshStatus: 'loading',
+          journalCacheSource: 'none',
+          journalCacheStale: null,
+          updatedAt: Date.now(),
+        }));
+      }
 
       console.info('[moment_sync]', {
         event: 'boot_remote_moments_started',
@@ -340,11 +441,21 @@ export function useBootSync({
         }
 
         syncRemoteMoments(remoteMomentPage.moments);
+        void saveRecentJournalSnapshot({
+          ownerKey: journalSnapshotCacheOwnerKey,
+          page: remoteMomentPage,
+        }).catch((error) => {
+          console.warn(
+            'Recent journal snapshot save failed:',
+            error instanceof Error ? error.message : 'Unknown error',
+          );
+        });
         setInitialRemoteMoments(remoteMomentPage.moments);
         setInitialRemoteMomentPageInfo({
           hasMore: remoteMomentPage.hasMore,
           nextCursor: remoteMomentPage.nextCursor,
         });
+        setInitialRemoteMomentPageSource('remote_summary');
         setHasInitialRemoteMomentPage(true);
         didFinishInitialRemoteSync = true;
         setRemoteMomentSyncStatus('completed');
@@ -356,6 +467,14 @@ export function useBootSync({
           durationMs: getRemoteMomentSyncDuration(startedAt),
           evidenceQueryMs: remoteMomentPage.evidenceQueryMs,
           hasMore: remoteMomentPage.hasMore,
+          journalCacheAgeMs: snapshotCacheApplied
+            ? getRemoteMomentSyncDuration(startedAt)
+            : null,
+          journalCacheCount: remoteMomentPage.moments.length,
+          journalCacheReason: null,
+          journalCacheRefreshStatus: 'completed',
+          journalCacheSource: 'remote_summary',
+          journalCacheStale: false,
           momentsQueryMs: remoteMomentPage.momentsQueryMs,
           publicUserLookupMs: remoteMomentPage.publicUserLookupMs,
           reason: null,
@@ -391,6 +510,12 @@ export function useBootSync({
             durationMs: getRemoteMomentSyncDuration(startedAt),
             evidenceQueryMs: null,
             hasMore: null,
+            journalCacheAgeMs: null,
+            journalCacheCount: null,
+            journalCacheReason: reason,
+            journalCacheRefreshStatus: 'failed',
+            journalCacheSource: snapshotCacheApplied ? 'local_snapshot' : 'none',
+            journalCacheStale: snapshotCacheApplied,
             momentsQueryMs: null,
             publicUserLookupMs: null,
             reason,
@@ -431,6 +556,7 @@ export function useBootSync({
     isStorageLoaded,
     isRemoteMomentSyncConfigured,
     initialRemoteMomentPageLimit,
+    journalSnapshotCacheOwnerKey,
     syncRemoteMoments,
   ]);
 
@@ -491,6 +617,12 @@ export function useBootSync({
           evidenceQueryMs:
             diagnostics?.evidenceQueryMs ?? current.evidenceQueryMs,
           hasMore: diagnostics?.hasMore ?? current.hasMore,
+          journalCacheAgeMs: current.journalCacheAgeMs,
+          journalCacheCount: current.journalCacheCount,
+          journalCacheReason: current.journalCacheReason,
+          journalCacheRefreshStatus: current.journalCacheRefreshStatus,
+          journalCacheSource: current.journalCacheSource,
+          journalCacheStale: current.journalCacheStale,
           momentsQueryMs: diagnostics?.momentsQueryMs ?? current.momentsQueryMs,
           publicUserLookupMs:
             diagnostics?.publicUserLookupMs ?? current.publicUserLookupMs,
@@ -528,9 +660,13 @@ export function useBootSync({
     isLoadingInitialMoments:
       !isStorageLoaded ||
       (isRemoteMomentSyncConfigured &&
+        !hasAppliedJournalSnapshotCache &&
         remoteMomentSyncStatus === 'not_configured') ||
-      (isRemoteMomentSyncConfigured && remoteMomentSyncStatus === 'loading') ||
-      remoteMomentSyncStatus === 'waiting_for_storage',
+      (isRemoteMomentSyncConfigured &&
+        !hasAppliedJournalSnapshotCache &&
+        remoteMomentSyncStatus === 'loading') ||
+      (!hasAppliedJournalSnapshotCache &&
+        remoteMomentSyncStatus === 'waiting_for_storage'),
     isInitialRemoteMomentSyncPending:
       isRemoteMomentSyncConfigured && !hasFinishedInitialRemoteMomentSync,
     hasInitialRemoteMomentPage,
@@ -538,6 +674,7 @@ export function useBootSync({
     isStorageLoaded,
     initialRemoteMoments,
     initialRemoteMomentPageInfo,
+    initialRemoteMomentPageSource,
     markRemoteMomentSyncCompleted,
     remoteMomentSyncDiagnostics,
     remoteMomentSyncStatus,

@@ -22,6 +22,33 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Full Local-first Journal Cache P1 implemented, no build run, 2026-07-06:
+  - Implemented the approved small P1 from `b0cf233`.
+  - Added `journalSnapshotCache.ts` as a separate owner-bound recent journal
+    snapshot cache. It does not replace `SESSION_STORAGE_KEY`.
+  - Cache uses schema version `1`, TTL `24h`, hashed owner key, hashed
+    `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`, and stores only the first summary page.
+  - Boot now attempts snapshot load after storage/auth owner context is
+    available. On hit, it applies cached rows through `syncRemoteMoments`,
+    applies the same Video first-page path, releases the boot screen, and still
+    continues the normal background `/api/moments?view=summary` refresh.
+  - Fresh remote summary results replace the cached first page and update the
+    snapshot. `view=thumbnails` hydration remains unchanged.
+  - Snapshot persistence strips `video`, `thumbnailUri`, `evidence`, and
+    `session.videoUri`, so signed URLs/raw storage paths are not durable cache
+    truth.
+  - Delete success removes the corresponding row from the snapshot. Auth owner
+    boundary changes clear the previous owner's snapshot.
+  - QA Debug Panel now exposes safe journal cache source/age/count/stale/refresh
+    status. No token, email, full user id, full callback URL, signed URL, raw
+    storage path, secret, or API key is exposed by the new cache fields.
+  - `npm run typecheck` passed. EAS build, local native build, AI Calibration,
+    DB/Render/Supabase/Auth setting changes, and Upload/Push/Detail state
+    machine changes were not performed.
+  - Next verification: `git diff --check`, then no-build Simulator/Expo Go
+    smoke if available for cache miss/write/restart-hit/background-refresh,
+    delete safety, and unchanged thumbnail hydration.
+
 - Full Local-first Journal Cache P1 design, no implementation, 2026-07-06:
   - This pass only investigated and documented. No app code, DB schema,
     Render/Supabase/Auth setting, EAS build, local native build, paid AI/API

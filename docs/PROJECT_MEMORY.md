@@ -81,18 +81,24 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
-- Full Local-first Journal Cache P1 is designed but not implemented. Current
-  app already restores partial sessions/maps from AsyncStorage, then fetches
-  `/api/moments?view=summary`, merges via existing remote reconciliation, reuses
-  the boot page for Video first page, and hydrates thumbnails later through
-  `view=thumbnails`. Recommended P1 is not a sync rewrite: add a separate
-  owner-bound recent journal snapshot cache for the first remote summary page,
-  apply it only after Auth owner/endpoint/schema/TTL checks, then always run
-  background remote summary refresh and replace the snapshot on success. It
-  must preserve completed-state priority, delete safety, owner/recovery cache
-  boundaries, summary-first boot, and thumbnail hydration. This is feasible but
-  not a hard AI Calibration blocker; implement only with Founder approval if
-  one more foundation pass is desired before AI Calibration.
+- Full Local-first Journal Cache P1 is implemented as a small pre-AI
+  foundation pass, with no build run yet. The app still restores the existing
+  partial sessions/maps from `SESSION_STORAGE_KEY`, then uses a separate
+  owner-bound recent journal snapshot cache for the first remote
+  `/api/moments?view=summary` page. On cache hit, boot applies rows through the
+  existing `syncRemoteMoments` and Video first-page paths, releases the boot
+  screen, and continues the normal background summary refresh. Fresh remote
+  summary results replace the cached first page and update the snapshot. Cache
+  schema version is `1`, TTL is `24h`, owner and endpoint boundaries are hashed,
+  and persisted snapshots strip `video`, `thumbnailUri`, `evidence`, and
+  `session.videoUri` so signed URLs/raw storage paths are not durable truth.
+  Delete success removes rows from the snapshot, auth owner changes clear the
+  previous owner's snapshot, completed-state priority remains in
+  `mergeMomentStatus`, and thumbnail hydration remains post-boot
+  `view=thumbnails`. QA Debug Panel exposes only safe cache source/age/count/
+  stale/refresh fields. `npm run typecheck` passed; no EAS/local native build,
+  AI Calibration, DB/Render/Supabase/Auth setting change, Recovery change, or
+  Upload/Push/Detail state-machine change was performed.
 - Local/native Development Build was attempted once without EAS cloud usage and
   did not reach device install. `npx expo run:ios --device` generated a
   temporary ignored `ios/` prebuild output, but local prerequisites blocked the

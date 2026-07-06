@@ -123,6 +123,60 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Full Local-first Journal Cache P1 implementation result:
+  - Implemented as a small owner-bound recent journal snapshot cache, not a
+    broad sync rewrite.
+  - New helper:
+    `src/features/sessions/journalSnapshotCache.ts`.
+  - Boot integration:
+    `src/features/sessions/useBootSync.ts` loads a valid snapshot after storage
+    and owner context are available, applies it through `syncRemoteMoments`,
+    marks the first page source as `local_snapshot`, and still runs the normal
+    background `/api/moments?view=summary` fetch. When the remote summary fetch
+    completes, it marks source `remote_summary`, replaces the displayed first
+    page, and writes the snapshot.
+  - Home/Video integration:
+    `src/features/sessions/HomeScreen.tsx` applies local snapshot and remote
+    summary first pages through the same `applyVideoArchiveFirstPage` path.
+    A local snapshot can show first, but a fresh remote summary can still
+    replace it once.
+  - Delete safety:
+    `src/features/sessions/useDeleteMoment.ts` now reports delete resolution
+    back to Home, and Home removes the local/remote row from the snapshot after
+    local-only delete or successful remote delete.
+  - Cache shape:
+    - key prefix: `action-sports-journal:journal-snapshot`;
+    - schema version: `1`;
+    - TTL: `24h`;
+    - owner boundary: hashed owner key;
+    - endpoint boundary: hashed `EXPO_PUBLIC_AI_ANALYSIS_ENDPOINT`;
+    - payload: first summary page only, `hasMore`, `nextCursor`, `fetchedAt`,
+      owner hash, endpoint hash, schema version.
+  - Sensitive-data guard:
+    - snapshot rows strip `video`, `thumbnailUri`, `evidence`, and
+      `session.videoUri`;
+    - no token, refresh token, email, full user id, full callback URL, signed
+      URL, raw storage path, secret, or API key is added to QA Debug Panel or
+      the new snapshot logs;
+    - owner/account boundary appears only as a short hash in logs/cache keys.
+  - Preserved guardrails:
+    - `SESSION_STORAGE_KEY` remains intact and separate;
+    - `/api/moments?view=summary` remains the boot/list critical path;
+    - `view=thumbnails` hydration remains unchanged;
+    - completed-state priority remains in `mergeMomentStatus`;
+    - Recovery/Auth/Upload/Push/Detail state machines were not reworked.
+  - Verification performed:
+    - `npm run typecheck` passed.
+  - Remaining no-build verification before marking this fully QA-closed:
+    - `git diff --check`;
+    - first launch cache miss -> remote summary writes snapshot;
+    - restart/cache hit -> recent Home/Video rows appear before remote refresh;
+    - remote refresh replaces `local_snapshot` first page with `remote_summary`;
+    - deleted Moment does not reappear from snapshot;
+    - completed Moment does not downgrade after snapshot load or refresh;
+    - thumbnail hydration still fills via `view=thumbnails`;
+    - QA Debug Panel cache fields show only source/count/age/stale/refresh.
+
 - Full Local-first Journal Cache P1 design:
   - Current code flow:
     - `sessionStorage.ts` stores `SESSION_STORAGE_KEY`
