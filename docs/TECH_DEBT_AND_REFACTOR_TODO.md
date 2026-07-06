@@ -123,6 +123,98 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Full Local-first Journal Cache P1 design:
+  - Current code flow:
+    - `sessionStorage.ts` stores `SESSION_STORAGE_KEY`
+      (`action-sports-journal:sessions:v1`) with local sessions/maps.
+    - `useBootSync.ts` restores that state, then fetches
+      `listMomentsPage({ view: 'summary' })`.
+    - `HomeScreen.tsx` uses `syncRemoteMoments` to merge remote rows, then
+      `applyVideoArchiveFirstPage` to reuse the boot page for Video first page.
+    - Video first page/refresh/pagination use `view=summary`; delayed list
+      thumbnail hydration uses `view=thumbnails`.
+    - `sessionMerge.ts` keeps completed state above stale local
+      processing/failed state.
+    - Auth owner changes clear the existing persisted session cache and
+      in-memory maps.
+  - P1:
+    - Add a new owner-bound recent journal snapshot cache key, separate from
+      `SESSION_STORAGE_KEY`.
+    - Snapshot only the first summary page: normalized remote moments,
+      `hasMore`, `nextCursor`, fetched-at timestamp, schema version, endpoint
+      mode, and a non-sensitive owner/cache key.
+    - Load snapshot only after Auth owner is known and only if schema,
+      endpoint, owner, and TTL match.
+    - Apply snapshot through the same `syncRemoteMoments` and
+      `applyVideoArchiveFirstPage` paths so status merge, remote id mapping,
+      video archive ids, and completed priority stay consistent.
+    - Immediately start the normal remote `view=summary` refresh in the
+      background. Replace the snapshot only after a successful remote page.
+    - Keep `view=thumbnails` hydration unchanged; do not depend on cached
+      signed URLs as durable truth.
+    - Add non-secret QA Debug Panel fields: `journalCacheSource`,
+      `journalCacheAgeMs`, `journalCacheCount`, `journalCacheStale`, and
+      `journalCacheRefreshStatus`.
+  - Delete/recovery safety:
+    - On remote/local delete, remove the session from the snapshot or clear the
+      snapshot before returning to list UI.
+    - If needed, keep a small local tombstone set by remote moment id/session
+      id until the next successful remote refresh so deleted rows cannot
+      briefly reappear from cache.
+    - Clear or ignore snapshots when Auth owner changes, recovery changes the
+      owner boundary, endpoint mode changes, or schema version changes.
+  - P2:
+    - Multi-page cache.
+    - Richer stale-while-revalidate UX.
+    - Offline mode copy/error affordance.
+    - Storage-size pruning and snapshot compaction.
+    - Optional thumbnail metadata/cache policy after signed URL TTL behavior is
+      explicitly bounded.
+  - Do not do:
+    - full bidirectional sync;
+    - offline mutation queue;
+    - DB schema changes;
+    - new server endpoints;
+    - changing `/api/moments?view=summary` response behavior;
+    - changing thumbnail hydration critical path;
+    - allowing cached local state to downgrade completed remote Moments;
+    - persisting raw tokens, emails, full user ids, signed URLs as source of
+      truth, or raw storage paths.
+  - Recommended implementation files if approved:
+    - `src/features/sessions/journalSnapshotCache.ts` (new helper);
+    - `src/features/sessions/useBootSync.ts`;
+    - `src/features/sessions/HomeScreen.tsx`;
+    - `src/features/sessions/useDeleteMoment.ts` or delete callback wiring in
+      `HomeScreen.tsx`;
+    - `src/features/sessions/sessionSyncPatches.ts` only if tombstone filtering
+      needs a shared helper;
+    - docs in `CURRENT_STAGE`, `HANDOFF`, `PROJECT_MEMORY`,
+      `TECH_DEBT_AND_REFACTOR_TODO`.
+  - Validation if approved:
+    - `npm run typecheck`;
+    - `git diff --check`;
+    - cold app boot with network available: snapshot paints first, remote
+      summary refresh replaces/merges without status downgrade;
+    - cold app boot with network unavailable/slow: cached recent list appears
+      with stale/source diagnostic, no false upload failure or no-evidence
+      state;
+    - delete then restart before remote refresh: deleted Moment does not
+      reappear from snapshot;
+    - completed Moment remains completed after snapshot load and refresh;
+    - Recovery/account switch clears or ignores prior owner cache;
+    - thumbnail hydration still fills via `view=thumbnails` after first paint;
+    - QA Debug Panel shows source/count/age without sensitive values.
+  - Rollback criteria:
+    - any deleted Moment reappears from cache;
+    - completed Moment downgrades to processing/failed/upload_failed;
+    - recovery/account switch shows another account's Moments;
+    - boot/list returns to a long blocking state;
+    - thumbnail hydration or Detail full hydration regresses;
+    - QA Debug Panel source/count diagnostics are misleading.
+  - Recommendation: feasible as a small P1, but not mandatory before AI
+    Calibration. Implement before AI Calibration only if Founder wants the
+    extra offline/perceived-boot foundation pass; otherwise proceed to AI
+    Calibration and keep this as the next foundation backlog item.
 - Local/native Development Build attempt result:
   - `npx expo run:ios --device` was attempted once to avoid EAS cloud usage.
   - It generated a temporary `ios/` directory and completed prebuild, but did

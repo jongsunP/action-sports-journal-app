@@ -22,6 +22,31 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Full Local-first Journal Cache P1 design, no implementation, 2026-07-06:
+  - This pass only investigated and documented. No app code, DB schema,
+    Render/Supabase/Auth setting, EAS build, local native build, paid AI/API
+    call, or AI Calibration work was performed.
+  - Current flow: AsyncStorage restores existing partial session/maps from
+    `SESSION_STORAGE_KEY`, then `useBootSync` fetches remote
+    `/api/moments?view=summary`, merges through `syncRemoteMoments`, reuses the
+    boot page as Video first page, and later hydrates thumbnails via
+    `view=thumbnails`.
+  - Existing persistence is useful but not a clean owner-bound recent journal
+    snapshot cache.
+  - Recommended P1 is a separate owner-bound recent journal snapshot cache:
+    load a valid cached summary page after Auth owner is known, apply it through
+    the existing remote merge/archive paths, then always run background
+    `view=summary` refresh and replace the snapshot on success.
+  - Keep guardrails: ownerKey boundary, TTL/schema/endpoint mode checks, delete
+    tombstone or snapshot clear on delete, completed-state priority preserved,
+    thumbnail hydration unchanged, no durable long-lived signed URL reliance.
+  - QA Debug Panel can show non-secret fields such as cache source, cache age,
+    snapshot count, and refresh status.
+  - Recommendation: feasible as a small pre-AI P1 if Founder wants the extra
+    foundation pass, but not a hard AI Calibration blocker. If implemented,
+    stop at recent first-page snapshot + background refresh; do not build a full
+    offline sync system.
+
 - Local/native Development Build attempt, no EAS build run, 2026-07-06:
   - Local/native route was attempted once with
     `npx expo run:ios --device` to check whether ASJ can install a Development

@@ -19,6 +19,66 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Full Local-first Journal Cache P1 design, no implementation, 2026-07-06:
+
+- This was a design/read-only code investigation. No app code, DB schema,
+  Render/Supabase/Auth setting, EAS build, local native build, paid AI/API call,
+  or AI Calibration work was performed.
+- Current data flow confirmed:
+  - Boot loads existing `SESSION_STORAGE_KEY` (`action-sports-journal:sessions:v1`)
+    from AsyncStorage, restores local sessions/maps, then fetches remote Moments
+    with `/api/moments?view=summary`.
+  - `useBootSync` calls `listMomentsPage({ view: 'summary' })`, then
+    `syncRemoteMoments(remoteMomentPage.moments)`.
+  - `HomeScreen` reuses that boot page for Video first page through
+    `applyVideoArchiveFirstPage`, avoiding a duplicate first-page fetch.
+  - Video tab first page and refreshes also use `view=summary`; post-boot list
+    thumbnail fill uses `view=thumbnails` after interactions.
+  - `sessionSyncPatches` / `sessionMerge` already protect completed state:
+    `mergeMomentStatus` makes completed highest priority over local stale
+    processing/failed state.
+  - Auth owner switch already clears the existing session cache and local maps
+    through `clearPersistedSessionState()` plus in-memory resets.
+- Existing local persistence is a partial session/map cache, not a clean
+  owner-bound remote journal snapshot cache. It stores sessions, videos,
+  evidence, thumbnails, remote id map, and upload reconciliation candidates.
+- Recommended P1:
+  - Add a separate owner-bound recent journal snapshot cache, not a broad sync
+    rewrite and not a replacement for `SESSION_STORAGE_KEY`.
+  - Cache only the latest remote summary page plus page metadata/diagnostics
+    needed to render Home/Video immediately.
+  - On boot, after Auth owner is known, load the snapshot if `ownerKey`,
+    endpoint mode, schema version, and TTL match; apply it with the same
+    `syncRemoteMoments` and `applyVideoArchiveFirstPage` paths; mark QA/debug
+    source as `local_snapshot`.
+  - Always start the normal remote `view=summary` refresh in the background.
+    When it completes, merge through the existing remote merge path and replace
+    the snapshot.
+  - Keep thumbnail hydration unchanged: do not store signed URLs as durable
+    truth beyond a short TTL; let `view=thumbnails` refresh them after first
+    paint.
+- P1 must include deletion safety: either clear/remove the snapshot on local
+  delete, or maintain a small local deleted/tombstone set so a stale cached row
+  cannot reappear before remote refresh.
+- P1 should expose non-secret QA Debug Panel fields such as cache source,
+  cache age, snapshot count, and stale/refresh status. Do not expose owner ids,
+  tokens, email, signed URLs, or raw storage paths.
+- P2 only after P1 proves stable: multiple pages, richer stale-while-revalidate
+  metadata, offline empty/error UX, storage-size pruning, and optional cached
+  thumbnail metadata policy.
+- Do not implement before approval:
+  - full bidirectional sync;
+  - offline edit/delete queue;
+  - DB schema changes;
+  - new server endpoints;
+  - long-lived signed URL storage;
+  - changing summary-first `/api/moments?view=summary` behavior;
+  - changing completed-state merge priority.
+- Current recommendation: implement only if the Founder wants one more
+  pre-AI foundation pass. It is feasible as a small P1, but it is not mandatory
+  for AI Calibration if reference videos are ready and the current network path
+  is acceptable.
+
 Local/native Development Build attempt, no EAS build run, 2026-07-06:
 
 - Goal was to check whether ASJ can install a Development Build on the

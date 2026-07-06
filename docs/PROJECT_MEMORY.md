@@ -81,6 +81,18 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Full Local-first Journal Cache P1 is designed but not implemented. Current
+  app already restores partial sessions/maps from AsyncStorage, then fetches
+  `/api/moments?view=summary`, merges via existing remote reconciliation, reuses
+  the boot page for Video first page, and hydrates thumbnails later through
+  `view=thumbnails`. Recommended P1 is not a sync rewrite: add a separate
+  owner-bound recent journal snapshot cache for the first remote summary page,
+  apply it only after Auth owner/endpoint/schema/TTL checks, then always run
+  background remote summary refresh and replace the snapshot on success. It
+  must preserve completed-state priority, delete safety, owner/recovery cache
+  boundaries, summary-first boot, and thumbnail hydration. This is feasible but
+  not a hard AI Calibration blocker; implement only with Founder approval if
+  one more foundation pass is desired before AI Calibration.
 - Local/native Development Build was attempted once without EAS cloud usage and
   did not reach device install. `npx expo run:ios --device` generated a
   temporary ignored `ios/` prebuild output, but local prerequisites blocked the
