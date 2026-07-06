@@ -81,6 +81,24 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Build 106 QA follow-up found and fixed a small boot flicker without a new
+  EAS build. Founder QA says app icon appears fixed and Upload -> Push ->
+  Detail / completed-state stability / skeleton-fade-in / Detail polish have no
+  major issue. The flicker was a one-render transition after Auth enabled remote
+  sync: current props indicated remote sync was configured while
+  `remoteMomentSyncStatus` still lagged as `not_configured`, allowing Home to
+  appear before `waiting_for_storage` / `loading` returned the app to boot.
+  `isLoadingInitialMoments` now treats configured + `not_configured` as loading.
+  Summary-first boot, `view=summary`, `view=thumbnails`, Upload/Auth/Recovery/
+  Push flows, Render/Supabase settings, DB, and AI Calibration were not changed.
+- Push notification icon mismatch remains classified as a non-AI-blocking
+  platform/cache visual follow-up. ASJ has only `./assets/icon.png` as the app
+  icon in config and no separate iOS notification icon slot. Expo notification
+  `icon` / `color` plugin options are Android notification settings, and APNs
+  payloads do not provide an iOS app-icon override. If the old Push icon
+  persists after reinstall/device cache refresh, treat it as platform rendering
+  or installed-app cache behavior unless future evidence points to an asset
+  generation issue.
 - Build 106 is complete and waiting for Founder standalone iPhone QA. It is a
   pre-AI final polish QA build, not an AI Calibration build. iOS `buildNumber`
   is `106`; build prep commit is `1290577`; EAS Build ID is

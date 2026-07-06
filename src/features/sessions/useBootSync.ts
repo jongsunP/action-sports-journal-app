@@ -527,6 +527,8 @@ export function useBootSync({
   return {
     isLoadingInitialMoments:
       !isStorageLoaded ||
+      (isRemoteMomentSyncConfigured &&
+        remoteMomentSyncStatus === 'not_configured') ||
       (isRemoteMomentSyncConfigured && remoteMomentSyncStatus === 'loading') ||
       remoteMomentSyncStatus === 'waiting_for_storage',
     isInitialRemoteMomentSyncPending:

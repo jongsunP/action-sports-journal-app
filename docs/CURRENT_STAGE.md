@@ -19,6 +19,50 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 106 QA follow-up, no EAS build run, 2026-07-06:
+
+- Founder Build 106 QA result:
+  - App icon appears fixed.
+  - Upload -> Push -> Detail, completed-state stability, skeleton/fade-in, and
+    Detail polish have no major issue.
+  - New residual issue: occasional boot flicker can look like boot screen ->
+    Home briefly -> boot screen -> Home.
+  - Push notification icon still appears like an early app icon, even though
+    the home-screen app icon changed.
+- Boot flicker root cause found and fixed without changing startup data paths:
+  when Auth finished and `remoteMomentSyncEnabled` became true, `useBootSync`
+  could have one render where current props meant remote sync was configured
+  but internal `remoteMomentSyncStatus` still lagged as `not_configured`. In
+  that render, Home could appear briefly before the hook effect moved status to
+  `waiting_for_storage` / `loading`, causing the boot screen to reappear.
+  `isLoadingInitialMoments` now treats this configured-but-not-yet-reset
+  `not_configured` transition as loading.
+- Startup guardrails remain intact: boot still uses
+  `/api/moments?view=summary`, post-boot thumbnail hydration still uses
+  `/api/moments?view=thumbnails`, and evidence/thumbnail signed URL generation
+  was not added back to the critical summary path.
+- Simulator / Expo Go no-build smoke passed after the fix: latest JS bundled,
+  Singapore endpoint was used, `[moment_sync] boot_remote_moments_started` and
+  `boot_remote_moments_completed` logged successfully, and Home rendered
+  normally.
+- Push icon investigation:
+  - ASJ app config has only the app icon `./assets/icon.png`; there is no
+    separate iOS notification icon slot in current `app.json`.
+  - `expo-notifications` config plugin `icon` / `color` options are Android
+    notification settings in Expo docs. iOS notification appearance uses the
+    installed app identity/icon rather than a per-notification icon set through
+    Expo config.
+  - Apple APNs payload documentation does not provide an app-icon override
+    field for iOS notification banners.
+  - Current conclusion: this is likely iOS notification rendering/cache or
+    installed-app icon cache behavior, not an ASJ app.json code path that can be
+    fixed by adding an iOS notification icon asset. If it persists after
+    reinstall/device cache refresh, treat as a non-AI-blocking platform/backlog
+    visual issue.
+- No EAS build, buildNumber change, Render/Supabase setting change, DB
+  write/migration, Auth/Recovery/Upload/Push flow change, paid AI/API call, or
+  AI Calibration work was performed.
+
 Build 106 pre-AI final polish QA build complete / Founder QA pending, 2026-07-03:
 
 - iOS `buildNumber` is `106`.

@@ -130,6 +130,12 @@ Non-blocking follow-up backlog:
 - Monitor visible list thumbnail hydration after the next build or Expo Go QA;
   it should fill recovered remote list thumbnails after first paint without
   regressing boot timing.
+- Push notification icon visual mismatch after Build 106: app icon appears
+  fixed, but iOS notification banner icon may still look like an older app
+  icon. Current investigation suggests this is not controlled by an iOS-specific
+  Expo notification icon slot or APNs payload icon field. Recheck after app
+  reinstall/device cache refresh; keep as non-AI-blocking platform/cache visual
+  follow-up unless future evidence points to an asset generation issue.
 
 ## Pre-AI Foundation Regression Smoke
 

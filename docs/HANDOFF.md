@@ -22,6 +22,31 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 106 QA follow-up, no EAS build run, 2026-07-06:
+  - Founder QA says app icon appears fixed, and Upload -> Push -> Detail /
+    completed-state stability / skeleton-fade-in / Detail polish have no major
+    issue.
+  - Residual boot flicker root cause was found: after Auth enabled remote sync,
+    `useBootSync` had a possible one-render transition where props indicated
+    remote sync was configured but internal `remoteMomentSyncStatus` still read
+    `not_configured`, so Home could briefly render before `waiting_for_storage`
+    / `loading` returned the app to the boot screen.
+  - Fix: `isLoadingInitialMoments` now treats configured + `not_configured` as
+    loading during that transition. This does not change summary-first boot,
+    `view=summary`, `view=thumbnails`, Upload/Auth/Recovery/Push flow, or
+    backend behavior.
+  - Simulator / Expo Go smoke passed: latest JS bundled, Singapore endpoint was
+    used, boot remote moments started/completed logs appeared, and Home rendered
+    normally.
+  - Push notification icon investigation conclusion: current ASJ config has no
+    separate iOS notification icon slot; Expo notification `icon`/`color`
+    plugin options are Android notification settings; APNs payload does not
+    expose an iOS app icon override. The remaining Push icon mismatch is likely
+    iOS notification rendering/cache or installed-app cache behavior. Reinstall
+    / device cache refresh can be checked, but this is not an AI Calibration
+    blocker unless Founder sees broader brand risk.
+  - AI Calibration has not started. No EAS build was run.
+
 - Build 106 pre-AI final polish QA build complete / Founder QA pending, 2026-07-03:
   - iOS `buildNumber` is `106`.
   - Build 106 is a standalone iPhone QA build for post-Build-105 final polish
