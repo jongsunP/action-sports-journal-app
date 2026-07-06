@@ -22,6 +22,28 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 106 follow-up no-build UX polish, no EAS build run, 2026-07-06:
+  - Founder QA update: Upload -> Push -> Detail completed state remains normal.
+    QA Debug Panel repeated checks can stop for this phase; keep only
+    Store-before-release hide/gate policy later. Push notification icon remains
+    a non-AI-blocking visual/platform backlog item.
+  - List thumbnail placeholder flash was addressed by always rendering the film
+    skeleton placeholder as the base media layer. Hydrated thumbnail images now
+    fade in above that layer, so visible list/recent rows should not show a
+    white/empty media frame before skeleton or image.
+  - Detail loading-vs-empty state was separated: while remote
+    detail/evidence/thumbnail hydration is still running and no evidence is
+    visible, Detail shows a skeleton state card instead of "아직 분석 근거가
+    없습니다". The empty/no-evidence state now waits until loading is complete.
+  - Detail delete moved from the body action panel to a compact header-right
+    trash action. Retry remains in the body action panel when applicable.
+  - Startup guardrails remain intact: `view=summary` remains the boot/list
+    critical path, and `view=thumbnails` remains the post-boot hydration path.
+  - Simulator / Expo Go smoke passed: latest JS bundled, Singapore endpoint was
+    used, boot remote moments started/completed logs appeared, and visible Home
+    recent records showed film skeleton placeholders without a blank media box.
+  - AI Calibration has not started. No EAS build was run.
+
 - Build 106 QA follow-up, no EAS build run, 2026-07-06:
   - Founder QA says app icon appears fixed, and Upload -> Push -> Detail /
     completed-state stability / skeleton-fade-in / Detail polish have no major

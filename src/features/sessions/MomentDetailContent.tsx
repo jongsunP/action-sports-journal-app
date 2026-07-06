@@ -107,6 +107,15 @@ function DetailMediaPlaceholder() {
   );
 }
 
+function DetailDataLoadingPlaceholder() {
+  return (
+    <View style={styles.detailStateCard}>
+      <View style={styles.detailLoadingLineWide} />
+      <View style={styles.detailLoadingLineNarrow} />
+    </View>
+  );
+}
+
 function LocalSessionVideoPlayer({
   momentStatus,
   thumbnailUri,
@@ -255,7 +264,7 @@ export function MomentDetailContent({
     );
   };
   const shouldShowRetryAction = Boolean(onRetry && !isCompleted);
-  const hasDetailActions = Boolean(shouldShowRetryAction || onDelete);
+  const hasDetailActions = shouldShowRetryAction;
   const canPressRetry = Boolean(
     shouldShowRetryAction && retryEligibility.canRetry && !isDeleting,
   );
@@ -294,7 +303,28 @@ export function MomentDetailContent({
             </Text>
           </View>
         </View>
-        <View style={styles.detailHeaderActions} />
+        <View style={styles.detailHeaderActions}>
+          {onDelete ? (
+            <Pressable
+              accessibilityLabel="기록 삭제"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canPressDelete }}
+              disabled={!canPressDelete}
+              onPress={canPressDelete ? onDelete : undefined}
+              style={({ pressed }) => [
+                styles.detailHeaderDeleteButton,
+                !canPressDelete ? styles.detailHeaderDeleteButtonDisabled : undefined,
+                pressed ? styles.buttonPressed : undefined,
+              ]}
+            >
+              <Ionicons
+                color={canPressDelete ? '#fb7185' : '#94a3b8'}
+                name="trash-outline"
+                size={18}
+              />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
       <ScrollView
         contentContainerStyle={styles.detailModalBody}
@@ -360,23 +390,6 @@ export function MomentDetailContent({
                     </Text>
                   </Pressable>
                 ) : null}
-                {onDelete ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: !canPressDelete }}
-                    disabled={!canPressDelete}
-                    onPress={canPressDelete ? onDelete : undefined}
-                    style={({ pressed }) => [
-                      styles.detailDeleteButton,
-                      !canPressDelete ? styles.detailDeleteButtonDisabled : undefined,
-                      pressed ? styles.buttonPressed : undefined,
-                    ]}
-                  >
-                    <Text style={styles.detailDeleteText}>
-                      {isDeleting ? '삭제 중...' : '삭제'}
-                    </Text>
-                  </Pressable>
-                ) : null}
               </View>
               {shouldShowRetryAction ? (
                 <Text style={styles.detailHint}>{retryEligibility.reason}</Text>
@@ -418,7 +431,9 @@ export function MomentDetailContent({
                 </Text>
               </View>
             ) : null}
-            {visibleEvidence && riderFacingAnalysis ? (
+            {isDetailDataLoading && !visibleEvidence ? (
+              <DetailDataLoadingPlaceholder />
+            ) : visibleEvidence && riderFacingAnalysis ? (
               <>
                 <SharePreviewCard
                   analysis={riderFacingAnalysis}
@@ -456,7 +471,7 @@ export function MomentDetailContent({
                   <GeminiEvidenceView evidence={visibleEvidence} />
                 ) : null}
               </>
-            ) : !shouldShowStatusMessage && !isLoading && video ? (
+            ) : !shouldShowStatusMessage && !isLoading && !isDetailDataLoading && video ? (
               <View style={styles.detailStateCard}>
                 <Text style={styles.detailStateTitle}>아직 분석 근거가 없습니다</Text>
                 <Text style={styles.detailStateText}>

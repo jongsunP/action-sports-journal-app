@@ -81,6 +81,18 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Build 106 follow-up no-build UX polish addressed the remaining pre-AI
+  polish items without a new EAS build. List/recent media previews now keep the
+  film skeleton as the base layer so empty media boxes should not flash before
+  thumbnail hydration; thumbnails fade in above that skeleton. Detail now
+  separates remote detail/evidence/thumbnail loading from truly-empty
+  no-evidence state, showing a skeleton state card during hydration and only
+  showing the no-evidence copy after loading completes. Detail delete moved to
+  a compact header-right trash action, while retry remains in the body action
+  panel. Summary-first boot and `view=thumbnails` hydration paths were not
+  changed. Build 106 QA also confirmed Upload -> Push -> Detail completed state
+  remains normal; QA Debug Panel repeated checks can stop for this phase, with
+  Store-before-release hide/gate policy left as follow-up.
 - Build 106 QA follow-up found and fixed a small boot flicker without a new
   EAS build. Founder QA says app icon appears fixed and Upload -> Push ->
   Detail / completed-state stability / skeleton-fade-in / Detail polish have no

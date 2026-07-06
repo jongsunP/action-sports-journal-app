@@ -2952,7 +2952,6 @@ function createHomeThemeStyles(colors: AppThemeColors, mode: 'dark' | 'light') {
       borderColor: borderSoft,
     },
     recentPreview: { backgroundColor: colors.surfaceElevated },
-    recentThumbFallbackText: { color: colors.textSecondary },
     recentDate: { color: colors.textMuted },
     momentStatusLabel: { color: colors.textPrimary },
     recentTitle: { color: colors.textPrimary },
@@ -4584,6 +4583,19 @@ const baseStyles = StyleSheet.create({
     flexShrink: 0,
     gap: 6,
   },
+  detailHeaderDeleteButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(251, 113, 133, 0.12)',
+    borderColor: 'rgba(251, 113, 133, 0.24)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  detailHeaderDeleteButtonDisabled: {
+    opacity: 0.52,
+  },
   detailVideoFrame: {
     aspectRatio: 1,
     backgroundColor: '#0f172a',
@@ -4665,6 +4677,19 @@ const baseStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 18,
+  },
+  detailLoadingLineWide: {
+    backgroundColor: 'rgba(203, 213, 225, 0.16)',
+    borderRadius: 999,
+    height: 9,
+    width: '64%',
+  },
+  detailLoadingLineNarrow: {
+    backgroundColor: 'rgba(203, 213, 225, 0.1)',
+    borderRadius: 999,
+    height: 9,
+    marginTop: 10,
+    width: '42%',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -4956,21 +4981,6 @@ const baseStyles = StyleSheet.create({
   },
   detailRetryTextDisabled: {
     color: '#cbd5e1',
-  },
-  detailDeleteButton: {
-    alignItems: 'center',
-    backgroundColor: '#fff1f2',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  detailDeleteButtonDisabled: {
-    opacity: 0.55,
-  },
-  detailDeleteText: {
-    color: '#be123c',
-    fontSize: 13,
-    fontWeight: '900',
   },
   detailHint: {
     color: '#94a3b8',

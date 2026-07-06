@@ -219,15 +219,22 @@ function SessionMediaPreview({
 
   if (thumbnailUri && !didImageFail) {
     return (
-      <Animated.Image
-        onError={() => setDidImageFail(true)}
-        resizeMode="cover"
-        source={{ uri: thumbnailUri }}
-        style={[styles.recentThumbImage, { opacity: fadeValue }]}
-      />
+      <>
+        <MediaSkeletonPlaceholder styles={styles} />
+        <Animated.Image
+          onError={() => setDidImageFail(true)}
+          resizeMode="cover"
+          source={{ uri: thumbnailUri }}
+          style={[styles.recentThumbImage, { opacity: fadeValue }]}
+        />
+      </>
     );
   }
 
+  return <MediaSkeletonPlaceholder styles={styles} />;
+}
+
+function MediaSkeletonPlaceholder({ styles }: { styles: HomeScreenStyles }) {
   return (
     <View style={styles.recentThumbFallback}>
       <View style={styles.recentThumbFallbackGlow} />

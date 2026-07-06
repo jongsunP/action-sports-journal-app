@@ -19,6 +19,40 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Build 106 follow-up no-build UX polish, no EAS build run, 2026-07-06:
+
+- Founder QA update:
+  - Upload -> Push -> Detail completed state remains normal.
+  - QA Debug Panel no longer needs repeated checking for this phase; keep only
+    the Store-before-release hide/gate policy as follow-up.
+  - Push notification icon still does not visually update, but this remains a
+    non-AI-blocking visual/platform backlog item.
+  - Remaining UX issues were list thumbnail placeholder flash, Detail
+    loading-vs-empty state confusion, and Detail delete action placement.
+- Fixes made without changing data/backend paths:
+  - List / recent thumbnail preview now always renders the film skeleton
+    placeholder as the base media layer, even when a thumbnail URI is available.
+    The hydrated thumbnail fades in above it, so the user should not see a
+    white/empty media frame before skeleton or image.
+  - Detail fetch/hydration now separates loading from truly-empty/no-evidence:
+    while remote detail/evidence/thumbnail data is loading and no evidence is
+    visible yet, Detail shows a skeleton state card instead of the "아직 분석
+    근거가 없습니다" empty state. The empty state is shown only after loading
+    is done.
+  - Detail delete moved from the body action panel to a compact header-right
+    trash icon action. Retry stays in the body action panel when applicable.
+- Startup guardrails remain intact: boot still uses
+  `/api/moments?view=summary`; post-boot thumbnail hydration still uses
+  `/api/moments?view=thumbnails`; evidence/thumbnail signed URL generation was
+  not added back to the critical summary path.
+- Simulator / Expo Go no-build smoke passed: latest JS bundled, Singapore
+  endpoint was used, boot remote moments started/completed logs appeared, and
+  Home rendered with film skeleton placeholders and no blank media box in the
+  visible recent records.
+- No EAS build, buildNumber change, Render/Supabase setting change, DB
+  write/migration, Upload/Auth/Recovery/Push/backend flow change, paid AI/API
+  call, or AI Calibration work was performed.
+
 Build 106 QA follow-up, no EAS build run, 2026-07-06:
 
 - Founder Build 106 QA result:
