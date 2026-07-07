@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Detail screen low-risk decomposition 1차, 2026-07-07:
+  - `src/features/sessions/MomentDetailContent.tsx` now separates the large
+    Detail render body into focused presentation sections for header/delete
+    action, media/hero, QA diagnostics, retry action panel, trick review CTA,
+    memo, status, analysis/evidence/loading/empty states, and deleting overlay.
+  - This is structure-only. Detail data fetching/full hydration, completed
+    status priority, retry CTA hiding on completed Moments, loading-vs-empty
+    gating, completed-but-no-evidence copy, Home/List thumbnail hydration,
+    local-first cache, Upload/Push/Recovery/Auth flows, and user-facing copy are
+    intended to remain unchanged.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth setting change, paid AI/API call, or external setting
+    change was performed.
+
 - HomeScreen low-risk decomposition 4차, 2026-07-07:
   - Upload reconciliation / upload-failure debug log payload helpers now live
     in `src/features/sessions/uploadReconciliation.ts`.

@@ -136,6 +136,10 @@ Pre-AI foundation follow-up:
     reconciliation/debug-log helper extraction. Continue only in small,
     behavior-preserving steps; do not start a large HomeScreen split before AI
     Calibration unless a specific bug requires it.
+  - Detail screen low-risk decomposition has started with a structure-only
+    `MomentDetailContent.tsx` presentation-section split. Continue only in
+    small, behavior-preserving passes; do not move Detail data fetching/full
+    hydration or status semantics unless a specific bug requires it.
   - Do not start large `dev-server/index.ts` splits before AI Calibration unless
     a specific bug requires it.
   - QA Debug Panel hide/gate remains store/TestFlight cleanup, not this pre-AI

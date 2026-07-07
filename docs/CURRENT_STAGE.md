@@ -19,6 +19,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Detail screen low-risk decomposition 1차, 2026-07-07:
+
+- Detail screen presentation sections were separated inside
+  `src/features/sessions/MomentDetailContent.tsx`: header/delete action,
+  media/hero, QA diagnostics, retry action panel, trick review CTA, memo,
+  status, analysis/evidence/loading/empty states, and deleting overlay now have
+  focused presentation components.
+- This is a structure-only refactor. Detail data fetching, full hydration,
+  completed status priority, retry eligibility, loading-vs-empty gating,
+  completed-but-no-evidence copy, Home/List thumbnail hydration, local cache,
+  Upload/Push/Recovery/Auth flows, and user-facing copy are intended to remain
+  unchanged.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, paid AI/API call, or AI Calibration work was performed.
+
 HomeScreen low-risk decomposition 4차, 2026-07-07:
 
 - Upload reconciliation / upload-failure debug log payload helpers were

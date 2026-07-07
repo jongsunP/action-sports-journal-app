@@ -81,6 +81,17 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Detail screen low-risk decomposition 1차 is complete as a structure-only
+  pre-AI cleanup. `src/features/sessions/MomentDetailContent.tsx` now separates
+  the large Detail render body into focused presentation sections for
+  header/delete action, media/hero, QA diagnostics, retry action panel, trick
+  review CTA, memo, status, analysis/evidence/loading/empty states, and deleting
+  overlay. Detail data fetching/full hydration, completed-state priority,
+  completed retry CTA hiding, loading-vs-empty gating,
+  completed-but-no-evidence copy, Home/List thumbnail hydration, local cache,
+  Upload/Push/Recovery/Auth flows, and user-facing copy are unchanged. This is
+  not AI Calibration and did not involve EAS/local native build, DB/storage,
+  Render/Supabase/Auth settings, or paid AI/API calls.
 - HomeScreen low-risk decomposition 4차 is complete as a structure-only pre-AI
   cleanup. Upload reconciliation / upload-failure debug log payload helpers now
   live in `src/features/sessions/uploadReconciliation.ts`, while HomeScreen
