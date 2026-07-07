@@ -19,6 +19,20 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+HomeScreen low-risk decomposition 2차, 2026-07-07:
+
+- Video Archive / recent records presentation assembly was separated into
+  `src/features/sessions/VideoArchiveSection.tsx`.
+- This is a structure-only refactor. Video tab values, order, skeleton,
+  thumbnail placeholder, status badge, empty state, and item press behavior are
+  unchanged.
+- HomeScreen still owns archive order calculation, thumbnail hydration,
+  local-first cache, remote reconciliation, item handlers, and upload/recovery/
+  cache state.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, QA Debug Panel hide/gate, thumbnail hydration logic change, or
+  AI Calibration work was performed.
+
 HomeScreen low-risk decomposition 1차, 2026-07-07:
 
 - QA Debug Panel presentation was separated from `HomeScreen.tsx` into

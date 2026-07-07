@@ -22,6 +22,18 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- HomeScreen low-risk decomposition 2차, 2026-07-07:
+  - Video Archive / recent records UI assembly is now in
+    `src/features/sessions/VideoArchiveSection.tsx`.
+  - HomeScreen still owns archive order, thumbnail hydration, local-first cache,
+    remote reconciliation, item press handlers, and upload/recovery/cache state.
+  - This is presentation-only: Video tab values/order, skeleton, thumbnail
+    placeholder, status badge, empty state, item press behavior, and copy are
+    intended to remain unchanged.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth setting change, QA Debug Panel hide/gate, thumbnail
+    hydration change, or Upload/Recovery/Cache state change was performed.
+
 - HomeScreen low-risk decomposition 1차, 2026-07-07:
   - QA Debug Panel UI/rendering is now a separate presentation component at
     `src/features/sessions/QADebugPanel.tsx`.

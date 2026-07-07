@@ -23,7 +23,7 @@ import { UploadContent } from './UploadContent';
 import type { SessionVideoAsset } from '../../services/ai';
 import type { GeminiEvidenceResult, MomentStatus, Session } from '../../types';
 
-type HomeScreenStyles = Record<string, object>;
+export type HomeScreenStyles = Record<string, object>;
 type IconColorStyle = { color?: string };
 
 export type AppTabId = 'home' | 'video' | 'flow';
@@ -38,7 +38,7 @@ export const APP_TABS: Array<{
   { id: 'flow', label: '성장', hint: '진행' },
 ];
 
-type SessionSummary = {
+export type SessionSummary = {
   card: {
     momentTitle: string;
     reason: string;

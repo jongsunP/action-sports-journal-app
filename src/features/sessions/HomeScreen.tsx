@@ -48,10 +48,9 @@ import {
   FlowPlaceholderTab,
   JournalSnapshot,
   PrimaryInsightCard,
-  RecentSessionsRail,
   type VideoArchiveLoadState,
-  VideoArchiveList,
 } from './sessionComponents';
+import { RecentRecordsSection, VideoArchiveSection } from './VideoArchiveSection';
 import {
   formatShortSessionDate,
   formatVideoMeta,
@@ -2768,55 +2767,28 @@ export function HomeScreen() {
         summary={primaryInsightSummary}
       />
 
-      <View style={styles.section}>
-        <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionLabel}>최근 기록</Text>
-          <Text style={styles.sectionHint}>최신순</Text>
-        </View>
-        <RecentSessionsRail
-          formatShortSessionDate={formatShortSessionDate}
-          isLoading={isSessionListLoading}
-          onOpenSession={openEvidenceSheet}
-          sessions={recentSessionSummaries}
-          styles={styles}
-        />
-      </View>
-    </>
-  );
-
-  const renderVideoArchiveHeader = () => (
-    <>
-      <View style={styles.tabPageHeader}>
-        <Text style={styles.title}>영상</Text>
-        <Text style={styles.headerMeta}>
-          {visibleVideoArchiveSessionSummaries.length}개 표시됨
-          {shouldUseVideoArchiveSessionFallback
-            ? ' · 홈 기록 기준'
-            : ' · 최근 기록 기준'}
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionLabel}>최근 영상</Text>
-          <Text style={styles.sectionHint}>최신순</Text>
-        </View>
-      </View>
+      <RecentRecordsSection
+        formatShortSessionDate={formatShortSessionDate}
+        isLoading={isSessionListLoading}
+        onOpenSession={openEvidenceSheet}
+        sessions={recentSessionSummaries}
+        styles={styles}
+      />
     </>
   );
 
   const renderVideoTab = () => (
-    <VideoArchiveList
+    <VideoArchiveSection
       formatShortSessionDate={formatShortSessionDate}
       getVideoArchiveDescription={getVideoArchiveDescription}
       hasMore={hasMoreVideoArchiveMoments}
-      header={renderVideoArchiveHeader()}
       isLoadingMore={isLoadingMoreVideoArchiveMoments}
       loadState={videoArchiveUiLoadState}
       onEndReached={handleLoadMoreVideoArchiveMoments}
       onOpenSession={openEvidenceSheet}
       onRetry={handleRetryVideoArchiveFirstPage}
       sessions={visibleVideoArchiveSessionSummaries}
+      shouldUseHomeFallback={shouldUseVideoArchiveSessionFallback}
       styles={styles}
     />
   );

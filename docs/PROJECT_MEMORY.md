@@ -81,6 +81,15 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- HomeScreen low-risk decomposition 2차 is complete as a structure-only
+  pre-AI cleanup. Video Archive / recent records UI assembly now lives in
+  `src/features/sessions/VideoArchiveSection.tsx`, while HomeScreen still owns
+  archive order, thumbnail hydration, local-first cache, remote reconciliation,
+  item handlers, and upload/recovery/cache state. Video values/order, skeleton,
+  thumbnail placeholder, status badge, empty state, item press behavior, and copy
+  are unchanged. This is not AI Calibration and did not touch EAS/local native
+  build, DB/storage, Render/Supabase/Auth settings, QA Debug Panel hide/gate, or
+  thumbnail hydration logic.
 - HomeScreen low-risk decomposition has started as structure-only pre-AI
   cleanup. The first pass separated the QA Debug Panel presentation component
   into `src/features/sessions/QADebugPanel.tsx` while keeping HomeScreen's
