@@ -19,6 +19,30 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local-first Cache Home/List sync follow-up, no build run, 2026-07-07:
+
+- Founder Expo Go QA after `01b76d6` still showed Home with 28 records while
+  Video Archive rendered `0` / empty. Detail full hydration continued to fetch
+  the representative image, so the issue stayed in Home/Archive first-page
+  state and list thumbnail hydration.
+- Fix: if Home has session summaries but the Archive order/mapping is empty,
+  Home now reconciles the Archive order from the current Home summary ids and
+  marks the archive load state ready. This prevents a local snapshot or remote
+  summary timing mismatch from leaving Video Archive empty while Home has data.
+- Thumbnail hydration remains post-boot, but it now follows up to three
+  `view=thumbnails` pages instead of only the first page, so Home/Archive rows
+  beyond the first 20 records can receive thumbnail signed URLs after first
+  paint. Persisted journal snapshots still strip thumbnails.
+- Preserved behavior:
+  - summary-first `/api/moments?view=summary` first paint unchanged;
+  - Detail full hydration unchanged;
+  - no EAS build, local native build, AI Calibration, DB/Render/Supabase/Auth
+    setting change, Upload/Push/Recovery state-machine change, or broad sync
+    rewrite.
+- Verification:
+  - `npm run typecheck` passed.
+  - `git diff --check` passed.
+
 Home/List data consistency follow-up, no build run, 2026-07-07:
 
 - Founder Expo Go QA found Home could show existing Moments while Video Archive

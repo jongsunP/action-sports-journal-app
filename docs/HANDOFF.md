@@ -22,6 +22,25 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local-first Cache Home/List sync follow-up, no build run, 2026-07-07:
+  - Founder Expo Go QA still showed Home with 28 records while Video Archive
+    showed `0` / empty. Detail full hydration continued to show the image.
+  - Fix adds a Home -> Archive order reconciliation guard: when Home summaries
+    exist but the Archive id order/mapping is empty, Archive order is restored
+    from the current Home summary ids and the archive load state is marked
+    ready.
+  - Thumbnail hydration remains post-boot but now follows up to three
+    `view=thumbnails` pages, so rows beyond the first thumbnail page are less
+    likely to stay skeleton-only. Journal snapshots still do not persist
+    thumbnail URIs.
+  - Preserved: summary-first `view=summary`, Detail full hydration,
+    Local-first Cache boundaries, Upload/Push/Recovery/Auth flows, backend/DB
+    settings, EAS build, local native build, AI Calibration, and broad sync
+    architecture.
+  - `npm run typecheck` and `git diff --check` passed. Founder should verify
+    in Expo Go + LAN that Home and Video Archive no longer diverge and that the
+    React update-depth error does not recur.
+
 - Home/List data consistency follow-up, no build run, 2026-07-07:
   - Founder Expo Go QA found Home could show existing Moments while Video
     Archive showed an empty state.

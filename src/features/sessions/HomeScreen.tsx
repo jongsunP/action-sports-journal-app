@@ -175,6 +175,7 @@ type AuthCacheOwnerKey =
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
 const LIST_THUMBNAIL_HYDRATION_DELAY_MS = 500;
+const LIST_THUMBNAIL_HYDRATION_MAX_PAGES = 3;
 const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
@@ -1888,6 +1889,10 @@ export function HomeScreen() {
       ),
     [homeSessionSummaries],
   );
+  const homeSessionSummaryIds = useMemo(
+    () => homeSessionSummaries.map((summary) => summary.session.id),
+    [homeSessionSummaries],
+  );
   const videoArchiveSessionSummaries = useMemo(
     () =>
       videoArchiveSessionIds
@@ -1903,6 +1908,33 @@ export function HomeScreen() {
   const visibleVideoArchiveSessionSummaries = shouldUseVideoArchiveSessionFallback
     ? homeSessionSummaries
     : videoArchiveSessionSummaries;
+
+  useEffect(() => {
+    if (
+      homeSessionSummaryIds.length === 0 ||
+      videoArchiveSessionSummaries.length > 0
+    ) {
+      return;
+    }
+
+    setVideoArchiveSessionIds((current) => {
+      const next = homeSessionSummaryIds;
+      const isSameOrder =
+        current.length === next.length &&
+        current.every((sessionId, index) => sessionId === next[index]);
+
+      return isSameOrder ? current : next;
+    });
+    setVideoArchiveLoadState('ready');
+    setVideoArchiveDiagnostics((current) => ({
+      ...current,
+      count: homeSessionSummaryIds.length,
+      reason: 'home_summary_reconcile',
+      status: 'ready',
+      updatedAt: Date.now(),
+    }));
+  }, [homeSessionSummaryIds, videoArchiveSessionSummaries.length]);
+
   const videoArchiveThumbnailHydrationTargets = useMemo(
     () =>
       visibleVideoArchiveSessionSummaries
@@ -1936,6 +1968,27 @@ export function HomeScreen() {
           : videoArchiveLoadState;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
+  const fetchVideoArchiveThumbnailPages = useCallback(async () => {
+    const moments: RemoteMomentRecord[] = [];
+    let cursor: string | null = null;
+    let pageCount = 0;
+    let hasMore = true;
+
+    while (hasMore && pageCount < LIST_THUMBNAIL_HYDRATION_MAX_PAGES) {
+      const page = await listMomentPageWithTimeout({
+        cursor: cursor ?? undefined,
+        limit: MOMENT_LIST_PAGE_SIZE,
+        view: 'thumbnails',
+      });
+
+      moments.push(...page.moments);
+      cursor = page.nextCursor;
+      hasMore = page.hasMore && Boolean(cursor);
+      pageCount += 1;
+    }
+
+    return moments;
+  }, []);
 
   useEffect(() => {
     if (
@@ -1969,22 +2022,19 @@ export function HomeScreen() {
           updatedAt: Date.now(),
         });
 
-        listMomentPageWithTimeout({
-          limit: MOMENT_LIST_PAGE_SIZE,
-          view: 'thumbnails',
-        })
-          .then((remoteMomentPage) => {
+        fetchVideoArchiveThumbnailPages()
+          .then((remoteMoments) => {
             if (isCancelled) {
               return;
             }
 
-            syncRemoteMoments(remoteMomentPage.moments);
+            syncRemoteMoments(remoteMoments);
             setThumbnailHydrationDiagnostics({
               reason: 'view=thumbnails',
-              responseCount: remoteMomentPage.moments.filter((moment) =>
+              responseCount: remoteMoments.filter((moment) =>
                 Boolean(moment.thumbnailUri),
               ).length,
-              status: remoteMomentPage.moments.some((moment) =>
+              status: remoteMoments.some((moment) =>
                 Boolean(moment.thumbnailUri),
               )
                 ? 'ready'
@@ -2021,6 +2071,7 @@ export function HomeScreen() {
     canUseRemoteApi,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    fetchVideoArchiveThumbnailPages,
     remoteMomentSyncStatus,
     syncRemoteMoments,
     videoArchiveThumbnailHydrationKey,
