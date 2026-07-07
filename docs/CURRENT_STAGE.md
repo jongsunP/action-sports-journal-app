@@ -19,6 +19,38 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local-first Journal Cache P1 cache-hit loop fix, no build run, 2026-07-07:
+
+- Founder QA found that first launch wrote/read the remote summary path, but
+  app restart produced a valid `local_snapshot` cache hit followed by React
+  `Maximum update depth exceeded`.
+- Root cause: `useBootSync` initial boot effect depended directly on
+  `syncRemoteMoments`. On cache hit, `syncRemoteMoments(snapshot.moments)`
+  updated session/reconciliation state, which changed the callback identity
+  before the background remote summary request completed. The effect cleanup
+  then reset the boot-start guard and allowed the same cache-hit boot path to
+  restart, creating a render/update loop.
+- Fix: keep the latest `syncRemoteMoments` in a ref inside `useBootSync` and
+  remove it from the one-shot boot effect dependency list. Snapshot and remote
+  summary application still call the latest callback through the ref, but the
+  boot effect now remains one boot cycle.
+- Preserved behavior:
+  - cache hit still applies through `syncRemoteMoments`;
+  - boot can still release on `local_snapshot`;
+  - background `/api/moments?view=summary` refresh still runs;
+  - fresh `remote_summary` still replaces the cached page and updates the
+    snapshot;
+  - `view=thumbnails`, Upload/Recovery/Push/Detail state machines, and
+    completed-state merge priority were not changed.
+- Verification:
+  - `npm run typecheck` passed.
+  - `git diff --check` passed.
+  - `npx expo start --clear --go --port 8099` started Metro in Expo Go mode;
+    the command was stopped after startup confirmation.
+- Still needed:
+  - Founder/physical-device or simulator Expo Go restart smoke for cache hit
+    and absence of the update-loop error.
+
 Session paused before Local-first Cache P1 no-build QA, 2026-07-06:
 
 - Founder is pausing here and will continue later.

@@ -176,6 +176,11 @@ export function useBootSync({
     });
   const previousRemoteMomentSyncEnabledRef = useRef(remoteMomentSyncEnabled);
   const hasStartedInitialRemoteSyncRef = useRef(false);
+  const syncRemoteMomentsRef = useRef(syncRemoteMoments);
+
+  useEffect(() => {
+    syncRemoteMomentsRef.current = syncRemoteMoments;
+  }, [syncRemoteMoments]);
 
   useEffect(() => {
     const wasRemoteMomentSyncEnabled =
@@ -376,7 +381,7 @@ export function useBootSync({
           snapshotCacheApplied = true;
           const snapshot = snapshotResult.snapshot;
 
-          syncRemoteMoments(snapshot.moments);
+          syncRemoteMomentsRef.current(snapshot.moments);
           setInitialRemoteMoments(snapshot.moments);
           setInitialRemoteMomentPageInfo({
             hasMore: snapshot.hasMore,
@@ -440,7 +445,7 @@ export function useBootSync({
           return;
         }
 
-        syncRemoteMoments(remoteMomentPage.moments);
+        syncRemoteMomentsRef.current(remoteMomentPage.moments);
         void saveRecentJournalSnapshot({
           ownerKey: journalSnapshotCacheOwnerKey,
           page: remoteMomentPage,
@@ -557,7 +562,6 @@ export function useBootSync({
     isRemoteMomentSyncConfigured,
     initialRemoteMomentPageLimit,
     journalSnapshotCacheOwnerKey,
-    syncRemoteMoments,
   ]);
 
   const isRemoteMomentSyncLoaded =

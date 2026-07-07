@@ -123,6 +123,30 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Local-first Journal Cache P1 cache-hit loop fix:
+  - Founder QA found a React `Maximum update depth exceeded` error on app
+    restart after a valid `local_snapshot` cache hit.
+  - Cause: `useBootSync`'s one-shot boot effect directly depended on
+    `syncRemoteMoments`. Snapshot application updated session/reconciliation
+    state, changed the callback identity, triggered cleanup before remote
+    summary completion, reset the boot-start guard, and allowed the cache-hit
+    path to repeat.
+  - Fix: `useBootSync` stores the latest `syncRemoteMoments` in a ref and the
+    one-shot boot effect calls `syncRemoteMomentsRef.current(...)` instead of
+    depending on the callback identity.
+  - Guardrail for future refactors: one-shot boot/cache effects should avoid
+    volatile state-derived callback dependencies when those callbacks update the
+    same state that changes their identity. Use a ref for the latest callback
+    unless the effect genuinely needs to restart.
+  - No change was made to summary-first `view=summary`, thumbnail hydration
+    `view=thumbnails`, completed-state merge priority, Upload/Recovery/Push/
+    Detail state machines, DB, or backend settings.
+  - Verification performed: `npm run typecheck` and `git diff --check` passed.
+    Expo Go Metro startup was confirmed with
+    `npx expo start --clear --go --port 8099` and then stopped.
+  - Remaining verification: Expo Go restart/cache-hit smoke to confirm no
+    update-loop error and background remote refresh still completes.
+
 - Full Local-first Journal Cache P1 implementation result:
   - Implemented as a small owner-bound recent journal snapshot cache, not a
     broad sync rewrite.

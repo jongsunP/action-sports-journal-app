@@ -81,6 +81,20 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Local-first Journal Cache P1 cache-hit loop was fixed after Founder QA found
+  React `Maximum update depth exceeded` on app restart with a valid
+  `local_snapshot` hit. The cause was `useBootSync`'s one-shot boot effect
+  depending on `syncRemoteMoments`; applying cached rows updated session state,
+  changed that callback identity, and could restart the same boot/cache-hit
+  path before background remote summary completed. `useBootSync` now keeps the
+  latest `syncRemoteMoments` in a ref and removes it from the boot effect
+  dependency list, preserving one boot cycle while keeping the latest merge
+  callback. Summary-first boot, background `/api/moments?view=summary`
+  refresh, `remote_summary` replacement, `view=thumbnails` hydration,
+  completed-state priority, and Upload/Recovery/Push/Detail state machines were
+  not changed. `npm run typecheck` and `git diff --check` passed, and Expo Go
+  Metro startup was confirmed with `npx expo start --clear --go --port 8099`;
+  full Expo Go restart/cache-hit smoke remains the next confirmation.
 - Full Local-first Journal Cache P1 is implemented as a small pre-AI
   foundation pass, with no build run yet. The app still restores the existing
   partial sessions/maps from `SESSION_STORAGE_KEY`, then uses a separate

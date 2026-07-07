@@ -22,6 +22,26 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local-first Journal Cache P1 cache-hit loop fix, no build run, 2026-07-07:
+  - Founder QA confirmed the snapshot cache hit path worked on restart
+    (`local_snapshot`, refresh loading), but then React showed
+    `Maximum update depth exceeded`.
+  - Cause was the one-shot boot effect in `useBootSync` depending on
+    `syncRemoteMoments`. Applying a cached snapshot updated session state,
+    changed the callback identity before background remote summary completed,
+    and allowed the boot effect cleanup/restart path to repeat.
+  - Fix keeps the latest `syncRemoteMoments` in a ref and removes it from the
+    boot effect dependency list. This keeps cache-hit application to one boot
+    cycle while still using the latest merge callback.
+  - Preserved: `local_snapshot` first paint, background
+    `/api/moments?view=summary` refresh, `remote_summary` replacement/snapshot
+    update, `view=thumbnails` hydration, completed-state priority, and
+    Upload/Recovery/Push/Detail state machines.
+  - `npm run typecheck` and `git diff --check` passed. Expo Go Metro startup
+    was confirmed with `npx expo start --clear --go --port 8099` and then
+    stopped. Still verify with Founder/physical-device or simulator Expo Go
+    restart smoke for cache hit with no React update-loop error.
+
 - Paused before Local-first Cache P1 no-build QA, 2026-07-06:
   - Founder paused here. Next session should resume with Local-first Cache P1
     no-build QA before moving to AI Calibration.
