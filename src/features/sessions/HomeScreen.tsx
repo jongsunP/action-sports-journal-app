@@ -162,11 +162,17 @@ type RequestDiagnostics = {
   view: string | null;
 };
 type ThumbnailHydrationDiagnostics = {
+  fallbackResponseCount: number | null;
   reason: string | null;
   responseCount: number | null;
   status: 'empty' | 'error' | 'idle' | 'loading' | 'ready';
   targetCount: number;
   updatedAt: number | null;
+};
+type ThumbnailHydrationResult = {
+  fallbackResponseCount: number | null;
+  reason: string;
+  remoteMoments: RemoteMomentRecord[];
 };
 type AuthCacheOwnerKey =
   | 'internalFallback'
@@ -381,6 +387,7 @@ export function HomeScreen() {
     });
   const [thumbnailHydrationDiagnostics, setThumbnailHydrationDiagnostics] =
     useState<ThumbnailHydrationDiagnostics>({
+      fallbackResponseCount: null,
       reason: null,
       responseCount: null,
       status: 'idle',
@@ -2062,6 +2069,7 @@ export function HomeScreen() {
           videoArchiveThumbnailHydrationKey;
         isHydratingVideoArchiveThumbnailsRef.current = true;
         setThumbnailHydrationDiagnostics({
+          fallbackResponseCount: null,
           reason: 'view=thumbnails',
           responseCount: null,
           status: 'loading',
@@ -2070,7 +2078,10 @@ export function HomeScreen() {
         });
 
         fetchVideoArchiveThumbnailPages()
-          .then((remoteMoments) => {
+          .then((remoteMoments):
+            | Promise<ThumbnailHydrationResult | undefined>
+            | ThumbnailHydrationResult
+            | undefined => {
             if (isCancelled) {
               return;
             }
@@ -2079,15 +2090,14 @@ export function HomeScreen() {
               Boolean(moment.thumbnailUri),
             );
 
-            if (remoteMoments.length > 0) {
-              syncRemoteMoments(remoteMoments);
-            }
-
             if (
               thumbnailMoments.length >=
               videoArchiveThumbnailHydrationTargets.length
             ) {
+              syncRemoteMoments(remoteMoments);
+
               return {
+                fallbackResponseCount: null,
                 reason: 'view=thumbnails',
                 remoteMoments,
               };
@@ -2097,20 +2107,35 @@ export function HomeScreen() {
               thumbnailMoments.map((moment) => moment.remoteMomentId),
             );
 
+            setThumbnailHydrationDiagnostics({
+              fallbackResponseCount: null,
+              reason: 'detail_thumbnail_fallback',
+              responseCount: thumbnailMoments.length,
+              status: 'loading',
+              targetCount: videoArchiveThumbnailHydrationTargets.length,
+              updatedAt: Date.now(),
+            });
+
             return fetchDetailThumbnailFallback(thumbnailRemoteMomentIds).then(
               (fallbackMoments) => {
-                if (fallbackMoments.length > 0) {
-                  syncRemoteMoments(fallbackMoments);
+                const mergedRemoteMoments = [...remoteMoments, ...fallbackMoments];
 
+                if (mergedRemoteMoments.length > 0) {
+                  syncRemoteMoments(mergedRemoteMoments);
+                }
+
+                if (fallbackMoments.length > 0) {
                   return {
+                    fallbackResponseCount: fallbackMoments.length,
                     reason: 'detail_thumbnail_fallback',
-                    remoteMoments: [...remoteMoments, ...fallbackMoments],
+                    remoteMoments: mergedRemoteMoments,
                   };
                 }
 
                 return {
-                  reason: 'view=thumbnails',
-                  remoteMoments,
+                  fallbackResponseCount: 0,
+                  reason: 'detail_thumbnail_fallback',
+                  remoteMoments: mergedRemoteMoments,
                 };
               },
             );
@@ -2124,8 +2149,9 @@ export function HomeScreen() {
               return;
             }
 
-            const { reason, remoteMoments } = result;
+            const { fallbackResponseCount, reason, remoteMoments } = result;
             setThumbnailHydrationDiagnostics({
+              fallbackResponseCount,
               reason,
               responseCount: remoteMoments.filter((moment) =>
                 Boolean(moment.thumbnailUri),
@@ -2142,6 +2168,7 @@ export function HomeScreen() {
           .catch((error) => {
             lastVideoArchiveThumbnailHydrationKeyRef.current = null;
             setThumbnailHydrationDiagnostics({
+              fallbackResponseCount: null,
               reason: 'request_failed',
               responseCount: null,
               status: 'error',
@@ -3090,6 +3117,10 @@ function QADebugPanel({
         {snapshot.thumbnailHydration.targetCount} · got{' '}
         {snapshot.thumbnailHydration.responseCount ?? '-'} · reason{' '}
         {compactDebugReason(snapshot.thumbnailHydration.reason)}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Thumb fallback got{' '}
+        {snapshot.thumbnailHydration.fallbackResponseCount ?? '-'}
       </Text>
       <Text style={styles.qaDebugLine}>
         Counts home {snapshot.counts.home} · archive{' '}

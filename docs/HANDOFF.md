@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Thumbnail fallback execution diagnostics fix, no build run, 2026-07-07:
+  - Founder QA confirmed count sync and no update loop, but
+    `detail_thumbnail_fallback` did not appear and skeleton rows stayed
+    unchanged after `view=thumbnails got 0`.
+  - Fix defers `syncRemoteMoments(...)` until after both the primary
+    `view=thumbnails` request and the bounded Detail fallback complete. This
+    avoids a pre-fallback state update cancelling the hydration effect.
+  - QA Debug Panel now shows `Thumb fallback got N`; `reason` switches to
+    `detail_thumbnail_fallback` when fallback is attempted, even if it returns
+    zero thumbnails.
+  - `npm run typecheck` and `git diff --check` passed. Founder should verify
+    that after `need 27 / got 0`, the panel shows
+    `reason detail_thumbnail_fallback` and `Thumb fallback got` updates.
+
 - Thumbnail hydration response fallback, no build run, 2026-07-07:
   - Founder QA confirmed the Home/Video count issue and update loop are fixed,
     and candidate detection now sees `need 27`, but `view=thumbnails` returned

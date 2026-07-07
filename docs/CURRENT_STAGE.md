@@ -19,6 +19,29 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Thumbnail fallback execution diagnostics fix, no build run, 2026-07-07:
+
+- Founder QA after `8a943b8` still showed `Thumb hydrate empty · need 27 ·
+  got 0 · reason view=thumbnails`, and `detail_thumbnail_fallback` never
+  appeared. Home/Video counts and update-loop stability remained good.
+- Root cause candidate in client flow: when `view=thumbnails` returned rows
+  but no thumbnail URIs, Home merged those rows with `syncRemoteMoments(...)`
+  before running the Detail fallback. That state update could re-render/cleanup
+  the hydration effect before fallback diagnostics and merge completed.
+- Fix: defer thumbnail hydration merge until the primary thumbnails request and
+  bounded Detail fallback both finish, then merge once. QA Debug Panel now shows
+  a separate safe `Thumb fallback got` count. During fallback, `reason` is set
+  to `detail_thumbnail_fallback` even if the fallback returns zero thumbnails.
+- Preserved behavior:
+  - `view=thumbnails` remains the primary post-boot hydration path;
+  - Detail fallback remains bounded to visible remote Moments only;
+  - snapshot still strips thumbnail URIs and signed URLs;
+  - no EAS build, AI Calibration, DB/Render/Supabase/Auth setting change, or
+    broad sync rewrite.
+- Verification:
+  - `npm run typecheck` passed.
+  - `git diff --check` passed.
+
 Thumbnail hydration response fallback, no build run, 2026-07-07:
 
 - Founder Expo Go QA after `f7df65b` confirmed count sync and candidate
