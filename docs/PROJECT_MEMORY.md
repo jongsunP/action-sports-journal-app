@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- dev-server low-risk decomposition 1차 is complete as a structure-only pre-AI
+  cleanup. Structured summary logging helpers now live in
+  `dev-server/lib/summaryLogging.ts`: `shortId`, `hashValue`,
+  `sanitizeLogError`, `logSummary`, `SummaryLogFields`, and redaction guards.
+  JSON one-line summary log shape, `tag: "asj_summary"` fallback, `event`,
+  short/hash id handling, URL-like string filtering, and sensitive key blocking
+  are unchanged. This did not change routes, API contracts, DB writes,
+  Upload/Auth/Push/Recovery/Analysis behavior, AI prompts/parsers/schemas, EAS/
+  local native build, Render/Supabase/Auth settings, paid AI/API calls, or AI
+  Calibration.
 - Account Recovery low-risk cleanup is complete as a structure-only pre-AI
   cleanup. `src/features/account/AccountRecoveryScreen.tsx` now uses named
   helpers for same-current-email no-op detection, recovery action availability,

@@ -19,6 +19,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+dev-server low-risk decomposition 1차, 2026-07-07:
+
+- Structured summary logging helpers were separated from `dev-server/index.ts`
+  into `dev-server/lib/summaryLogging.ts`.
+- Moved helpers: `shortId`, `hashValue`, `sanitizeLogError`, `logSummary`, and
+  the related `SummaryLogFields` type / redaction guards.
+- This is structure-only. JSON one-line log shape, `tag: "asj_summary"`
+  fallback, `event` field, id short/hash usage, URL-like string filtering, and
+  token/email/secret/callback/signed URL/storage-path/full-id blocking policy
+  are intended to remain unchanged.
+- No route handler, API response contract, DB write path, Upload/Auth/Push/
+  Recovery/Analysis behavior, AI prompt/parser/schema, EAS/local native build,
+  Render/Supabase/Auth setting, paid AI/API call, or AI Calibration work was
+  performed.
+
 Account Recovery low-risk cleanup, 2026-07-07:
 
 - Account Recovery readability cleanup was completed without changing

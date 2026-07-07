@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- dev-server low-risk decomposition 1차, 2026-07-07:
+  - Structured summary logging helpers now live in
+    `dev-server/lib/summaryLogging.ts` instead of `dev-server/index.ts`.
+  - Moved helpers: `shortId`, `hashValue`, `sanitizeLogError`, `logSummary`,
+    the `SummaryLogFields` type, and the redaction guard patterns.
+  - This is structure-only. JSON one-line summary log shape, `tag:
+    "asj_summary"` fallback, `event` field, short/hash id handling, URL-like
+    string filtering, and token/email/secret/callback/signed URL/storage-path/
+    full-id blocking policy are intended to remain unchanged.
+  - AI Calibration has not started. No route/API contract change, DB write,
+    Upload/Auth/Push/Recovery/Analysis behavior change, AI prompt/parser/schema
+    change, EAS/local native build, Render/Supabase/Auth setting change, or
+    paid AI/API call was performed.
+
 - Account Recovery low-risk cleanup, 2026-07-07:
   - `src/features/account/AccountRecoveryScreen.tsx` now uses small named
     helpers for same-current-email no-op detection, recovery action
