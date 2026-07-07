@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- dev-server low-risk decomposition 2차, 2026-07-07:
+  - Recovery attempt helper logic now lives in
+    `dev-server/features/recovery/recoveryAttempts.ts` instead of
+    `dev-server/index.ts`.
+  - Moved helpers: `isRecoveryAttemptProvider`, `isRecoveryAttemptFlow`,
+    `isRecoveryAttemptStatus`, and recovery attempt metadata
+    sanitization/redaction helpers.
+  - This is structure-only. `/api/recovery-attempts` route behavior, response
+    contract, DB insert shape, provider/flow/status validation meaning, and
+    metadata redaction policy are intended to remain unchanged.
+  - AI Calibration has not started. No DB write, Upload/Auth/Push/Analysis
+    behavior change, EAS/local native build, Render/Supabase/Auth setting
+    change, or paid AI/API call was performed.
+
 - dev-server low-risk decomposition 1차, 2026-07-07:
   - Structured summary logging helpers now live in
     `dev-server/lib/summaryLogging.ts` instead of `dev-server/index.ts`.

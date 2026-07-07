@@ -19,6 +19,20 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+dev-server low-risk decomposition 2차, 2026-07-07:
+
+- Recovery attempt observability helpers were separated from
+  `dev-server/index.ts` into
+  `dev-server/features/recovery/recoveryAttempts.ts`.
+- Moved helpers: provider/flow/status type guards and metadata
+  sanitization/redaction helpers for recovery attempt payloads.
+- This is structure-only. `/api/recovery-attempts` route behavior, response
+  status/body, DB insert shape, provider/flow/status validation meaning, and
+  metadata redaction policy are intended to remain unchanged.
+- No DB write, route contract change, Upload/Auth/Push/Analysis behavior
+  change, EAS/local native build, Render/Supabase/Auth setting change, paid
+  AI/API call, or AI Calibration work was performed.
+
 dev-server low-risk decomposition 1차, 2026-07-07:
 
 - Structured summary logging helpers were separated from `dev-server/index.ts`

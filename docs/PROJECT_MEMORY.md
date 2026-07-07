@@ -81,6 +81,15 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- dev-server low-risk decomposition 2차 is complete as a structure-only pre-AI
+  cleanup. Recovery attempt provider/flow/status type guards and metadata
+  sanitization helpers now live in
+  `dev-server/features/recovery/recoveryAttempts.ts`. `/api/recovery-attempts`
+  behavior, API response contract, DB insert shape, metadata redaction policy,
+  and token/email/full callback URL/full user id/signed URL/secret/API key
+  blocking are unchanged. This is not AI Calibration and did not involve EAS/
+  local native build, DB writes, Render/Supabase/Auth settings, paid AI/API
+  calls, or Upload/Auth/Push/Analysis route changes.
 - dev-server low-risk decomposition 1차 is complete as a structure-only pre-AI
   cleanup. Structured summary logging helpers now live in
   `dev-server/lib/summaryLogging.ts`: `shortId`, `hashValue`,

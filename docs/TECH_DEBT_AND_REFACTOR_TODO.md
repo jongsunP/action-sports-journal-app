@@ -130,13 +130,15 @@ Final confirmation before AI Calibration:
 Pre-AI foundation follow-up:
 
 - Audit follow-up backlog separation:
-  - dev-server low-risk decomposition has started with a structure-only
-    summary logging helper split. `shortId`, `hashValue`, `sanitizeLogError`,
-    `logSummary`, `SummaryLogFields`, and redaction guards now live in
-    `dev-server/lib/summaryLogging.ts`. Continue dev-server decomposition only
-    in small, behavior-preserving helper/service moves; do not use this as a
-    reason to touch Upload/Auth/Push/Analysis route behavior or AI prompt/parser
-    schemas before AI Calibration.
+  - dev-server low-risk decomposition has started with structure-only helper
+    splits. Summary logging helpers now live in
+    `dev-server/lib/summaryLogging.ts`, and recovery attempt provider/flow/
+    status guards plus metadata sanitization helpers now live in
+    `dev-server/features/recovery/recoveryAttempts.ts`. Continue dev-server
+    decomposition only in small, behavior-preserving helper/service moves; do
+    not use this as a reason to touch Upload/Auth/Push/Analysis route behavior,
+    Recovery route response/DB insert shape, or AI prompt/parser schemas before
+    AI Calibration.
   - Account Recovery low-risk cleanup is complete as a structure-only pass:
     same-current-email no-op detection, recovery action availability, Email CTA
     labels/wait copy, connection labels, and Kakao badge/status tone mapping now
