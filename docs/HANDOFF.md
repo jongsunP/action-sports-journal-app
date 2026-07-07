@@ -22,6 +22,27 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Detail/List thumbnail hydration follow-up, no build run, 2026-07-07:
+  - Founder Expo Go + LAN QA says the no-EAS device path itself is working, but
+    list thumbnails could remain skeleton-only while Detail fetched and showed
+    the image after API data arrived.
+  - Judgment: delayed list thumbnails are expected under summary-first boot, but
+    there was a real write-back gap. Detail-fetched thumbnail URIs were kept
+    local to Detail and did not update the shared list thumbnail map.
+  - Fix writes Detail-fetched thumbnails back through the existing
+    Home/runtime bridge and makes identical thumbnail writes a no-op. Detail
+    thumbnail images also fade in briefly instead of appearing abruptly.
+  - QA Debug Panel now has safe `Thumb hydrate` status/needed/received/reason
+    fields to confirm whether `view=thumbnails` is running and returning
+    thumbnails. It does not expose URLs, raw paths, full ids, tokens, email,
+    callbacks, secrets, or API keys.
+  - Preserved: `/api/moments?view=summary` first paint,
+    `/api/moments?view=thumbnails` post-boot hydration, Local-first Cache,
+    completed-state priority, Upload/Push/Recovery/Auth flows, backend/DB
+    settings, EAS build, local native build, and AI Calibration.
+  - `npm run typecheck` passed. Still run/confirm `git diff --check` and an
+    Expo Go smoke if available before treating this follow-up as closed.
+
 - Local-first Journal Cache P1 cache-hit loop fix, no build run, 2026-07-07:
   - Founder QA confirmed the snapshot cache hit path worked on restart
     (`local_snapshot`, refresh loading), but then React showed

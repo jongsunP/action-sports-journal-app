@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEventListener } from 'expo';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Modal,
   Pressable,
@@ -67,13 +68,23 @@ function DetailThumbnailPreview({
   thumbnailUri: string;
 }) {
   const completed = isCompletedMoment(momentStatus);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      duration: 180,
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim, thumbnailUri]);
 
   return (
     <View style={styles.detailThumbnailHero}>
-      <Image
+      <Animated.Image
         resizeMode="cover"
         source={{ uri: thumbnailUri }}
-        style={styles.detailThumbnailImage}
+        style={[styles.detailThumbnailImage, { opacity: fadeAnim }]}
       />
       <View style={styles.detailThumbnailOverlay}>
         <Text style={styles.detailThumbnailBadge}>대표 이미지</Text>

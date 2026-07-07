@@ -19,6 +19,36 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Detail/List thumbnail hydration follow-up, no build run, 2026-07-07:
+
+- Founder Expo Go + LAN QA confirmed the no-EAS physical-device workflow is
+  usable, but reported that list thumbnails could remain skeleton-only while
+  opening Detail fetched and showed the image. Some delay is expected because
+  first paint still uses `/api/moments?view=summary` and list thumbnails hydrate
+  later through `/api/moments?view=thumbnails`, but Detail-fetched thumbnails
+  were not written back into the shared list thumbnail map.
+- Fix: when `getMomentDetail(...)` returns a thumbnail URI, Detail now updates
+  the shared session thumbnail map through the existing Home/runtime bridge.
+  Re-setting an identical thumbnail is a no-op to avoid redundant renders.
+- QA Debug Panel now includes safe thumbnail hydration status (`Thumb hydrate`
+  status/needed/received/reason) without exposing signed URLs, raw storage
+  paths, owner ids, tokens, email, callback URLs, secrets, or API keys.
+- Detail thumbnail image appearance now fades in briefly, keeping the existing
+  skeleton/placeholder path while reducing the "API data popped in" feel.
+- Preserved behavior:
+  - summary-first `/api/moments?view=summary` boot path unchanged;
+  - post-boot `/api/moments?view=thumbnails` hydration unchanged;
+  - Local-first Journal Cache, completed-state merge priority, Upload/Push/
+    Recovery/Auth state machines, backend/DB settings, EAS build, local native
+    build, and AI Calibration were not changed.
+- Verification:
+  - `npm run typecheck` passed.
+- Still needed:
+  - `git diff --check`;
+  - Expo Go physical-device or simulator smoke to confirm list thumbnails fill
+    after Detail fetch and/or thumbnail hydration, cache-hit loop does not
+    recur, and Detail loading feels smoother.
+
 Local-first Journal Cache P1 cache-hit loop fix, no build run, 2026-07-07:
 
 - Founder QA found that first launch wrote/read the remote summary path, but

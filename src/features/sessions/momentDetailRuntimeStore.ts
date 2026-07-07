@@ -21,6 +21,7 @@ export type MomentDetailRuntimeState = {
     },
   ) => void | Promise<void>;
   isReady: boolean;
+  onDetailThumbnailResolved: (sessionId: string, thumbnailUri: string) => void;
   remoteMomentIdsBySessionId: Record<string, string>;
   sessions: Session[];
   sourceVideoStorageStatusBySessionId: Record<string, string>;
@@ -39,6 +40,7 @@ let currentState: MomentDetailRuntimeState = {
   handleDeleteSession: () => {},
   handleExtractEvidence: () => {},
   isReady: false,
+  onDetailThumbnailResolved: () => {},
   remoteMomentIdsBySessionId: {},
   sessions: [],
   sourceVideoStorageStatusBySessionId: {},
@@ -63,6 +65,7 @@ export function resetMomentDetailRuntimeState() {
     handleDeleteSession: () => {},
     handleExtractEvidence: () => {},
     isReady: false,
+    onDetailThumbnailResolved: () => {},
     remoteMomentIdsBySessionId: {},
     sessions: [],
     sourceVideoStorageStatusBySessionId: {},

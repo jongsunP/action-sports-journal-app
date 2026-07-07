@@ -123,6 +123,21 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Detail/List thumbnail hydration follow-up:
+  - Founder Expo Go + LAN QA showed that no-EAS device testing works, but list
+    thumbnails could stay skeleton-only while Detail fetched and displayed the
+    image.
+  - Delayed list thumbnail appearance remains expected because first paint uses
+    summary-only rows, but Detail-fetched thumbnail URIs now write back to the
+    shared list thumbnail map so returning to the list can show the image.
+  - QA Debug Panel has safe `Thumb hydrate` status/needed/received/reason
+    fields for future checks. Do not add signed URLs, raw storage paths, full
+    user ids, tokens, email, callback URLs, secrets, or API keys to this panel.
+  - Future polish should keep this narrow: preserve `/api/moments?view=summary`
+    and `/api/moments?view=thumbnails`, avoid broad cache/sync rewrites, and
+    verify with Expo Go restart/cache-hit/list/detail smoke before any new EAS
+    build.
+
 - Local-first Journal Cache P1 cache-hit loop fix:
   - Founder QA found a React `Maximum update depth exceeded` error on app
     restart after a valid `local_snapshot` cache hit.

@@ -66,10 +66,16 @@ export function useSessionRepository() {
 
   const setThumbnailForSession = useCallback(
     (sessionId: string, thumbnailUri: string) => {
-      setThumbnailsBySessionId((current) => ({
-        ...current,
-        [sessionId]: thumbnailUri,
-      }));
+      setThumbnailsBySessionId((current) => {
+        if (current[sessionId] === thumbnailUri) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [sessionId]: thumbnailUri,
+        };
+      });
     },
     [],
   );

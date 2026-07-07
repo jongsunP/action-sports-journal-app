@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -42,6 +42,14 @@ export function MomentDetailScreen({
   const [detailDiagnostics, setDetailDiagnostics] =
     useState<MomentDetailFetchDiagnostics | null>(null);
   const [isDetailDataLoading, setIsDetailDataLoading] = useState(false);
+  const onDetailThumbnailResolvedRef = useRef(
+    runtimeState.onDetailThumbnailResolved,
+  );
+
+  useEffect(() => {
+    onDetailThumbnailResolvedRef.current =
+      runtimeState.onDetailThumbnailResolved;
+  }, [runtimeState.onDetailThumbnailResolved]);
 
   useEffect(() => {
     if (runtimeState.isReady && !session && navigation.canGoBack()) {
@@ -73,6 +81,10 @@ export function MomentDetailScreen({
 
         if (result.moment?.thumbnailUri) {
           setDetailThumbnailUri(result.moment.thumbnailUri);
+          onDetailThumbnailResolvedRef.current(
+            sessionId,
+            result.moment.thumbnailUri,
+          );
         }
 
         if (result.moment?.evidence) {

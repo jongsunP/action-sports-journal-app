@@ -81,6 +81,19 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Detail/List thumbnail hydration follow-up is implemented without EAS build.
+  Under summary-first boot, list thumbnails can still appear after first paint
+  because `/api/moments?view=summary` intentionally skips thumbnail signed URL
+  generation and `/api/moments?view=thumbnails` hydrates later. However,
+  Detail-fetched thumbnail URIs were previously local to Detail, so a user
+  could see an image in Detail while the list stayed skeleton-only. Detail now
+  writes returned thumbnail URIs back to the shared list thumbnail map through
+  the existing runtime bridge, identical thumbnail writes are no-ops, QA Debug
+  Panel exposes safe thumbnail hydration status/counts/reason only, and Detail
+  thumbnail images fade in briefly. Summary-first boot, thumbnail hydration API
+  shape, Local-first Cache, completed-state priority, Upload/Push/Recovery/Auth
+  flows, backend/DB settings, EAS build, local native build, and AI Calibration
+  were not changed.
 - Local-first Journal Cache P1 cache-hit loop was fixed after Founder QA found
   React `Maximum update depth exceeded` on app restart with a valid
   `local_snapshot` hit. The cause was `useBootSync`'s one-shot boot effect

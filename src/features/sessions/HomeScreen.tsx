@@ -160,6 +160,13 @@ type RequestDiagnostics = {
   updatedAt: number | null;
   view: string | null;
 };
+type ThumbnailHydrationDiagnostics = {
+  reason: string | null;
+  responseCount: number | null;
+  status: 'empty' | 'error' | 'idle' | 'loading' | 'ready';
+  targetCount: number;
+  updatedAt: number | null;
+};
 type AuthCacheOwnerKey =
   | 'internalFallback'
   | 'loginRequired'
@@ -367,6 +374,14 @@ export function HomeScreen() {
       thumbnailSignedUrlWallMs: null,
       updatedAt: null,
       view: null,
+    });
+  const [thumbnailHydrationDiagnostics, setThumbnailHydrationDiagnostics] =
+    useState<ThumbnailHydrationDiagnostics>({
+      reason: null,
+      responseCount: null,
+      status: 'idle',
+      targetCount: 0,
+      updatedAt: null,
     });
   const [
     isLoadingMoreVideoArchiveMoments,
@@ -1889,26 +1904,25 @@ export function HomeScreen() {
   const visibleVideoArchiveSessionSummaries = shouldUseVideoArchiveSessionFallback
     ? homeSessionSummaries
     : videoArchiveSessionSummaries;
-  const videoArchiveThumbnailHydrationKey = useMemo(
-    () => {
-      const sessionIdsNeedingThumbnail = visibleVideoArchiveSessionSummaries
+  const videoArchiveThumbnailHydrationTargets = useMemo(
+    () =>
+      visibleVideoArchiveSessionSummaries
         .filter(
           (summary) =>
             Boolean(remoteMomentIdsBySessionId[summary.session.id]) &&
             !thumbnailsBySessionId[summary.session.id],
         )
-        .map((summary) => summary.session.id);
-
-      return sessionIdsNeedingThumbnail.length > 0
-        ? sessionIdsNeedingThumbnail.join('|')
-        : null;
-    },
+        .map((summary) => summary.session.id),
     [
       remoteMomentIdsBySessionId,
       thumbnailsBySessionId,
       visibleVideoArchiveSessionSummaries,
     ],
   );
+  const videoArchiveThumbnailHydrationKey =
+    videoArchiveThumbnailHydrationTargets.length > 0
+      ? videoArchiveThumbnailHydrationTargets.join('|')
+      : null;
   const hasRemoteMomentSyncDelay =
     remoteMomentSyncStatus === 'timeout' || remoteMomentSyncStatus === 'failed';
   const videoArchiveUiLoadState: VideoArchiveLoadState =
@@ -1948,6 +1962,13 @@ export function HomeScreen() {
         lastVideoArchiveThumbnailHydrationKeyRef.current =
           videoArchiveThumbnailHydrationKey;
         isHydratingVideoArchiveThumbnailsRef.current = true;
+        setThumbnailHydrationDiagnostics({
+          reason: 'view=thumbnails',
+          responseCount: null,
+          status: 'loading',
+          targetCount: videoArchiveThumbnailHydrationTargets.length,
+          updatedAt: Date.now(),
+        });
 
         listMomentPageWithTimeout({
           limit: MOMENT_LIST_PAGE_SIZE,
@@ -1959,9 +1980,29 @@ export function HomeScreen() {
             }
 
             syncRemoteMoments(remoteMomentPage.moments);
+            setThumbnailHydrationDiagnostics({
+              reason: 'view=thumbnails',
+              responseCount: remoteMomentPage.moments.filter((moment) =>
+                Boolean(moment.thumbnailUri),
+              ).length,
+              status: remoteMomentPage.moments.some((moment) =>
+                Boolean(moment.thumbnailUri),
+              )
+                ? 'ready'
+                : 'empty',
+              targetCount: videoArchiveThumbnailHydrationTargets.length,
+              updatedAt: Date.now(),
+            });
           })
           .catch((error) => {
             lastVideoArchiveThumbnailHydrationKeyRef.current = null;
+            setThumbnailHydrationDiagnostics({
+              reason: 'request_failed',
+              responseCount: null,
+              status: 'error',
+              targetCount: videoArchiveThumbnailHydrationTargets.length,
+              updatedAt: Date.now(),
+            });
             console.warn(
               'Video archive thumbnail hydration failed:',
               error instanceof Error ? error.message : 'Unknown error',
@@ -1984,6 +2025,7 @@ export function HomeScreen() {
     remoteMomentSyncStatus,
     syncRemoteMoments,
     videoArchiveThumbnailHydrationKey,
+    videoArchiveThumbnailHydrationTargets.length,
   ]);
 
   const removeSessionLocally = useCallback((sessionId: string) => {
@@ -2347,6 +2389,7 @@ export function HomeScreen() {
       handleDeleteSession,
       handleExtractEvidence,
       isReady: true,
+      onDetailThumbnailResolved: setThumbnailForSession,
       remoteMomentIdsBySessionId,
       sessions,
       sourceVideoStorageStatusBySessionId,
@@ -2364,6 +2407,7 @@ export function HomeScreen() {
     handleExtractEvidence,
     remoteMomentIdsBySessionId,
     sessions,
+    setThumbnailForSession,
     sourceVideoStorageStatusBySessionId,
     thumbnailsBySessionId,
     videosBySessionId,
@@ -2420,6 +2464,10 @@ export function HomeScreen() {
         videoShown: visibleVideoArchiveSessionSummaries.length,
       },
       video: videoArchiveDiagnostics,
+      thumbnailHydration: {
+        ...thumbnailHydrationDiagnostics,
+        targetCount: videoArchiveThumbnailHydrationTargets.length,
+      },
       videoUiLoadState: videoArchiveUiLoadState,
     }),
     [
@@ -2428,9 +2476,11 @@ export function HomeScreen() {
       homeSessionSummaries.length,
       isAuthLoading,
       remoteMomentSyncDiagnostics,
+      thumbnailHydrationDiagnostics,
       user,
       videoArchiveDiagnostics,
       videoArchiveSessionSummaries.length,
+      videoArchiveThumbnailHydrationTargets.length,
       videoArchiveUiLoadState,
       visibleVideoArchiveSessionSummaries.length,
     ],
@@ -2756,6 +2806,7 @@ function QADebugPanel({
       videoShown: number;
     };
     video: RequestDiagnostics;
+    thumbnailHydration: ThumbnailHydrationDiagnostics;
     videoUiLoadState: VideoArchiveLoadState;
   };
   styles: Record<string, object>;
@@ -2883,6 +2934,12 @@ function QADebugPanel({
       <Text style={styles.qaDebugLine}>
         Video at {formatDebugTimestamp(snapshot.video.updatedAt)} · reason{' '}
         {compactDebugReason(snapshot.video.reason)}
+      </Text>
+      <Text style={styles.qaDebugLine}>
+        Thumb hydrate {snapshot.thumbnailHydration.status} · need{' '}
+        {snapshot.thumbnailHydration.targetCount} · got{' '}
+        {snapshot.thumbnailHydration.responseCount ?? '-'} · reason{' '}
+        {compactDebugReason(snapshot.thumbnailHydration.reason)}
       </Text>
       <Text style={styles.qaDebugLine}>
         Counts home {snapshot.counts.home} · archive{' '}
