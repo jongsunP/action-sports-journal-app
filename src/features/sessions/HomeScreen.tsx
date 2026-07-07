@@ -1940,12 +1940,11 @@ export function HomeScreen() {
       visibleVideoArchiveSessionSummaries
         .filter(
           (summary) =>
-            Boolean(remoteMomentIdsBySessionId[summary.session.id]) &&
+            getVisibleMomentStatus(summary.momentStatus) !== 'running' &&
             !thumbnailsBySessionId[summary.session.id],
         )
         .map((summary) => summary.session.id),
     [
-      remoteMomentIdsBySessionId,
       thumbnailsBySessionId,
       visibleVideoArchiveSessionSummaries,
     ],

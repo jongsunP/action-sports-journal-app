@@ -19,6 +19,25 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Thumbnail hydration candidate follow-up, no build run, 2026-07-07:
+
+- Founder Expo Go QA after `51b68b8` confirmed Home/Video Archive counts now
+  match (`home 28`, `archive 28`, `ids 28`, `shown 28`) and the React update
+  loop did not recur, but QA Debug Panel still showed
+  `Thumb hydrate idle · need 0` while most list rows remained film skeleton.
+- Root cause: thumbnail hydration candidates required
+  `remoteMomentIdsBySessionId[session.id]`. After local snapshot / summary
+  reconciliation, visible rows can be valid list rows before that map is a
+  reliable candidate gate, so rows without thumbnails could be excluded and the
+  hydrator never started.
+- Fix: candidate detection now uses visible Home/Video rows directly and
+  targets non-running rows without a current thumbnail. The hydrator still uses
+  post-boot `view=thumbnails` and does not persist thumbnail URIs in the
+  journal snapshot.
+- Verification:
+  - `npm run typecheck` passed.
+  - `git diff --check` passed.
+
 Local-first Cache Home/List sync follow-up, no build run, 2026-07-07:
 
 - Founder Expo Go QA after `01b76d6` still showed Home with 28 records while

@@ -22,6 +22,22 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Thumbnail hydration candidate follow-up, no build run, 2026-07-07:
+  - Founder Expo Go QA confirmed the Home/Video count divergence is fixed and
+    the update-depth error did not recur. Remaining issue: most list rows stayed
+    skeleton while QA Debug Panel showed `Thumb hydrate idle · need 0`.
+  - Cause: thumbnail hydration candidate detection depended on
+    `remoteMomentIdsBySessionId[session.id]`. After local snapshot / summary
+    reconciliation, visible rows can be valid before that map is a safe
+    candidate gate, so missing-thumbnail rows were excluded.
+  - Fix: hydrate candidates now come from visible Home/Video rows directly:
+    non-running rows without a current thumbnail become candidates. The request
+    path remains post-boot `view=thumbnails`, and journal snapshots still strip
+    thumbnail URIs.
+  - `npm run typecheck` and `git diff --check` passed. Founder should verify
+    `Thumb hydrate need` becomes non-zero when skeleton rows are visible, then
+    `got` increases and rows fill.
+
 - Local-first Cache Home/List sync follow-up, no build run, 2026-07-07:
   - Founder Expo Go QA still showed Home with 28 records while Video Archive
     showed `0` / empty. Detail full hydration continued to show the image.
