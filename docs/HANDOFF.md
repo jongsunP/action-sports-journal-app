@@ -22,6 +22,18 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- HomeScreen low-risk decomposition 1차, 2026-07-07:
+  - QA Debug Panel UI/rendering is now a separate presentation component at
+    `src/features/sessions/QADebugPanel.tsx`.
+  - HomeScreen still computes and owns the QA snapshot and all boot/cache/video/
+    thumb/count/auth state. This pass did not move state logic or change product
+    behavior.
+  - Visible QA Debug Panel values, order, copy, open/collapsed toggle behavior,
+    and sensitive-information policy are intended to remain identical.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth setting change, QA Debug Panel hide/gate, thumbnail
+    hydration change, or Upload/Recovery/Cache state change was performed.
+
 - Pre-AI Audit Follow-up small fixes, 2026-07-07:
   - Small safe fixes from the Pre-AI audit are complete. No EAS build, local
     native build, DB write/backfill, Render/Supabase/Auth setting change, paid

@@ -39,6 +39,7 @@ import {
   getMomentStatus,
   getVisibleMomentStatus,
 } from './momentStatus';
+import { QADebugPanel } from './QADebugPanel';
 import { hasDebugValue, shortDebugId } from '../../utils/debugLog';
 import {
   APP_TABS,
@@ -108,8 +109,6 @@ import {
 const ACTIVE_WAKEBOARD_GROUP_ID = 'group-wakeboard';
 const ENABLE_INTERNAL_DEBUG_VIEWER =
   __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_VIEWER === 'true';
-const ENABLE_QA_DEBUG_PANEL =
-  process.env.EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL !== 'false';
 const ENABLE_ANALYSIS_PUSH_NOTIFICATIONS =
   process.env.EXPO_PUBLIC_ENABLE_ANALYSIS_PUSH_NOTIFICATIONS === 'true';
 type RemoteRefreshReason =
@@ -202,38 +201,6 @@ function isRemoteRequestTimeout(error: unknown) {
     error instanceof Error &&
     error.message.toLowerCase().includes('timed out')
   );
-}
-
-function compactDebugReason(reason: string | null) {
-  if (!reason) {
-    return '-';
-  }
-
-  return reason.replace(/\s+/g, ' ').slice(0, 72);
-}
-
-function formatDebugRequestId(requestId: string | null) {
-  return requestId ? requestId.slice(0, 8) : '-';
-}
-
-function formatDebugBoolean(value: boolean | null) {
-  if (value === null) {
-    return '-';
-  }
-
-  return value ? 'Y' : 'N';
-}
-
-function formatDebugTimestamp(updatedAt: number | null) {
-  if (!updatedAt) {
-    return '-';
-  }
-
-  return new Date(updatedAt).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
 }
 
 function ensureAnalysisPushRegistration(source: string) {
@@ -2940,195 +2907,6 @@ export function HomeScreen() {
         styles={styles}
       />
     </SafeAreaView>
-  );
-}
-
-function QADebugPanel({
-  isOpen,
-  onToggle,
-  snapshot,
-  styles,
-}: {
-  isOpen: boolean;
-  onToggle: () => void;
-  snapshot: {
-    auth: {
-      bootstrapDurationMs: number | null;
-      bootstrapReason: string | null;
-      bootstrapStage: string;
-      bootstrapStatus: string;
-      bootstrapUpdatedAt: number | null;
-      hasUser: boolean;
-      isAnonymous: boolean;
-      isLoading: boolean;
-      mode: string;
-    };
-    boot: {
-      count: number | null;
-      durationMs: number | null;
-      hasMore: boolean | null;
-      journalCacheAgeMs?: number | null;
-      journalCacheCount?: number | null;
-      journalCacheReason?: string | null;
-      journalCacheRefreshStatus?: string;
-      journalCacheSource?: string;
-      journalCacheStale?: boolean | null;
-      reason: string | null;
-      status: string;
-      updatedAt: number | null;
-    };
-    counts: {
-      home: number;
-      videoArchiveIds: number;
-      videoArchive: number;
-      videoShown: number;
-    };
-    video: RequestDiagnostics;
-    thumbnailHydration: ThumbnailHydrationDiagnostics;
-    videoUiLoadState: VideoArchiveLoadState;
-  };
-  styles: Record<string, object>;
-}) {
-  if (!ENABLE_QA_DEBUG_PANEL) {
-    return null;
-  }
-
-  if (!isOpen) {
-    return (
-      <Pressable
-        accessibilityLabel="QA debug panel 열기"
-        accessibilityRole="button"
-        onPress={onToggle}
-        style={({ pressed }) => [
-          styles.qaDebugCollapsed,
-          pressed ? styles.buttonPressed : undefined,
-        ]}
-      >
-        <Text style={styles.qaDebugCollapsedText}>QA</Text>
-      </Pressable>
-    );
-  }
-
-  return (
-    <View style={styles.qaDebugPanel}>
-      <Pressable
-        accessibilityLabel="QA debug panel 닫기"
-        accessibilityRole="button"
-        onPress={onToggle}
-        style={({ pressed }) => [
-          styles.qaDebugHeader,
-          pressed ? styles.buttonPressed : undefined,
-        ]}
-      >
-        <Text style={styles.qaDebugTitle}>QA Debug</Text>
-        <Text style={styles.qaDebugCollapseHint}>접기</Text>
-      </Pressable>
-      <Text style={styles.qaDebugLine}>
-        Auth {snapshot.auth.mode} · loading {snapshot.auth.isLoading ? 'Y' : 'N'} ·
-        user {snapshot.auth.hasUser ? 'Y' : 'N'} · anon{' '}
-        {snapshot.auth.isAnonymous ? 'Y' : 'N'}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Auth boot {snapshot.auth.bootstrapStatus}/{snapshot.auth.bootstrapStage} ·{' '}
-        {snapshot.auth.bootstrapDurationMs ?? '-'}ms
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Auth at {formatDebugTimestamp(snapshot.auth.bootstrapUpdatedAt)} · reason{' '}
-        {compactDebugReason(snapshot.auth.bootstrapReason)}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Boot {snapshot.boot.status} · {snapshot.boot.durationMs ?? '-'}ms · count{' '}
-        {snapshot.boot.count ?? '-'} · more{' '}
-        {snapshot.boot.hasMore === null ? '-' : snapshot.boot.hasMore ? 'Y' : 'N'}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Boot at {formatDebugTimestamp(snapshot.boot.updatedAt)} · reason{' '}
-        {compactDebugReason(snapshot.boot.reason)}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Journal cache {snapshot.boot.journalCacheSource ?? '-'} · refresh{' '}
-        {snapshot.boot.journalCacheRefreshStatus ?? '-'} · count{' '}
-        {snapshot.boot.journalCacheCount ?? '-'} · age{' '}
-        {snapshot.boot.journalCacheAgeMs ?? '-'}ms
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Journal stale{' '}
-        {snapshot.boot.journalCacheStale === null ||
-        snapshot.boot.journalCacheStale === undefined
-          ? '-'
-          : snapshot.boot.journalCacheStale
-            ? 'Y'
-            : 'N'}{' '}
-        · reason {compactDebugReason(snapshot.boot.journalCacheReason ?? null)}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video {snapshot.video.status} · {snapshot.video.durationMs ?? '-'}ms ·
-        api {snapshot.video.apiMs ?? '-'}ms · source {snapshot.video.source ?? '-'}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video ui {snapshot.videoUiLoadState} · norm{' '}
-        {snapshot.video.clientNormalizeMs ?? '-'}ms · bootReuse{' '}
-        {snapshot.video.bootPageReused === null
-          ? '-'
-          : snapshot.video.bootPageReused
-            ? 'Y'
-            : 'N'}{' '}
-        · dupBlocked{' '}
-        {snapshot.video.duplicateVideoFetchBlocked === null
-          ? '-'
-          : snapshot.video.duplicateVideoFetchBlocked
-            ? 'Y'
-            : 'N'}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video req {formatDebugRequestId(snapshot.video.requestId)} · server{' '}
-        {snapshot.video.serverTotalMs ?? '-'}ms
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video view {snapshot.video.view ?? '-'} · auth{' '}
-        {snapshot.video.authVerificationMode ?? '-'} · claims{' '}
-        {snapshot.video.authClaimsMs ?? '-'}ms · getUser{' '}
-        {snapshot.video.authGetUserMs ?? '-'}ms
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video inflight {formatDebugBoolean(snapshot.video.requestUserInflightHit)} ·
-        wait {snapshot.video.requestUserInflightWaitMs ?? '-'}ms
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video resolve {snapshot.video.resolveRequestUserMs ?? '-'}ms · user{' '}
-        {snapshot.video.publicUserLookupMs ?? '-'}ms · query{' '}
-        {snapshot.video.momentsQueryMs ?? '-'}ms
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video ev {snapshot.video.evidenceQueryMs ?? '-'}ms · thumb{' '}
-        {snapshot.video.thumbnailSignedUrlWallMs ?? '-'}ms · bytes{' '}
-        {snapshot.video.responseBytes ?? '-'}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video count {snapshot.video.count ?? '-'} · more{' '}
-        {snapshot.video.hasMore === null ? '-' : snapshot.video.hasMore ? 'Y' : 'N'} ·
-        retry {snapshot.video.retryCount}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Video at {formatDebugTimestamp(snapshot.video.updatedAt)} · reason{' '}
-        {compactDebugReason(snapshot.video.reason)}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Thumb hydrate {snapshot.thumbnailHydration.status} · need{' '}
-        {snapshot.thumbnailHydration.targetCount} · got{' '}
-        {snapshot.thumbnailHydration.responseCount ?? '-'} · reason{' '}
-        {compactDebugReason(snapshot.thumbnailHydration.reason)}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Thumb fallback got{' '}
-        {snapshot.thumbnailHydration.fallbackResponseCount ?? '-'}
-      </Text>
-      <Text style={styles.qaDebugLine}>
-        Counts home {snapshot.counts.home} · archive{' '}
-        {snapshot.counts.videoArchive} · ids {snapshot.counts.videoArchiveIds} ·
-        shown {snapshot.counts.videoShown}
-      </Text>
-    </View>
   );
 }
 

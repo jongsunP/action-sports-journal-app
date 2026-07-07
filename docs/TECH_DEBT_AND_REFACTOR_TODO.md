@@ -130,8 +130,12 @@ Final confirmation before AI Calibration:
 Pre-AI foundation follow-up:
 
 - Audit follow-up backlog separation:
-  - Do not start large HomeScreen or `dev-server/index.ts` splits before AI
-    Calibration unless a specific bug requires it.
+  - HomeScreen low-risk decomposition has started with a structure-only QA Debug
+    Panel presentation split. Continue only in small, behavior-preserving steps;
+    do not start a large HomeScreen split before AI Calibration unless a
+    specific bug requires it.
+  - Do not start large `dev-server/index.ts` splits before AI Calibration unless
+    a specific bug requires it.
   - QA Debug Panel hide/gate remains store/TestFlight cleanup, not this pre-AI
     fix.
   - Push icon remains a visual/platform backlog item.

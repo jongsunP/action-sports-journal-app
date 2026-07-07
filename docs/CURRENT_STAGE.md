@@ -19,6 +19,18 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+HomeScreen low-risk decomposition 1차, 2026-07-07:
+
+- QA Debug Panel presentation was separated from `HomeScreen.tsx` into
+  `src/features/sessions/QADebugPanel.tsx`.
+- This is a structure-only refactor. The visible QA values, order, labels,
+  collapsed/open behavior, and sensitive-information policy are unchanged.
+- HomeScreen still owns the diagnostic state/snapshot calculation; boot/cache/
+  video/thumb/count/auth logic was not moved in this pass.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, QA Debug Panel hide/gate, thumbnail hydration logic change, or
+  AI Calibration work was performed.
+
 Pre-AI Audit Follow-up small fixes, 2026-07-07:
 
 - Safe audit follow-up is complete without EAS build, local native build, DB

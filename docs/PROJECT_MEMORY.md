@@ -81,6 +81,14 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- HomeScreen low-risk decomposition has started as structure-only pre-AI
+  cleanup. The first pass separated the QA Debug Panel presentation component
+  into `src/features/sessions/QADebugPanel.tsx` while keeping HomeScreen's
+  diagnostic state/snapshot logic in place. Visible QA values, order, copy,
+  toggle behavior, and sensitive-info guardrails are unchanged. This is not AI
+  Calibration and did not touch EAS/local native build, DB/storage, Render/
+  Supabase/Auth settings, thumbnail hydration, Upload/Recovery/Cache state, or
+  QA Debug Panel hide/gate.
 - Pre-AI Audit Follow-up small fixes are complete without build or external
   setting changes. Client console upload/reconciliation/timing logs now mask
   local session, draft, upload, Moment, and raw storage-path values as short ids
