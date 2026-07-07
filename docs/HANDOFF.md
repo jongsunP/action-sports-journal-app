@@ -22,6 +22,24 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Thumbnail hydration response fallback, no build run, 2026-07-07:
+  - Founder QA confirmed the Home/Video count issue and update loop are fixed,
+    and candidate detection now sees `need 27`, but `view=thumbnails` returned
+    `got 0`.
+  - Fix keeps `view=thumbnails` as the primary post-boot hydration path. When
+    it returns zero or only partial thumbnails for visible missing-thumbnail
+    rows, Home now runs a bounded Detail thumbnail fallback using
+    `GET /api/moments/:momentId` for visible remote Moment ids, concurrency
+    `3`, max `30`, then merges returned `thumbnailUri` records through
+    `syncRemoteMoments`.
+  - This does not store thumbnails in the local journal snapshot and does not
+    change summary-first boot, Detail route behavior, Upload/Push/Recovery/Auth
+    flows, backend/DB settings, EAS build, local native build, AI Calibration,
+    or broad sync architecture.
+  - `npm run typecheck` and `git diff --check` passed. Founder should verify
+    the QA Debug `Thumb hydrate` reason may show `detail_thumbnail_fallback`
+    and `got` should become greater than zero if Detail can resolve thumbnails.
+
 - Thumbnail hydration candidate follow-up, no build run, 2026-07-07:
   - Founder Expo Go QA confirmed the Home/Video count divergence is fixed and
     the update-depth error did not recur. Remaining issue: most list rows stayed

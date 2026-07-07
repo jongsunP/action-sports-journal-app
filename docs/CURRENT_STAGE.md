@@ -19,6 +19,31 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Thumbnail hydration response fallback, no build run, 2026-07-07:
+
+- Founder Expo Go QA after `f7df65b` confirmed count sync and candidate
+  detection are fixed (`home/archive/ids/shown 28`, `need 27`) and no update
+  loop recurred, but `view=thumbnails` returned `got 0`.
+- Server code and DB inspection show thumbnails can exist globally, but the
+  current device/auth/page path can still return no thumbnail URLs while Detail
+  full hydration can resolve a representative thumbnail for an opened Moment.
+- Fix: list thumbnail hydration still starts with post-boot `view=thumbnails`.
+  If that response covers only part of the visible missing-thumbnail rows or
+  returns zero thumbnails, Home now runs a bounded best-effort Detail thumbnail
+  fallback for the visible remote Moment ids. The fallback uses
+  `GET /api/moments/:momentId`, concurrency `3`, max `30` Moments, and merges
+  only returned `thumbnailUri` records back through the existing
+  `syncRemoteMoments` path.
+- Preserved behavior:
+  - snapshot still strips `thumbnailUri` and does not persist signed URLs;
+  - summary-first boot and cache first paint remain unchanged;
+  - Detail route behavior remains unchanged;
+  - no EAS build, AI Calibration, DB schema change, Render/Supabase/Auth
+    setting change, or broad sync rewrite.
+- Verification:
+  - `npm run typecheck` passed.
+  - `git diff --check` passed.
+
 Thumbnail hydration candidate follow-up, no build run, 2026-07-07:
 
 - Founder Expo Go QA after `51b68b8` confirmed Home/Video Archive counts now

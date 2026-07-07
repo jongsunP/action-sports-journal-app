@@ -32,6 +32,7 @@ import { useAuthSession } from '../../services/auth/AuthSessionProvider';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import {
   finalizeUploadedSourceVideo,
+  getMomentDetail,
   hasConfiguredSupabaseMoments,
 } from '../../services/moments';
 import {
@@ -176,6 +177,8 @@ const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
 const LIST_THUMBNAIL_HYDRATION_DELAY_MS = 500;
 const LIST_THUMBNAIL_HYDRATION_MAX_PAGES = 3;
+const DETAIL_THUMBNAIL_FALLBACK_CONCURRENCY = 3;
+const DETAIL_THUMBNAIL_FALLBACK_MAX_MOMENTS = 30;
 const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
@@ -1988,6 +1991,51 @@ export function HomeScreen() {
 
     return moments;
   }, []);
+  const fetchDetailThumbnailFallback = useCallback(async (
+    excludedRemoteMomentIds: Set<string> = new Set(),
+  ) => {
+    const targetRemoteMomentIds = videoArchiveThumbnailHydrationTargets
+      .map((sessionId) => remoteMomentIdsBySessionId[sessionId])
+      .filter((remoteMomentId): remoteMomentId is string =>
+        Boolean(remoteMomentId) && !excludedRemoteMomentIds.has(remoteMomentId),
+      )
+      .slice(0, DETAIL_THUMBNAIL_FALLBACK_MAX_MOMENTS);
+
+    if (targetRemoteMomentIds.length === 0) {
+      return [];
+    }
+
+    const remoteMoments: RemoteMomentRecord[] = [];
+    let nextIndex = 0;
+
+    async function worker() {
+      while (nextIndex < targetRemoteMomentIds.length) {
+        const remoteMomentId = targetRemoteMomentIds[nextIndex];
+        nextIndex += 1;
+
+        try {
+          const result = await getMomentDetail(remoteMomentId);
+
+          if (result.moment?.thumbnailUri) {
+            remoteMoments.push(result.moment);
+          }
+        } catch {
+          // Detail fallback is best-effort and should not block list rendering.
+        }
+      }
+    }
+
+    await Promise.all(
+      Array.from({
+        length: Math.min(
+          DETAIL_THUMBNAIL_FALLBACK_CONCURRENCY,
+          targetRemoteMomentIds.length,
+        ),
+      }).map(() => worker()),
+    );
+
+    return remoteMoments;
+  }, [remoteMomentIdsBySessionId, videoArchiveThumbnailHydrationTargets]);
 
   useEffect(() => {
     if (
@@ -2027,9 +2075,58 @@ export function HomeScreen() {
               return;
             }
 
-            syncRemoteMoments(remoteMoments);
+            const thumbnailMoments = remoteMoments.filter((moment) =>
+              Boolean(moment.thumbnailUri),
+            );
+
+            if (remoteMoments.length > 0) {
+              syncRemoteMoments(remoteMoments);
+            }
+
+            if (
+              thumbnailMoments.length >=
+              videoArchiveThumbnailHydrationTargets.length
+            ) {
+              return {
+                reason: 'view=thumbnails',
+                remoteMoments,
+              };
+            }
+
+            const thumbnailRemoteMomentIds = new Set(
+              thumbnailMoments.map((moment) => moment.remoteMomentId),
+            );
+
+            return fetchDetailThumbnailFallback(thumbnailRemoteMomentIds).then(
+              (fallbackMoments) => {
+                if (fallbackMoments.length > 0) {
+                  syncRemoteMoments(fallbackMoments);
+
+                  return {
+                    reason: 'detail_thumbnail_fallback',
+                    remoteMoments: [...remoteMoments, ...fallbackMoments],
+                  };
+                }
+
+                return {
+                  reason: 'view=thumbnails',
+                  remoteMoments,
+                };
+              },
+            );
+          })
+          .then((result) => {
+            if (isCancelled) {
+              return;
+            }
+
+            if (!result) {
+              return;
+            }
+
+            const { reason, remoteMoments } = result;
             setThumbnailHydrationDiagnostics({
-              reason: 'view=thumbnails',
+              reason,
               responseCount: remoteMoments.filter((moment) =>
                 Boolean(moment.thumbnailUri),
               ).length,
@@ -2070,6 +2167,7 @@ export function HomeScreen() {
     canUseRemoteApi,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
+    fetchDetailThumbnailFallback,
     fetchVideoArchiveThumbnailPages,
     remoteMomentSyncStatus,
     syncRemoteMoments,
