@@ -123,6 +123,23 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Local-first Journal Cache P1 closeout:
+  - Founder Expo Go + LAN QA and read-only DB/API/code inspection are enough to
+    close the P1 as no-build QA passed.
+  - Home/Archive counts remain aligned, Video Archive does not stay empty while
+    Home has rows, cache-hit update loop did not recur, and thumbnail
+    candidates/fallback execution are now observable.
+  - Remaining list skeletons are legacy data, not a Local-first Cache blocker:
+    recent 28 rows for the checked owner include 8 rows without durable
+    `moments.thumbnail_uri`. Detail can still show imagery through
+    `sourceVideoUri` / video preview/player, which is not the same as a durable
+    list thumbnail.
+  - Do not use signed source-video URLs as list thumbnails and do not persist
+    them in the local journal snapshot.
+  - Track `Legacy Thumbnail Backfill` separately. Before any DB write/backfill,
+    run a read-only target count and require explicit approval. Rows whose
+    source videos are already deleted may be impossible to backfill.
+
 - Detail/List thumbnail hydration follow-up:
   - Founder Expo Go + LAN QA showed that no-EAS device testing works, but list
     thumbnails could stay skeleton-only while Detail fetched and displayed the

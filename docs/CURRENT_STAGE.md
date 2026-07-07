@@ -19,6 +19,40 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
+
+- Founder Expo Go + LAN QA and read-only DB/API/code inspection are complete
+  enough to close Local-first Cache P1 as a no-build QA pass.
+- Passed:
+  - Home and Video Archive counts remain aligned (`home 28`, `archive 28`,
+    `ids 28`, `shown 28`);
+  - `Maximum update depth exceeded` did not recur after the cache-hit boot-loop
+    fix;
+  - local snapshot / remote summary / archive reconciliation no longer leaves
+    Video Archive empty while Home has records;
+  - thumbnail hydration candidate detection now sees missing-thumbnail rows
+    (`need 27`) and the bounded fallback path runs.
+- Remaining visible skeletons are not considered a Local-first Cache P1 blocker.
+  Read-only investigation showed the current legacy/recovered owner has recent
+  rows without durable `moments.thumbnail_uri`:
+  - recent 28 rows;
+  - 20 have `thumbnail_uri`;
+  - 8 do not have `thumbnail_uri`;
+  - the 8 without thumbnails have source-video references, but most source
+    videos are already deleted.
+- Detail can still show an image because Detail prioritizes `sourceVideoUri`
+  / video preview/player when available. That image is not the durable
+  thumbnail URI used by list hydration.
+- Decision:
+  - keep placeholder/skeleton for legacy rows without `thumbnail_uri`;
+  - do not use signed source-video URLs as in-memory list thumbnails;
+  - do not persist thumbnail URIs in the local journal snapshot;
+  - track `Legacy Thumbnail Backfill` as a non-AI-blocking backlog item. Any
+    actual backfill must be separately approved and may be impossible for rows
+    whose source video has already been deleted.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, or AI Calibration work was performed.
+
 Thumbnail fallback execution diagnostics fix, no build run, 2026-07-07:
 
 - Founder QA after `8a943b8` still showed `Thumb hydrate empty · need 27 ·

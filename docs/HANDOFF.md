@@ -22,6 +22,26 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
+  - Local-first Cache P1 can be treated as no-build QA passed.
+  - Founder Expo Go + LAN QA confirmed Home/Video counts stay aligned, Video
+    Archive no longer goes empty while Home has records, and the React update
+    loop did not recur.
+  - Thumbnail hydration now detects missing rows and fallback execution is
+    observable, but some legacy/recovered rows still show skeletons because
+    read-only DB/API/code inspection confirmed they do not have durable
+    `moments.thumbnail_uri`.
+  - Detail images for those rows are likely `sourceVideoUri` video
+    preview/player output, not list thumbnail URIs. Do not use signed
+    source-video URLs as list thumbnails and do not persist them in the local
+    journal snapshot.
+  - Track this as `Legacy Thumbnail Backfill` backlog. Backfill must be a
+    separately approved task and may be impossible for rows whose source videos
+    are already deleted.
+  - Next product step can move past Local-first Cache P1. Remaining pre-AI
+    choices are: finish postponed Local/native Development Build environment
+    setup later, or wait for Founder reference videos and start AI Calibration.
+
 - Thumbnail fallback execution diagnostics fix, no build run, 2026-07-07:
   - Founder QA confirmed count sync and no update loop, but
     `detail_thumbnail_fallback` did not appear and skeleton rows stayed

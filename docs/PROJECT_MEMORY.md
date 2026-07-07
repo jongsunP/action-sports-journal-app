@@ -650,6 +650,7 @@ Current grouped listup view:
   - Startup Performance / Region Alignment(부팅 성능 / 리전 정렬)
   - Summary-first Boot(요약 우선 부팅)
   - no-EAS Local Testing Path(EAS 없는 로컬/실기기 테스트 경로)
+  - Full Local-first Journal Cache P1(완전한 로컬 우선 기록 캐시 1차)
 
 - Product UX Foundation(제품 UX 기반)
   - Home / Journal UX(홈 / 기록 UX)
@@ -669,7 +670,6 @@ Current grouped listup view:
 현재 남은 과제:
 - AI 전 기반 정리 / 다음 진행
   - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우): EAS 빌드 의존도를 줄이기 위해 AI Calibration 전에 구축한다. Expo Go no-EAS 테스트는 이미 가능하지만, Push/deep link/native compression 같은 native/standalone 성격을 더 자주 확인할 수 있는 development build 또는 local native build 루틴은 아직 별도 정리되지 않았다.
-  - Full Local-first Journal Cache(완전한 로컬 우선 기록 캐시): 바로 대규모 구현으로 들어가지 말고 먼저 설계/범위를 확정한다. 현재 부분 캐시와 summary-first boot는 완료되어 있으므로, P1은 "최근 journal 로컬 캐시 + 백그라운드 remote refresh"처럼 startup/summary-first/thumbnail hydration을 깨지 않는 범위로 작게 끊을 수 있는지 판단한 뒤 진행한다.
 
 - 필수 / 아직 미시작
   - AI Calibration(AI 캘리브레이션): TS/HS Evidence(TS/HS 근거) 안정화부터 시작
@@ -681,10 +681,8 @@ Current grouped listup view:
   - Boot Flicker Fix(부팅 깜박임 방지)
   - Detail Loading UX Polish(상세 로딩 UX 정리)
   - Media Placeholder First Paint Fix(썸네일 전 빈 박스 방지)
-  - Full Local-first Journal Cache P1(완전한 로컬 우선 기록 캐시 1차): 구현 완료, no-build QA 대기
 
 - QA / 검증 대기
-  - Local-first Cache P1 no-build QA(로컬 우선 캐시 1차 무빌드 QA): Expo Go 모드에서 cache miss/write/restart-hit/background refresh/delete safety 확인
   - Email Recovery Standalone Deep-link(이메일 복구 standalone 딥링크)
   - Account Recovery Small-screen QA(계정 복구 작은 화면/취소/복귀)
   - 다음 standalone 빌드에서 post-Build-106 수정 확인
@@ -700,6 +698,7 @@ Current grouped listup view:
   - Share Export / Native Share Sheet / ShareResult Route(공유 내보내기 / 네이티브 공유 / 공유 결과 경로)
   - Detail Representative Media Selection(상세 대표 미디어 선택)
   - Moment Memo / Rider Note(기록 메모 / 라이더 노트)
+  - Legacy Thumbnail Backfill(기존 기록 썸네일 보강)
   - Apple Login(애플 로그인)
 ```
 
