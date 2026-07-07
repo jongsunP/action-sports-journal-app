@@ -22,6 +22,22 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Home/List data consistency follow-up, no build run, 2026-07-07:
+  - Founder Expo Go QA found Home could show existing Moments while Video
+    Archive showed an empty state.
+  - Cause: Archive fallback stopped once the first archive page was marked
+    loaded, even if the archive id order was empty or failed to map to current
+    Home summaries.
+  - Fix: if Archive has no mapped summaries but Home has summaries, Archive
+    keeps showing the Home-backed list instead of empty. QA Debug Panel now
+    includes safe Home/archive-id/archive-mapped/shown counts.
+  - Preserved: summary-first `/api/moments?view=summary`, post-boot
+    `/api/moments?view=thumbnails`, Detail full hydration, Local-first Cache,
+    Upload/Push/Recovery/Auth flows, backend/DB settings, EAS build, local
+    native build, and AI Calibration.
+  - `npm run typecheck` and `git diff --check` passed. Founder should verify
+    the Home/List consistency and Detail thumbnail write-back in Expo Go.
+
 - Detail/List thumbnail hydration follow-up, no build run, 2026-07-07:
   - Founder Expo Go + LAN QA says the no-EAS device path itself is working, but
     list thumbnails could remain skeleton-only while Detail fetched and showed

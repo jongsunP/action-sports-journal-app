@@ -1899,8 +1899,7 @@ export function HomeScreen() {
   );
   const shouldUseVideoArchiveSessionFallback =
     videoArchiveSessionSummaries.length === 0 &&
-    homeSessionSummaries.length > 0 &&
-    !hasLoadedVideoArchiveFirstPage;
+    homeSessionSummaries.length > 0;
   const visibleVideoArchiveSessionSummaries = shouldUseVideoArchiveSessionFallback
     ? homeSessionSummaries
     : videoArchiveSessionSummaries;
@@ -2460,6 +2459,7 @@ export function HomeScreen() {
       boot: remoteMomentSyncDiagnostics,
       counts: {
         home: homeSessionSummaries.length,
+        videoArchiveIds: videoArchiveSessionIds.length,
         videoArchive: videoArchiveSessionSummaries.length,
         videoShown: visibleVideoArchiveSessionSummaries.length,
       },
@@ -2479,6 +2479,7 @@ export function HomeScreen() {
       thumbnailHydrationDiagnostics,
       user,
       videoArchiveDiagnostics,
+      videoArchiveSessionIds.length,
       videoArchiveSessionSummaries.length,
       videoArchiveThumbnailHydrationTargets.length,
       videoArchiveUiLoadState,
@@ -2647,7 +2648,7 @@ export function HomeScreen() {
         <Text style={styles.headerMeta}>
           {visibleVideoArchiveSessionSummaries.length}개 표시됨
           {shouldUseVideoArchiveSessionFallback
-            ? ' · 홈 기록 기준, 동기화 중'
+            ? ' · 홈 기록 기준'
             : ' · 최근 기록 기준'}
         </Text>
       </View>
@@ -2802,6 +2803,7 @@ function QADebugPanel({
     };
     counts: {
       home: number;
+      videoArchiveIds: number;
       videoArchive: number;
       videoShown: number;
     };
@@ -2943,7 +2945,8 @@ function QADebugPanel({
       </Text>
       <Text style={styles.qaDebugLine}>
         Counts home {snapshot.counts.home} · archive{' '}
-        {snapshot.counts.videoArchive} · shown {snapshot.counts.videoShown}
+        {snapshot.counts.videoArchive} · ids {snapshot.counts.videoArchiveIds} ·
+        shown {snapshot.counts.videoShown}
       </Text>
     </View>
   );

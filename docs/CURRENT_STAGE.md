@@ -19,6 +19,24 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Home/List data consistency follow-up, no build run, 2026-07-07:
+
+- Founder Expo Go QA found Home could show existing Moments while Video Archive
+  showed an empty state. Root cause was the Archive visible-list fallback being
+  disabled once the first archive page was considered loaded, even if the
+  archive order was empty or did not map to current Home session summaries.
+- Fix: when Archive has no mapped summaries but Home has summaries, Video
+  Archive now continues to render the Home-backed list instead of locking into
+  empty. This preserves the summary-first boot and keeps the existing
+  `/api/moments?view=summary`, `/api/moments?view=thumbnails`, and Detail
+  hydration paths unchanged.
+- QA Debug Panel count line now includes safe archive id count in addition to
+  Home/mapped/shown counts. No signed URLs, raw storage paths, full ids, tokens,
+  email, callback URLs, secrets, or API keys are exposed.
+- Verification:
+  - `npm run typecheck` passed.
+  - `git diff --check` passed.
+
 Detail/List thumbnail hydration follow-up, no build run, 2026-07-07:
 
 - Founder Expo Go + LAN QA confirmed the no-EAS physical-device workflow is
