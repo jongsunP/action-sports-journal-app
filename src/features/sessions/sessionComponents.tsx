@@ -17,6 +17,7 @@ import {
   getMomentStatusLabel,
   getMomentStatusMessage,
   getVisibleMomentStatus,
+  needsEvidenceReview,
 } from './momentStatus';
 import { UploadContent } from './UploadContent';
 
@@ -58,17 +59,6 @@ export type VideoArchiveLoadState =
   | 'loading'
   | 'ready'
   | 'timeout';
-
-function needsEvidenceReview(evidence?: GeminiEvidenceResult) {
-  return Boolean(
-    evidence?.requiresUserConfirmation ||
-      evidence?.consistencyStatus === 'needs_review' ||
-      evidence?.consistencyStatus === 'inconsistent' ||
-      evidence?.confidence === 'low' ||
-      evidence?.primaryCandidate.confidence === 'low' ||
-      evidence?.primaryCandidate.name === '확인 필요',
-  );
-}
 
 function getArchiveCardLabel({
   completedEvidence,

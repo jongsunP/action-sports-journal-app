@@ -140,6 +140,11 @@ Pre-AI foundation follow-up:
     `MomentDetailContent.tsx` presentation-section split. Continue only in
     small, behavior-preserving passes; do not move Detail data fetching/full
     hydration or status semantics unless a specific bug requires it.
+  - Session status/copy helper consolidation is complete for the current
+    pre-AI cleanup pass. Keep future status/copy changes centralized in
+    `momentStatus.ts` when they are shared across Home/List/Detail, but do not
+    change user-facing copy, retry policy, or status priority as part of a
+    refactor-only pass.
   - Do not start large `dev-server/index.ts` splits before AI Calibration unless
     a specific bug requires it.
   - QA Debug Panel hide/gate remains store/TestFlight cleanup, not this pre-AI

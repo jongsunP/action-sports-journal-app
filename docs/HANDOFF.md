@@ -22,6 +22,22 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Session status/copy helper consolidation, 2026-07-07:
+  - `src/features/sessions/momentStatus.ts` now centralizes shared helpers for
+    completed detection, visible evidence gating, status-message visibility,
+    evidence-review detection, Detail missing-media copy, and completed
+    no-evidence copy.
+  - `sessionFormatters.ts`, `sessionComponents.tsx`, and
+    `MomentDetailContent.tsx` now reuse those helpers instead of carrying local
+    duplicate conditions/copy.
+  - This is structure-only. User-facing copy, status priority, retry policy,
+    completed retry CTA hiding, loading-vs-empty gating, Upload/Push/Recovery/
+    Auth flow, Home/local-first cache behavior, and Detail full hydration are
+    intended to remain unchanged.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth setting change, paid AI/API call, or external setting
+    change was performed.
+
 - Detail screen low-risk decomposition 1차, 2026-07-07:
   - `src/features/sessions/MomentDetailContent.tsx` now separates the large
     Detail render body into focused presentation sections for header/delete

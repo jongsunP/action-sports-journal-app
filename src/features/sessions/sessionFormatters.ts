@@ -1,4 +1,4 @@
-import { getMomentStatus } from './momentStatus';
+import { getMomentStatus, needsEvidenceReview } from './momentStatus';
 
 import type { SessionVideoAsset } from '../../services/ai';
 import type { GeminiEvidenceResult, MomentStatus, Session } from '../../types';
@@ -83,17 +83,8 @@ export function getSessionCardPresentation({
   evidence?: GeminiEvidenceResult;
   thumbnailUri?: string;
 }) {
-  const needsReview =
-    evidence?.requiresUserConfirmation ||
-    evidence?.consistencyStatus === 'needs_review' ||
-    evidence?.consistencyStatus === 'inconsistent' ||
-    evidence?.confidence === 'low' ||
-    evidence?.primaryCandidate.confidence === 'low' ||
-    evidence?.primaryCandidate.name === '확인 필요';
-  const detectedAction =
-    needsReview || evidence?.primaryCandidate.name === '확인 필요'
-      ? undefined
-      : evidence?.primaryCandidate.name;
+  const needsReview = needsEvidenceReview(evidence);
+  const detectedAction = needsReview ? undefined : evidence?.primaryCandidate.name;
   const hook =
     needsReview
       ? evidence?.candidateTrace?.displayLabel

@@ -19,6 +19,22 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Session status/copy helper consolidation, 2026-07-07:
+
+- Session/Moment status helper cleanup was completed without changing
+  user-facing copy or status semantics.
+- `src/features/sessions/momentStatus.ts` now centralizes small shared helpers
+  for completed detection, visible evidence gating, status-message visibility,
+  evidence-review detection, Detail missing-media copy, and completed
+  no-evidence copy.
+- Home/List/Detail now reuse the shared helpers where they previously had local
+  duplicate conditions. Status priority, retry eligibility, completed retry CTA
+  hiding, loading-vs-empty gating, and completed-but-no-evidence copy are
+  intended to remain unchanged.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, paid AI/API call, Upload/Push/Recovery/Auth flow change,
+  Home/local-first cache change, or AI Calibration work was performed.
+
 Detail screen low-risk decomposition 1차, 2026-07-07:
 
 - Detail screen presentation sections were separated inside

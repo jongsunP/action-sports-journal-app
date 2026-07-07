@@ -17,9 +17,15 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { DebugResultViewer } from './DebugResultViewer';
 import {
+  getCompletedMomentNoEvidenceCopy,
+  getMissingDetailMediaCopy,
   getMomentStatusLabel,
   getMomentStatusMessage,
   getRetryEligibility,
+  getVisibleEvidenceForMoment,
+  isMomentCompleted,
+  needsEvidenceReview,
+  shouldShowMomentStatusMessage,
 } from './momentStatus';
 import {
   buildRiderFacingAnalysis,
@@ -42,24 +48,6 @@ function formatDetailDebugRequestId(requestId?: string | null) {
   return requestId ? requestId.slice(0, 8) : '-';
 }
 
-function isCompletedMoment(momentStatus?: MomentStatus) {
-  return momentStatus === 'completed';
-}
-
-function getMissingMediaCopy(momentStatus?: MomentStatus) {
-  if (isCompletedMoment(momentStatus)) {
-    return {
-      body: '영상 미리보기가 없어도 대표 기록과 분석 요약은 계속 확인할 수 있습니다.',
-      title: '대표 이미지가 준비되지 않았습니다',
-    };
-  }
-
-  return {
-    body: '원본 영상 위치가 바뀌었거나 아직 미리보기를 준비하는 중입니다.',
-    title: '영상 미리보기를 준비하지 못했습니다',
-  };
-}
-
 function DetailThumbnailPreview({
   momentStatus,
   thumbnailUri,
@@ -67,7 +55,7 @@ function DetailThumbnailPreview({
   momentStatus?: MomentStatus;
   thumbnailUri: string;
 }) {
-  const completed = isCompletedMoment(momentStatus);
+  const completed = isMomentCompleted({ momentStatus });
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -176,7 +164,7 @@ function LocalSessionVideoPlayer({
       );
     }
 
-    const missingMediaCopy = getMissingMediaCopy(momentStatus);
+    const missingMediaCopy = getMissingDetailMediaCopy(momentStatus);
 
     return (
       <View style={styles.videoMissingFallback}>
@@ -210,11 +198,7 @@ function shouldShowTrickConfirmationAction(evidence?: GeminiEvidenceResult) {
 
   return Boolean(
     predictedNeedsReview ||
-      evidence.requiresUserConfirmation ||
-      evidence.consistencyStatus === 'needs_review' ||
-      evidence.consistencyStatus === 'inconsistent' ||
-      evidence.confidence === 'low' ||
-      evidence.primaryCandidate.confidence === 'low' ||
+      needsEvidenceReview(evidence) ||
       evidence.candidateTrace?.displayLabel,
   );
 }
@@ -261,8 +245,10 @@ export function MomentDetailContent({
     return null;
   }
 
-  const isCompleted =
-    momentStatus === 'completed' || evidence?.status === 'completed';
+  const isCompleted = isMomentCompleted({
+    evidence,
+    momentStatus,
+  });
   const retryEligibility = getRetryEligibility({
     canRequestGeminiEvidence,
     evidence,
@@ -271,13 +257,11 @@ export function MomentDetailContent({
     session,
     video,
   });
-  const visibleEvidence =
-    evidence && (!momentStatus || momentStatus === 'completed')
-      ? evidence
-      : undefined;
-  const shouldShowStatusMessage = Boolean(
-    momentStatus && momentStatus !== 'completed',
-  );
+  const visibleEvidence = getVisibleEvidenceForMoment({
+    evidence,
+    momentStatus,
+  });
+  const shouldShowStatusMessage = shouldShowMomentStatusMessage(momentStatus);
   const statusMessage = momentStatus
     ? getMomentStatusMessage(momentStatus)
     : undefined;
@@ -299,7 +283,7 @@ export function MomentDetailContent({
     shouldShowRetryAction && retryEligibility.canRetry && !isDeleting,
   );
   const canPressDelete = Boolean(onDelete && !isDeleting);
-  const missingMediaCopy = getMissingMediaCopy(momentStatus);
+  const missingMediaCopy = getMissingDetailMediaCopy(momentStatus);
 
   return (
     <SafeAreaView style={styles.detailModalContainer}>
@@ -439,7 +423,7 @@ function DetailMediaSection({
   video,
 }: {
   isDetailDataLoading: boolean;
-  missingMediaCopy: ReturnType<typeof getMissingMediaCopy>;
+  missingMediaCopy: ReturnType<typeof getMissingDetailMediaCopy>;
   momentStatus?: MomentStatus;
   thumbnailUri?: string;
   video?: SessionVideoAsset | null;
@@ -665,14 +649,12 @@ function DetailAnalysisSections({
   }
 
   if (!shouldShowStatusMessage && !isLoading && !isDetailDataLoading && video) {
+    const noEvidenceCopy = getCompletedMomentNoEvidenceCopy();
+
     return (
       <View style={styles.detailStateCard}>
-        <Text style={styles.detailStateTitle}>
-          이 기록에는 표시할 분석 근거가 없습니다
-        </Text>
-        <Text style={styles.detailStateText}>
-          영상 기록은 보존되어 있으며, 필요한 경우 다시 분석을 요청할 수 있습니다.
-        </Text>
+        <Text style={styles.detailStateTitle}>{noEvidenceCopy.title}</Text>
+        <Text style={styles.detailStateText}>{noEvidenceCopy.body}</Text>
       </View>
     );
   }

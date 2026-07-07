@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Session status/copy helper consolidation is complete as a structure-only
+  pre-AI cleanup. `src/features/sessions/momentStatus.ts` now centralizes
+  shared helpers for completed detection, visible evidence gating,
+  status-message visibility, evidence-review detection, Detail missing-media
+  copy, and completed no-evidence copy. Home/List/Detail reuse those helpers
+  without changing user-facing copy, completed status priority, retry policy,
+  completed retry CTA hiding, loading-vs-empty gating, Upload/Push/Recovery/Auth
+  flows, Home/local-first cache behavior, or Detail full hydration. This is not
+  AI Calibration and did not involve EAS/local native build, DB/storage,
+  Render/Supabase/Auth settings, or paid AI/API calls.
 - Detail screen low-risk decomposition 1차 is complete as a structure-only
   pre-AI cleanup. `src/features/sessions/MomentDetailContent.tsx` now separates
   the large Detail render body into focused presentation sections for

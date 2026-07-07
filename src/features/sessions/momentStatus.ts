@@ -19,6 +19,71 @@ export type RetryEligibility = {
   reason: string;
 };
 
+export type MomentStatusCopy = {
+  body: string;
+  title: string;
+};
+
+export function isMomentCompleted({
+  evidence,
+  momentStatus,
+}: {
+  evidence?: GeminiEvidenceResult;
+  momentStatus?: MomentStatus;
+}) {
+  return momentStatus === 'completed' || evidence?.status === 'completed';
+}
+
+export function getVisibleEvidenceForMoment({
+  evidence,
+  momentStatus,
+}: {
+  evidence?: GeminiEvidenceResult;
+  momentStatus?: MomentStatus;
+}) {
+  return evidence && (!momentStatus || momentStatus === 'completed')
+    ? evidence
+    : undefined;
+}
+
+export function shouldShowMomentStatusMessage(status?: MomentStatus) {
+  return Boolean(status && status !== 'completed');
+}
+
+export function needsEvidenceReview(evidence?: GeminiEvidenceResult) {
+  return Boolean(
+    evidence?.requiresUserConfirmation ||
+      evidence?.consistencyStatus === 'needs_review' ||
+      evidence?.consistencyStatus === 'inconsistent' ||
+      evidence?.confidence === 'low' ||
+      evidence?.primaryCandidate.confidence === 'low' ||
+      evidence?.primaryCandidate.name === '확인 필요',
+  );
+}
+
+export function getMissingDetailMediaCopy(
+  momentStatus?: MomentStatus,
+): MomentStatusCopy {
+  if (momentStatus === 'completed') {
+    return {
+      body: '영상 미리보기가 없어도 대표 기록과 분석 요약은 계속 확인할 수 있습니다.',
+      title: '대표 이미지가 준비되지 않았습니다',
+    };
+  }
+
+  return {
+    body: '원본 영상 위치가 바뀌었거나 아직 미리보기를 준비하는 중입니다.',
+    title: '영상 미리보기를 준비하지 못했습니다',
+  };
+}
+
+export function getCompletedMomentNoEvidenceCopy(): MomentStatusCopy {
+  return {
+    title: '이 기록에는 표시할 분석 근거가 없습니다',
+    body: '영상 기록은 보존되어 있으며, 필요한 경우 다시 분석을 요청할 수 있습니다.',
+  };
+}
+
 export function getRetryEligibility({
   canRequestGeminiEvidence,
   evidence,
@@ -34,7 +99,7 @@ export function getRetryEligibility({
   session: Session;
   video?: SessionVideoAsset | null;
 }): RetryEligibility {
-  if (momentStatus === 'completed' || evidence?.status === 'completed') {
+  if (isMomentCompleted({ evidence, momentStatus })) {
     return {
       canRetry: false,
       reason: '이미 정상 완료된 분석입니다.',
