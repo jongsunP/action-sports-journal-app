@@ -22,6 +22,23 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Account Recovery low-risk cleanup, 2026-07-07:
+  - `src/features/account/AccountRecoveryScreen.tsx` now uses small named
+    helpers for same-current-email no-op detection, recovery action
+    availability, Email CTA labels/wait copy, connection labels, and Kakao
+    badge/status tone mapping.
+  - This is structure-only. User-facing copy, already-linked email no-op
+    blocking, `email_exists` recovery sign-in fallback, Kakao Recovery
+    entry/cancel/return handling, Email pending/rate-limit semantics, and
+    Recovery attempt observability are intended to remain unchanged.
+  - Sensitive-information policy is unchanged: Recovery metadata uses masked
+    email/domain-only fields and no token, refresh token, raw email, full
+    callback URL, full user id, signed URL, secret, or API key exposure was
+    added.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth/OAuth/deep-link setting change, paid AI/API call, or
+    user-facing copy change was performed.
+
 - Session status/copy helper consolidation, 2026-07-07:
   - `src/features/sessions/momentStatus.ts` now centralizes shared helpers for
     completed detection, visible evidence gating, status-message visibility,

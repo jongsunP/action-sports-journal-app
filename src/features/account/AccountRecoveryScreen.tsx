@@ -16,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { RootStackParamList } from '../../navigation/types';
+import type { AuthMode } from '../../services/auth/authPolicy';
 import {
   useAppTheme,
   type AppThemeColors,
@@ -57,6 +58,14 @@ type KakaoUiState =
   | 'cancelled'
   | 'dismissed'
   | 'error';
+type RecoveryBadgeTone = 'attention' | 'default' | 'neutral' | 'success';
+type RecoveryActionAvailabilityInput = {
+  authMode: AuthMode;
+  isLinkingKakao: boolean;
+  isRecoveringWithKakao: boolean;
+  isRefreshingSession: boolean;
+  isSubmittingEmail: boolean;
+};
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -100,6 +109,71 @@ function getRecoveryEmailMetadata(email: string) {
     emailDomain: getRecoveryEmailDomain(email),
     maskedEmail: maskRecoveryEmail(email),
   };
+}
+
+function getNormalizedCurrentEmail(currentEmail: string | null) {
+  return currentEmail ? normalizeRecoveryEmail(currentEmail) : null;
+}
+
+function isSameCurrentRecoveryEmail({
+  normalizedCurrentEmail,
+  normalizedEmail,
+}: {
+  normalizedCurrentEmail: string | null;
+  normalizedEmail: string;
+}) {
+  return Boolean(normalizedCurrentEmail) && normalizedEmail === normalizedCurrentEmail;
+}
+
+function canRunRecoveryAction({
+  authMode,
+  isLinkingKakao,
+  isRecoveringWithKakao,
+  isRefreshingSession,
+  isSubmittingEmail,
+}: RecoveryActionAvailabilityInput) {
+  return (
+    authMode === 'authenticated' &&
+    !isSubmittingEmail &&
+    !isRefreshingSession &&
+    !isLinkingKakao &&
+    !isRecoveringWithKakao
+  );
+}
+
+function canSubmitRecoveryEmail({
+  isCurrentEmailInput,
+  normalizedEmail,
+  ...availability
+}: RecoveryActionAvailabilityInput & {
+  isCurrentEmailInput: boolean;
+  normalizedEmail: string;
+}) {
+  return (
+    canRunRecoveryAction(availability) &&
+    normalizedEmail.includes('@') &&
+    !isCurrentEmailInput
+  );
+}
+
+function getConnectionLabel(isConnected: boolean) {
+  return isConnected ? '연결됨' : '미연결';
+}
+
+function getEmailMethodTitle(currentEmail: string | null) {
+  return currentEmail ? '이메일 연결됨' : '이메일로 계속하기';
+}
+
+function getEmailPrimaryButtonLabel(isCurrentEmailInput: boolean) {
+  return isCurrentEmailInput ? '이미 연결된 이메일' : '이메일로 계속하기';
+}
+
+function getEmailWaitDescription(emailContinueFlow: EmailContinueFlow) {
+  return `확인 메일이 도착하면 링크를 눌러주세요. 링크를 열면 앱으로 돌아와 ${
+    emailContinueFlow === 'recovery'
+      ? '기존 기록을 불러옵니다.'
+      : '복구 수단 연결을 확인합니다.'
+  }`;
 }
 
 function mergeStyleMaps<T extends Record<string, any>>(
@@ -250,6 +324,45 @@ function shouldShowKakaoDescription(state: KakaoUiState) {
   );
 }
 
+function getKakaoStateBadgeCopy(state: KakaoUiState): {
+  label: string;
+  tone: RecoveryBadgeTone;
+} {
+  if (state === 'linked' || state === 'success') {
+    return { label: '연결됨', tone: 'success' };
+  }
+
+  if (state === 'linking' || state === 'recovering') {
+    return { label: '진행 중', tone: 'default' };
+  }
+
+  if (state === 'blocked') {
+    return { label: '대기', tone: 'attention' };
+  }
+
+  if (state === 'recoverReady' || state === 'error') {
+    return { label: '확인 필요', tone: 'attention' };
+  }
+
+  if (state === 'cancelled' || state === 'dismissed') {
+    return { label: '미완료', tone: 'neutral' };
+  }
+
+  return { label: '미연결', tone: 'default' };
+}
+
+function getKakaoFeedbackTone(type: KakaoFeedbackType): RecoveryBadgeTone {
+  if (type === 'success') {
+    return 'success';
+  }
+
+  if (type === 'cancelled' || type === 'dismissed') {
+    return 'neutral';
+  }
+
+  return 'attention';
+}
+
 function getAccountStatusCopy({
   currentEmail,
   hasKakaoIdentity,
@@ -335,34 +448,28 @@ export function AccountRecoveryScreen() {
   const normalizedEmail = useMemo(() => normalizeRecoveryEmail(email), [email]);
   const isAnonymousUser = hasAnonymousFlag(user);
   const currentEmail = user?.email ?? null;
-  const normalizedCurrentEmail = currentEmail
-    ? normalizeRecoveryEmail(currentEmail)
-    : null;
-  const isCurrentEmailInput =
-    Boolean(normalizedCurrentEmail) && normalizedEmail === normalizedCurrentEmail;
+  const normalizedCurrentEmail = getNormalizedCurrentEmail(currentEmail);
+  const recoveryActionAvailability = {
+    authMode,
+    isLinkingKakao,
+    isRecoveringWithKakao,
+    isRefreshingSession,
+    isSubmittingEmail,
+  };
+  const isCurrentEmailInput = isSameCurrentRecoveryEmail({
+    normalizedCurrentEmail,
+    normalizedEmail,
+  });
   const hasKakaoIdentity = hasKakaoProviderIdentity(user);
   const kakaoNickname = getKakaoNickname(user?.user_metadata);
-  const canSubmitEmail =
-    authMode === 'authenticated' &&
-    normalizedEmail.includes('@') &&
-    !isCurrentEmailInput &&
-    !isSubmittingEmail &&
-    !isRefreshingSession &&
-    !isLinkingKakao &&
-    !isRecoveringWithKakao;
-  const canRefreshLinkStatus =
-    authMode === 'authenticated' &&
-    !isSubmittingEmail &&
-    !isRefreshingSession &&
-    !isLinkingKakao &&
-    !isRecoveringWithKakao;
+  const canSubmitEmail = canSubmitRecoveryEmail({
+    ...recoveryActionAvailability,
+    isCurrentEmailInput,
+    normalizedEmail,
+  });
+  const canRefreshLinkStatus = canRunRecoveryAction(recoveryActionAvailability);
   const canContinueWithKakao =
-    authMode === 'authenticated' &&
-    !hasKakaoIdentity &&
-    !isSubmittingEmail &&
-    !isRefreshingSession &&
-    !isLinkingKakao &&
-    !isRecoveringWithKakao;
+    canRunRecoveryAction(recoveryActionAvailability) && !hasKakaoIdentity;
   const kakaoUiCopy = getKakaoUiCopy({
     hasKakaoIdentity,
     isLinkingKakao,
@@ -376,6 +483,10 @@ export function AccountRecoveryScreen() {
     hasKakaoIdentity,
     isAnonymousUser,
   });
+  const kakaoStateBadge = getKakaoStateBadgeCopy(kakaoUiCopy.state);
+  const kakaoFeedbackTone = kakaoFeedback
+    ? getKakaoFeedbackTone(kakaoFeedback.type)
+    : null;
   const hasProtectedAccount = Boolean(currentEmail || hasKakaoIdentity);
   const showEmailDetails =
     selectedRecoveryMethod === 'email' ||
@@ -939,7 +1050,7 @@ export function AccountRecoveryScreen() {
                 ]}
               >
                 <Text style={styles.methodMiniBadgeText}>
-                  카카오 {hasKakaoIdentity ? '연결됨' : '미연결'}
+                  카카오 {getConnectionLabel(hasKakaoIdentity)}
                 </Text>
               </View>
               <View
@@ -951,7 +1062,7 @@ export function AccountRecoveryScreen() {
                 ]}
               >
                 <Text style={styles.methodMiniBadgeText}>
-                  이메일 {currentEmail ? '연결됨' : '미연결'}
+                  이메일 {getConnectionLabel(Boolean(currentEmail))}
                 </Text>
               </View>
             </View>
@@ -1008,7 +1119,7 @@ export function AccountRecoveryScreen() {
                       ]}
                     >
                       <Text style={styles.methodStateBadgeText}>
-                        {hasKakaoIdentity ? '연결됨' : '미연결'}
+                        {getConnectionLabel(hasKakaoIdentity)}
                       </Text>
                     </View>
                   </View>
@@ -1042,7 +1153,7 @@ export function AccountRecoveryScreen() {
                       <View style={styles.methodTitleBlock}>
                         <Text style={styles.methodLabel}>Email</Text>
                         <Text style={styles.methodTitle}>
-                          {currentEmail ? '이메일 연결됨' : '이메일로 계속하기'}
+                          {getEmailMethodTitle(currentEmail)}
                         </Text>
                       </View>
                     </View>
@@ -1055,7 +1166,7 @@ export function AccountRecoveryScreen() {
                       ]}
                     >
                       <Text style={styles.methodStateBadgeText}>
-                        {currentEmail ? '연결됨' : '미연결'}
+                        {getConnectionLabel(Boolean(currentEmail))}
                       </Text>
                     </View>
                   </View>
@@ -1074,38 +1185,17 @@ export function AccountRecoveryScreen() {
                     <View
                       style={[
                         styles.kakaoStateBadge,
-                        kakaoUiCopy.state === 'linked' ||
-                        kakaoUiCopy.state === 'success'
+                        kakaoStateBadge.tone === 'success'
                           ? styles.kakaoStateBadgeSuccess
-                          : kakaoUiCopy.state === 'blocked' ||
-                              kakaoUiCopy.state === 'recoverReady'
+                          : kakaoStateBadge.tone === 'attention'
                             ? styles.kakaoStateBadgeAttention
-                          : kakaoUiCopy.state === 'cancelled' ||
-                              kakaoUiCopy.state === 'dismissed'
-                            ? styles.kakaoStateBadgeNeutral
-                          : kakaoUiCopy.state === 'error'
-                              ? styles.kakaoStateBadgeAttention
+                            : kakaoStateBadge.tone === 'neutral'
+                              ? styles.kakaoStateBadgeNeutral
                               : styles.kakaoStateBadgeDefault,
                       ]}
                     >
                       <Text style={styles.kakaoStateBadgeText}>
-                        {kakaoUiCopy.state === 'linked' ||
-                        kakaoUiCopy.state === 'success'
-                          ? '연결됨'
-                          : kakaoUiCopy.state === 'linking'
-                            ? '진행 중'
-                            : kakaoUiCopy.state === 'recovering'
-                              ? '진행 중'
-                              : kakaoUiCopy.state === 'error'
-                                ? '확인 필요'
-                                : kakaoUiCopy.state === 'blocked'
-                                  ? '대기'
-                                  : kakaoUiCopy.state === 'recoverReady'
-                                    ? '확인 필요'
-                                    : kakaoUiCopy.state === 'cancelled' ||
-                                        kakaoUiCopy.state === 'dismissed'
-                                      ? '미완료'
-                                      : '미연결'}
+                        {kakaoStateBadge.label}
                       </Text>
                     </View>
                   </View>
@@ -1137,10 +1227,9 @@ export function AccountRecoveryScreen() {
                     <Text
                       style={[
                         styles.kakaoStatusText,
-                        kakaoFeedback.type === 'success'
+                        kakaoFeedbackTone === 'success'
                           ? styles.kakaoStatusTextSuccess
-                          : kakaoFeedback.type === 'cancelled' ||
-                              kakaoFeedback.type === 'dismissed'
+                          : kakaoFeedbackTone === 'neutral'
                             ? styles.kakaoStatusTextNeutral
                             : styles.kakaoStatusTextAttention,
                       ]}
@@ -1184,9 +1273,7 @@ export function AccountRecoveryScreen() {
                       <ActivityIndicator color="#050507" />
                     ) : (
                       <Text style={styles.primaryButtonText}>
-                        {isCurrentEmailInput
-                          ? '이미 연결된 이메일'
-                          : '이메일로 계속하기'}
+                        {getEmailPrimaryButtonLabel(isCurrentEmailInput)}
                       </Text>
                     )}
                   </Pressable>
@@ -1195,11 +1282,7 @@ export function AccountRecoveryScreen() {
                     <View style={styles.codeBlock}>
                       <Text style={styles.formLabel}>이메일 확인 대기 중</Text>
                       <Text style={styles.helperText}>
-                        확인 메일이 도착하면 링크를 눌러주세요. 링크를 열면
-                        앱으로 돌아와{' '}
-                        {emailContinueFlow === 'recovery'
-                          ? '기존 기록을 불러옵니다.'
-                          : '복구 수단 연결을 확인합니다.'}
+                        {getEmailWaitDescription(emailContinueFlow)}
                       </Text>
                       <Pressable
                         accessibilityRole="button"

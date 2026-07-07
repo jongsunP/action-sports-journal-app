@@ -130,6 +130,13 @@ Final confirmation before AI Calibration:
 Pre-AI foundation follow-up:
 
 - Audit follow-up backlog separation:
+  - Account Recovery low-risk cleanup is complete as a structure-only pass:
+    same-current-email no-op detection, recovery action availability, Email CTA
+    labels/wait copy, connection labels, and Kakao badge/status tone mapping now
+    have named helpers inside `AccountRecoveryScreen.tsx`. Do not treat this as
+    a Recovery flow redesign; user-facing copy, `email_exists` recovery
+    sign-in fallback, Kakao entry/cancel/return, Email pending/rate-limit
+    semantics, and observability policy are intended to remain unchanged.
   - HomeScreen low-risk decomposition has started with a structure-only QA Debug
     Panel presentation split and a Video Archive / recent records presentation
     split, followed by a thumbnail hydration hook extraction and upload

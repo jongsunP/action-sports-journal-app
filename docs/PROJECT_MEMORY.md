@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Account Recovery low-risk cleanup is complete as a structure-only pre-AI
+  cleanup. `src/features/account/AccountRecoveryScreen.tsx` now uses named
+  helpers for same-current-email no-op detection, recovery action availability,
+  Email CTA labels/wait copy, connection labels, and Kakao badge/status tone
+  mapping. User-facing copy, already-linked email no-op blocking,
+  `email_exists` recovery sign-in fallback, Kakao Recovery entry/cancel/return,
+  Email pending/rate-limit semantics, and Recovery attempt observability are
+  unchanged. This is not AI Calibration and did not involve EAS/local native
+  build, DB/storage, Render/Supabase/Auth/OAuth/deep-link settings, paid
+  AI/API calls, or sensitive-information exposure.
 - Session status/copy helper consolidation is complete as a structure-only
   pre-AI cleanup. `src/features/sessions/momentStatus.ts` now centralizes
   shared helpers for completed detection, visible evidence gating,

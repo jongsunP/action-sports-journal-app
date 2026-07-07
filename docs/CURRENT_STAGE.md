@@ -19,6 +19,24 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Account Recovery low-risk cleanup, 2026-07-07:
+
+- Account Recovery readability cleanup was completed without changing
+  user-facing copy or recovery semantics.
+- `src/features/account/AccountRecoveryScreen.tsx` now uses small named helpers
+  for current-email no-op detection, shared recovery action availability, Email
+  CTA labels/wait copy, connection labels, and Kakao badge/status tone mapping.
+- Existing behavior is intended to remain unchanged: already-linked current
+  email still does not call the email update path, `email_exists` still falls
+  through to recovery sign-in, and Kakao entry/cancel/return handling remains
+  intact.
+- Recovery attempt metadata continues to use masked email/domain-only fields;
+  no token, refresh token, raw email, full callback URL, full user id, signed
+  URL, secret, or API key exposure was added.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth/
+  OAuth/deep-link setting change, paid AI/API call, user-facing copy change, or
+  AI Calibration work was performed.
+
 Session status/copy helper consolidation, 2026-07-07:
 
 - Session/Moment status helper cleanup was completed without changing
