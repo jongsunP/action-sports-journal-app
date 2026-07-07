@@ -22,6 +22,23 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI Audit Follow-up small fixes, 2026-07-07:
+  - Small safe fixes from the Pre-AI audit are complete. No EAS build, local
+    native build, DB write/backfill, Render/Supabase/Auth setting change, paid
+    AI/API call, or AI Calibration was performed.
+  - Client console logs for upload/reconciliation/timing no longer print full
+    localSessionId/draftId/uploadId/momentId/raw storage path values; they use
+    short ids and `storagePathPresent`-style booleans. API request bodies still
+    pass required full values internally.
+  - Detail no-evidence copy is now neutral for completed legacy rows without
+    evidence. Loading skeletons still hide empty/no-evidence copy until the
+    detail fetch finishes.
+  - AI Calibration has no known foundation blocker, but Founder reference videos
+    are still needed before starting calibration.
+  - Remaining non-blocking follow-ups stay in backlog/later lanes: large
+    HomeScreen/dev-server refactors, QA Debug Panel hide/gate before store,
+    Push icon platform/asset investigation, and any Legacy Thumbnail Backfill.
+
 - Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
   - Local-first Cache P1 can be treated as no-build QA passed.
   - Founder Expo Go + LAN QA confirmed Home/Video counts stay aligned, Video

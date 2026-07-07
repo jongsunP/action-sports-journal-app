@@ -503,9 +503,11 @@ export function MomentDetailContent({
               </>
             ) : !shouldShowStatusMessage && !isLoading && !isDetailDataLoading && video ? (
               <View style={styles.detailStateCard}>
-                <Text style={styles.detailStateTitle}>아직 분석 근거가 없습니다</Text>
+                <Text style={styles.detailStateTitle}>
+                  이 기록에는 표시할 분석 근거가 없습니다
+                </Text>
                 <Text style={styles.detailStateText}>
-                  다시 시도하면 영상 근거를 다시 확인합니다.
+                  영상 기록은 보존되어 있으며, 필요한 경우 다시 분석을 요청할 수 있습니다.
                 </Text>
               </View>
             ) : null}

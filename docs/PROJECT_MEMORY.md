@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Pre-AI Audit Follow-up small fixes are complete without build or external
+  setting changes. Client console upload/reconciliation/timing logs now mask
+  local session, draft, upload, Moment, and raw storage-path values as short ids
+  or presence booleans, while keeping required full values inside functional API
+  payloads. Detail completed/no-evidence copy is neutralized for legacy rows
+  without evidence, and loading/empty separation is preserved. There is still no
+  known foundation blocker for AI Calibration, but Founder reference videos are
+  not prepared yet, so AI Calibration has not started. Larger refactors, QA Debug
+  Panel hide/gate, Push icon investigation, and Legacy Thumbnail Backfill remain
+  later/backlog work.
 - Detail Progressive Hydration Polish and Legacy Thumbnail Backfill feasibility
   are closed without EAS build. Detail loading now keeps the media/detail page
   stable with section-shaped skeletons for share-preview and evidence/analysis

@@ -8,6 +8,7 @@ import {
   type VideoUploadTarget,
 } from '../../services/moments';
 import type { Session } from '../../types';
+import { hasDebugValue, shortDebugId } from '../../utils/debugLog';
 import {
   getVideoFromUploadDraft,
   type UploadDraft,
@@ -28,12 +29,12 @@ export async function uploadDraftSourceVideoDirectly(
   try {
     options?.onProgress?.('creating_target');
     console.info('[upload_timing]', {
-      draftId: draft.draftId,
+      draftIdShort: shortDebugId(draft.draftId),
       durationMs: draft.durationMs,
       event: 'upload_target_request_start',
       fileName: draft.fileName,
       fileSize: draft.fileSize,
-      localSessionId: options?.localSessionId,
+      localSessionIdShort: shortDebugId(options?.localSessionId),
       stage: 'request_upload_target',
     });
 
@@ -51,15 +52,15 @@ export async function uploadDraftSourceVideoDirectly(
     }
 
     console.info('[upload_timing]', {
-      draftId: draft.draftId,
+      draftIdShort: shortDebugId(draft.draftId),
       durationMs: draft.durationMs,
       event: 'upload_target_request_success',
       fileName: draft.fileName,
       fileSize: draft.fileSize,
-      localSessionId: options?.localSessionId,
+      localSessionIdShort: shortDebugId(options?.localSessionId),
       stage: 'request_upload_target',
-      storagePath: uploadTarget.storagePath,
-      uploadId: uploadTarget.uploadId,
+      storagePathPresent: hasDebugValue(uploadTarget.storagePath),
+      uploadIdShort: shortDebugId(uploadTarget.uploadId),
     });
     options?.onUploadTargetCreated?.(uploadTarget);
 
@@ -81,18 +82,18 @@ export async function uploadDraftSourceVideoDirectly(
     };
   } catch (error) {
     console.info('[upload_timing]', {
-      draftId: draft.draftId,
+      draftIdShort: shortDebugId(draft.draftId),
       durationMs: draft.durationMs,
       event: uploadTarget
         ? 'signed_upload_failure'
         : 'upload_target_request_failure',
       fileName: draft.fileName,
       fileSize: draft.fileSize,
-      localSessionId: options?.localSessionId,
+      localSessionIdShort: shortDebugId(options?.localSessionId),
       reason: error instanceof Error ? error.message : 'unknown',
       stage: uploadTarget ? 'signed_upload' : 'request_upload_target',
-      storagePath: uploadTarget?.storagePath,
-      uploadId: uploadTarget?.uploadId,
+      storagePathPresent: hasDebugValue(uploadTarget?.storagePath),
+      uploadIdShort: shortDebugId(uploadTarget?.uploadId),
     });
 
     if (uploadTarget) {

@@ -13,6 +13,7 @@ import {
   getMomentDetail,
   type MomentDetailFetchDiagnostics,
 } from '../../services/moments';
+import { shortDebugId } from '../../utils/debugLog';
 
 import type { RootStackParamList } from '../../navigation/types';
 import type { GeminiEvidenceResult } from '../../types';
@@ -99,7 +100,7 @@ export function MomentDetailScreen({
           error instanceof Error ? error.message : 'Moment detail load failed.';
         console.warn('[moment_detail_load_failed]', {
           message,
-          momentId: remoteMomentId,
+          momentIdShort: shortDebugId(remoteMomentId),
         });
       })
       .finally(() => {

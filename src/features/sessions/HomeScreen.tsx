@@ -39,6 +39,7 @@ import {
   getMomentStatus,
   getVisibleMomentStatus,
 } from './momentStatus';
+import { hasDebugValue, shortDebugId } from '../../utils/debugLog';
 import {
   APP_TABS,
   type AppTabId,
@@ -512,12 +513,12 @@ export function HomeScreen() {
         [candidate.localSessionId]: candidate,
       }));
       console.info('[moment_reconciliation]', {
-        draftId: candidate.draftId,
+        draftIdShort: shortDebugId(candidate.draftId),
         event: 'upload_reconciliation_candidate_created',
         fileSize: candidate.fileSize,
-        localSessionId: candidate.localSessionId,
+        localSessionIdShort: shortDebugId(candidate.localSessionId),
         matched: false,
-        uploadId: candidate.uploadId,
+        uploadIdShort: shortDebugId(candidate.uploadId),
       });
     },
     [],
@@ -572,13 +573,13 @@ export function HomeScreen() {
         };
       });
       console.info('[moment_reconciliation]', {
-        draftId: draftId ?? uploadTarget.draftId,
+        draftIdShort: shortDebugId(draftId ?? uploadTarget.draftId),
         event: 'upload_reconciliation_candidate_targeted',
-        localSessionId: sessionId,
+        localSessionIdShort: shortDebugId(sessionId),
         matched: false,
         state: 'recoverable_orphan',
-        storagePath: uploadTarget.storagePath,
-        uploadId: uploadTarget.uploadId,
+        storagePathPresent: hasDebugValue(uploadTarget.storagePath),
+        uploadIdShort: shortDebugId(uploadTarget.uploadId),
       });
     },
     [],
@@ -599,11 +600,11 @@ export function HomeScreen() {
       clearUploadReconciliationCandidate(localSessionId);
       console.info('[moment_reconciliation]', {
         event: 'remote_moment_reconciled',
-        localSessionId,
+        localSessionIdShort: shortDebugId(localSessionId),
         matchReason,
         matched: true,
-        momentId,
-        remoteSessionId,
+        momentIdShort: shortDebugId(momentId),
+        remoteSessionIdShort: shortDebugId(remoteSessionId),
       });
     },
     [clearUploadReconciliationCandidate],
@@ -678,12 +679,12 @@ export function HomeScreen() {
 
         console.info('[moment_reconciliation]', {
           event: 'recoverable_orphan_recovery_started',
-          localSessionId: candidate.localSessionId,
+          localSessionIdShort: shortDebugId(candidate.localSessionId),
           matchReason: 'recoverable_upload_target',
           reason,
           state: 'recoverable_orphan',
-          storagePath: candidate.storagePath,
-          uploadId: candidate.uploadId,
+          storagePathPresent: hasDebugValue(candidate.storagePath),
+          uploadIdShort: shortDebugId(candidate.uploadId),
         });
 
         try {
@@ -728,25 +729,25 @@ export function HomeScreen() {
             );
             console.info('[moment_reconciliation]', {
               event: 'recoverable_orphan_recovery_success',
-              localSessionId: candidate.localSessionId,
+              localSessionIdShort: shortDebugId(candidate.localSessionId),
               matchReason: 'recoverable_upload_target',
               matched: true,
-              momentId: storedMoment.momentId,
+              momentIdShort: shortDebugId(storedMoment.momentId),
               reason,
               state: 'recoverable_orphan',
-              storagePath: candidate.storagePath,
-              uploadId: candidate.uploadId,
+              storagePathPresent: hasDebugValue(candidate.storagePath),
+              uploadIdShort: shortDebugId(candidate.uploadId),
             });
           }
         } catch (error) {
           console.info('[moment_reconciliation]', {
             event: 'recoverable_orphan_recovery_failure',
-            localSessionId: candidate.localSessionId,
+            localSessionIdShort: shortDebugId(candidate.localSessionId),
             matched: false,
             reason: error instanceof Error ? error.message : 'unknown',
             state: 'recoverable_orphan',
-            storagePath: candidate.storagePath,
-            uploadId: candidate.uploadId,
+            storagePathPresent: hasDebugValue(candidate.storagePath),
+            uploadIdShort: shortDebugId(candidate.uploadId),
           });
         } finally {
           recoveringUploadSessionIdsRef.current.delete(candidate.localSessionId);
@@ -920,7 +921,7 @@ export function HomeScreen() {
         pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
         console.info('[moment_reconciliation]', {
           event: 'remote_moment_unmatched',
-          localSessionId: sessionId,
+          localSessionIdShort: shortDebugId(sessionId),
           matchReason: hasRecoverableUploadTarget
             ? 'upload_context_ttl_expired'
             : 'local_only_upload_context_ttl_expired',
@@ -983,7 +984,7 @@ export function HomeScreen() {
       pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
       console.info('[moment_reconciliation]', {
         event: 'local_only_upload_session_expired',
-        localSessionId: sessionId,
+        localSessionIdShort: shortDebugId(sessionId),
         matchReason: 'missing_upload_recovery_context',
         matched: false,
       });
@@ -2242,11 +2243,11 @@ export function HomeScreen() {
       if (existingRemoteMomentId) {
         console.info('[upload_timing]', {
           event: 'upload_failure_remote_reconcile_existing',
-          localSessionId,
-          momentId: existingRemoteMomentId,
+          localSessionIdShort: shortDebugId(localSessionId),
+          momentIdShort: shortDebugId(existingRemoteMomentId),
           reason,
           stage,
-          uploadId,
+          uploadIdShort: shortDebugId(uploadId),
         });
         return true;
       }
@@ -2278,11 +2279,11 @@ export function HomeScreen() {
           console.info('[upload_timing]', {
             attempt,
             event: 'upload_failure_remote_reconcile_matched',
-            localSessionId,
-            momentId: matchedMoment.remoteMomentId,
+            localSessionIdShort: shortDebugId(localSessionId),
+            momentIdShort: shortDebugId(matchedMoment.remoteMomentId),
             reason,
             stage,
-            uploadId,
+            uploadIdShort: shortDebugId(uploadId),
           });
           return true;
         }
@@ -2290,10 +2291,10 @@ export function HomeScreen() {
         console.info('[upload_timing]', {
           attempt,
           event: 'upload_failure_remote_reconcile_unmatched',
-          localSessionId,
+          localSessionIdShort: shortDebugId(localSessionId),
           reason,
           stage,
-          uploadId,
+          uploadIdShort: shortDebugId(uploadId),
         });
         return false;
       };
@@ -2311,11 +2312,11 @@ export function HomeScreen() {
       } catch (error) {
         console.info('[upload_timing]', {
           event: 'upload_failure_remote_reconcile_failed',
-          localSessionId,
+          localSessionIdShort: shortDebugId(localSessionId),
           reason: error instanceof Error ? error.message : 'unknown',
           sourceFailureReason: reason,
           stage,
-          uploadId,
+          uploadIdShort: shortDebugId(uploadId),
         });
         return false;
       }

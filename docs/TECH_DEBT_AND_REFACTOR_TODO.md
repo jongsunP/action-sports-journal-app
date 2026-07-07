@@ -57,6 +57,12 @@ blocker before AI Calibration:
 - Startup/Region/Upload/Auth/Recovery have no known AI Calibration blocker.
 - The next process improvement is local/physical-device test environment setup,
   not another EAS build by default.
+- Pre-AI Audit Follow-up small fixes are complete: client console
+  upload/reconciliation/timing logs now use short ids or presence booleans
+  instead of full local session, draft, upload, Moment, or raw storage-path
+  values, and Detail completed/no-evidence copy is neutral. AI Calibration still
+  has no known foundation blocker, but Founder reference videos are not prepared
+  yet, so calibration has not started.
 
 Local DB inspection setup:
 
@@ -122,6 +128,16 @@ Final confirmation before AI Calibration:
   callback URL, signed URL, secret, or API key.
 
 Pre-AI foundation follow-up:
+
+- Audit follow-up backlog separation:
+  - Do not start large HomeScreen or `dev-server/index.ts` splits before AI
+    Calibration unless a specific bug requires it.
+  - QA Debug Panel hide/gate remains store/TestFlight cleanup, not this pre-AI
+    fix.
+  - Push icon remains a visual/platform backlog item.
+  - Legacy Thumbnail Backfill remains approval-gated because it requires
+    DB/storage writes and may be impossible for rows whose source videos are
+    already deleted.
 
 - Local-first Journal Cache P1 closeout:
   - Founder Expo Go + LAN QA and read-only DB/API/code inspection are enough to

@@ -19,6 +19,24 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Pre-AI Audit Follow-up small fixes, 2026-07-07:
+
+- Safe audit follow-up is complete without EAS build, local native build, DB
+  write/backfill, Render/Supabase/Auth setting change, paid AI/API call, or AI
+  Calibration work.
+- Client console upload/reconciliation/timing logs now avoid full local session,
+  draft, upload, Moment, and raw storage-path values. Logs use short ids and
+  boolean presence fields such as `storagePathPresent`; functional API payloads
+  still use the required full values internally.
+- Detail completed/no-evidence copy was softened from a failure/retry-leaning
+  message to a neutral "no displayable evidence for this record" state. Loading
+  and truly-empty states remain separated.
+- AI Calibration still has no known foundation blocker, but Founder reference
+  videos are not prepared yet, so AI Calibration has not started.
+- Still later/backlog, not pre-AI blockers: HomeScreen/dev-server large
+  refactors, QA Debug Panel hide/gate before store/TestFlight, iOS Push icon
+  platform investigation, and any Legacy Thumbnail Backfill write path.
+
 Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
 
 - Founder Expo Go + LAN QA and read-only DB/API/code inspection are complete

@@ -7,6 +7,7 @@ import type {
   Session,
 } from '../../types';
 import type { SessionVideoAsset } from '../ai';
+import { hasDebugValue, shortDebugId } from '../../utils/debugLog';
 import * as FileSystem from 'expo-file-system/legacy';
 import { authenticatedFetch } from '../auth/authenticatedFetch';
 
@@ -492,8 +493,8 @@ export async function uploadVideoToSignedTarget(
     expectedFileSize,
     event: 'direct_upload_file_info',
     localFileSize,
-    storagePath: target.storagePath,
-    uploadId: target.uploadId,
+    storagePathPresent: hasDebugValue(target.storagePath),
+    uploadIdShort: shortDebugId(target.uploadId),
     videoUriScheme: video.uri.split(':', 1)[0],
   });
 
@@ -556,8 +557,8 @@ export async function uploadVideoToSignedTarget(
     event: 'direct_upload_success',
     localFileSize,
     responseStatus: uploadResult.status,
-    storagePath: target.storagePath,
-    uploadId: target.uploadId,
+    storagePathPresent: hasDebugValue(target.storagePath),
+    uploadIdShort: shortDebugId(target.uploadId),
   });
 
   return uploadResult;
@@ -693,12 +694,12 @@ export async function finalizeUploadedSourceVideo(
     }
 
     console.info('[upload_timing]', {
-      analysisJobId,
+      analysisJobIdShort: shortDebugId(analysisJobId),
       analysisJobStatus,
       event: 'direct_finalize_success',
-      momentId,
-      storagePath,
-      uploadId: input.uploadId,
+      momentIdShort: shortDebugId(momentId),
+      storagePathPresent: hasDebugValue(storagePath),
+      uploadIdShort: shortDebugId(input.uploadId),
     });
 
     return {
