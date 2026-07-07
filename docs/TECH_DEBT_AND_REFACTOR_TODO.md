@@ -134,11 +134,25 @@ Pre-AI foundation follow-up:
     `moments.thumbnail_uri`. Detail can still show imagery through
     `sourceVideoUri` / video preview/player, which is not the same as a durable
     list thumbnail.
+  - Read-only feasibility check found those 8 missing-thumbnail rows have
+    deleted source-video storage and no source Storage object, so the checked
+    recent 28-row set has 0 direct backfill candidates from existing source
+    video and 8 rows that cannot be backfilled without another source.
   - Do not use signed source-video URLs as list thumbnails and do not persist
     them in the local journal snapshot.
   - Track `Legacy Thumbnail Backfill` separately. Before any DB write/backfill,
     run a read-only target count and require explicit approval. Rows whose
     source videos are already deleted may be impossible to backfill.
+
+- Detail Progressive Hydration Polish:
+  - Detail loading now reserves section-shaped skeleton space for share preview
+    and evidence/analysis content while the full Detail API response is in
+    flight.
+  - Loading and truly-empty states stay separated: no-evidence/empty copy should
+    appear only after loading completes.
+  - This is UX-only; it does not change Detail full hydration, list thumbnail
+    hydration, Upload/Push/Recovery/Auth, backend/DB settings, EAS build, local
+    native build, or AI Calibration.
 
 - Detail/List thumbnail hydration follow-up:
   - Founder Expo Go + LAN QA showed that no-EAS device testing works, but list

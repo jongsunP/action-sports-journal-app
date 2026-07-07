@@ -81,6 +81,17 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Detail Progressive Hydration Polish and Legacy Thumbnail Backfill feasibility
+  are closed without EAS build. Detail loading now keeps the media/detail page
+  stable with section-shaped skeletons for share-preview and evidence/analysis
+  content while API hydration is in flight; empty/no-evidence copy remains
+  gated until loading finishes. Read-only DB/API/Storage inspection for the
+  current legacy/recovered recent 28 rows found 20 rows with durable
+  `moments.thumbnail_uri` and 8 without it. Those 8 missing-thumbnail rows have
+  deleted source-video storage and no source Storage object was found, so there
+  are 0 direct source-video backfill candidates in that checked set. Any
+  thumbnail backfill remains a separately approved DB/storage write task, not an
+  AI Calibration blocker.
 - Detail/List thumbnail hydration follow-up is implemented without EAS build.
   Under summary-first boot, list thumbnails can still appear after first paint
   because `/api/moments?view=summary` intentionally skips thumbnail signed URL

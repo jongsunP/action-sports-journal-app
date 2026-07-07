@@ -120,10 +120,29 @@ function DetailMediaPlaceholder() {
 
 function DetailDataLoadingPlaceholder() {
   return (
-    <View style={styles.detailStateCard}>
-      <View style={styles.detailLoadingLineWide} />
-      <View style={styles.detailLoadingLineNarrow} />
-    </View>
+    <>
+      <View style={styles.detailHydrationPreviewCard}>
+        <View style={styles.detailHydrationHeaderRow}>
+          <View style={styles.detailLoadingLineNarrow} />
+          <View style={styles.detailHydrationPill} />
+        </View>
+        <View style={styles.detailHydrationImage} />
+        <View style={styles.detailHydrationBody}>
+          <View style={styles.detailLoadingLineWide} />
+          <View style={styles.detailLoadingLineNarrow} />
+          <View style={styles.detailHydrationLineFull} />
+        </View>
+      </View>
+      <View style={styles.detailHydrationAnalysisCard}>
+        <View style={styles.detailLoadingLineWide} />
+        <View style={styles.detailHydrationLineFull} />
+        <View style={styles.detailHydrationLineMid} />
+        <View style={styles.detailHydrationChipRow}>
+          <View style={styles.detailHydrationChip} />
+          <View style={styles.detailHydrationChip} />
+        </View>
+      </View>
+    </>
   );
 }
 

@@ -31,10 +31,19 @@ Latest product/UX direction update:
     observable, but some legacy/recovered rows still show skeletons because
     read-only DB/API/code inspection confirmed they do not have durable
     `moments.thumbnail_uri`.
+  - Latest read-only feasibility pass checked the recent 28 rows for the active
+    legacy/recovered owner: 20 have durable thumbnails, 8 do not, and the 8
+    missing-thumbnail rows have deleted source-video storage with no source
+    Storage object found. Direct backfill candidates from existing source video:
+    0.
   - Detail images for those rows are likely `sourceVideoUri` video
     preview/player output, not list thumbnail URIs. Do not use signed
     source-video URLs as list thumbnails and do not persist them in the local
     journal snapshot.
+  - Detail progressive hydration polish is implemented: while detail/evidence/
+    share-preview data loads, the screen now shows section-shaped skeletons
+    instead of a sparse placeholder. Empty/no-evidence copy remains hidden until
+    loading completes.
   - Track this as `Legacy Thumbnail Backfill` backlog. Backfill must be a
     separately approved task and may be impossible for rows whose source videos
     are already deleted.

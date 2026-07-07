@@ -38,18 +38,24 @@ Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
   - recent 28 rows;
   - 20 have `thumbnail_uri`;
   - 8 do not have `thumbnail_uri`;
-  - the 8 without thumbnails have source-video references, but most source
-    videos are already deleted.
+  - the 8 without thumbnails have source-video references, but all 8 have
+    `source_video_storage_status=deleted` and no source Storage object was
+    found in read-only inspection.
 - Detail can still show an image because Detail prioritizes `sourceVideoUri`
   / video preview/player when available. That image is not the durable
   thumbnail URI used by list hydration.
+- Detail progressive hydration polish was applied without changing data flow:
+  the detail/evidence/share-preview loading state now reserves section-shaped
+  skeleton space so API hydration feels less abrupt, while truly-empty copy
+  remains gated until loading finishes.
 - Decision:
   - keep placeholder/skeleton for legacy rows without `thumbnail_uri`;
   - do not use signed source-video URLs as in-memory list thumbnails;
   - do not persist thumbnail URIs in the local journal snapshot;
   - track `Legacy Thumbnail Backfill` as a non-AI-blocking backlog item. Any
-    actual backfill must be separately approved and may be impossible for rows
-    whose source video has already been deleted.
+    actual backfill must be separately approved. The checked recent 28 rows
+    currently have 0 direct backfill candidates because their missing-thumbnail
+    source videos are already deleted.
 - No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
   setting change, or AI Calibration work was performed.
 
