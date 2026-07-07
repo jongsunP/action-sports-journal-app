@@ -19,6 +19,22 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+HomeScreen low-risk decomposition 4차, 2026-07-07:
+
+- Upload reconciliation / upload-failure debug log payload helpers were
+  separated from `HomeScreen.tsx` into
+  `src/features/sessions/uploadReconciliation.ts`.
+- This is a structure-only refactor. HomeScreen still owns React state setters,
+  remote summary refresh, upload failure suppression flow, and upload/recovery
+  state behavior.
+- Client console masking is preserved: local session, draft, upload, Moment,
+  and storage-path values are still logged only as short ids or presence
+  booleans.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, Upload state-machine redesign, `useUploadMoment` API contract
+  change, Push/Recovery/Auth flow change, UI/copy change, or AI Calibration
+  work was performed.
+
 HomeScreen low-risk decomposition 3차, 2026-07-07:
 
 - Thumbnail hydration responsibility was separated from `HomeScreen.tsx` into

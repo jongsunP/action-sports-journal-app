@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- HomeScreen low-risk decomposition 4차 is complete as a structure-only pre-AI
+  cleanup. Upload reconciliation / upload-failure debug log payload helpers now
+  live in `src/features/sessions/uploadReconciliation.ts`, while HomeScreen
+  still owns state setters, remote summary refresh, upload failure suppression,
+  and upload/recovery behavior. Client console masking remains intact: local
+  session, draft, upload, Moment, and storage-path values are logged only as
+  short ids or presence booleans. This is not AI Calibration and did not change
+  EAS/local native build, DB/storage, Render/Supabase/Auth settings,
+  `useUploadMoment` API contract, Upload/Push/Recovery/Auth behavior, or
+  UI/copy.
 - HomeScreen low-risk decomposition 3차 is complete as a structure-only
   pre-AI cleanup. Thumbnail hydration logic now lives in
   `src/features/sessions/useThumbnailHydration.ts`, and HomeScreen consumes the

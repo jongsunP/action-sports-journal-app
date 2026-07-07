@@ -39,7 +39,6 @@ import {
   getVisibleMomentStatus,
 } from './momentStatus';
 import { QADebugPanel } from './QADebugPanel';
-import { hasDebugValue, shortDebugId } from '../../utils/debugLog';
 import {
   APP_TABS,
   type AppTabId,
@@ -82,6 +81,21 @@ import {
   useBootSync,
 } from './useBootSync';
 import { useThumbnailHydration } from './useThumbnailHydration';
+import {
+  buildLocalOnlyUploadSessionExpiredLog,
+  buildRecoverableOrphanRecoveryFailureLog,
+  buildRecoverableOrphanRecoveryStartedLog,
+  buildRecoverableOrphanRecoverySuccessLog,
+  buildRemoteMomentReconciledLog,
+  buildRemoteMomentUnmatchedLog,
+  buildUploadFailureRemoteReconcileExistingLog,
+  buildUploadFailureRemoteReconcileFailedLog,
+  buildUploadFailureRemoteReconcileMatchedLog,
+  buildUploadFailureRemoteReconcileUnmatchedLog,
+  buildUploadReconciliationCandidateCreatedLog,
+  buildUploadReconciliationCandidateTargetedLog,
+  hasRecoverableUploadTarget,
+} from './uploadReconciliation';
 import { useAnalysisRealtimeSync } from './useAnalysisRealtimeSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
@@ -450,14 +464,10 @@ export function HomeScreen() {
         ...current,
         [candidate.localSessionId]: candidate,
       }));
-      console.info('[moment_reconciliation]', {
-        draftIdShort: shortDebugId(candidate.draftId),
-        event: 'upload_reconciliation_candidate_created',
-        fileSize: candidate.fileSize,
-        localSessionIdShort: shortDebugId(candidate.localSessionId),
-        matched: false,
-        uploadIdShort: shortDebugId(candidate.uploadId),
-      });
+      console.info(
+        '[moment_reconciliation]',
+        buildUploadReconciliationCandidateCreatedLog(candidate),
+      );
     },
     [],
   );
@@ -510,15 +520,14 @@ export function HomeScreen() {
           },
         };
       });
-      console.info('[moment_reconciliation]', {
-        draftIdShort: shortDebugId(draftId ?? uploadTarget.draftId),
-        event: 'upload_reconciliation_candidate_targeted',
-        localSessionIdShort: shortDebugId(sessionId),
-        matched: false,
-        state: 'recoverable_orphan',
-        storagePathPresent: hasDebugValue(uploadTarget.storagePath),
-        uploadIdShort: shortDebugId(uploadTarget.uploadId),
-      });
+      console.info(
+        '[moment_reconciliation]',
+        buildUploadReconciliationCandidateTargetedLog({
+          draftId,
+          sessionId,
+          uploadTarget,
+        }),
+      );
     },
     [],
   );
@@ -536,14 +545,15 @@ export function HomeScreen() {
     }) => {
       pendingVideoArchiveSessionIdsRef.current.delete(localSessionId);
       clearUploadReconciliationCandidate(localSessionId);
-      console.info('[moment_reconciliation]', {
-        event: 'remote_moment_reconciled',
-        localSessionIdShort: shortDebugId(localSessionId),
-        matchReason,
-        matched: true,
-        momentIdShort: shortDebugId(momentId),
-        remoteSessionIdShort: shortDebugId(remoteSessionId),
-      });
+      console.info(
+        '[moment_reconciliation]',
+        buildRemoteMomentReconciledLog({
+          localSessionId,
+          matchReason,
+          momentId,
+          remoteSessionId,
+        }),
+      );
     },
     [clearUploadReconciliationCandidate],
   );
@@ -615,15 +625,13 @@ export function HomeScreen() {
           };
         });
 
-        console.info('[moment_reconciliation]', {
-          event: 'recoverable_orphan_recovery_started',
-          localSessionIdShort: shortDebugId(candidate.localSessionId),
-          matchReason: 'recoverable_upload_target',
-          reason,
-          state: 'recoverable_orphan',
-          storagePathPresent: hasDebugValue(candidate.storagePath),
-          uploadIdShort: shortDebugId(candidate.uploadId),
-        });
+        console.info(
+          '[moment_reconciliation]',
+          buildRecoverableOrphanRecoveryStartedLog({
+            candidate,
+            reason,
+          }),
+        );
 
         try {
           const localVideo =
@@ -665,28 +673,23 @@ export function HomeScreen() {
               candidate.localSessionId,
               storedMoment.analysisJobStatus ?? 'processing',
             );
-            console.info('[moment_reconciliation]', {
-              event: 'recoverable_orphan_recovery_success',
-              localSessionIdShort: shortDebugId(candidate.localSessionId),
-              matchReason: 'recoverable_upload_target',
-              matched: true,
-              momentIdShort: shortDebugId(storedMoment.momentId),
-              reason,
-              state: 'recoverable_orphan',
-              storagePathPresent: hasDebugValue(candidate.storagePath),
-              uploadIdShort: shortDebugId(candidate.uploadId),
-            });
+            console.info(
+              '[moment_reconciliation]',
+              buildRecoverableOrphanRecoverySuccessLog({
+                candidate,
+                momentId: storedMoment.momentId,
+                reason,
+              }),
+            );
           }
         } catch (error) {
-          console.info('[moment_reconciliation]', {
-            event: 'recoverable_orphan_recovery_failure',
-            localSessionIdShort: shortDebugId(candidate.localSessionId),
-            matched: false,
-            reason: error instanceof Error ? error.message : 'unknown',
-            state: 'recoverable_orphan',
-            storagePathPresent: hasDebugValue(candidate.storagePath),
-            uploadIdShort: shortDebugId(candidate.uploadId),
-          });
+          console.info(
+            '[moment_reconciliation]',
+            buildRecoverableOrphanRecoveryFailureLog({
+              candidate,
+              error,
+            }),
+          );
         } finally {
           recoveringUploadSessionIdsRef.current.delete(candidate.localSessionId);
         }
@@ -796,13 +799,7 @@ export function HomeScreen() {
           }
 
           const candidateCreatedAtMs = Date.parse(candidate.createdAt);
-          const hasRecoverableUploadTarget = Boolean(
-            candidate.uploadId &&
-              candidate.storagePath &&
-              candidate.storageProvider &&
-              candidate.storageBucket,
-          );
-          const ttlMs = hasRecoverableUploadTarget
+          const ttlMs = hasRecoverableUploadTarget(candidate)
             ? UPLOAD_RECONCILIATION_TTL_MS
             : LOCAL_ONLY_UPLOAD_TTL_MS;
 
@@ -850,24 +847,14 @@ export function HomeScreen() {
       for (const sessionId of expiredSessionIds) {
         const expiredCandidate =
           uploadReconciliationCandidatesBySessionId[sessionId];
-        const hasRecoverableUploadTarget = Boolean(
-          expiredCandidate?.uploadId &&
-            expiredCandidate?.storagePath &&
-            expiredCandidate?.storageProvider &&
-            expiredCandidate?.storageBucket,
-        );
         pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
-        console.info('[moment_reconciliation]', {
-          event: 'remote_moment_unmatched',
-          localSessionIdShort: shortDebugId(sessionId),
-          matchReason: hasRecoverableUploadTarget
-            ? 'upload_context_ttl_expired'
-            : 'local_only_upload_context_ttl_expired',
-          matched: false,
-          state: hasRecoverableUploadTarget
-            ? 'recoverable_orphan'
-            : 'remote_reconcile_pending',
-        });
+        console.info(
+          '[moment_reconciliation]',
+          buildRemoteMomentUnmatchedLog({
+            candidate: expiredCandidate,
+            sessionId,
+          }),
+        );
       }
     },
     [
@@ -920,12 +907,10 @@ export function HomeScreen() {
 
     for (const sessionId of expiredSessionIds) {
       pendingVideoArchiveSessionIdsRef.current.delete(sessionId);
-      console.info('[moment_reconciliation]', {
-        event: 'local_only_upload_session_expired',
-        localSessionIdShort: shortDebugId(sessionId),
-        matchReason: 'missing_upload_recovery_context',
-        matched: false,
-      });
+      console.info(
+        '[moment_reconciliation]',
+        buildLocalOnlyUploadSessionExpiredLog(sessionId),
+      );
     }
 
     setVideoArchiveSessionIds((current) =>
@@ -1951,14 +1936,16 @@ export function HomeScreen() {
         latestState.remoteMomentIdsBySessionId[localSessionId];
 
       if (existingRemoteMomentId) {
-        console.info('[upload_timing]', {
-          event: 'upload_failure_remote_reconcile_existing',
-          localSessionIdShort: shortDebugId(localSessionId),
-          momentIdShort: shortDebugId(existingRemoteMomentId),
-          reason,
-          stage,
-          uploadIdShort: shortDebugId(uploadId),
-        });
+        console.info(
+          '[upload_timing]',
+          buildUploadFailureRemoteReconcileExistingLog({
+            existingRemoteMomentId,
+            localSessionId,
+            reason,
+            stage,
+            uploadId,
+          }),
+        );
         return true;
       }
 
@@ -1986,26 +1973,30 @@ export function HomeScreen() {
         applyVideoArchiveFirstPage(remoteMomentPage);
 
         if (matchedMoment) {
-          console.info('[upload_timing]', {
-            attempt,
-            event: 'upload_failure_remote_reconcile_matched',
-            localSessionIdShort: shortDebugId(localSessionId),
-            momentIdShort: shortDebugId(matchedMoment.remoteMomentId),
-            reason,
-            stage,
-            uploadIdShort: shortDebugId(uploadId),
-          });
+          console.info(
+            '[upload_timing]',
+            buildUploadFailureRemoteReconcileMatchedLog({
+              attempt,
+              localSessionId,
+              matchedMomentId: matchedMoment.remoteMomentId,
+              reason,
+              stage,
+              uploadId,
+            }),
+          );
           return true;
         }
 
-        console.info('[upload_timing]', {
-          attempt,
-          event: 'upload_failure_remote_reconcile_unmatched',
-          localSessionIdShort: shortDebugId(localSessionId),
-          reason,
-          stage,
-          uploadIdShort: shortDebugId(uploadId),
-        });
+        console.info(
+          '[upload_timing]',
+          buildUploadFailureRemoteReconcileUnmatchedLog({
+            attempt,
+            localSessionId,
+            reason,
+            stage,
+            uploadId,
+          }),
+        );
         return false;
       };
 
@@ -2020,14 +2011,16 @@ export function HomeScreen() {
 
         return await findRemoteMatch(2);
       } catch (error) {
-        console.info('[upload_timing]', {
-          event: 'upload_failure_remote_reconcile_failed',
-          localSessionIdShort: shortDebugId(localSessionId),
-          reason: error instanceof Error ? error.message : 'unknown',
-          sourceFailureReason: reason,
-          stage,
-          uploadIdShort: shortDebugId(uploadId),
-        });
+        console.info(
+          '[upload_timing]',
+          buildUploadFailureRemoteReconcileFailedLog({
+            error,
+            localSessionId,
+            sourceFailureReason: reason,
+            stage,
+            uploadId,
+          }),
+        );
         return false;
       }
     },

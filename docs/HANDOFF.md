@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- HomeScreen low-risk decomposition 4차, 2026-07-07:
+  - Upload reconciliation / upload-failure debug log payload helpers now live
+    in `src/features/sessions/uploadReconciliation.ts`.
+  - HomeScreen still owns state setters, remote summary refresh, upload failure
+    suppression flow, and upload/recovery behavior. This pass only moves pure
+    helper/log payload construction and the recoverable upload-target predicate.
+  - Client console full-id masking is preserved: logs use short ids and
+    presence booleans rather than full local session, draft, upload, Moment, or
+    raw storage-path values.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth setting change, Upload state-machine redesign,
+    `useUploadMoment` API contract change, Push/Recovery/Auth flow change, or
+    UI/copy change was performed.
+
 - HomeScreen low-risk decomposition 3차, 2026-07-07:
   - Thumbnail hydration logic is now in
     `src/features/sessions/useThumbnailHydration.ts`.
