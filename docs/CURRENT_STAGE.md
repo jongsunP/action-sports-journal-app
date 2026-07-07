@@ -19,6 +19,21 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+HomeScreen low-risk decomposition 3차, 2026-07-07:
+
+- Thumbnail hydration responsibility was separated from `HomeScreen.tsx` into
+  `src/features/sessions/useThumbnailHydration.ts`.
+- This is a structure-only refactor. Candidate calculation, post-boot
+  `view=thumbnails`, detail thumbnail fallback, concurrency/limits,
+  duplicate-key/in-flight guards, and QA diagnostics are intended to be
+  behavior-identical.
+- Preserved guardrails: local journal snapshots still do not persist
+  `thumbnailUri`, summary-first boot stays intact, Detail full hydration and
+  Home/Archive reconciliation are unchanged, and legacy rows without durable
+  thumbnails remain placeholders.
+- No EAS build, local native build, DB write/backfill, Render/Supabase/Auth
+  setting change, thumbnail policy change, or AI Calibration work was performed.
+
 HomeScreen low-risk decomposition 2차, 2026-07-07:
 
 - Video Archive / recent records presentation assembly was separated into

@@ -22,6 +22,20 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- HomeScreen low-risk decomposition 3차, 2026-07-07:
+  - Thumbnail hydration logic is now in
+    `src/features/sessions/useThumbnailHydration.ts`.
+  - HomeScreen consumes only `thumbnailHydrationDiagnostics`,
+    `thumbnailHydrationTargetIds`, and `resetThumbnailHydration`.
+  - Behavior is intended to remain unchanged: visible-row candidate detection,
+    post-boot `view=thumbnails`, detail thumbnail fallback, concurrency/limits,
+    duplicate hydration-key/in-flight guards, and QA Debug `Thumb hydrate` /
+    `Thumb fallback got` diagnostics are preserved.
+  - AI Calibration has not started. No EAS/local native build, DB write,
+    Render/Supabase/Auth setting change, thumbnail policy change, Detail full
+    hydration change, Home/Archive reconciliation change, or Upload/Recovery/
+    Cache state change was performed.
+
 - HomeScreen low-risk decomposition 2차, 2026-07-07:
   - Video Archive / recent records UI assembly is now in
     `src/features/sessions/VideoArchiveSection.tsx`.

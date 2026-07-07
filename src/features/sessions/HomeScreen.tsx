@@ -32,7 +32,6 @@ import { useAuthSession } from '../../services/auth/AuthSessionProvider';
 import { mockActivityGroups } from '../groups/mockActivityGroups';
 import {
   finalizeUploadedSourceVideo,
-  getMomentDetail,
   hasConfiguredSupabaseMoments,
 } from '../../services/moments';
 import {
@@ -82,6 +81,7 @@ import {
   listMomentPageWithTimeout,
   useBootSync,
 } from './useBootSync';
+import { useThumbnailHydration } from './useThumbnailHydration';
 import { useAnalysisRealtimeSync } from './useAnalysisRealtimeSync';
 import { useDeleteMoment } from './useDeleteMoment';
 import { useEvidenceExtraction } from './useEvidenceExtraction';
@@ -160,19 +160,6 @@ type RequestDiagnostics = {
   updatedAt: number | null;
   view: string | null;
 };
-type ThumbnailHydrationDiagnostics = {
-  fallbackResponseCount: number | null;
-  reason: string | null;
-  responseCount: number | null;
-  status: 'empty' | 'error' | 'idle' | 'loading' | 'ready';
-  targetCount: number;
-  updatedAt: number | null;
-};
-type ThumbnailHydrationResult = {
-  fallbackResponseCount: number | null;
-  reason: string;
-  remoteMoments: RemoteMomentRecord[];
-};
 type AuthCacheOwnerKey =
   | 'internalFallback'
   | 'loginRequired'
@@ -180,10 +167,6 @@ type AuthCacheOwnerKey =
 
 const PUSH_RESPONSE_BOOT_DEDUPE_MS = 8_000;
 const MOMENT_LIST_PAGE_SIZE = 20;
-const LIST_THUMBNAIL_HYDRATION_DELAY_MS = 500;
-const LIST_THUMBNAIL_HYDRATION_MAX_PAGES = 3;
-const DETAIL_THUMBNAIL_FALLBACK_CONCURRENCY = 3;
-const DETAIL_THUMBNAIL_FALLBACK_MAX_MOMENTS = 30;
 const LOCAL_ONLY_UPLOAD_TTL_MS = 45_000;
 const UPLOAD_RECONCILIATION_TTL_MS = 3 * 60_000;
 const UPLOAD_RECOVERY_ATTEMPT_INTERVAL_MS = 25_000;
@@ -352,15 +335,6 @@ export function HomeScreen() {
       updatedAt: null,
       view: null,
     });
-  const [thumbnailHydrationDiagnostics, setThumbnailHydrationDiagnostics] =
-    useState<ThumbnailHydrationDiagnostics>({
-      fallbackResponseCount: null,
-      reason: null,
-      responseCount: null,
-      status: 'idle',
-      targetCount: 0,
-      updatedAt: null,
-    });
   const [
     isLoadingMoreVideoArchiveMoments,
     setIsLoadingMoreVideoArchiveMoments,
@@ -394,8 +368,6 @@ export function HomeScreen() {
   const pendingVideoArchiveSessionIdsRef = useRef<Set<string>>(new Set());
   const recoveringUploadSessionIdsRef = useRef<Set<string>>(new Set());
   const hasAttemptedBootUploadRecoveryRef = useRef(false);
-  const lastVideoArchiveThumbnailHydrationKeyRef = useRef<string | null>(null);
-  const isHydratingVideoArchiveThumbnailsRef = useRef(false);
   const {
     analysisBySessionId,
     geminiEvidenceBySessionId,
@@ -1912,24 +1884,6 @@ export function HomeScreen() {
     }));
   }, [homeSessionSummaryIds, videoArchiveSessionSummaries.length]);
 
-  const videoArchiveThumbnailHydrationTargets = useMemo(
-    () =>
-      visibleVideoArchiveSessionSummaries
-        .filter(
-          (summary) =>
-            getVisibleMomentStatus(summary.momentStatus) !== 'running' &&
-            !thumbnailsBySessionId[summary.session.id],
-        )
-        .map((summary) => summary.session.id),
-    [
-      thumbnailsBySessionId,
-      visibleVideoArchiveSessionSummaries,
-    ],
-  );
-  const videoArchiveThumbnailHydrationKey =
-    videoArchiveThumbnailHydrationTargets.length > 0
-      ? videoArchiveThumbnailHydrationTargets.join('|')
-      : null;
   const hasRemoteMomentSyncDelay =
     remoteMomentSyncStatus === 'timeout' || remoteMomentSyncStatus === 'failed';
   const videoArchiveUiLoadState: VideoArchiveLoadState =
@@ -1944,230 +1898,20 @@ export function HomeScreen() {
           : videoArchiveLoadState;
   const canRequestGeminiEvidence = hasConfiguredGeminiEvidenceEndpoint();
   const configuredAiEndpoints = getConfiguredAiEndpoints();
-  const fetchVideoArchiveThumbnailPages = useCallback(async () => {
-    const moments: RemoteMomentRecord[] = [];
-    let cursor: string | null = null;
-    let pageCount = 0;
-    let hasMore = true;
-
-    while (hasMore && pageCount < LIST_THUMBNAIL_HYDRATION_MAX_PAGES) {
-      const page = await listMomentPageWithTimeout({
-        cursor: cursor ?? undefined,
-        limit: MOMENT_LIST_PAGE_SIZE,
-        view: 'thumbnails',
-      });
-
-      moments.push(...page.moments);
-      cursor = page.nextCursor;
-      hasMore = page.hasMore && Boolean(cursor);
-      pageCount += 1;
-    }
-
-    return moments;
-  }, []);
-  const fetchDetailThumbnailFallback = useCallback(async (
-    excludedRemoteMomentIds: Set<string> = new Set(),
-  ) => {
-    const targetRemoteMomentIds = videoArchiveThumbnailHydrationTargets
-      .map((sessionId) => remoteMomentIdsBySessionId[sessionId])
-      .filter((remoteMomentId): remoteMomentId is string =>
-        Boolean(remoteMomentId) && !excludedRemoteMomentIds.has(remoteMomentId),
-      )
-      .slice(0, DETAIL_THUMBNAIL_FALLBACK_MAX_MOMENTS);
-
-    if (targetRemoteMomentIds.length === 0) {
-      return [];
-    }
-
-    const remoteMoments: RemoteMomentRecord[] = [];
-    let nextIndex = 0;
-
-    async function worker() {
-      while (nextIndex < targetRemoteMomentIds.length) {
-        const remoteMomentId = targetRemoteMomentIds[nextIndex];
-        nextIndex += 1;
-
-        try {
-          const result = await getMomentDetail(remoteMomentId);
-
-          if (result.moment?.thumbnailUri) {
-            remoteMoments.push(result.moment);
-          }
-        } catch {
-          // Detail fallback is best-effort and should not block list rendering.
-        }
-      }
-    }
-
-    await Promise.all(
-      Array.from({
-        length: Math.min(
-          DETAIL_THUMBNAIL_FALLBACK_CONCURRENCY,
-          targetRemoteMomentIds.length,
-        ),
-      }).map(() => worker()),
-    );
-
-    return remoteMoments;
-  }, [remoteMomentIdsBySessionId, videoArchiveThumbnailHydrationTargets]);
-
-  useEffect(() => {
-    if (
-      isHydratingVideoArchiveThumbnailsRef.current ||
-      !videoArchiveThumbnailHydrationKey ||
-      lastVideoArchiveThumbnailHydrationKeyRef.current ===
-        videoArchiveThumbnailHydrationKey ||
-      !canUseRemoteApi ||
-      !isStorageLoaded ||
-      !isRemoteMomentSyncLoaded ||
-      remoteMomentSyncStatus !== 'completed'
-    ) {
-      return;
-    }
-
-    let isCancelled = false;
-    const timeoutId = setTimeout(() => {
-      InteractionManager.runAfterInteractions(() => {
-        if (isCancelled) {
-          return;
-        }
-
-        lastVideoArchiveThumbnailHydrationKeyRef.current =
-          videoArchiveThumbnailHydrationKey;
-        isHydratingVideoArchiveThumbnailsRef.current = true;
-        setThumbnailHydrationDiagnostics({
-          fallbackResponseCount: null,
-          reason: 'view=thumbnails',
-          responseCount: null,
-          status: 'loading',
-          targetCount: videoArchiveThumbnailHydrationTargets.length,
-          updatedAt: Date.now(),
-        });
-
-        fetchVideoArchiveThumbnailPages()
-          .then((remoteMoments):
-            | Promise<ThumbnailHydrationResult | undefined>
-            | ThumbnailHydrationResult
-            | undefined => {
-            if (isCancelled) {
-              return;
-            }
-
-            const thumbnailMoments = remoteMoments.filter((moment) =>
-              Boolean(moment.thumbnailUri),
-            );
-
-            if (
-              thumbnailMoments.length >=
-              videoArchiveThumbnailHydrationTargets.length
-            ) {
-              syncRemoteMoments(remoteMoments);
-
-              return {
-                fallbackResponseCount: null,
-                reason: 'view=thumbnails',
-                remoteMoments,
-              };
-            }
-
-            const thumbnailRemoteMomentIds = new Set(
-              thumbnailMoments.map((moment) => moment.remoteMomentId),
-            );
-
-            setThumbnailHydrationDiagnostics({
-              fallbackResponseCount: null,
-              reason: 'detail_thumbnail_fallback',
-              responseCount: thumbnailMoments.length,
-              status: 'loading',
-              targetCount: videoArchiveThumbnailHydrationTargets.length,
-              updatedAt: Date.now(),
-            });
-
-            return fetchDetailThumbnailFallback(thumbnailRemoteMomentIds).then(
-              (fallbackMoments) => {
-                const mergedRemoteMoments = [...remoteMoments, ...fallbackMoments];
-
-                if (mergedRemoteMoments.length > 0) {
-                  syncRemoteMoments(mergedRemoteMoments);
-                }
-
-                if (fallbackMoments.length > 0) {
-                  return {
-                    fallbackResponseCount: fallbackMoments.length,
-                    reason: 'detail_thumbnail_fallback',
-                    remoteMoments: mergedRemoteMoments,
-                  };
-                }
-
-                return {
-                  fallbackResponseCount: 0,
-                  reason: 'detail_thumbnail_fallback',
-                  remoteMoments: mergedRemoteMoments,
-                };
-              },
-            );
-          })
-          .then((result) => {
-            if (isCancelled) {
-              return;
-            }
-
-            if (!result) {
-              return;
-            }
-
-            const { fallbackResponseCount, reason, remoteMoments } = result;
-            setThumbnailHydrationDiagnostics({
-              fallbackResponseCount,
-              reason,
-              responseCount: remoteMoments.filter((moment) =>
-                Boolean(moment.thumbnailUri),
-              ).length,
-              status: remoteMoments.some((moment) =>
-                Boolean(moment.thumbnailUri),
-              )
-                ? 'ready'
-                : 'empty',
-              targetCount: videoArchiveThumbnailHydrationTargets.length,
-              updatedAt: Date.now(),
-            });
-          })
-          .catch((error) => {
-            lastVideoArchiveThumbnailHydrationKeyRef.current = null;
-            setThumbnailHydrationDiagnostics({
-              fallbackResponseCount: null,
-              reason: 'request_failed',
-              responseCount: null,
-              status: 'error',
-              targetCount: videoArchiveThumbnailHydrationTargets.length,
-              updatedAt: Date.now(),
-            });
-            console.warn(
-              'Video archive thumbnail hydration failed:',
-              error instanceof Error ? error.message : 'Unknown error',
-            );
-          })
-          .finally(() => {
-            isHydratingVideoArchiveThumbnailsRef.current = false;
-          });
-      });
-    }, LIST_THUMBNAIL_HYDRATION_DELAY_MS);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [
+  const {
+    resetThumbnailHydration,
+    thumbnailHydrationDiagnostics,
+    thumbnailHydrationTargetIds,
+  } = useThumbnailHydration({
     canUseRemoteApi,
     isRemoteMomentSyncLoaded,
     isStorageLoaded,
-    fetchDetailThumbnailFallback,
-    fetchVideoArchiveThumbnailPages,
+    remoteMomentIdsBySessionId,
     remoteMomentSyncStatus,
     syncRemoteMoments,
-    videoArchiveThumbnailHydrationKey,
-    videoArchiveThumbnailHydrationTargets.length,
-  ]);
+    thumbnailsBySessionId,
+    visibleVideoArchiveSessionSummaries,
+  });
 
   const removeSessionLocally = useCallback((sessionId: string) => {
     removeSessionDataLocally(sessionId);
@@ -2403,8 +2147,7 @@ export function HomeScreen() {
     isLoadingVideoArchiveInitialPageRef.current = false;
     completedBootSyncAtRef.current = null;
     hasAttemptedBootUploadRecoveryRef.current = false;
-    lastVideoArchiveThumbnailHydrationKeyRef.current = null;
-    isHydratingVideoArchiveThumbnailsRef.current = false;
+    resetThumbnailHydration();
     didNavigateToUploadRef.current = false;
 
     setVideoArchiveSessionIds([]);
@@ -2466,6 +2209,7 @@ export function HomeScreen() {
     canUseRemoteApi,
     closeMomentDetail,
     refreshRemoteMoments,
+    resetThumbnailHydration,
     resetUploadFlow,
     setAnalysisBySessionId,
     setGeminiEvidenceBySessionId,
@@ -2608,7 +2352,7 @@ export function HomeScreen() {
       video: videoArchiveDiagnostics,
       thumbnailHydration: {
         ...thumbnailHydrationDiagnostics,
-        targetCount: videoArchiveThumbnailHydrationTargets.length,
+        targetCount: thumbnailHydrationTargetIds.length,
       },
       videoUiLoadState: videoArchiveUiLoadState,
     }),
@@ -2619,11 +2363,11 @@ export function HomeScreen() {
       isAuthLoading,
       remoteMomentSyncDiagnostics,
       thumbnailHydrationDiagnostics,
+      thumbnailHydrationTargetIds.length,
       user,
       videoArchiveDiagnostics,
       videoArchiveSessionIds.length,
       videoArchiveSessionSummaries.length,
-      videoArchiveThumbnailHydrationTargets.length,
       videoArchiveUiLoadState,
       visibleVideoArchiveSessionSummaries.length,
     ],

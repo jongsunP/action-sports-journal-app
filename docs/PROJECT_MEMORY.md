@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- HomeScreen low-risk decomposition 3차 is complete as a structure-only
+  pre-AI cleanup. Thumbnail hydration logic now lives in
+  `src/features/sessions/useThumbnailHydration.ts`, and HomeScreen consumes the
+  hook's diagnostics/target ids/reset action. Candidate calculation,
+  post-boot `view=thumbnails`, Detail thumbnail fallback, concurrency/limits,
+  duplicate-key/in-flight guards, and QA Debug `Thumb hydrate` /
+  `Thumb fallback got` diagnostics are preserved. This is not AI Calibration and
+  did not change local snapshot thumbnail policy, summary-first boot, Detail
+  full hydration, Home/Archive reconciliation, Upload/Recovery/Cache state, EAS/
+  local native build, DB/storage, or Render/Supabase/Auth settings.
 - HomeScreen low-risk decomposition 2차 is complete as a structure-only
   pre-AI cleanup. Video Archive / recent records UI assembly now lives in
   `src/features/sessions/VideoArchiveSection.tsx`, while HomeScreen still owns
