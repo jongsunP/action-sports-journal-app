@@ -81,6 +81,18 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- dev-server low-risk decomposition 3차 is complete as a structure-only pre-AI
+  cleanup. Upload policy helpers now live in
+  `dev-server/features/upload/uploadPolicy.ts`: allowed video MIME types,
+  `UploadPolicyError`, upload policy response helpers, error message builder,
+  and file size/duration/MIME validation. Env-derived upload limits still come
+  from `dev-server/index.ts` after dotenv loading and are passed into the policy
+  helpers, preserving response max values. Upload target/finalize/source-video
+  route behavior, API response body/status, DB write shape, structured summary
+  logs, signed upload URL generation, and sensitive-info guardrails are
+  unchanged. This is not AI Calibration and did not involve EAS/local native
+  build, DB writes, Render/Supabase/Auth settings, paid AI/API calls, or
+  analysis/moments/push/recovery/auth route changes.
 - dev-server low-risk decomposition 2차 is complete as a structure-only pre-AI
   cleanup. Recovery attempt provider/flow/status type guards and metadata
   sanitization helpers now live in

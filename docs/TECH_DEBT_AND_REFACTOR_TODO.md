@@ -134,10 +134,12 @@ Pre-AI foundation follow-up:
     splits. Summary logging helpers now live in
     `dev-server/lib/summaryLogging.ts`, and recovery attempt provider/flow/
     status guards plus metadata sanitization helpers now live in
-    `dev-server/features/recovery/recoveryAttempts.ts`. Continue dev-server
-    decomposition only in small, behavior-preserving helper/service moves; do
-    not use this as a reason to touch Upload/Auth/Push/Analysis route behavior,
-    Recovery route response/DB insert shape, or AI prompt/parser schemas before
+    `dev-server/features/recovery/recoveryAttempts.ts`; upload policy helpers
+    now live in `dev-server/features/upload/uploadPolicy.ts`. Continue
+    dev-server decomposition only in small, behavior-preserving helper/service
+    moves; do not use this as a reason to touch Upload/Auth/Push/Analysis route
+    behavior, Recovery route response/DB insert shape, upload policy response
+    contract, signed upload URL generation, or AI prompt/parser schemas before
     AI Calibration.
   - Account Recovery low-risk cleanup is complete as a structure-only pass:
     same-current-email no-op detection, recovery action availability, Email CTA

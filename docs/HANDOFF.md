@@ -22,6 +22,22 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- dev-server low-risk decomposition 3차, 2026-07-07:
+  - Upload policy / validation helpers now live in
+    `dev-server/features/upload/uploadPolicy.ts` instead of
+    `dev-server/index.ts`.
+  - Moved helpers: allowed video MIME types, `UploadPolicyError`, upload policy
+    response helpers, error message builder, and file size/duration/MIME
+    validation.
+  - This is structure-only. Upload max size/duration values still come from
+    `dev-server/index.ts` after dotenv loading and are passed into the helper
+    module, preserving policy response max values.
+  - AI Calibration has not started. No upload target/finalize/source-video
+    route behavior change, API response contract change, DB write shape change,
+    signed upload URL change, structured summary log change, EAS/local native
+    build, Render/Supabase/Auth setting change, or paid AI/API call was
+    performed.
+
 - dev-server low-risk decomposition 2차, 2026-07-07:
   - Recovery attempt helper logic now lives in
     `dev-server/features/recovery/recoveryAttempts.ts` instead of

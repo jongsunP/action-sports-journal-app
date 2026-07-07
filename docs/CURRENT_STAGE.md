@@ -19,6 +19,22 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+dev-server low-risk decomposition 3차, 2026-07-07:
+
+- Upload policy / validation helpers were separated from
+  `dev-server/index.ts` into `dev-server/features/upload/uploadPolicy.ts`.
+- Moved helpers: allowed video MIME types, `UploadPolicyError`,
+  `sendUploadPolicyError`, `sendUploadPolicyErrorResponse`,
+  `getUploadPolicyErrorMessage`, and `assertUploadFilePolicy`.
+- This is structure-only. Upload policy max size/duration values still come
+  from `dev-server/index.ts` after dotenv loading and are passed into the helper
+  module, so oversized/unsupported/empty/invalid-duration response status/body
+  is intended to remain unchanged.
+- No upload target/finalize/source-video route behavior change, API contract
+  change, DB write shape change, signed upload URL change, structured summary
+  log change, EAS/local native build, Render/Supabase/Auth setting change, paid
+  AI/API call, or AI Calibration work was performed.
+
 dev-server low-risk decomposition 2차, 2026-07-07:
 
 - Recovery attempt observability helpers were separated from

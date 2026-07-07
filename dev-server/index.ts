@@ -43,6 +43,13 @@ import {
   isRecoveryAttemptStatus,
   sanitizeRecoveryAttemptMetadata,
 } from "./features/recovery/recoveryAttempts";
+import {
+  allowedVideoMimeTypes,
+  assertUploadFilePolicy,
+  sendUploadPolicyError,
+  sendUploadPolicyErrorResponse,
+  UploadPolicyError,
+} from "./features/upload/uploadPolicy";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -68,6 +75,10 @@ const uploadMaxVideoBytes = Math.max(
   uploadPolicyMaxVideoBytes,
   openAiMaxVideoBytes,
 );
+const uploadPolicyConfig = {
+  maxDurationMs: uploadPolicyMaxDurationMs,
+  maxVideoBytes: uploadPolicyMaxVideoBytes,
+};
 const dailyUsageLimitEnabled = process.env.NODE_ENV === "production";
 const dailyAnalysisLimit = Math.max(
   readNumberEnv("DAILY_ANALYSIS_LIMIT", 30),
@@ -259,30 +270,6 @@ type StoredVideoInput = {
   provider: string;
 };
 
-const allowedVideoMimeTypes = new Set([
-  "video/mp4",
-  "video/quicktime",
-  "video/x-m4v",
-  "video/mov",
-]);
-type UploadPolicyErrorCode =
-  | "empty_file"
-  | "invalid_duration"
-  | "too_large"
-  | "too_long"
-  | "unsupported_type";
-
-class UploadPolicyError extends Error {
-  code: UploadPolicyErrorCode;
-  status: number;
-
-  constructor(code: UploadPolicyErrorCode, status = 400) {
-    super(getUploadPolicyErrorMessage(code));
-    this.name = "UploadPolicyError";
-    this.code = code;
-    this.status = status;
-  }
-}
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 const dailyUsage = new Map<string, number>();
 const analysisRateLimit = createRateLimit("analysis", {
@@ -672,27 +659,27 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
     }
 
     if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
-      sendUploadPolicyError(response, 400, "unsupported_type");
+      sendUploadPolicyError(response, 400, "unsupported_type", uploadPolicyConfig);
       return;
     }
 
     if (!Number.isFinite(fileSize) || fileSize <= 0) {
-      sendUploadPolicyError(response, 400, "empty_file");
+      sendUploadPolicyError(response, 400, "empty_file", uploadPolicyConfig);
       return;
     }
 
     if (fileSize > uploadPolicyMaxVideoBytes) {
-      sendUploadPolicyError(response, 413, "too_large");
+      sendUploadPolicyError(response, 413, "too_large", uploadPolicyConfig);
       return;
     }
 
     if (!Number.isFinite(durationMs) || durationMs <= 0) {
-      sendUploadPolicyError(response, 400, "invalid_duration");
+      sendUploadPolicyError(response, 400, "invalid_duration", uploadPolicyConfig);
       return;
     }
 
     if (durationMs > uploadPolicyMaxDurationMs) {
-      sendUploadPolicyError(response, 400, "too_long");
+      sendUploadPolicyError(response, 400, "too_long", uploadPolicyConfig);
       return;
     }
 
@@ -864,7 +851,7 @@ app.post(
         return;
       }
 
-      if (sendUploadPolicyErrorResponse(response, error)) {
+      if (sendUploadPolicyErrorResponse(response, error, uploadPolicyConfig)) {
         return;
       }
 
@@ -964,12 +951,12 @@ app.post(
       }
 
       if (request.file.size <= 0) {
-        sendUploadPolicyError(response, 400, "empty_file");
+        sendUploadPolicyError(response, 400, "empty_file", uploadPolicyConfig);
         return;
       }
 
       if (request.file.size > uploadPolicyMaxVideoBytes) {
-        sendUploadPolicyError(response, 413, "too_large");
+        sendUploadPolicyError(response, 413, "too_large", uploadPolicyConfig);
         return;
       }
 
@@ -1079,12 +1066,12 @@ app.post(
       });
 
       if (request.file.size <= 0) {
-        sendUploadPolicyError(response, 400, "empty_file");
+        sendUploadPolicyError(response, 400, "empty_file", uploadPolicyConfig);
         return;
       }
 
       if (request.file.size > uploadPolicyMaxVideoBytes) {
-        sendUploadPolicyError(response, 413, "too_large");
+        sendUploadPolicyError(response, 413, "too_large", uploadPolicyConfig);
         return;
       }
 
@@ -1142,7 +1129,7 @@ app.post(
         return;
       }
 
-      if (sendUploadPolicyErrorResponse(response, error)) {
+      if (sendUploadPolicyErrorResponse(response, error, uploadPolicyConfig)) {
         return;
       }
 
@@ -4613,11 +4600,14 @@ async function createStoredMomentFromSourceVideo({
   const sessionId = getField(body?.sessionId, "");
   const durationMs = Number(body?.durationMs);
 
-  assertUploadFilePolicy({
-    durationMs,
-    fileSize: file.size,
-    mimeType: file.mimetype,
-  });
+  assertUploadFilePolicy(
+    {
+      durationMs,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+    },
+    uploadPolicyConfig,
+  );
 
   const extension =
     extensionForFileName(file.originalname) ?? extensionForMimeType(file.mimetype);
@@ -4762,11 +4752,14 @@ async function createStoredMomentFromUploadedSource({
       throw new Error("Invalid storage bucket.");
     }
 
-    assertUploadFilePolicy({
-      durationMs,
-      fileSize: expectedFileSize,
-      mimeType,
-    });
+    assertUploadFilePolicy(
+      {
+        durationMs,
+        fileSize: expectedFileSize,
+        mimeType,
+      },
+      uploadPolicyConfig,
+    );
 
     const expectedPrefix = `users/${userId}/uploads/${uploadId}/source`;
 
@@ -4836,7 +4829,7 @@ async function createStoredMomentFromUploadedSource({
       typeof storedObjectMetadata.size === "number" &&
       storedObjectMetadata.size > uploadPolicyMaxVideoBytes
     ) {
-      throw new UploadPolicyError("too_large", 413);
+      throw new UploadPolicyError("too_large", uploadPolicyConfig, 413);
     }
 
     const { data: existingMoment, error: existingMomentError } = await client
@@ -8141,76 +8134,6 @@ function sendAuthRequiredResponse(
     message: error.message,
   });
   return true;
-}
-
-function sendUploadPolicyError(
-  response: express.Response,
-  status: number,
-  code: UploadPolicyErrorCode,
-) {
-  response.status(status).json({
-    code,
-    error: getUploadPolicyErrorMessage(code),
-    maxDurationMs: uploadPolicyMaxDurationMs,
-    maxSizeBytes: uploadPolicyMaxVideoBytes,
-  });
-}
-
-function sendUploadPolicyErrorResponse(
-  response: express.Response,
-  error: unknown,
-) {
-  if (!(error instanceof UploadPolicyError)) {
-    return false;
-  }
-
-  sendUploadPolicyError(response, error.status, error.code);
-  return true;
-}
-
-function getUploadPolicyErrorMessage(code: UploadPolicyErrorCode) {
-  switch (code) {
-    case "empty_file":
-      return "Video file size must be greater than 0 bytes.";
-    case "invalid_duration":
-      return "Video duration must be greater than 0 seconds.";
-    case "too_large":
-      return `Video is too large. Max size is ${Math.round(uploadPolicyMaxVideoBytes / 1024 / 1024)}MB.`;
-    case "too_long":
-      return `Video is too long. Max duration is ${Math.round(uploadPolicyMaxDurationMs / 1000)} seconds.`;
-    case "unsupported_type":
-      return "Unsupported or missing video type.";
-  }
-}
-
-function assertUploadFilePolicy({
-  durationMs,
-  fileSize,
-  mimeType,
-}: {
-  durationMs: number;
-  fileSize: number;
-  mimeType: string | null;
-}) {
-  if (!mimeType || !allowedVideoMimeTypes.has(mimeType)) {
-    throw new UploadPolicyError("unsupported_type");
-  }
-
-  if (!Number.isFinite(fileSize) || fileSize <= 0) {
-    throw new UploadPolicyError("empty_file");
-  }
-
-  if (fileSize > uploadPolicyMaxVideoBytes) {
-    throw new UploadPolicyError("too_large", 413);
-  }
-
-  if (!Number.isFinite(durationMs) || durationMs <= 0) {
-    throw new UploadPolicyError("invalid_duration");
-  }
-
-  if (durationMs > uploadPolicyMaxDurationMs) {
-    throw new UploadPolicyError("too_long");
-  }
 }
 
 function getSupabaseServerClient() {
