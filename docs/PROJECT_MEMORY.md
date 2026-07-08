@@ -81,6 +81,19 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- Build 106 이후 로컬 재개 점검이 완료됐다. `codex-personal-context`와 ASJ
+  repo를 pull한 뒤, local dependency 상태를 `npm install`로 동기화했고
+  `expo-dev-client@6.0.21` 설치 상태를 확인했다. `npm run typecheck`,
+  `git diff --check`, `npx expo config --json`, local BFF `/health`,
+  no-token auth-boundary smoke, and Metro dev-client start smoke all passed.
+  `app.json` / Expo config 기준 최신 iOS `buildNumber`는 `106`이다. Historical
+  Build 98 startup notes must not be treated as the current QA target.
+- Upload target auth-boundary hardening is complete. `POST
+  /api/video-upload-targets` now resolves the authenticated request user before
+  upload metadata policy validation, so no-token requests return `401` before
+  size/duration/MIME policy errors. Local smoke confirmed valid, too-large, and
+  too-long no-token upload-target requests all return `401`; no-token
+  `/api/moments` and `/api/recovery-attempts` also remain `401`.
 - dev-server low-risk decomposition 3차 is complete as a structure-only pre-AI
   cleanup. Upload policy helpers now live in
   `dev-server/features/upload/uploadPolicy.ts`: allowed video MIME types,
@@ -797,15 +810,17 @@ Current grouped listup view:
   - Trick-name Accuracy(트릭명 정확도 개선)
   - MediaPipe / Pose Landmark(미디어파이프 / 포즈 랜드마크)는 보조 근거로 검토
 
-- 구현 완료 / 다음 빌드에 포함될 항목
+- Build 106 이후 로컬 확인 완료 / 다음 독립 빌드 때 자연 포함
   - Boot Flicker Fix(부팅 깜박임 방지)
   - Detail Loading UX Polish(상세 로딩 UX 정리)
   - Media Placeholder First Paint Fix(썸네일 전 빈 박스 방지)
+  - Upload Target Auth Boundary(업로드 타깃 인증 경계): 무토큰 요청은
+    업로드 정책 에러보다 먼저 401로 차단
 
 - QA / 검증 대기
   - Email Recovery Standalone Deep-link(이메일 복구 standalone 딥링크)
   - Account Recovery Small-screen QA(계정 복구 작은 화면/취소/복귀)
-  - 다음 standalone 빌드에서 post-Build-106 수정 확인
+  - 다음 standalone 또는 Development Build에서 post-Build-106 수정 확인
 
 - Store 전 운영
   - QA Debug Panel Hide/Gate(QA 디버그 패널 숨김/차단)
@@ -890,7 +905,7 @@ Detailed historical stable workstream list:
 - OAuth Step Reduction Investigation(외부 OAuth 진행 단계 축소 가능성 조사): 조사 완료. 앱 내부 Kakao Single CTA one-click은 충족했고, 남은 Kakao/iOS OAuth 계속 단계는 플랫폼/provider 인증 단계라 우회하지 않음. Store 전 Kakao/Supabase 표시/redirect/consent 설정 점검만 후속
 - Email Recovery Sign-in Standalone E2E QA(이메일 기존 기록 복구 실기기 QA): single CTA 구현 완료 / 실기기 QA 대기. 실제 이메일 링크 클릭 -> ASJ 앱 복귀 -> 기존 email-linked Auth user session 전환 -> Home/Video/Detail reload는 standalone build와 fresh test email로 검증 필요
 - Account Recovery UI Information Architecture P1(계정 복구 UI 정보구조 1차): 구현 완료 / 실기기 QA 대기. `AccountRecoveryScreen`은 Upload처럼 독립 스택 페이지를 유지하되, 첫 화면을 "기록 보호 방법 선택 허브"로 단순화했다. 첫 화면은 compact protection summary, 연결 수단 badge, Kakao/Email method card를 보여주고, Email/Kakao의 상세 pending/error/linked 상태는 선택 또는 진행 후 progressive disclosure로 보여준다. Auth/Supabase/Kakao/Email helper 로직은 변경하지 않았다.
-- Build 96 Startup Performance Observability P2.1 QA(빌드 96 시작 성능 관측 2.1차 QA): EAS preview/internal build 완료 / Founder timing QA 대기. Build commit `4f8f4a2`, iOS buildNumber `96`, EAS Build ID `68b17987-b5f8-4a6f-9a06-7a2260c69708`. 다음 작업 재개 시 앱 QA Debug `apiMs`와 `serverTotalMs`를 먼저 비교한다
+- Build 96 Startup Performance Observability P2.1 QA(빌드 96 시작 성능 관측 2.1차 QA): historical timing QA. Build commit `4f8f4a2`, iOS buildNumber `96`, EAS Build ID `68b17987-b5f8-4a6f-9a06-7a2260c69708`. Later startup-performance builds superseded it as the active target.
 - Build 97 Startup Performance Optimization P1 QA(빌드 97 시작 성능 최적화 1차 QA): EAS preview/internal build 완료 / Founder QA 통과. Build commit `1bb347c`, iOS buildNumber `97`, EAS Build ID `a3693975-e234-4ae0-a169-373fd683cd3a`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/a3693975-e234-4ae0-a169-373fd683cd3a`, IPA URL은 `https://expo.dev/artifacts/eas/46cVuinLZ-VVowkdVFcw-iKcdjx-vvzG10RU4M7Vyx4.ipa`. Founder 판단은 "개선 전보다 확실히 체감 개선됨"이다. 0개 계정은 반복 실행 기준 `serverTotalMs`가 `672ms`, `661ms`, `661ms`까지 내려갔고, Build 96의 0개 계정 `1.9-2.6s` 대비 개선이 확인됐다. 7개 계정은 `1666-3728ms` 편차가 남아 있어 P1.5 후보로 evidence payload 축소, thumbnail signed URL lazy/cache, list/detail payload 분리를 보관한다
 - Startup Performance Optimization P1 QA(시작 성능 최적화 1차 QA): Build 97 QA 통과 / 완료. Build 96에서 확인한 server-side 지연을 줄이기 위해 stale cleanup 비동기화, request user TTL cache, thumbnail wall timing 보정을 반영했고, Build 97에서 0개 계정 성능 개선을 확인했다
 - Build 98 Startup Performance Optimization P1.5 QA(빌드 98 시작 성능 최적화 1.5차 QA): EAS preview/internal build 완료 / boot 및 Video readiness QA 결과 반영. Build commit `1a4f542`, iOS buildNumber `98`, EAS Build ID `506cf961-45d7-4e26-ac47-f3106ca1ec7f`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/506cf961-45d7-4e26-ac47-f3106ca1ec7f`, IPA URL은 `https://expo.dev/artifacts/eas/xfI0axoBndQ7i7YPGS2lpBbPhYCec9WDLSX1vgdnR1U.ipa`. Build 96/97 이전보다 개선 체감은 있으나 long-idle first access와 repeated access 차이가 남았다. 0-record anonymous는 첫 케이스 Boot/Video api 약 `3523ms`, server 약 `3053ms`에서 이후 Boot `1004-2092ms`, server `681-1715ms`까지 내려갔다. 7-record recovered는 Boot/Video api `1449-5273ms`, serverTotalMs `1162-3545ms`로 흔들림이 남았다. `source boot reuse`는 보이고 `dupBlocked`도 일부 발생하므로 reuse/guard는 동작 중이다. 다음 판단은 Render `[moments_timing]`의 `cacheHit`, `momentsQueryMs`, `evidenceQueryMs`, `thumbnailSignedUrlWallMs`, `responseBytes`, `normalizationMs`, `serverTotalMs`를 request id로 비교한 뒤 P1.6 후보를 선택한다
@@ -905,7 +920,7 @@ Detailed historical stable workstream list:
 - Startup Performance P2.1 Public User Lookup Cache(시작 성능 2.1차 public user lookup cache): 구현 완료 / Render 배포 후 Build 100으로 관찰 대기. Build 100 QA에서 `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, responseBytes 약 7545가 확인되어 list payload/thumbnail/evidence는 병목에서 제외됐다. 느린 케이스는 `authVerificationMode=claims`, `authClaimsMs` 약 880ms, `publicUserLookupMs` 약 918ms, `resolveRequestUserMs` 약 1799ms였고 빠른 케이스는 token/public user cache hit으로 `publicUserLookupMs=0`, `resolveRequestUserMs=0`이었다. `public.users.auth_user_id`는 schema상 `unique`라 index가 있어야 하고 lookup query도 `id, display_name, email`만 선택하므로, P2.1은 auth 검증을 우회하지 않고 verified `authUserId -> public.users.id` cache를 request token cache와 분리했다. `AUTH_USER_PUBLIC_USER_CACHE_TTL_MS` 기본값은 6시간, `AUTH_USER_PUBLIC_USER_CACHE_MAX_ENTRIES` 기본값은 500이며 `/health.performanceCaches`에 노출된다. raw bearer token 저장, no-token/default-user 정책, ownership filtering, Auth/Recovery/Upload/AI flow, DB schema, API contract, EAS build, buildNumber는 변경하지 않았다
 - Build 101 Startup Performance P2.2 QA(빌드 101 시작 성능 2.2차 QA): EAS preview/internal build 완료 / Founder 실기기 QA 대기. Build prep commit `c939257`, base implementation commit `7ded0ba`, iOS buildNumber `101`, EAS Build ID `cda7e537-ed24-4365-b117-e7b5b0ac9061`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/cda7e537-ed24-4365-b117-e7b5b0ac9061`, IPA URL은 `https://expo.dev/artifacts/eas/WLDNFrq_Ti9CDD-kJXjkPu6Qtux0t6obSYjT_uoAGSQ.ipa`. Build 101은 summary-first boot/list, claims-first auth diagnostics, verified public-user cache separation, same-token in-flight request-user resolution dedupe, phase 14 moment list index migration file을 포함한다. Render latest deploy와 Supabase index SQL 적용은 사용자/CTO 세션에서 완료 확인됐다. QA 기준은 long-idle 첫 진입, 바로 재진입, QA panel의 auth mode/claims/resolve/query/server timing, Render `[moments_timing]` requestId 대조, Home/Video thumbnail placeholder, Detail full thumbnail/evidence 보강, Upload/Auth/Recovery 회귀 확인이다
 - Build 102 Singapore Endpoint QA(빌드 102 싱가포르 엔드포인트 QA): EAS preview/internal build 완료 / endpoint 전환 및 정량 startup 확인 완료 / Upload/Auth/Recovery smoke 대기. Build commit `2584872`, iOS buildNumber `102`, EAS Build ID `2f1620ae-1a9e-4323-a935-710803b0aeeb`. Install page는 `https://expo.dev/accounts/jspark88/projects/action-sports-journal/builds/2f1620ae-1a9e-4323-a935-710803b0aeeb`, IPA URL은 `https://expo.dev/artifacts/eas/F40umop-OycaD0QSDvistiHn7rr0I5wbquhkuG7XhoA.ipa`. Founder가 설치/실행 정상과 Singapore Render 실제 앱 로그 유입을 확인했고, capture 기준 `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, 0-record bytes `48`, 7-record bytes 약 `7545`, boot/API 대체로 `0.6s-1.9s`, server 대체로 `0.3s-1.7s`를 확인했다. Startup Performance / Region Alignment는 AI blocker가 아니므로 pause 가능하다
-- Startup Performance Optimization P1.5 QA(시작 성능 최적화 1.5차 QA): 구현 완료 / Build 98 QA 대기. list에서 compact evidence만 반환하고 Detail에서 full evidence를 별도 조회하는 최소 list/detail payload 분리를 적용했다. Moment Detail QA/debug에서 detail request id/server ms/fetch ms/response bytes를 볼 수 있다. Build 98에서 7개 계정 list `responseBytes`/`serverTotalMs`와 Detail fetch diagnostics를 Build 97 대비 확인한다
+- Startup Performance Optimization P1.5 QA(시작 성능 최적화 1.5차 QA): historical QA, completed/superseded. list에서 compact evidence만 반환하고 Detail에서 full evidence를 별도 조회하는 최소 list/detail payload 분리를 적용했다. Moment Detail QA/debug에서 detail request id/server ms/fetch ms/response bytes를 볼 수 있다. Build 98에서 7개 계정 list `responseBytes`/`serverTotalMs`와 Detail fetch diagnostics를 Build 97 대비 확인했고, later Build 102+ closeout superseded this as an active QA target.
 - Build 95 Startup Performance Observability P2 QA(빌드 95 시작 성능 관측 2차 QA): EAS preview/internal build 완료 / Founder timing QA 대기. Build commit `f49481e`, iOS buildNumber `95`, EAS Build ID `b45e226d-60f7-458d-ab2e-e814f33ca6c6`. 다음 작업 재개 시 앱 QA Debug `apiMs`와 Render `[moments_timing] serverTotalMs/requestId`를 먼저 비교한다
 - Build 94 Startup Performance Observability QA(빌드 94 시작 성능 관측 QA): EAS preview/internal build 완료 / Founder multi-day 실사용 관측 대기. Build commit `880ed23`, iOS buildNumber `94`, EAS Build ID `9ee5a132-44c5-4760-95d6-f76c2e4b3a67`. 다음 작업 재개 시 Startup / Video ready QA Debug 값과 server `/api/moments` timing 로그를 먼저 확인한다
 - Build 93 Pre-AI QA(빌드 93 AI 전 기준선 QA): EAS preview/internal build 완료. Build 94가 Startup Performance Observability P1을 추가한 최신 관측 빌드이므로, startup/video ready 판단은 Build 94 기준으로 이동했다

@@ -463,22 +463,22 @@ Pre-AI foundation follow-up:
 
   - Run the first two commands only after explicit Founder/CTO approval. The
     Metro command is useful after a Development Build is already installed.
-- Development Build / Local Build Workflow has been investigated and is the
-  recommended next foundation workflow step before AI Calibration. Expo Go +
-  LAN no-EAS device testing is already possible, but native/standalone-sensitive
-  flows still depend too much on EAS preview builds.
-  - Current state: Expo SDK `~54.0.35`, managed-app style, no checked-in
-    `ios/` or `android/` native directories, no `expo-dev-client` installed,
-    and no `development` profile in `eas.json`.
+- Development Build / Local Build Workflow investigation is complete and is
+  superseded by the completed P1 repo setup above. Expo Go + LAN no-EAS device
+  testing is still useful as the first QA pass, but native/standalone-sensitive
+  flows should move toward a Development Build once the Founder approves the
+  first install/signing step.
+  - Current repo state: Expo SDK `~54.0.35`, managed-app style, no checked-in
+    `ios/` or `android/` native directories, `expo-dev-client` installed, and
+    an `eas.json` `development` profile exists.
   - Native/config-sensitive surfaces: `react-native-compressor`,
     `react-native-nitro-modules`, `expo-notifications`, app scheme
     `actionsportsjournal`, `expo-video`, `expo-web-browser`, and the
     `react-native-compressor` config plugin.
-  - Recommended P1: after Founder approval, install `expo-dev-client`, add an
-    `eas.json` `development` profile, and create/install one development build
-    on the Founder iPhone. After that, JS-only ASJ work can use local Metro
-    through `npx expo start --dev-client` / LAN instead of repeated preview
-    builds.
+  - Next P1 execution step: after Founder approval, create/install one
+    development build on the Founder iPhone. After that, JS-only ASJ work can
+    use local Metro through `npx expo start --dev-client` / LAN instead of
+    repeated preview builds.
   - Approval boundary: do not run `npx expo run:ios --device`,
     `eas build --local`, `eas build`, signing/provisioning, or install steps
     without explicit approval. These can generate native directories, invoke
@@ -500,6 +500,11 @@ Pre-AI foundation follow-up:
 
 Non-blocking follow-up backlog:
 
+- Upload target auth-boundary hardening after Build 106 local checks is complete.
+  `POST /api/video-upload-targets` now checks the authenticated request user
+  before upload metadata policy validation, so no-token requests return `401`
+  before file size/duration/MIME errors. Local smoke confirmed valid,
+  too-large, and too-long no-token upload-target requests all return `401`.
 - Custom domain for endpoint stability and branding.
 - Advanced infra tuning if future captures prove Supabase/Auth/query/network
   variance is product-visible.
@@ -1131,11 +1136,11 @@ Future Detail UX backlog:
   endpoint returns `X-ASJ-Request-Id`, `X-ASJ-Server-Total-Ms`, and
   `X-ASJ-Response-Bytes`; Moment Detail QA/debug shows detail request id,
   detail server ms, detail fetch ms, and detail response bytes.
-- Build 98 is the current P1.5 payload optimization QA build. Build commit:
-  `1a4f542`; iOS buildNumber: `98`; EAS Build ID:
-  `506cf961-45d7-4e26-ac47-f3106ca1ec7f`. Next start point is P1.5 payload
-  optimization QA result review: compare list `responseBytes`/`serverTotalMs`
-  with Build 97 and confirm Detail fetch diagnostics are not a new bottleneck.
+- Build 98 was the historical P1.5 payload optimization QA build, not the
+  current build target. Its build commit was `1a4f542`, iOS buildNumber was
+  `98`, and EAS Build ID was `506cf961-45d7-4e26-ac47-f3106ca1ec7f`.
+  Current active work has moved past Build 106; keep Build 98 notes only as
+  startup-performance history.
 - Build 98 boot / Video readiness QA confirmed improvement versus the pre-Build
   96/97 baseline, but not a flat latency profile. Long-idle first access remains
   slower than repeated access. 0-record anonymous captures ranged from about
@@ -1195,14 +1200,11 @@ Future Detail UX backlog:
   thumbnail through `GET /api/moments/:momentId`. If P2 still feels slow, the
   next candidate is a dedicated thumbnail lazy endpoint or visible-row thumbnail
   fetch, not weakening auth.
-- Build 99 is the current Startup Performance P2 summary-first QA build.
+- Build 99 was the historical Startup Performance P2 summary-first QA build.
   Build prep commit: `18340e9`; base implementation commit: `918e7a0`; iOS
   buildNumber: `99`; EAS Build ID:
-  `ae567786-f3c7-4aa3-913d-4af033b1d4fd`. Founder QA is pending. Check
-  long-idle first entry, QA Debug API time, Render `[moments_timing]`
-  `view=summary`, `evidenceQueryMs=0`, `thumbnailSignedUrlWallMs=0`, list
-  placeholder quality, and Detail full evidence/thumbnail hydration before
-  deciding whether more startup work is needed.
+  `ae567786-f3c7-4aa3-913d-4af033b1d4fd`. Later builds superseded this QA
+  target; keep these notes as startup-performance history.
 - Startup Performance P2.1 adds the next diagnostic and auth-resolve pass.
   Build 99 logs showed summary mode already removes list evidence and thumbnail
   signed URL work, so the remaining cold path is now Auth/public-user resolve
@@ -1225,15 +1227,14 @@ Future Detail UX backlog:
   `authUserPublicUserCacheHit=true`, `publicUserLookupMs=0`, and lower
   `resolveRequestUserMs`; if not, the next candidates are Supabase public user
   lookup/index inspection or moments query tuning, not auth bypass.
-- Build 101 is the current Startup Performance P2.2 standalone QA build.
+- Build 101 was the historical Startup Performance P2.2 standalone QA build.
   Build prep commit: `c939257`; base implementation commit: `7ded0ba`; iOS
   buildNumber: `101`; EAS Build ID:
   `cda7e537-ed24-4365-b117-e7b5b0ac9061`. It includes summary-first boot/list,
   claims-first auth diagnostics, verified public-user cache separation,
   same-token in-flight request-user resolution dedupe, and the phase 14 moments
-  list index migration file. Founder QA should decide whether Startup
-  Performance can pause before AI Calibration or whether more work is needed on
-  moments query / thumbnail lazy hydration / remaining infra variance.
+  list index migration file. Later Build 102+ closeout superseded this as an
+  active QA target.
 - Future observability work should prefer QA Debug Panel over Render-log-only
   checks whenever the values are non-secret and useful during device QA.
   Candidate fields include request view, server total, evidence timing,

@@ -22,6 +22,28 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Build 106 이후 local/no-build 재개 점검, 2026-07-08:
+  - `codex-personal-context`와 ASJ repo를 remote 기준으로 동기화한 뒤
+    프로젝트 문서 read order를 재확인했다.
+  - Local dependency mismatch를 `npm install`로 정리했고
+    `expo-dev-client@6.0.21` 설치 상태를 확인했다. `package.json` /
+    `package-lock.json` 변경은 없었다.
+  - `npm run typecheck`, `git diff --check`, `npx expo config --json`,
+    local BFF `/health`, no-token protected API smoke, and Metro dev-client
+    start smoke passed.
+  - `app.json` 기준 최신 iOS `buildNumber`는 `106`이다. Build 98은 과거
+    startup-performance history이며 현재 QA target으로 취급하지 않는다.
+  - Small safety hardening: `POST /api/video-upload-targets` now resolves the
+    authenticated request user before upload metadata policy validation. Local
+    smoke confirmed valid, too-large, and too-long no-token upload-target
+    requests all return `401`; no-token `/api/moments` and
+    `/api/recovery-attempts` also remain `401`.
+  - No EAS/local native build, DB migration, external console change, Storage
+    upload, Email Recovery `updateUser`, or paid AI/API call was performed.
+  - Next practical start point remains Development Build / Local Build Workflow
+    once the physical iPhone/USB or an approved alternative is available. If no
+    device setup is available, continue with no-build refactor/audit only.
+
 - dev-server low-risk decomposition 3차, 2026-07-07:
   - Upload policy / validation helpers now live in
     `dev-server/features/upload/uploadPolicy.ts` instead of

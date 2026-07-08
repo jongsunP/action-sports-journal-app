@@ -644,6 +644,9 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
       return;
     }
 
+    const requestUser = await resolveRequestUser(request);
+    const userId = requestUser.userId;
+
     const draftId = getField(request.body?.draftId, "");
     const fileName = nullableString(request.body?.fileName);
     const mimeType = nullableString(request.body?.mimeType);
@@ -683,8 +686,6 @@ app.post("/api/video-upload-targets", uploadRateLimit, async (request, response)
       return;
     }
 
-    const requestUser = await resolveRequestUser(request);
-    const userId = requestUser.userId;
     const uploadId = randomUUID();
     const extension =
       extensionForFileName(fileName ?? "") ?? extensionForMimeType(mimeType);
