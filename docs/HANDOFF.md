@@ -22,6 +22,24 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local env / Simulator closeout, no EAS build run, 2026-07-08:
+  - This session did not run a new EAS build. Do not describe the next state as
+    "Build 106 QA feedback pending" for this session.
+  - Local `.env.local` had drifted back to the deleted Virginia Render endpoint
+    (`action-sports-journal-api.onrender.com`). It was corrected locally to the
+    Singapore endpoint:
+    `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  - Expo Go / iPhone 17 Simulator smoke was rerun after the env fix. The app
+    bundled with the Singapore endpoint, `/api/moments` no longer returned 404,
+    Home rendered normally, and the Video tab rendered normally.
+  - This was a no-build simulator/Expo Go smoke only. It does not verify native
+    compression, Push notifications, deep links, or standalone iPhone behavior.
+  - Next start should decide between:
+    1. continuing no-build/local review;
+    2. running a new standalone EAS build only if needed; or
+    3. preparing Development Build / Local Build Workflow once physical
+       iPhone/USB or an approved alternative is available.
+
 - Build 106 이후 local/no-build 재개 점검, 2026-07-08:
   - `codex-personal-context`와 ASJ repo를 remote 기준으로 동기화한 뒤
     프로젝트 문서 read order를 재확인했다.

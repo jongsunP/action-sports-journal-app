@@ -81,6 +81,17 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- 2026-07-08 local env / Simulator closeout: no new EAS build was run in this
+  session, so the next state must not be described as "Build 106 QA feedback
+  pending." Local `.env.local` was corrected from the deleted Virginia Render
+  endpoint to the active Singapore endpoint
+  `https://action-sports-journal-api-sg.onrender.com/api/analyze-session-video`.
+  Expo Go / iPhone 17 Simulator smoke then confirmed the app bundles with the
+  Singapore endpoint, `/api/moments` no longer returns 404, Home renders
+  normally, and the Video tab renders normally. This verifies only no-build
+  simulator/Expo Go behavior; native compression, Push, deep links, and
+  standalone iPhone behavior still require standalone/dev-client verification
+  when needed.
 - Build 106 이후 로컬 재개 점검이 완료됐다. `codex-personal-context`와 ASJ
   repo를 pull한 뒤, local dependency 상태를 `npm install`로 동기화했고
   `expo-dev-client@6.0.21` 설치 상태를 확인했다. `npm run typecheck`,
