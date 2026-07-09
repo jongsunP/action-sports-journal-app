@@ -22,6 +22,26 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local Development Readiness utility added, read-only, 2026-07-09:
+  - When the local dev-client / Expo Go physical-device path feels unclear,
+    start with:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run qa:local-readiness
+    ```
+
+  - Optional endpoint `/health` check:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run qa:local-readiness -- --check-health
+    ```
+
+  - The command checks local preconditions only. It does not run EAS build,
+    local native build/install, DB write, or AI calls, and it avoids printing
+    secrets/raw device ids/tokens/private env values.
+
 - AI Calibration Reference Video Set intake standard clarified, 2026-07-09:
   - AI Calibration still has not started because the Founder has not prepared
     the reference video set yet.

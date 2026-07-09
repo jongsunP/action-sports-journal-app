@@ -19,6 +19,32 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local Development Readiness utility added, read-only, 2026-07-09:
+
+- Added a local readiness command for no-EAS Development Build / Expo Go
+  workflow checks:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:local-readiness
+  ```
+
+- It checks Node engine fit, `expo-dev-client` dependency, local Metro scripts,
+  iOS bundle/buildNumber metadata, EAS development profile presence, public
+  endpoint mode, local Apple Development codesigning identity count, and
+  connected iPhone visibility without running a build or installing anything.
+- Optional endpoint `/health` check:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:local-readiness -- --check-health
+  ```
+
+- The output is JSON and avoids secrets, raw device ids, tokens, and private
+  env values. No EAS build, local native build/install, DB write, Render/
+  Supabase/Auth setting change, paid AI/API call, or AI Calibration work was
+  performed.
+
 Safe DB owner summary utility added, read-only, 2026-07-09:
 
 - Added a sanitized read-only Supabase owner summary command for CTO/QA checks:

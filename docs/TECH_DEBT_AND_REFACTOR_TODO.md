@@ -730,6 +730,17 @@ or browser must use the Mac LAN IP rather than `127.0.0.1`.
 
 Physical iPhone + Expo Go operating notes:
 
+- First check local readiness when the Development Build / Expo Go path is
+  confusing:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:local-readiness
+  ```
+
+  Add `-- --check-health` when you also want to verify the configured endpoint
+  `/health`. This is read-only and does not run EAS build, local native
+  build/install, DB write, or AI calls.
 - Start with the Singapore Render endpoint when the goal is UI/basic remote
   sync smoke without EAS.
 - Start `npm run server:dev` first and override

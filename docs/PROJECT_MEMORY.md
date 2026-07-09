@@ -81,6 +81,16 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- 2026-07-09 Local Development Readiness utility was added for no-EAS
+  Development Build / Expo Go workflow checks. Use
+  `npm run qa:local-readiness` when the local physical-device path feels
+  unclear; add `-- --check-health` to verify the configured endpoint `/health`.
+  It checks local preconditions only: Node engine fit, `expo-dev-client`
+  dependency, Metro scripts, iOS bundle/buildNumber metadata, EAS development
+  profile, public endpoint mode, local Apple Development codesigning identity
+  count, and connected iPhone visibility. It does not run EAS build, local
+  native build/install, DB writes, or AI calls, and avoids printing secrets,
+  raw device ids, tokens, or private env values.
 - 2026-07-09 Safe DB Owner Summary utility was added for read-only CTO/QA
   inspection. Use `npm run qa:db:owner-summary -- --match-count=11` before
   considering Postico mutations, DB cleanup, or legacy thumbnail/data backfill.
