@@ -19,6 +19,50 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Local native Development Build workflow open, no EAS cloud build run,
+2026-07-09:
+
+- The local no-EAS physical-device Development Build path is now working on
+  the Founder iPhone.
+- Local signing/certificate blockers were resolved:
+  - Apple WWDR G3 intermediate certificate was installed locally.
+  - Local Keychain now has one valid `Apple Development` codesigning identity.
+  - The duplicate stale Apple Development certificate was revoked from Apple
+    Developer Portal and removed from the local Keychain/Xcode view.
+- `npx expo run:ios --device` successfully built and installed the ASJ dev
+  client on the physical iPhone without using EAS Cloud Build.
+- The installed dev client uses the same bundle id
+  `com.parksunl88.actionsportsjournal`, so it can overwrite the currently
+  installed EAS preview/internal app. To return to standalone Build 106, install
+  Build 106 again from its EAS build page.
+- After the dev build is installed, routine JS/UI iteration should use local
+  Metro over LAN:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run start:dev-client:lan
+  ```
+
+- If the dev client launcher does not auto-discover Metro, enter the manual
+  LAN URL from the iPhone:
+
+  ```text
+  http://<MAC_LAN_IP>:8081
+  ```
+
+- Helper scripts are now available:
+  - `npm run device:ip`: prints the Mac LAN IP from `en0`.
+  - `npm run device:list`: lists connected Apple devices through `devicectl`.
+  - `npm run device:certs`: checks valid local codesigning identities.
+  - `npm run start:go:lan:clear`: explicit Expo Go physical-iPhone LAN mode.
+  - `npm run start:dev-client:lan`: Development Build Metro LAN mode.
+- USB is needed for native rebuild/install or explicit launch commands, but
+  normal Metro/JS testing can continue over the same Wi-Fi/LAN after the dev
+  build is installed.
+- No EAS Cloud Build, standalone buildNumber change, DB write/backfill,
+  Render/Supabase/Auth setting change, paid AI/API call, or AI Calibration work
+  was performed.
+
 Local env / Simulator closeout, no EAS build run, 2026-07-08:
 
 - This session did not run a new EAS build. Current next state should not be
@@ -417,18 +461,18 @@ Local-first Journal Cache P1 cache-hit loop fix, no build run, 2026-07-07:
   - Founder/physical-device or simulator Expo Go restart smoke for cache hit
     and absence of the update-loop error.
 
-Session paused before Local-first Cache P1 no-build QA, 2026-07-06:
+Session paused before Local-first Cache P1 no-build QA, 2026-07-06
+(superseded by 2026-07-09 local dev-client install):
 
 - Founder is pausing here and will continue later.
 - Full Local-first Journal Cache P1 implementation is complete, but no-build QA
   is still pending.
-- Important Expo mode note: `expo-dev-client` is installed in the project, but
-  no Development Build app is installed on the simulator or physical iPhone
-  yet. Therefore `npm run start:dev-client` or an Expo CLI `i` flow that targets
-  a development build can fail with:
+- Historical Expo mode note: at this checkpoint `expo-dev-client` existed in
+  the repo but no Development Build app had been installed yet, so
+  `npm run start:dev-client` or an Expo CLI `i` flow could fail with:
   `No development build (com.parksunl88.actionsportsjournal) for this project is installed.`
-- Until a Development Build app is actually installed, Local-first Cache P1
-  no-build QA should use Expo Go mode explicitly:
+- This blocker is superseded by the 2026-07-09 local dev-client install. Use
+  Expo Go explicitly only when testing the fixed Expo Go runtime:
 
   ```bash
   cd ~/Repository/action-sports-journal-app
@@ -442,10 +486,8 @@ Session paused before Local-first Cache P1 no-build QA, 2026-07-06:
   npx expo start --clear --go --lan
   ```
 
-- Local/native Development Build remains paused until the Founder handles the
-  Mac/iPhone setup items: physical iPhone recognition by
-  `xcrun devicectl list devices` and CocoaPods availability via
-  `pod --version`.
+- Local/native Development Build is no longer paused for those blockers; the
+  physical iPhone/signing path is working as of 2026-07-09.
 - AI Calibration remains paused until reference videos are prepared and the
   remaining foundation QA/workflow items are intentionally closed.
 
@@ -554,7 +596,8 @@ Full Local-first Journal Cache P1 design, no implementation, 2026-07-06:
   for AI Calibration if reference videos are ready and the current network path
   is acceptable.
 
-Local/native Development Build attempt, no EAS build run, 2026-07-06:
+Local/native Development Build attempt, no EAS build run, 2026-07-06
+(historical failed attempt; fixed on 2026-07-09):
 
 - Goal was to check whether ASJ can install a Development Build on the
   Founder's physical iPhone without using EAS paid/cloud builds.
@@ -584,14 +627,11 @@ Local/native Development Build attempt, no EAS build run, 2026-07-06:
   - The generated `ios/` directory is already ignored by `.gitignore` via
     `/ios`; it was removed from the workspace and not committed.
 - Current conclusion:
-  - Local/native Development Build is still plausible, but not currently ready
-    on this Mac without setup.
-  - Blocking items are physical iPhone connection/trust visibility and
-    CocoaPods/Xcode local build dependency setup. Signing/team/provisioning was
-    not reached.
-  - Do not move to Cloud Development Build yet if the primary goal is reducing
-    EAS usage. First connect/trust the iPhone and intentionally approve/install
-    CocoaPods or an equivalent local CocoaPods setup.
+  - This is a historical failed attempt. The physical iPhone/signing path was
+    fixed later on 2026-07-09 and `npx expo run:ios --device` successfully
+    installed the local dev client.
+  - Keep this note only as troubleshooting history if a future Mac loses local
+    device/signing/CocoaPods readiness.
 - No EAS build, `eas build --local`, standalone preview/internal build,
   buildNumber change, AI Calibration, Render/Supabase/DB/Auth setting change,
   or device install was performed.

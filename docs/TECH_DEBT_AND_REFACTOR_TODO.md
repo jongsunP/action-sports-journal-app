@@ -129,6 +129,48 @@ Final confirmation before AI Calibration:
 
 Pre-AI foundation follow-up:
 
+- Development Build / Local Build Workflow closeout:
+  - The local native Development Build path is now open on the Founder iPhone
+    without EAS Cloud Build usage.
+  - Local signing setup is stable enough for day-to-day iteration: Apple WWDR
+    G3 is installed, the local Keychain has one valid Apple Development
+    identity, and the duplicate stale Development certificate was revoked from
+    Apple Developer Portal.
+  - `npx expo run:ios --device` successfully built/installed the ASJ dev client
+    on the physical iPhone. This can create/update ignored `ios/` prebuild
+    output locally; do not commit `ios/` unless ASJ intentionally changes to a
+    checked-in native directory policy.
+  - After the dev build is installed, use local Metro for ordinary JS/UI
+    iteration:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run start:dev-client:lan
+    ```
+
+  - If the dev client does not discover Metro, manually enter:
+
+    ```text
+    http://<MAC_LAN_IP>:8081
+    ```
+
+  - Helper scripts:
+    - `npm run device:ip`
+    - `npm run device:list`
+    - `npm run device:certs`
+    - `npm run start:go:lan:clear`
+    - `npm run start:dev-client:lan`
+  - USB is required for native rebuild/install/explicit launch only. Once the
+    dev build is installed, the iPhone can load JS from Metro over the same
+    LAN.
+  - The dev build shares bundle id `com.parksunl88.actionsportsjournal` with
+    the standalone preview/internal app, so installing it may overwrite the EAS
+    Build 106 app. Reinstall Build 106 when standalone EAS behavior is the
+    target.
+  - Keep using EAS standalone preview/internal builds only for final installed
+    app proof, EAS env parity, or distribution-like Push/deep-link/native
+    runtime verification.
+
 - Audit follow-up backlog separation:
   - dev-server low-risk decomposition has started with structure-only helper
     splits. Summary logging helpers now live in
@@ -394,7 +436,8 @@ Pre-AI foundation follow-up:
     Calibration. Implement before AI Calibration only if Founder wants the
     extra offline/perceived-boot foundation pass; otherwise proceed to AI
     Calibration and keep this as the next foundation backlog item.
-- Local/native Development Build attempt result:
+- Local/native Development Build attempt result (historical, superseded by the
+  2026-07-09 successful local dev-client install):
   - `npx expo run:ios --device` was attempted once to avoid EAS cloud usage.
   - It generated a temporary `ios/` directory and completed prebuild, but did
     not install on a physical iPhone.
@@ -432,8 +475,9 @@ Pre-AI foundation follow-up:
     npx expo run:ios --device
     ```
 
-  - Do not jump to Cloud Development Build solely because this attempt failed;
-    the first blockers are local device recognition and CocoaPods setup.
+  - This blocker was later resolved on 2026-07-09. Do not use this historical
+    section as the current next action unless a future machine loses local
+    device/signing/CocoaPods readiness again.
 - Development Build P1 repo setup is complete:
   - `expo-dev-client` is installed at `~6.0.21`.
   - `package.json` includes `start:dev-client` for

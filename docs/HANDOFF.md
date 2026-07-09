@@ -22,6 +22,40 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Local native Development Build workflow is open, no EAS cloud build run,
+  2026-07-09:
+  - The Founder iPhone can now run an ASJ Development Build installed locally
+    through `npx expo run:ios --device`.
+  - Signing/certificate blockers were resolved by installing Apple WWDR G3,
+    leaving one valid local Apple Development codesigning identity, and
+    revoking/removing the duplicate stale Development certificate.
+  - The dev client installed with bundle id
+    `com.parksunl88.actionsportsjournal`, so it can overwrite the installed EAS
+    preview/internal app. Reinstall Build 106 if standalone Build 106 behavior
+    is needed again.
+  - After install, routine no-EAS device iteration should start Metro with:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run start:dev-client:lan
+    ```
+
+  - If the dev client launcher says no development servers were found, enter
+    the manual URL on the iPhone:
+
+    ```text
+    http://<MAC_LAN_IP>:8081
+    ```
+
+  - Use `npm run device:ip` to get `<MAC_LAN_IP>`, `npm run device:list` to
+    verify USB-connected devices, and `npm run device:certs` to verify the
+    local signing identity.
+  - USB is needed only for rebuild/install/explicit launch. Normal JS testing
+    can continue over LAN after the dev build is installed.
+  - No EAS Cloud Build, buildNumber bump, DB write/backfill,
+    Render/Supabase/Auth setting change, paid AI/API call, or AI Calibration
+    work was performed.
+
 - Local env / Simulator closeout, no EAS build run, 2026-07-08:
   - This session did not run a new EAS build. Do not describe the next state as
     "Build 106 QA feedback pending" for this session.
@@ -375,22 +409,18 @@ Latest product/UX direction update:
     stopped. Still verify with Founder/physical-device or simulator Expo Go
     restart smoke for cache hit with no React update-loop error.
 
-- Paused before Local-first Cache P1 no-build QA, 2026-07-06:
+- Paused before Local-first Cache P1 no-build QA, 2026-07-06
+  (superseded by 2026-07-09 local dev-client install):
   - Founder paused here. Next session should resume with Local-first Cache P1
     no-build QA before moving to AI Calibration.
-  - `expo-dev-client` exists in package dependencies, but no Development Build
-    app is installed yet. If Expo CLI tries to launch a development build, it
-    can fail with `No development build (com.parksunl88.actionsportsjournal)
-    for this project is installed.`
+  - Historical note: at this checkpoint `expo-dev-client` existed in package
+    dependencies, but no Development Build app was installed yet. This is
+    superseded by the 2026-07-09 local dev-client install.
   - For Local-first Cache P1 no-build QA, use Expo Go mode explicitly:
     `npx expo start --clear --go`. For physical iPhone Expo Go over LAN, use
     `npx expo start --clear --go --lan`.
-  - Do not use `npm run start:dev-client` until a Development Build app is
-    installed.
-  - Local/native Development Build remains paused until the Founder handles
-    local Mac setup: physical iPhone must appear in
-    `xcrun devicectl list devices`, and CocoaPods must be available via
-    `pod --version`.
+  - Use Expo Go mode when intentionally testing Expo Go. For the installed
+    local Development Build, use `npm run start:dev-client:lan`.
   - Local-first Cache P1 QA checklist for next session:
     first run cache miss -> remote summary writes snapshot -> restart cache hit
     -> background refresh replaces snapshot -> thumbnail hydration still uses
@@ -468,12 +498,10 @@ Latest product/UX direction update:
   - Cleanup: Expo's temporary script rewrite of `package.json` `ios/android` to
     `expo run:*` was restored to `expo start --ios` / `expo start --android`.
     The generated ignored `ios/` directory was removed and was not committed.
-  - Result: no iPhone install, no Development Build runtime, and no LAN Metro
-    dev-client smoke yet.
-  - Next local-first action: connect/trust the physical iPhone so `devicectl`
-    sees it, then intentionally install/configure CocoaPods locally before
-    retrying `npx expo run:ios --device`. Signing/team/provisioning may appear
-    after those blockers are cleared.
+  - Historical result: no iPhone install, no Development Build runtime, and no
+    LAN Metro dev-client smoke at that time.
+  - Superseded by 2026-07-09: physical iPhone/signing setup was fixed and
+    `npx expo run:ios --device` successfully installed the local dev client.
   - Do not switch to Cloud Development Build just because this attempt failed;
     the current blockers are local setup/device recognition first.
 

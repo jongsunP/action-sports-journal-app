@@ -81,6 +81,19 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- 2026-07-09 local native Development Build workflow is open without EAS Cloud
+  Build. The Founder iPhone successfully installed and launched the ASJ dev
+  client through `npx expo run:ios --device` after local signing setup was
+  fixed. Apple WWDR G3 is installed, the local Keychain has one valid Apple
+  Development codesigning identity, and the duplicate stale Development
+  certificate was revoked/removed. Routine JS iteration can now use
+  `npm run start:dev-client:lan`; if auto-discovery fails, enter
+  `http://<MAC_LAN_IP>:8081` in the dev client. The dev client uses bundle id
+  `com.parksunl88.actionsportsjournal`, so it may overwrite the installed EAS
+  preview/internal app; reinstall Build 106 when standalone behavior is needed.
+  USB is needed for native rebuild/install, but ordinary Metro/JS testing can
+  continue over LAN. No EAS Cloud Build, DB write/backfill, Render/Supabase/Auth
+  setting change, paid AI/API call, or AI Calibration work was performed.
 - 2026-07-08 local env / Simulator closeout: no new EAS build was run in this
   session, so the next state must not be described as "Build 106 QA feedback
   pending." Local `.env.local` was corrected from the deleted Virginia Render
@@ -270,17 +283,11 @@ Current infrastructure / pre-AI hardening:
   stale/refresh fields. `npm run typecheck` passed; no EAS/local native build,
   AI Calibration, DB/Render/Supabase/Auth setting change, Recovery change, or
   Upload/Push/Detail state-machine change was performed.
-- Local/native Development Build was attempted once without EAS cloud usage and
-  did not reach device install. `npx expo run:ios --device` generated a
-  temporary ignored `ios/` prebuild output, but local prerequisites blocked the
-  path: no physical iPhone was visible through `xcrun devicectl list devices`,
-  CocoaPods CLI was missing, Gem install failed, and Homebrew CocoaPods install
-  would have changed machine-level packages, so it was declined. Expo then only
-  offered Simulator choices. Generated `ios/` output was removed, Expo's
-  temporary package script rewrite was restored, and no EAS build, local EAS
-  build, buildNumber change, device install, or AI Calibration was performed.
-  Next local-first step is to connect/trust the physical iPhone and explicitly
-  set up CocoaPods locally before retrying `npx expo run:ios --device`.
+- Local/native Development Build had an earlier failed attempt without EAS
+  cloud usage, but that blocker is now superseded. On 2026-07-09 the physical
+  iPhone/signing path was fixed and `npx expo run:ios --device` successfully
+  installed the ASJ dev client locally. Keep the earlier failed attempt only as
+  troubleshooting history for future machines.
 - Development Build P1 repo setup is complete as a no-build step.
   `expo-dev-client` is installed at `~6.0.21`, `package.json` has
   `start:dev-client`, and `eas.json` has a `development` profile with
@@ -810,11 +817,9 @@ Current grouped listup view:
   - Render JSON Summary Logs(렌더 JSON 요약 로그)
   - QA Debug Panel(QA 디버그 패널)
   - Postico DB Read Path(Postico DB 조회 환경)
+  - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우)
 
 현재 남은 과제:
-- AI 전 기반 정리 / 다음 진행
-  - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우): EAS 빌드 의존도를 줄이기 위해 AI Calibration 전에 구축한다. Expo Go no-EAS 테스트는 이미 가능하지만, Push/deep link/native compression 같은 native/standalone 성격을 더 자주 확인할 수 있는 development build 또는 local native build 루틴은 아직 별도 정리되지 않았다.
-
 - 필수 / 아직 미시작
   - AI Calibration(AI 캘리브레이션): TS/HS Evidence(TS/HS 근거) 안정화부터 시작
   - Reference Video Set(기준 영상 세트) 준비/정의
