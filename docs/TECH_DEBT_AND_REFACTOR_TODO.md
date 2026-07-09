@@ -570,6 +570,19 @@ Before AI Calibration, verify that the existing app foundation still works on
 the Singapore-only backend. This is a smoke checklist, not a new implementation
 project.
 
+One-command readiness check:
+
+```bash
+cd ~/Repository/action-sports-journal-app
+npm run qa:pre-ai-readiness
+```
+
+This combines `typecheck`, local readiness plus endpoint `/health`, and
+sanitized DB owner summary. It is read-only: no EAS build, no local native
+build/install, no DB writes, and no paid AI/API calls. Use
+`npm run qa:pre-ai-readiness -- --skip-db=true` when DB inspection should be
+skipped.
+
 Minimum checks:
 
 | Area | Check | Preferred environment |

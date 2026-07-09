@@ -22,6 +22,21 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Pre-AI Readiness Check utility added, read-only, 2026-07-09:
+  - Before starting AI Calibration after the Founder provides reference videos,
+    run:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run qa:pre-ai-readiness
+    ```
+
+  - It combines `typecheck`, local dev readiness plus endpoint `/health`, and
+    sanitized DB owner summary. It does not run EAS build, local native
+    build/install, DB writes, or paid AI/API calls.
+  - Use `npm run qa:pre-ai-readiness -- --skip-db=true` if DB inspection should
+    be skipped for that pass.
+
 - Local Development Readiness utility added, read-only, 2026-07-09:
   - When the local dev-client / Expo Go physical-device path feels unclear,
     start with:

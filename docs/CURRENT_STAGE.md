@@ -19,6 +19,26 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Pre-AI Readiness Check utility added, read-only, 2026-07-09:
+
+- Added a single command to check the current non-EAS, non-AI foundation before
+  entering AI Calibration:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:pre-ai-readiness
+  ```
+
+- The command runs `typecheck`, local dev readiness with endpoint `/health`,
+  and sanitized DB owner summary. It performs no EAS build, no local native
+  build/install, no DB writes, and no paid AI/API calls.
+- If the Founder wants to skip DB inspection:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:pre-ai-readiness -- --skip-db=true
+  ```
+
 Local Development Readiness utility added, read-only, 2026-07-09:
 
 - Added a local readiness command for no-EAS Development Build / Expo Go

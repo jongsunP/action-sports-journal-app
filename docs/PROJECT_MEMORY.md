@@ -81,6 +81,12 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- 2026-07-09 Pre-AI Readiness Check utility was added. Use
+  `npm run qa:pre-ai-readiness` before the first AI Calibration run after the
+  Founder provides reference videos. It combines `typecheck`, local dev
+  readiness plus endpoint `/health`, and sanitized DB owner summary. It does
+  not run EAS build, local native build/install, DB writes, or paid AI/API
+  calls. Use `-- --skip-db=true` when DB inspection should be skipped.
 - 2026-07-09 Local Development Readiness utility was added for no-EAS
   Development Build / Expo Go workflow checks. Use
   `npm run qa:local-readiness` when the local physical-device path feels
@@ -841,6 +847,7 @@ Current grouped listup view:
   - Safe DB Owner Summary(안전 DB 소유자 요약)
   - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우)
   - Local Development Readiness Check(로컬 개발 준비 상태 점검)
+  - Pre-AI Readiness Check(AI 전 준비 상태 점검)
 
 현재 남은 과제:
 - 필수 / 아직 미시작
