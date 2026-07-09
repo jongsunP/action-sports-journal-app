@@ -210,8 +210,10 @@ Pre-AI foundation follow-up:
     refactor-only pass.
   - Do not start large `dev-server/index.ts` splits before AI Calibration unless
     a specific bug requires it.
-  - QA Debug Panel hide/gate remains store/TestFlight cleanup, not this pre-AI
-    fix.
+  - QA Debug Panel hide/gate readiness is implemented via env flag and local
+    readiness check. Store/TestFlight cleanup is the final verification step:
+    set `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` and confirm the panel is
+    hidden before real distribution.
   - Push icon remains a visual/platform backlog item.
   - Legacy Thumbnail Backfill remains approval-gated because it requires
     DB/storage writes and may be impossible for rows whose source videos are

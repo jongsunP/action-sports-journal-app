@@ -358,9 +358,12 @@ Latest product/UX direction update:
     detail fetch finishes.
   - AI Calibration has no known foundation blocker, but Founder reference videos
     are still needed before starting calibration.
-  - Remaining non-blocking follow-ups stay in backlog/later lanes: large
-    HomeScreen/dev-server refactors, QA Debug Panel hide/gate before store,
-    Push icon platform/asset investigation, and any Legacy Thumbnail Backfill.
+  - Remaining non-blocking follow-ups stay in backlog/later lanes: remaining
+    large refactors, Push icon platform/asset investigation, and any Legacy
+    Thumbnail Backfill write path. QA Debug Panel hide/gate readiness is
+    implemented via env flag and local readiness check; the remaining store
+    task is verifying it with `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` before
+    real distribution.
 
 - Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
   - Local-first Cache P1 can be treated as no-build QA passed.

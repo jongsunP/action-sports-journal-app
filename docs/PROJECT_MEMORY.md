@@ -264,15 +264,17 @@ Current infrastructure / pre-AI hardening:
   Calibration and did not touch EAS/local native build, DB/storage, Render/
   Supabase/Auth settings, thumbnail hydration, Upload/Recovery/Cache state, or
   QA Debug Panel hide/gate.
-- Pre-AI Audit Follow-up small fixes are complete without build or external
-  setting changes. Client console upload/reconciliation/timing logs now mask
-  local session, draft, upload, Moment, and raw storage-path values as short ids
-  or presence booleans, while keeping required full values inside functional API
-  payloads. Detail completed/no-evidence copy is neutralized for legacy rows
-  without evidence, and loading/empty separation is preserved. There is still no
-  known foundation blocker for AI Calibration, but Founder reference videos are
-  not prepared yet, so AI Calibration has not started. Larger refactors, QA Debug
-  Panel hide/gate, Push icon investigation, and Legacy Thumbnail Backfill remain
+- Pre-AI Audit Follow-up small fixes and the first safe decomposition passes are
+  complete without build or external setting changes. Client console upload/
+  reconciliation/timing logs now mask local session, draft, upload, Moment, and
+  raw storage-path values as short ids or presence booleans, while keeping
+  required full values inside functional API payloads. Detail completed/
+  no-evidence copy is neutralized for legacy rows without evidence, and
+  loading/empty separation is preserved. There is still no known foundation
+  blocker for AI Calibration, but Founder reference videos are not prepared yet,
+  so AI Calibration has not started. QA Debug Panel has an env hide gate and
+  readiness check; Legacy Thumbnail Backfill has a read-only candidate report.
+  Push icon platform investigation and any DB/Storage write backfill remain
   later/backlog work.
 - Detail Progressive Hydration Polish and Legacy Thumbnail Backfill feasibility
   are closed without EAS build. Detail loading now keeps the media/detail page
@@ -863,11 +865,13 @@ Current grouped listup view:
   - Render Singapore Backend(렌더 싱가포르 단일 백엔드)
   - Render JSON Summary Logs(렌더 JSON 요약 로그)
   - QA Debug Panel(QA 디버그 패널)
+  - QA Debug Panel Hide/Gate Readiness(QA 디버그 패널 숨김/차단 준비)
   - Postico DB Read Path(Postico DB 조회 환경)
   - Safe DB Owner Summary(안전 DB 소유자 요약)
   - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우)
   - Local Development Readiness Check(로컬 개발 준비 상태 점검)
   - Pre-AI Readiness Check(AI 전 준비 상태 점검)
+  - Legacy Thumbnail Backfill Candidate Report(기존 썸네일 보강 후보 산정)
 
 현재 남은 과제:
 - 필수 / 아직 미시작
@@ -892,7 +896,9 @@ Current grouped listup view:
   - 다음 standalone 또는 Development Build에서 post-Build-106 수정 확인
 
 - Store 전 운영
-  - QA Debug Panel Hide/Gate(QA 디버그 패널 숨김/차단)
+  - QA Debug Panel Store Verification(QA 디버그 패널 스토어 전 숨김 확인):
+    gate는 구현 완료. App Store / 실서비스 배포 직전에
+    `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` 설정 후 숨김 상태를 확인한다
   - Kakao/Supabase OAuth Review(카카오/슈파베이스 OAuth 표시/redirect/consent 점검)
   - Push Notification Icon Polish(푸시 알림 아이콘 정리)
 
@@ -902,7 +908,8 @@ Current grouped listup view:
   - Share Export / Native Share Sheet / ShareResult Route(공유 내보내기 / 네이티브 공유 / 공유 결과 경로)
   - Detail Representative Media Selection(상세 대표 미디어 선택)
   - Moment Memo / Rider Note(기록 메모 / 라이더 노트)
-  - Legacy Thumbnail Backfill(기존 기록 썸네일 보강)
+  - Legacy Thumbnail Backfill(기존 기록 썸네일 보강): read-only 후보 산정은
+    완료. 실제 DB/Storage write backfill은 별도 승인 전까지 보류
   - Apple Login(애플 로그인)
 ```
 

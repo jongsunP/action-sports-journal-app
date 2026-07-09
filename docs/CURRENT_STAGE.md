@@ -368,9 +368,11 @@ Pre-AI Audit Follow-up small fixes, 2026-07-07:
   and truly-empty states remain separated.
 - AI Calibration still has no known foundation blocker, but Founder reference
   videos are not prepared yet, so AI Calibration has not started.
-- Still later/backlog, not pre-AI blockers: HomeScreen/dev-server large
-  refactors, QA Debug Panel hide/gate before store/TestFlight, iOS Push icon
-  platform investigation, and any Legacy Thumbnail Backfill write path.
+- Still later/backlog, not pre-AI blockers: remaining large refactors, iOS Push
+  icon platform investigation, and any Legacy Thumbnail Backfill write path.
+  QA Debug Panel hide/gate readiness is implemented via env flag and local
+  readiness check; the remaining store task is verifying it with
+  `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` before real distribution.
 
 Local-first Cache P1 closeout / legacy thumbnail backlog, 2026-07-07:
 
