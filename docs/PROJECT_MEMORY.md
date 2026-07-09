@@ -838,7 +838,9 @@ Current grouped listup view:
   - Render JSON Summary Logs(렌더 JSON 요약 로그)
   - QA Debug Panel(QA 디버그 패널)
   - Postico DB Read Path(Postico DB 조회 환경)
+  - Safe DB Owner Summary(안전 DB 소유자 요약)
   - Development Build / Local Build Workflow(개발 빌드 / 로컬 빌드 워크플로우)
+  - Local Development Readiness Check(로컬 개발 준비 상태 점검)
 
 현재 남은 과제:
 - 필수 / 아직 미시작
