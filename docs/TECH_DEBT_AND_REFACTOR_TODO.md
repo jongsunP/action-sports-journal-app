@@ -158,6 +158,10 @@ Pre-AI foundation follow-up:
     - `npm run device:ip`
     - `npm run device:list`
     - `npm run device:certs`
+    - `npm run ports:metro`
+    - `npm run ports:metro:kill`
+    - `npm run ports:server`
+    - `npm run ports:server:kill`
     - `npm run start:go:lan:clear`
     - `npm run start:dev-client:lan`
   - USB is required for native rebuild/install/explicit launch only. Once the
@@ -680,6 +684,11 @@ Verified on 2026-07-03, physical iPhone Expo Go path:
 - Port note: if Expo says port `8081` is already running, check whether it is an
   older ASJ `expo start` process before choosing a different port. Keeping
   `8081` avoids confusing saved QR/device state.
+- Port helpers:
+  - `npm run ports:metro` checks what is listening on Metro port `8081`.
+  - `npm run ports:metro:kill` stops the process listening on `8081`.
+  - `npm run ports:server` checks local backend port `8787`.
+  - `npm run ports:server:kill` stops the process listening on `8787`.
 
 Verified on 2026-07-03:
 

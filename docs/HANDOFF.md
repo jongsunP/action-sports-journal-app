@@ -155,7 +155,10 @@ Latest product/UX direction update:
 
   - Use `npm run device:ip` to get `<MAC_LAN_IP>`, `npm run device:list` to
     verify USB-connected devices, and `npm run device:certs` to verify the
-    local signing identity.
+    local signing identity. If Metro/local backend ports are already occupied,
+    use `npm run ports:metro`, `npm run ports:metro:kill`,
+    `npm run ports:server`, and `npm run ports:server:kill` instead of ad hoc
+    `lsof` commands.
   - USB is needed only for rebuild/install/explicit launch. Normal JS testing
     can continue over LAN after the dev build is installed.
   - No EAS Cloud Build, buildNumber bump, DB write/backfill,
