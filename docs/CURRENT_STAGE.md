@@ -63,6 +63,26 @@ QA Debug Panel hide/gate readiness, 2026-07-09:
 - No visible QA panel behavior changes were made unless the env flag is set to
   `false` and Metro/build is restarted.
 
+Legacy Thumbnail Backfill candidate utility added, read-only, 2026-07-09:
+
+- Added a sanitized read-only candidate report:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:db:thumbnail-backfill-candidates -- --match-count=11
+  ```
+
+- The script reports owner hashes, short sample moment ids, thumbnail present/
+  missing counts, source-video storage-status buckets, and whether missing
+  thumbnails look backfillable from an existing stored source.
+- It performs no DB writes, no Storage writes, prints no raw user ids, no
+  storage paths, and no signed URLs.
+- Current 11-record owner check: thumbnails present 11 / missing 0, so no
+  backfill is needed for the current local dev-client owner.
+- Top-owner read-only sample showed legacy missing thumbnail rows mostly have
+  deleted or unknown source state, so placeholder/reupload remains the safe
+  policy unless a separate backfill write task is explicitly approved.
+
 Local Development Readiness utility added, read-only, 2026-07-09:
 
 - Added a local readiness command for no-EAS Development Build / Expo Go

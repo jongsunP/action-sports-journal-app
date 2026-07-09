@@ -120,6 +120,14 @@ Current infrastructure / pre-AI hardening:
   default for internal QA, and `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` hides
   it for a public/store build after Metro/build restart. `.env.example` includes
   the flag, and `npm run qa:local-readiness` reports the gate state.
+- Legacy Thumbnail Backfill candidate reporting is available as a read-only
+  utility: `npm run qa:db:thumbnail-backfill-candidates -- --match-count=11`.
+  It prints only owner hashes, short sample moment ids, counts, storage-status
+  buckets, and recommendations. Current 11-record owner has thumbnails present
+  11 / missing 0, so no backfill is needed there. Older legacy rows can still
+  have missing thumbnails, but top-owner sampling indicates those are mostly
+  deleted/unknown source states; keep placeholders or require source reupload
+  unless an explicit DB/Storage write backfill task is approved.
 - 2026-07-09 local native Development Build workflow is open without EAS Cloud
   Build. The Founder iPhone successfully installed and launched the ASJ dev
   client through `npx expo run:ios --device` after local signing setup was

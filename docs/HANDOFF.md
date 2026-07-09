@@ -60,6 +60,24 @@ Latest product/UX direction update:
   - No visible behavior changes occur unless the flag is set to `false` and
     Metro/build is restarted.
 
+- Legacy Thumbnail Backfill candidate utility added, read-only, 2026-07-09:
+  - Use this before considering any thumbnail DB write/backfill:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run qa:db:thumbnail-backfill-candidates -- --match-count=11
+    ```
+
+  - The report is sanitized: owner hashes, short sample moment ids, counts,
+    source-video storage-status buckets, and a backfill recommendation only.
+    It prints no raw user ids, storage paths, or signed URLs and performs no
+    DB/Storage writes.
+  - Current 11-record owner check returned thumbnails present 11 / missing 0,
+    so no backfill is needed for the current dev-client owner. Top-owner
+    read-only sampling still shows older legacy rows whose source state is
+    deleted/unknown; keep placeholders or require source reupload unless a
+    separate explicit write/backfill task is approved.
+
 - Local Development Readiness utility added, read-only, 2026-07-09:
   - When the local dev-client / Expo Go physical-device path feels unclear,
     start with:

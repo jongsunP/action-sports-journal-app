@@ -894,9 +894,14 @@ Remaining:
 - Verify the duplicate-request reduction in the next standalone or simulator QA
   by comparing QA Debug Panel boot/video durations and backend `/api/moments`
   request logs if needed.
-- QA Debug Panel now has an env hide gate. Before real service distribution,
-  set `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false`, restart Metro/build, and verify
-  the panel is hidden.
+  - QA Debug Panel now has an env hide gate. Before real service distribution,
+    set `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false`, restart Metro/build, and verify
+    the panel is hidden.
+  - Legacy thumbnail backfill is now measurable with
+    `npm run qa:db:thumbnail-backfill-candidates`. Current 11-record dev-client
+    owner has no missing thumbnails. Older legacy missing-thumbnail rows should
+    stay as placeholders unless stored source is available and a separate
+    DB/Storage write backfill task is explicitly approved.
 
 ### Execution result - 2026-06-26
 

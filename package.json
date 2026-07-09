@@ -63,6 +63,7 @@
     "device:list": "xcrun devicectl list devices",
     "device:certs": "security find-identity -v -p codesigning",
     "qa:db:owner-summary": "node scripts/qa/read-current-owner-summary.mjs",
+    "qa:db:thumbnail-backfill-candidates": "node scripts/qa/read-thumbnail-backfill-candidates.mjs",
     "qa:local-readiness": "node scripts/qa/check-local-dev-readiness.mjs",
     "qa:pre-ai-readiness": "node scripts/qa/check-pre-ai-readiness.mjs",
     "benchmark:edge:summary": "node scripts/summarize-edge-model-benchmarks.mjs",
