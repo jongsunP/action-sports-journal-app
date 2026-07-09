@@ -37,6 +37,20 @@ Latest product/UX direction update:
   - Use `npm run qa:pre-ai-readiness -- --skip-db=true` if DB inspection should
     be skipped for that pass.
 
+- dev-server low-risk decomposition 4차, 2026-07-09:
+  - Expo Push observability helper logic now lives in
+    `dev-server/features/push/pushObservability.ts` instead of
+    `dev-server/index.ts`.
+  - Moved helpers/types: Expo push token validation/masking, ticket summary,
+    receipt summary, stored token-result parsing, receipt error-code
+    extraction, and push token/result row types.
+  - This is structure-only. Push token registration, analysis-completed push
+    delivery, ticket/receipt handling, `push_delivery_attempts` DB shape,
+    token masking policy, JSON log shape, and API response contracts are
+    intended to remain unchanged.
+  - No EAS/local native build, DB write/backfill, Render/Supabase/Auth setting
+    change, paid AI/API call, or AI Calibration work was performed.
+
 - Local Development Readiness utility added, read-only, 2026-07-09:
   - When the local dev-client / Expo Go physical-device path feels unclear,
     start with:

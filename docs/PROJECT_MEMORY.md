@@ -108,6 +108,14 @@ Current infrastructure / pre-AI hardening:
   explicit-approval only. No DB write/backfill, EAS build, local native build,
   Render/Supabase/Auth setting change, paid AI/API call, or AI Calibration work
   was performed.
+- dev-server low-risk decomposition 4차 is complete as a structure-only pre-AI
+  cleanup. Expo Push observability helpers now live in
+  `dev-server/features/push/pushObservability.ts`: Expo token validation/
+  masking, push ticket summary, receipt summary, persisted token-result
+  parsing, receipt error-code extraction, and push token/result row types.
+  Push token registration, analysis-completed push delivery, Expo ticket/
+  receipt handling, `push_delivery_attempts` DB shape, JSON log shape, token
+  masking policy, and API response contracts are intended to remain unchanged.
 - 2026-07-09 local native Development Build workflow is open without EAS Cloud
   Build. The Founder iPhone successfully installed and launched the ASJ dev
   client through `npx expo run:ios --device` after local signing setup was

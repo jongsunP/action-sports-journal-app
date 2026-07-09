@@ -39,6 +39,20 @@ Pre-AI Readiness Check utility added, read-only, 2026-07-09:
   npm run qa:pre-ai-readiness -- --skip-db=true
   ```
 
+dev-server low-risk decomposition 4차, 2026-07-09:
+
+- Expo Push observability helpers were separated from `dev-server/index.ts`
+  into `dev-server/features/push/pushObservability.ts`.
+- Moved helpers/types: Expo push token validation/masking, ticket summary,
+  receipt summary, stored token-result parsing, receipt error-code extraction,
+  and the push token/result row types used by the route layer.
+- This is structure-only. Push token registration, analysis-completed push
+  delivery, Expo ticket/receipt handling, `push_delivery_attempts` DB shape,
+  JSON log shape, token masking policy, and API response contracts are intended
+  to remain unchanged.
+- No EAS/local native build, DB write/backfill, Render/Supabase/Auth setting
+  change, paid AI/API call, or AI Calibration work was performed.
+
 Local Development Readiness utility added, read-only, 2026-07-09:
 
 - Added a local readiness command for no-EAS Development Build / Expo Go
