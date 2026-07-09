@@ -19,6 +19,23 @@ Stage 3: Standalone iPhone video-to-analysis prototype in progress.
 
 ## Current Status
 
+Safe DB owner summary utility added, read-only, 2026-07-09:
+
+- Added a sanitized read-only Supabase owner summary command for CTO/QA checks:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:db:owner-summary -- --match-count=11
+  ```
+
+- The script uses service-role access only for read-only aggregation and prints
+  counts/hashes/short ids, not raw user ids, auth user ids, emails, tokens,
+  signed URLs, or storage paths.
+- Use this before considering any Postico mutation, DB cleanup, or legacy data
+  backfill. Production DB write/delete/backfill remains approval-gated.
+- No DB write/backfill, EAS build, local native build, Render/Supabase/Auth
+  setting change, paid AI/API call, or AI Calibration work was performed.
+
 Local native Development Build workflow open, no EAS cloud build run,
 2026-07-09:
 

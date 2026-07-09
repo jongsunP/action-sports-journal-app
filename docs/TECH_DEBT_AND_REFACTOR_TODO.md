@@ -755,6 +755,18 @@ EAS without-build boundary:
 
 Postico operations backlog:
 
+- Prefer the sanitized CLI summary before manual Postico inspection:
+
+  ```bash
+  cd ~/Repository/action-sports-journal-app
+  npm run qa:db:owner-summary -- --match-count=11
+  ```
+
+  This command is read-only and prints owner hashes, short moment ids, counts,
+  status buckets, thumbnail counts, Push/Recovery counts, and Analysis/Evidence
+  counts. It intentionally avoids raw user ids, auth user ids, emails, tokens,
+  signed URLs, and storage paths. Use it as the first check when deciding
+  whether visible app state matches DB state.
 - Founder can continue using Postico 2 with the current Supabase Session
   pooler connection for read-only QA inspection.
 - Do not run production mutations from Postico.

@@ -22,6 +22,24 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- Safe DB owner summary utility added, read-only, 2026-07-09:
+  - Use this command before considering any Postico mutation, DB cleanup, or
+    legacy backfill:
+
+    ```bash
+    cd ~/Repository/action-sports-journal-app
+    npm run qa:db:owner-summary -- --match-count=11
+    ```
+
+  - It reads Supabase with service-role access but only aggregates sanitized
+    QA fields. Output uses owner hashes, short moment ids, counts, status
+    buckets, thumbnail counts, push-token counts, recovery attempt counts, and
+    analysis/evidence counts.
+  - It must not print raw user ids, auth user ids, emails, tokens, signed URLs,
+    or storage paths. DB write/delete/backfill remains explicit-approval only.
+  - No DB write/backfill, EAS build, local native build, Render/Supabase/Auth
+    setting change, paid AI/API call, or AI Calibration work was performed.
+
 - Local native Development Build workflow is open, no EAS cloud build run,
   2026-07-09:
   - The Founder iPhone can now run an ASJ Development Build installed locally

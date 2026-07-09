@@ -81,6 +81,17 @@ Stage 3 standalone iPhone video-to-analysis prototype in progress
 
 Current infrastructure / pre-AI hardening:
 
+- 2026-07-09 Safe DB Owner Summary utility was added for read-only CTO/QA
+  inspection. Use `npm run qa:db:owner-summary -- --match-count=11` before
+  considering Postico mutations, DB cleanup, or legacy thumbnail/data backfill.
+  The script aggregates Supabase data with service-role access but outputs only
+  sanitized fields: owner hashes, short moment ids, counts, status buckets,
+  thumbnail counts, push-token counts, recovery attempt counts, and analysis/
+  evidence counts. It must not print raw user ids, auth user ids, emails,
+  tokens, signed URLs, or storage paths. DB write/delete/backfill remains
+  explicit-approval only. No DB write/backfill, EAS build, local native build,
+  Render/Supabase/Auth setting change, paid AI/API call, or AI Calibration work
+  was performed.
 - 2026-07-09 local native Development Build workflow is open without EAS Cloud
   Build. The Founder iPhone successfully installed and launched the ASJ dev
   client through `npx expo run:ios --device` after local signing setup was

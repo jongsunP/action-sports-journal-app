@@ -62,6 +62,7 @@
     "device:ip": "ipconfig getifaddr en0",
     "device:list": "xcrun devicectl list devices",
     "device:certs": "security find-identity -v -p codesigning",
+    "qa:db:owner-summary": "node scripts/qa/read-current-owner-summary.mjs",
     "benchmark:edge:summary": "node scripts/summarize-edge-model-benchmarks.mjs",
     "supabase:smoke": "node scripts/smoke-test-supabase.mjs",
     "supabase:write-smoke": "node scripts/smoke-test-supabase-writes.mjs",
