@@ -53,6 +53,16 @@ dev-server low-risk decomposition 4차, 2026-07-09:
 - No EAS/local native build, DB write/backfill, Render/Supabase/Auth setting
   change, paid AI/API call, or AI Calibration work was performed.
 
+QA Debug Panel hide/gate readiness, 2026-07-09:
+
+- QA Debug Panel already has a public env gate:
+  `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` hides the panel.
+- Default remains visible for internal QA, matching the current Founder policy.
+- `.env.example` now documents the flag, and `npm run qa:local-readiness`
+  reports the current gate state without printing secrets.
+- No visible QA panel behavior changes were made unless the env flag is set to
+  `false` and Metro/build is restarted.
+
 Local Development Readiness utility added, read-only, 2026-07-09:
 
 - Added a local readiness command for no-EAS Development Build / Expo Go

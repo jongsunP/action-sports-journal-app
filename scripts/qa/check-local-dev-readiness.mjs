@@ -36,6 +36,13 @@ addCheck('eas_development_profile', {
   },
 });
 addCheck('public_endpoint', checkPublicEndpoint(endpoint));
+addCheck(
+  'qa_debug_panel_gate',
+  checkBooleanPublicFlag(process.env.EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL, {
+    defaultEnabled: true,
+    flagName: 'EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL',
+  }),
+);
 addCheck('codesigning_identity', checkCodesigningIdentities());
 addCheck('connected_apple_device', checkConnectedAppleDevices());
 
@@ -158,6 +165,29 @@ function checkPublicEndpoint(value) {
       mode,
       host: url.hostname,
       endpointHash: hashValue(value),
+    },
+  };
+}
+
+function checkBooleanPublicFlag(value, { defaultEnabled, flagName }) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : null;
+  const enabled =
+    normalized === null || normalized === ''
+      ? defaultEnabled
+      : normalized !== 'false';
+
+  return {
+    ok: true,
+    detail: {
+      flagName,
+      enabled,
+      source:
+        normalized === null || normalized === ''
+          ? 'default'
+          : 'env',
+      note: enabled
+        ? 'QA Debug Panel remains visible for internal QA.'
+        : 'QA Debug Panel is hidden by public env gate.',
     },
   };
 }

@@ -51,6 +51,15 @@ Latest product/UX direction update:
   - No EAS/local native build, DB write/backfill, Render/Supabase/Auth setting
     change, paid AI/API call, or AI Calibration work was performed.
 
+- QA Debug Panel hide/gate readiness, 2026-07-09:
+  - QA Debug Panel already supports
+    `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false` to hide it.
+  - Default remains visible for internal QA. `.env.example` documents the flag,
+    and `npm run qa:local-readiness` reports whether the gate is currently
+    default-visible or env-hidden.
+  - No visible behavior changes occur unless the flag is set to `false` and
+    Metro/build is restarted.
+
 - Local Development Readiness utility added, read-only, 2026-07-09:
   - When the local dev-client / Expo Go physical-device path feels unclear,
     start with:

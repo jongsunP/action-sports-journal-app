@@ -894,8 +894,9 @@ Remaining:
 - Verify the duplicate-request reduction in the next standalone or simulator QA
   by comparing QA Debug Panel boot/video durations and backend `/api/moments`
   request logs if needed.
-- QA Debug Panel still needs a production hide/gate policy before real service
-  distribution.
+- QA Debug Panel now has an env hide gate. Before real service distribution,
+  set `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false`, restart Metro/build, and verify
+  the panel is hidden.
 
 ### Execution result - 2026-06-26
 
@@ -1160,8 +1161,9 @@ Future Detail UX backlog:
   Internal variables, docs, historical notes, and developer-only logs can keep
   ASJ.
 - Upload compression POC/debug metadata remains available only by explicit env
-  opt-in. Before production distribution, re-check QA Debug Panel visibility and
-  any other debug-only surfaces.
+  opt-in. Before production distribution, set
+  `EXPO_PUBLIC_ENABLE_QA_DEBUG_PANEL=false`, rebuild/restart, and re-check any
+  other debug-only surfaces.
 - Build 94 is the current Startup Performance Observability standalone QA
   target. Build commit: `880ed23`; iOS buildNumber: `94`; EAS Build ID:
   `9ee5a132-44c5-4760-95d6-f76c2e4b3a67`. EAS build is complete and Founder
