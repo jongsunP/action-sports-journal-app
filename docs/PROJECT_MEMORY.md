@@ -833,7 +833,10 @@ Current grouped listup view:
 현재 남은 과제:
 - 필수 / 아직 미시작
   - AI Calibration(AI 캘리브레이션): TS/HS Evidence(TS/HS 근거) 안정화부터 시작
-  - Reference Video Set(기준 영상 세트) 준비/정의
+  - Reference Video Set(기준 영상 세트) 준비/정의: 전체 원본 영상 여러 개로
+    시작 가능하되, 각 후보에 TS/HS/unknown, 기대 트릭명, positive/negative/
+    ambiguous, 카메라 각도/가림/실패 시도 같은 맥락 라벨을 붙인 뒤
+    calibration run 범위를 승인한다
   - Trick-name Accuracy(트릭명 정확도 개선)
   - MediaPipe / Pose Landmark(미디어파이프 / 포즈 랜드마크)는 보조 근거로 검토
 

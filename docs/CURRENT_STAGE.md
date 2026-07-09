@@ -36,6 +36,21 @@ Safe DB owner summary utility added, read-only, 2026-07-09:
 - No DB write/backfill, EAS build, local native build, Render/Supabase/Auth
   setting change, paid AI/API call, or AI Calibration work was performed.
 
+AI Calibration reference video intake standard clarified, 2026-07-09:
+
+- AI Calibration still has not started because the Founder has not prepared the
+  reference video set yet.
+- The first intake can start from several full raw wakeboard videos. Exact cut
+  points are helpful but not required for the first pass.
+- Each candidate should eventually have a small human label before calibration:
+  TS/HS/unknown, expected trick name if known, positive/negative/ambiguous, and
+  key context such as camera angle, rope side, occlusion, spray, failed attempt,
+  or partial trick.
+- First calibration scope remains TS/HS Evidence. Do not expand to broad
+  trick-name tuning until TS/HS evidence is reviewed against repeated samples.
+- No prompt/schema/provider change, paid AI/API call, DB write, EAS build, or
+  AI Calibration run was performed.
+
 Local native Development Build workflow open, no EAS cloud build run,
 2026-07-09:
 

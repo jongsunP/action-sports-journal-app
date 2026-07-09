@@ -3792,6 +3792,33 @@ AI Calibration P1 direction:
   rider moments, trick evidence, growth history, and next-session suggestions.
   Do not copy medical/rehab language or turn ASJ into a healthcare workflow.
 
+Reference Video Set intake standard:
+
+- Founder may start with several full raw wakeboard videos. Exact trim points
+  are useful but not required for the first intake pass.
+- For each candidate video, capture a simple human label before any prompt or
+  model tuning:
+  - expected broad class: toeside / heelside / unknown / not-applicable;
+  - expected trick name if known, or `unknown`;
+  - whether the clip is a positive example, negative example, or ambiguous;
+  - any important context: camera angle, rider direction, rope side, water
+    spray/occlusion, failed attempt, or partial trick.
+- Prefer multiple repeated samples over one surprising result. A useful first
+  set is:
+  - 3-5 clear TS/HS examples;
+  - 3-5 ambiguous or hard TS/HS examples;
+  - 2-3 negative/control clips where TS/HS should not be over-asserted;
+  - any known misclassification examples from current ASJ output.
+- The first AI Calibration pass should inspect current EvidenceResult output
+  against the human labels before changing prompts, validators, schemas, or
+  provider settings.
+- Do not use these videos to tune every trick name at once. Close TS/HS
+  Evidence first, then decide whether to expand to Back Roll / Tantrum / grab /
+  broader trick-name accuracy.
+- Do not start paid batch AI calls, DB writes, or prompt/schema changes until
+  the received video set has a small manifest and the Founder has approved the
+  calibration run scope.
+
 Rule:
 
 Only repeated failure patterns across multiple real videos should become prompt,

@@ -22,6 +22,18 @@ This is an Action Sports Life Log platform, not an AI-only analysis app.
 
 Latest product/UX direction update:
 
+- AI Calibration Reference Video Set intake standard clarified, 2026-07-09:
+  - AI Calibration still has not started because the Founder has not prepared
+    the reference video set yet.
+  - The first intake can start from several full raw wakeboard videos; exact
+    cut points are helpful but not required for the first pass.
+  - Before any prompt/schema/provider change or paid batch AI run, each
+    candidate should have a small human label: TS/HS/unknown, expected trick
+    name if known, positive/negative/ambiguous, and key context such as camera
+    angle, rope side, occlusion, spray, failed attempt, or partial trick.
+  - First calibration scope remains TS/HS Evidence. Do not expand to broad
+    trick-name tuning until TS/HS evidence is reviewed against repeated samples.
+
 - Safe DB owner summary utility added, read-only, 2026-07-09:
   - Use this command before considering any Postico mutation, DB cleanup, or
     legacy backfill:
